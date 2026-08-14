@@ -131,17 +131,17 @@ Everything below is built, tested, and playable end to end. 62 tests pass
 (`npm test`), including full 300-turn AI-vs-AI games, save round-trips, and a
 determinism check.
 
-Balance, measured over six seeds of AI-vs-AI to the turn limit: 3 wins each,
-identical average advance counts (19.8 orc / 18.5 human), ~90 battles per game, all
-six games decisive. Orcs reach Six Orcs in half of them.
+Balance, measured over six seeds of AI-vs-AI to the turn limit: 4-2 to the orcs,
+average advance counts 21.7 orc / 20.0 human, ~90 battles per game, all six games
+decisive. Eight Orcs is now reached on some seeds -- the economy buildings pushed the
+deep end of the counting ladder into range.
 
 ### Art status
 
-All 17 unit sprites, all 8 terrain sets, sound effects and music are in. Cities are
-the last gap: `human_1` and `human_8` are done, the other four need re-rolling with a
-plain magenta background (see [ART_PROMPTS.md](ART_PROMPTS.md)) — their originals
-arrived with baked-in transparency checkerboards that cannot be cut out reliably, and
-sit in `art_src/cities/_needs_reroll/` until replaced.
+All 17 unit sprites, all 6 city sprites, all 8 terrain sets, sound effects and music
+are in. The only art still outstanding is the **advance icons**, which are entirely
+optional — a missing icon is simply removed and the tech card reads fine without it.
+Prompts for all 43 are in [ART_PROMPTS.md](ART_PROMPTS.md).
 
 `dist/` is **3.7 MB**, of which 3.0 MB is the two music tracks. `npm run art`
 re-encodes audio on the way in: the source files arrive at 256 kbps stereo, which is a
@@ -151,9 +151,9 @@ with no audible difference in play.
 
 ### Known gaps and next steps
 
-1. **The deep ladder is rarely reached.** `Eight Orcs` and `Ten Orcs` exist, are
-   balanced, and are tested — but an AI game to turn 300 typically tops out at Six.
-   A focused human player should get there; worth confirming by actually playing.
+1. **`Ten Orcs` is still rarely reached.** Eight now shows up on some seeds since
+   research buildings arrived; ten remains a stretch for the AI inside 300 turns.
+   A focused human player should manage it.
 2. **No naval anything.** Worldgen therefore guarantees both civs start on the same
    continent. Islands on the map are decorative and unreachable.
 3. **Citizens are auto-assigned to tiles.** There is no manual tile-assignment UI.

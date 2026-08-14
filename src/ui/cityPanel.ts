@@ -5,6 +5,8 @@ import {
   cityYield,
   contentLimit,
   foodSurplus,
+  cityGoldBonus,
+  cityScienceBonus,
   foodToGrow,
   freeSupport,
   productionCost,
@@ -31,6 +33,8 @@ export function openCityPanel(
   const options = buildOptions(state, city);
   const limit = contentLimit(state, city);
   const upkeep = unitUpkeep(state, city);
+  const goldBonus = cityGoldBonus(city);
+  const scienceBonus = cityScienceBonus(city);
   const netShields = yields.shields - upkeep;
   const eta = turnsLeft(city, netShields);
 
@@ -63,6 +67,16 @@ export function openCityPanel(
           <div class="stat-row"><span class="label">Shields</span><span class="value">${netShields}/turn${upkeep > 0 ? ` <span class="muted">(${yields.shields} − ${upkeep} rations)</span>` : ''}</span></div>
           <div class="stat-row"><span class="label">Supports free</span><span class="value">${freeSupport(city)} units</span></div>
           <div class="stat-row"><span class="label">Trade</span><span class="value">${yields.trade}/turn</span></div>
+          ${
+            goldBonus > 0
+              ? `<div class="stat-row"><span class="label">Gold here</span><span class="value">+${Math.round(goldBonus * 100)}%</span></div>`
+              : ''
+          }
+          ${
+            scienceBonus > 0
+              ? `<div class="stat-row"><span class="label">Research here</span><span class="value">+${Math.round(scienceBonus * 100)}%</span></div>`
+              : ''
+          }
           <div class="stat-row"><span class="label">Founded</span><span class="value">Turn ${city.foundedTurn}</span></div>
         </div>
         <div class="panel-title">Standing Structures</div>

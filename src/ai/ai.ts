@@ -211,12 +211,14 @@ function chooseProduction(
     if (settler) return { kind: 'unit', id: settler.id };
   }
 
-  // 3. Useful buildings, when they can be afforded comfortably.
-  const wantedBuilding = options.buildings.find(
-    (b) => (b.id === 'barracks' || b.id === 'walls') && b.cost <= 80,
-  );
-  if (wantedBuilding && city.size >= 3 && withRng(state, (r) => r.chance(0.35))) {
-    return { kind: 'building', id: wantedBuilding.id };
+  // 3. Infrastructure, once a city is big enough to be worth investing in.
+  // Economy buildings come first: a city that pays for its own research
+  // compounds, whereas a second barracks does not.
+  const wanted =
+    options.buildings.find((b) => b.scienceBonus || b.goldBonus) ??
+    options.buildings.find((b) => b.id === 'barracks' || b.id === 'walls');
+  if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
+    return { kind: 'building', id: wanted.id };
   }
 
   // 4. Otherwise: the biggest stick currently affordable in reasonable time.

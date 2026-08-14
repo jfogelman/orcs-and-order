@@ -1,7 +1,14 @@
 import { unitType } from '../model/units';
 import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player } from '../model/types';
-import { buildingUpkeep, cityYield, processCity, defaultProduction } from './city';
+import {
+  buildingUpkeep,
+  cityGoldBonus,
+  cityScienceBonus,
+  cityYield,
+  defaultProduction,
+  processCity,
+} from './city';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { resumeGotoOrders } from './movement';
 import { addBeakers, splitTrade } from './research';
@@ -43,9 +50,15 @@ function refreshUnits(state: GameState, player: Player): void {
   }
 }
 
-/** Empire bookkeeping: cities, treasury, research. */
+/**
+ * Empire bookkeeping: cities, treasury, research.
+ *
+ * Trade is split into gold and beakers per city rather than once for the whole
+ * empire, because a treasury or a library only enriches the city it stands in.
+ */
 function runEconomy(state: GameState, player: Player): void {
-  let trade = 0;
+  let goldIncome = 0;
+  let beakerIncome = 0;
   let upkeep = 0;
 
   for (const city of playerCities(state, player.id)) {
@@ -55,7 +68,9 @@ function runEconomy(state: GameState, player: Player): void {
       if (suggestion.kind !== 'coin') city.producing = suggestion;
     }
     const events = processCity(state, city);
-    trade += cityYield(state, city).trade;
+    const split = splitTrade(player, cityYield(state, city).trade);
+    goldIncome += Math.round(split.gold * (1 + cityGoldBonus(city)));
+    beakerIncome += Math.round(split.beakers * (1 + cityScienceBonus(city)));
     upkeep += buildingUpkeep(city);
 
     if (events.grew) log(state, `${city.name} grows to ${city.size}.`, 'growth', player.id);
@@ -71,9 +86,8 @@ function runEconomy(state: GameState, player: Player): void {
     }
   }
 
-  const split = splitTrade(player, trade);
-  player.gold += split.gold - upkeep;
-  addBeakers(state, player, split.beakers);
+  player.gold += goldIncome - upkeep;
+  addBeakers(state, player, beakerIncome);
 
   // Bankruptcy sells something off rather than going negative forever.
   while (player.gold < 0) {

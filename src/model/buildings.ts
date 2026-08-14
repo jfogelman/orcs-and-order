@@ -17,6 +17,10 @@ export interface BuildingDef {
   foodKept?: number;
   /** New land units are built as veterans. */
   veteranUnits?: boolean;
+  /** Extra share of this city's gold income, as a fraction. 0.5 = +50%. */
+  goldBonus?: number;
+  /** Extra share of this city's research output, as a fraction. */
+  scienceBonus?: number;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -64,6 +68,54 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     contentBonus: 2,
     blurb: 'Two citizens are reassured that things are, on balance, going fine.',
+  },
+
+  // ------------------------------------------------------------- treasuries
+  treasury: {
+    id: 'treasury',
+    name: 'Goblin Treasury',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 0.5,
+    blurb:
+      'The goblins love gold. It has not yet occurred to any of them that ' +
+      'somebody else might also love gold.',
+  },
+  market: {
+    id: 'market',
+    name: 'Simple Market',
+    faction: 'human',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 0.5,
+    blurb:
+      'Buy and sell, but only one thing at a time. A queue forms. In due ' +
+      'course the queue becomes the point.',
+  },
+
+  // --------------------------------------------------------- places to think
+  thinkingRock: {
+    id: 'thinkingRock',
+    name: 'The Thinking Rock',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb:
+      'One orc sits on it at a time. Every so often something occurs to them, ' +
+      'and they are helped down and asked to describe it.',
+  },
+  scriptorium: {
+    id: 'scriptorium',
+    name: 'Hall of Careful Notes',
+    faction: 'human',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb:
+      'Everything worth knowing, written down twice in case the first copy ' +
+      'turns out to have been written down wrong.',
   },
 };
 

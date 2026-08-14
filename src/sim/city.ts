@@ -110,6 +110,16 @@ export function buildingUpkeep(city: City): number {
   return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.upkeep ?? 0), 0);
 }
 
+/** Extra share of this city's gold income from its buildings. */
+export function cityGoldBonus(city: City): number {
+  return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.goldBonus ?? 0), 0);
+}
+
+/** Extra share of this city's research output from its buildings. */
+export function cityScienceBonus(city: City): number {
+  return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.scienceBonus ?? 0), 0);
+}
+
 /** Units a city supports for free before shields start going to rations. */
 export function freeSupport(city: City): number {
   return Math.max(2, city.size);

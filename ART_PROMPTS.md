@@ -153,6 +153,94 @@ music are in and rendering.
 
 ---
 
+## Advance icons — optional, 43 of them
+
+Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
+**Entirely optional**: a missing icon is removed from the card, and the tree reads
+fine without one. So treat this as a long tail to chip away at, not a batch to sit
+through.
+
+Use a **plain magenta background** as everywhere else, then this preamble:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat shading
+> lit from the upper left, mid-1990s fantasy strategy game interface icon, no text,
+> no letters, no numbers, no border, no background scenery.
+
+**No text or numerals**, emphatically — generators love to write words into icons and
+they turn to mush at 48px.
+
+### The counting ladder — do these first
+
+These are the spine of the game, and the one place an icon can carry the joke on its
+own. The trick is that each is the *previous icon plus one more*, so the row reads as
+a sequence at a glance.
+
+| id | Icon subject |
+|---|---|
+| `first-orc` | a single green orc head in profile, tusks prominent |
+| `orc-meaning` | one orc head with a small question mark shape formed from a bent axe (no letters) |
+| `orc-together` | two green orc heads side by side, touching |
+| `idiots-stick-together` | three orc heads in a tight triangle |
+| `next-level-stupid` | four orc heads in a square block |
+| `beyond-stupid` | six orc heads crammed into the frame, edges cropped |
+| `not-just-stupid` | eight orc heads as a dense mass, all facing the same way |
+| `stupidity-for-all` | a solid wall of orc heads filling the whole icon, uncountable |
+| `first-human` | a single human head in a steel helm, in profile |
+| `brotherhood` | two identical helmed heads side by side, perfectly aligned |
+| `join-army` | three helmed heads in a neat row |
+| `bunches-footmen` | five helmed heads in two tidy ranks |
+| `ten-heads` | ten helmed heads in a perfect drilled block |
+
+Note the deliberate contrast: **orc groups get more crowded, human groups get more
+orderly.** That difference is the whole joke between the two trees.
+
+### Economy and infrastructure
+
+| id | Icon subject |
+|---|---|
+| `not-you-again` | a single gold coin, face-on, with a crude scratched mark |
+| `hammers-of-glory` | a stone mason's hammer crossed with a quill |
+| `mapmaking` | a rolled parchment map with a compass rose |
+| `tree-hugging` | a single stylised tree with a protective ring around it |
+| `bridge-building` | a simple stone arch bridge over blue water |
+| `wall-building` | a section of grey stone battlement |
+| `tower-building` | a tall round stone watchtower |
+| `joy-making` | a crude carved wooden mask with a wide grin |
+| `happiness` | a simple sun with soft rays |
+| `insanity` | a spiral of wild red and yellow, slightly off-centre |
+
+### Orc branches
+
+| id | Icon subject |
+|---|---|
+| `goblin-smarts` | a small green goblin head with oversized ears and bright yellow eyes |
+| `suicidal-goblins` | a bundle of red explosive sticks with a lit fuse |
+| `underground-smarts` | a dark tunnel mouth with two yellow eyes inside |
+| `to-be-an-orc` | a crude wooden training post, notched and battered |
+| `axes` | a single heavy iron axe head |
+| `axes-crazy` | two crossed axes with a jagged spark between them |
+| `throwing-buddies` | an axe in mid-flight with a motion arc behind it |
+| `my-little-friend` | a small figure standing beside a much larger silhouette |
+| `dead-messed-up` | a cracked skull with faint violet glow in the eye sockets |
+| `full-of-fire` | a red dragon's head breathing a gout of orange flame |
+
+### Human branches
+
+| id | Icon subject |
+|---|---|
+| `see-the-world` | a spyglass over a small horizon line |
+| `archery` | a drawn longbow with a single nocked arrow |
+| `pointed-ears` | a single pointed ear, seen side on, slightly suspicious |
+| `arrows-glory` | three arrows fanned upward |
+| `horses-sneeze` | a horse's head in profile, mid-sneeze, eyes screwed shut |
+| `let-us-ride` | two stylised horse heads side by side |
+| `run-you-through` | a couched lance angled across the frame |
+| `rumbling-voice` | an open mouth with concentric sound rings coming out |
+| `lordship` | an ornate crown with a single blue gem |
+
+---
+
 ## Terrain
 
 Terrain art is a **tiling sheet**, not a single tile — the ones supplied hold roughly

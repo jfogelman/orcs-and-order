@@ -24,6 +24,15 @@ function depthOf(t: TechDef, cache = new Map<string, number>()): number {
   return d;
 }
 
+/**
+ * Where an advance's icon lives. Missing files are expected: the icon is
+ * hidden on error, and the card reads perfectly well without one.
+ */
+function techIconPath(id: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}tech/${id}.png`;
+}
+
 function unlockSummary(t: TechDef, player: Player): string {
   const bits: string[] = [];
   for (const u of t.units) {
@@ -69,7 +78,10 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
           .map((p) => TECHS_BY_ID[p]?.name ?? p);
         return `
           <div class="tech-card ${cls}" data-id="${escapeHtml(t.id)}" ${canResearch ? '' : 'data-locked="1"'}>
-            <div class="tech-name">${escapeHtml(t.name)}</div>
+            <div class="tech-head">
+              <img class="tech-icon" src="${techIconPath(t.id)}" alt="" />
+              <div class="tech-name">${escapeHtml(t.name)}</div>
+            </div>
             <div class="tech-cost">${known ? 'known' : `${techCost(player, t)} beakers`}</div>
             ${unlocks ? `<div class="tech-unlocks">${escapeHtml(unlocks)}</div>` : ''}
             ${missing.length > 0 && !known ? `<div class="tech-needs">needs ${escapeHtml(missing.join(', '))}</div>` : ''}
@@ -98,6 +110,10 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
     body,
     width: 'min(1400px, 97vw)',
     onMount: (root, close) => {
+      // No icon yet for this advance is the normal case, not an error.
+      root.querySelectorAll<HTMLImageElement>('.tech-icon').forEach((img) => {
+        img.addEventListener('error', () => img.remove());
+      });
       root.querySelectorAll<HTMLElement>('.tech-card').forEach((card) => {
         if (card.dataset.locked) return;
         card.addEventListener('click', () => {

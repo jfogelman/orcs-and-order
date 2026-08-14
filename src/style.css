@@ -850,3 +850,18 @@ input[type='range']::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: #45392c;
 }
+
+/* ---------------------------------------------------------- advance icons */
+.tech-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.tech-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  image-rendering: pixelated;
+  border-radius: 3px;
+}

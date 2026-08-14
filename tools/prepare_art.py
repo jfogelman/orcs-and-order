@@ -72,6 +72,26 @@ TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water",
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
+# Advance icons, keyed by tech id from src/model/techs.ts. Optional: the tech
+# tree hides the icon and reads fine without it.
+TECH_ICONS = [
+    "mapmaking", "tree-hugging", "bridge-building", "wall-building",
+    "tower-building", "not-you-again", "hammers-of-glory", "joy-making",
+    "happiness", "insanity",
+    "first-orc", "goblin-smarts", "suicidal-goblins", "underground-smarts",
+    "orc-meaning", "orc-together", "idiots-stick-together", "next-level-stupid",
+    "beyond-stupid", "not-just-stupid", "stupidity-for-all", "to-be-an-orc",
+    "axes", "axes-crazy", "throwing-buddies", "my-little-friend",
+    "dead-messed-up", "full-of-fire",
+    "first-human", "brotherhood", "join-army", "bunches-footmen", "ten-heads",
+    "see-the-world", "archery", "pointed-ears", "arrows-glory",
+    "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
+    "lordship",
+]
+
+# Icons are read at a glance in a crowded tree, so they stay small.
+ICON_SIZE = 48
+
 
 def close_enough(a: tuple[int, int, int], b: tuple[int, int, int], tol: int) -> bool:
     return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol and abs(a[2] - b[2]) <= tol
@@ -354,7 +374,11 @@ def find_source(folder: Path, name: str) -> Path | None:
 
 
 def process_cutouts(
-    folder: str, names: list[str], force: bool
+    folder: str,
+    names: list[str],
+    force: bool,
+    size: int = UNIT_SIZE,
+    quiet_missing: bool = False,
 ) -> tuple[int, list[str], list[str]]:
     """Anything that sits on top of the map: units and settlements alike."""
     src = SRC / folder
@@ -367,14 +391,15 @@ def process_cutouts(
     for name in names:
         path = find_source(src, name)
         if path is None:
-            missing.append(name)
+            if not quiet_missing:
+                missing.append(name)
             continue
         target = out / f"{name}.png"
         if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
             continue
         img = Image.open(path)
         img, cut_out = remove_background(img)
-        img = trim_and_square(img, UNIT_SIZE)
+        img = trim_and_square(img, size)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
         print(f"  {folder}/{name}.png  {target.stat().st_size // 1024}KB{flag}")
@@ -399,7 +424,8 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
     for name in TERRAINS:
         path = find_source(src, name)
         if path is None:
-            missing.append(name)
+            if not quiet_missing:
+                missing.append(name)
             continue
         first = out / f"{name}_0.png"
         if first.exists() and not force and first.stat().st_mtime > path.stat().st_mtime:
@@ -553,18 +579,23 @@ def main() -> int:
     units, missing_units, failed_units = process_cutouts("units", CREATURES, force)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    print("Advance icons:")
+    icons, missing_icons, failed_icons = process_cutouts(
+        "tech", TECH_ICONS, force, size=ICON_SIZE, quiet_missing=True
+    )
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
     audio, audio_before, audio_after = process_audio()
 
     print(
-        f"\n{units} unit sprites, {cities} city sprites, "
+        f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
         f"{terrain} terrain sets, {audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
     for label, missing in (
         ("units", missing_units),
         ("cities", missing_cities),
+        ("advance icons", missing_icons),
         ("terrain", missing_terrain),
     ):
         if missing:
