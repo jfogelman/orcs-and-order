@@ -18,6 +18,8 @@ export interface MapOverlay {
   attacks: Set<number> | null;
   /** Preview of the route to the hovered tile. */
   path: Array<[number, number]> | null;
+  /** The selected unit's standing march order, if it has one. */
+  gotoPath: Array<[number, number]> | null;
   /** Tiles worked by the city currently open, drawn as a highlight ring. */
   workRing: Set<number> | null;
   showGrid: boolean;
@@ -29,6 +31,7 @@ export const EMPTY_OVERLAY: MapOverlay = {
   reachable: null,
   attacks: null,
   path: null,
+  gotoPath: null,
   workRing: null,
   showGrid: true,
 };
@@ -231,21 +234,21 @@ export class MapRenderer {
       }
     }
 
-    // --- path preview ----------------------------------------------------
-    if (overlay.path && overlay.path.length > 1) {
-      ctx.strokeStyle = 'rgba(255,240,180,0.9)';
-      ctx.lineWidth = Math.max(2, size / 14);
-      ctx.setLineDash([size / 5, size / 6]);
+    // --- march orders and path preview -----------------------------------
+    // The standing order is a solid line the unit will actually walk; the
+    // hover preview is dashed, because it is only a proposal.
+    if (overlay.gotoPath && overlay.gotoPath.length > 1) {
+      this.drawRoute(ctx, cam, overlay.gotoPath, 'rgba(140,215,255,0.85)', false);
+      const end = overlay.gotoPath[overlay.gotoPath.length - 1];
+      const s = cam.tileToScreen(end[0], end[1]);
+      ctx.strokeStyle = 'rgba(140,215,255,0.95)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      overlay.path.forEach(([px, py], n) => {
-        const s = cam.tileToScreen(px, py);
-        const cx = s.x + size / 2;
-        const cy = s.y + size / 2;
-        if (n === 0) ctx.moveTo(cx, cy);
-        else ctx.lineTo(cx, cy);
-      });
+      ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.3, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.setLineDash([]);
+    }
+    if (overlay.path && overlay.path.length > 1) {
+      this.drawRoute(ctx, cam, overlay.path, 'rgba(255,240,180,0.9)', true);
     }
 
     // --- hover cursor ----------------------------------------------------
@@ -255,6 +258,31 @@ export class MapRenderer {
       ctx.lineWidth = 2;
       ctx.strokeRect(s.x + 1, s.y + 1, size - 2, size - 2);
     }
+  }
+
+  private drawRoute(
+    ctx: CanvasRenderingContext2D,
+    cam: Camera,
+    route: Array<[number, number]>,
+    color: string,
+    dashed: boolean,
+  ): void {
+    const size = cam.tileSize;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, size / 14);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    if (dashed) ctx.setLineDash([size / 5, size / 6]);
+    ctx.beginPath();
+    route.forEach(([px, py], n) => {
+      const s = cam.tileToScreen(px, py);
+      const cx = s.x + size / 2;
+      const cy = s.y + size / 2;
+      if (n === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   // ------------------------------------------------------------- pieces

@@ -15,12 +15,20 @@ import { Minimap } from './render/minimap';
 import { canFoundCity, foundCity, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
 import { cityAt, createGame, playerCities, playerUnits, unitAt } from './sim/gamestate';
-import { attackTargets, moveToward, reachableTiles, routeTo, tryStep } from './sim/movement';
-import { techCost } from './sim/research';
+import {
+  attackTargets,
+  estimateTurns,
+  moveToward,
+  reachableTiles,
+  routeTo,
+  tryStep,
+} from './sim/movement';
+import { researchableTechs, techCost } from './sim/research';
 import { beginPlayerTurn, endPlayerTurn, idleUnits, playerScore } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { openAudioMenu, openNewGameMenu, openSaveMenu } from './ui/menus';
+import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
 
 /** Turns the battle theme keeps playing after the last enemy is lost from sight. */
@@ -67,6 +75,7 @@ class App {
     this.bindEvents();
     this.selectNextIdle();
     this.refreshHud();
+    this.promptResearchIfIdle();
     requestAnimationFrame(this.frame);
   }
 
@@ -83,6 +92,7 @@ class App {
     beginPlayerTurn(this.state, this.viewerId);
     this.selectNextIdle();
     this.refreshHud();
+    this.promptResearchIfIdle();
   }
 
   /** Swap in a different game state — new game, or one loaded from a save. */
@@ -123,10 +133,15 @@ class App {
       this.overlay.reachable = null;
       this.overlay.attacks = null;
       this.overlay.path = null;
+      this.overlay.gotoPath = null;
       return;
     }
     this.overlay.reachable = new Set(reachableTiles(this.state, unit).keys());
     this.overlay.attacks = attackTargets(this.state, unit);
+    // A standing order is invisible otherwise, and looks like it was forgotten.
+    this.overlay.gotoPath = unit.goto
+      ? routeTo(this.state, unit, unit.goto.x, unit.goto.y)
+      : null;
     this.updatePathPreview();
   }
 
@@ -253,7 +268,25 @@ class App {
     this.select(null);
     this.selectNextIdle();
     this.refreshHud();
-    if (this.state.winner !== null) this.showVictory();
+    if (this.state.winner !== null) {
+      this.showVictory();
+      return;
+    }
+    this.promptResearchIfIdle();
+  }
+
+  /**
+   * Ask what to research next rather than choosing silently.
+   *
+   * Beakers bank up while nothing is selected, so being asked never costs
+   * progress -- but the direction of an empire's research is exactly the sort
+   * of decision that should not happen behind the player's back.
+   */
+  private promptResearchIfIdle(): void {
+    const player = this.state.players[this.viewerId];
+    if (player.researching || isModalOpen() || this.state.winner !== null) return;
+    if (researchableTechs(player).length === 0) return;
+    openTechPanel(this.state, player, () => this.refreshHud());
   }
 
   private showVictory(): void {
@@ -477,17 +510,31 @@ class App {
     const unit = unitAt(this.state, x, y);
     const city = cityAt(this.state, x, y);
     const visible = this.state.players[this.viewerId].visible[idx(x, y, this.state.width)] === 1;
+    const mine = unit && unit.owner === this.viewerId && visible;
+    const myCity = city && city.owner === this.viewerId;
 
-    if (unit && unit.owner === this.viewerId && visible) {
-      this.select(unit);
-      return;
+    if (mine) {
+      // A garrison sits on top of its city, so the unit would otherwise swallow
+      // every click and the city could never be opened. Clicking a unit that is
+      // already selected falls through to whatever it is standing on.
+      if (this.overlay.selectedUnitId !== unit.id) {
+        this.select(unit);
+        return;
+      }
+      if (myCity) {
+        this.openCity(city);
+        return;
+      }
     }
-    if (city && city.owner === this.viewerId) {
+
+    if (myCity && !mine) {
       this.openCity(city);
       return;
     }
-    // Left-click on empty ground doubles as a move order, which is how Civ2
-    // played and what everyone reaches for first.
+
+    // Left-click on open ground doubles as a move order, which is what most
+    // people reach for first. Ordering a unit *into* one of your own cities is
+    // a right-click, since a left-click there means "show me this city".
     const selected = this.selected;
     if (selected) {
       const i = idx(x, y, this.state.width);
@@ -544,6 +591,9 @@ class App {
       case 'm':
         this.toggleMute();
         break;
+      case 'p':
+        openPedia(this.state.players[this.viewerId], this.selected?.type);
+        break;
       case 'escape':
         this.select(null);
         break;
@@ -592,8 +642,12 @@ class App {
     if (unit) {
       const t = unitType(unit.type);
       const canSettle = t.settler && canFoundCity(this.state, unit, unit.x, unit.y).ok;
+      const cityHere = cityAt(this.state, unit.x, unit.y);
       panel.innerHTML = `
-        <div class="panel-title">${escapeHtml(t.name)}${unit.veteran ? ' <span class="muted">· veteran</span>' : ''}</div>
+        <div class="panel-title">
+          <a href="#" class="pedia-link" data-pedia="${escapeHtml(t.id)}"
+             title="Look it up in the Orcpedia">${escapeHtml(t.name)}</a>${unit.veteran ? ' <span class="muted">· veteran</span>' : ''}
+        </div>
         <div class="panel-body">
           <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${t.attack} / ${t.defense}</span></div>
           <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${t.hp}</span></div>
@@ -604,16 +658,35 @@ class App {
               : ''
           }
           ${unit.order !== 'none' ? `<div class="chip">${unit.order}</div>` : ''}
-          ${unit.goto ? `<div class="chip">walking to ${unit.goto.x}, ${unit.goto.y}</div>` : ''}
+          ${
+            unit.goto
+              ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
+                  this.overlay.gotoPath
+                    ? ` &middot; ~${estimateTurns(this.state, unit, this.overlay.gotoPath)} turns`
+                    : ''
+                }</div>`
+              : ''
+          }
           <p class="flavor">${escapeHtml(t.blurb)}</p>
         </div>
         <div class="button-row">
           ${canSettle ? '<button class="small" data-act="found">Found City (B)</button>' : ''}
+          ${
+            cityHere
+              ? `<button class="small" data-act="city">Open ${escapeHtml(cityHere.name)}</button>`
+              : ''
+          }
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
         </div>`;
+      panel.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          openPedia(this.state.players[this.viewerId], link.dataset.pedia);
+        });
+      });
       panel.querySelectorAll<HTMLButtonElement>('button[data-act]').forEach((btn) => {
         btn.addEventListener('click', () => {
           switch (btn.dataset.act) {
@@ -631,6 +704,9 @@ class App {
               break;
             case 'next':
               this.selectNextIdle();
+              break;
+            case 'city':
+              if (cityHere) this.openCity(cityHere);
               break;
           }
         });

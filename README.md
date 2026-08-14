@@ -1,6 +1,6 @@
 # Orcs & Order
 
-A small, extremely tongue-in-cheek Civ2-style 4X in which orcs slowly discover that
+A small, extremely tongue-in-cheek turn-based 4X in which orcs slowly discover that
 two orcs can stand in the same place.
 
 The tech tree is the joke. The Horde advances through `First Orc` → `Let's Orc
@@ -10,7 +10,7 @@ conclusion via `Brotherhood`, `Join the Army`, `Bunches of Footmen`, and
 `10 Heads are Better than One`. Every advance name comes from the original design
 doc.
 
-Units stay singleton, Civ2 style — one tile, one unit. **"Two Orcs" is not a stack**;
+Units stay singleton — one tile, one unit. **"Two Orcs" is not a stack**;
 it is a unit type with two orcs drawn on it and double the numbers. Ten of them cost
 ten orcs' worth of shields, occupy one tile, spend one movement point, and die all at
 once.
@@ -42,13 +42,25 @@ npm test
 | Input | Does |
 |---|---|
 | Left-click | Select your unit, or open your city |
-| Left-click empty ground | Move there, if it is in range |
-| Right-click | Move or attack, at any distance (the unit walks over several turns) |
+| Left-click again | On a unit standing in a city, opens the city underneath it |
+| Left-click open ground | Move there, if it is in range |
+| Right-click | Move or attack at any distance — including into your own cities |
 | Left-drag | Pan · **Wheel** zoom · **Arrows** pan |
 | `B` | Found a city (Peons and Peasants only) |
+| `P` | Orcpedia — also reachable by clicking any unit's name |
 | `F` fortify · `S` sentry · `Space` skip · `N` next idle unit · `C` centre | |
 | `T` advances · `Ctrl+S` saves · `G` grid · `Enter` end turn · `Esc` deselect | |
 | `M` | Mute. The **Sound** button opens music and effects volume sliders |
+
+**Reading the map.** A blue wash marks everywhere the selected unit can reach *this
+turn*; red marks what it can attack. Hovering shows a dashed line — a proposal. Once
+ordered, the route becomes a **solid blue line with a ring at the destination**: a
+standing march order the unit resumes every turn until it arrives. The readout tells
+you how many turns that will take.
+
+**Research is never chosen for you.** Beakers bank up until you pick a target, so you
+are asked rather than assigned; the tech tree opens by itself whenever nothing is
+being researched.
 
 The soundtrack follows the situation: the battle theme cross-fades in whenever an enemy
 unit is in sight and holds for two turns after the last one is lost from view.

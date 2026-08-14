@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A small, extremely tongue-in-cheek Civ2-style 4X where orcs slowly discover that two orcs can stand in the same place.",
+  "description": "A small, extremely tongue-in-cheek turn-based 4X where orcs slowly discover that two orcs can stand in the same place.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

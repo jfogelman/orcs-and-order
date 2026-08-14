@@ -7,7 +7,7 @@ import type { City, GameState, Unit } from '../model/types';
 import type { CombatResult } from './combat';
 import { destroyUnit, resolveCombat } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt } from './gamestate';
-import { terrainMoveCost } from './rules';
+import { effectiveMove, terrainMoveCost } from './rules';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -102,6 +102,36 @@ export function attackTargets(state: GameState, unit: Unit): Set<number> {
     }
   }
   return out;
+}
+
+/**
+ * Roughly how many turns a route will take, counting the movement already
+ * spent this turn. Terrain costs are summed and divided by the unit's
+ * allowance, with the Civ2 rule that any leftover movement always buys one
+ * more step baked in by charging at most the remaining budget per tile.
+ */
+export function estimateTurns(
+  state: GameState,
+  unit: Unit,
+  route: Array<[number, number]>,
+): number {
+  if (route.length < 2) return 0;
+  const owner = state.players[unit.owner];
+  const type = unitType(unit.type);
+  const perTurn = Math.max(1, effectiveMove(owner, unit.type));
+  let turns = 1;
+  let left = unit.moves;
+
+  for (let i = 1; i < route.length; i++) {
+    const [x, y] = route[i];
+    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    if (left <= 0) {
+      turns++;
+      left = perTurn;
+    }
+    left -= Math.min(cost, left);
+  }
+  return turns;
 }
 
 /** Route to a destination, ignoring this turn's movement budget. */

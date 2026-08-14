@@ -88,8 +88,14 @@ export interface ResearchEvent {
 }
 
 export function addBeakers(state: GameState, player: Player, amount: number): ResearchEvent {
-  autoPickResearch(state, player);
-  if (!player.researching) return { completed: null };
+  // The AI picks its own next project. A human is asked, so the choice of what
+  // to work towards stays theirs -- but the beakers still bank up meanwhile,
+  // so being asked costs nothing.
+  if (player.controller === 'ai') autoPickResearch(state, player);
+  if (!player.researching) {
+    player.beakers += amount;
+    return { completed: null };
+  }
 
   player.beakers += amount;
   const def = TECHS_BY_ID[player.researching];
@@ -115,7 +121,7 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
     log(state, `Now buildable: ${newBuildings.join(', ')}.`, 'good', player.id);
   }
 
-  autoPickResearch(state, player);
+  if (player.controller === 'ai') autoPickResearch(state, player);
   return { completed: def };
 }
 

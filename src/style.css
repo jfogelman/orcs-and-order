@@ -684,6 +684,156 @@ input[type='range']::-moz-range-thumb {
   font-size: 12.5px;
 }
 
+/* -------------------------------------------------------------- orcpedia */
+.pedia-link {
+  color: var(--gold);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.pedia-link:hover {
+  color: #f4d27a;
+}
+
+.pedia-tabs {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 8px;
+}
+
+.pedia-tab.active {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #4a3d25, #332a1c);
+  color: var(--gold);
+}
+
+.pedia-pane[hidden] {
+  display: none;
+}
+
+.pedia-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 9px;
+}
+
+.pedia-card {
+  display: flex;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.pedia-highlight {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(217, 168, 63, 0.45) inset;
+}
+
+.pedia-art {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  image-rendering: pixelated;
+  align-self: flex-start;
+}
+
+.pedia-body {
+  min-width: 0;
+}
+
+.pedia-name {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.pedia-stats {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0;
+}
+
+.pedia-tech {
+  font-size: 11.5px;
+  color: #b8d8f0;
+}
+
+.pedia-notes {
+  font-size: 11.5px;
+  color: #d0b98a;
+}
+
+.pedia-flavor {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+.pedia-ladder {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+
+.pedia-ladder .chip {
+  margin: 0;
+  min-width: 22px;
+  text-align: center;
+}
+
+.pedia-ladder-note {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-left: 3px;
+}
+
+.pedia-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.pedia-tech-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) 120px minmax(120px, 1fr);
+  gap: 4px 12px;
+  padding: 7px 4px;
+  border-bottom: 1px solid rgba(107, 85, 55, 0.28);
+  align-items: baseline;
+}
+
+.pedia-tech-name {
+  font-weight: 600;
+}
+
+.pedia-tech-cost {
+  color: var(--gold);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pedia-tech-needs {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pedia-tech-row .pedia-flavor {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 /* ------------------------------------------------------------ scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
