@@ -1,0 +1,13 @@
+# Normalise line endings so the repo stays LF regardless of who checks it out.
+# Without this, working on Windows rewrites every file to CRLF and the next
+# diff looks like the whole project changed.
+* text=auto eol=lf
+
+# Never touch binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp3 binary
+*.ogg binary
+*.wav binary

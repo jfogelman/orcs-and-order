@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Generated game assets.
+# Everything in public/ is produced from art_src/ by `npm run art`, so it is
+# build output rather than source. The one exception is anything hand-placed
+# that has no raw original -- if that ever happens, commit it explicitly.
+public/units/
+public/cities/
+public/terrain/
+public/sfx/
+public/music/
+
+# Editor and OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local environment overrides
+*.local
+.env
+.env.*

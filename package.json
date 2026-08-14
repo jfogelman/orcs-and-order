@@ -1,0 +1,21 @@
+{
+  "name": "orcs-and-order",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A small, extremely tongue-in-cheek Civ2-style 4X where orcs slowly discover that two orcs can stand in the same place.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "art": "python tools/prepare_art.py"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}
