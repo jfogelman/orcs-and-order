@@ -23,6 +23,14 @@ export interface TerrainDef {
   noCity: boolean;
   /** Blocks line of sight past this tile. */
   blocksSight: boolean;
+  /**
+   * Which terrain bleeds over which at a shared edge.
+   *
+   * The higher number wins and feathers itself into its neighbour, so grass
+   * softens into sand, rock crumbles onto grass, and land forms a shoreline
+   * against water rather than a hard square edge.
+   */
+  blend: number;
   /** Base fill colour for the procedural tile art. */
   base: string;
   /** Secondary colour for speckle / detail passes. */
@@ -43,6 +51,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: true,
     noCity: true,
     blocksSight: false,
+    blend: 0,
     base: '#173650',
     detail: '#1e4462',
     special: { name: 'Something Enormous', food: 3, shields: 0, trade: 2 },
@@ -58,6 +67,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: true,
     noCity: true,
     blocksSight: false,
+    blend: 1,
     base: '#2a6b8f',
     detail: '#3d86ab',
     special: { name: 'Fish, Probably', food: 3, shields: 0, trade: 2 },
@@ -73,6 +83,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: false,
     blocksSight: false,
+    blend: 4,
     base: '#5b8a3c',
     detail: '#6e9f47',
     special: { name: 'Suspiciously Good Grass', food: 3, shields: 1, trade: 1 },
@@ -88,6 +99,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: false,
     blocksSight: true,
+    blend: 5,
     base: '#2f5a2c',
     detail: '#417036',
     special: { name: 'Big Angry Game', food: 3, shields: 2, trade: 0 },
@@ -103,6 +115,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: false,
     blocksSight: false,
+    blend: 6,
     base: '#7a7346',
     detail: '#8f8754',
     special: { name: 'Shiny Rocks', food: 1, shields: 4, trade: 0 },
@@ -118,6 +131,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: true,
     blocksSight: true,
+    blend: 7,
     base: '#6b625c',
     detail: '#9a9089',
     special: { name: 'A Very Deep Hole', food: 0, shields: 2, trade: 6 },
@@ -133,6 +147,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: false,
     blocksSight: false,
+    blend: 2,
     base: '#47563a',
     detail: '#586a44',
     special: { name: 'Smells Like Money', food: 1, shields: 4, trade: 0 },
@@ -148,6 +163,7 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     water: false,
     noCity: false,
     blocksSight: false,
+    blend: 3,
     base: '#bfa568',
     detail: '#d5bc80',
     special: { name: 'Bones Worth Something', food: 0, shields: 1, trade: 5 },

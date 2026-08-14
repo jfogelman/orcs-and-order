@@ -32,7 +32,7 @@ import sys
 from collections import Counter, deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageStat
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "art_src"
@@ -411,10 +411,28 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
         # repeats of the motif, so downscaling averages into a usable tile.
         cw, ch = w // 2, h // 2
         offsets = [(0, 0), (cw, 0), (0, ch), (cw, ch)][:TERRAIN_VARIANTS]
-        for i, (ox, oy) in enumerate(offsets):
-            tile = sheet.crop((ox, oy, ox + cw, oy + ch))
-            tile = tile.resize((TERRAIN_SIZE, TERRAIN_SIZE), Image.LANCZOS)
-            tile.save(out / f"{name}_{i}.png", optimize=True)
+        variants = [
+            sheet.crop((ox, oy, ox + cw, oy + ch)).resize(
+                (TERRAIN_SIZE, TERRAIN_SIZE), Image.LANCZOS
+            )
+            for ox, oy in offsets
+        ]
+
+        # Match the variants' average colour to each other. Different parts of
+        # a sheet are lit slightly differently, and once those crops are tiled
+        # across a map at random the difference reads as pale and dark patches
+        # in a chequered pattern - the exact "stamped" look the variants exist
+        # to avoid.
+        means = [ImageStat.Stat(v).mean[:3] for v in variants]
+        target = [sum(m[c] for m in means) / len(means) for c in range(3)]
+        for i, (tile, mean) in enumerate(zip(variants, means)):
+            channels = list(tile.split())[:3]
+            for c in range(3):
+                gain = target[c] / max(1e-6, mean[c])
+                channels[c] = channels[c].point(
+                    lambda value, gain=gain: min(255, int(value * gain))
+                )
+            Image.merge("RGB", channels).save(out / f"{name}_{i}.png", optimize=True)
         print(f"  terrain/{name}_[0-{TERRAIN_VARIANTS - 1}].png")
         done += 1
     return done, missing

@@ -5,8 +5,9 @@ import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
-import { buildSpecialIcon, buildTerrainTiles, variantFor } from './tileArt';
+import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
+import { TerrainLayer } from './terrainLayer';
 
 export interface MapOverlay {
   selectedUnitId: number | null;
@@ -40,6 +41,8 @@ export class MapRenderer {
   readonly sprites: SpriteCache;
   /** Advances every frame; drives the selection pulse. */
   private clock = 0;
+  private layer: TerrainLayer | null = null;
+  private rebuildTimer: number | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -48,14 +51,87 @@ export class MapRenderer {
     this.tiles = buildTerrainTiles();
     this.specialIcon = buildSpecialIcon();
     this.sprites = sprites ?? new SpriteCache();
-    // Procedural tiles render immediately; real ones replace them as they load.
-    this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS);
+    // Procedural tiles render immediately; real ones replace them as they load,
+    // at which point the pre-rendered map has to be built again.
+    this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS, () => this.invalidateLayerSoon());
   }
 
   private ctx(): CanvasRenderingContext2D {
     const ctx = this.canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable');
     return ctx;
+  }
+
+  /** Rebuild the pre-rendered terrain when the map underneath it changes. */
+  private ensureLayer(state: GameState): void {
+    const key = TerrainLayer.keyFor(state);
+    if (this.layer && this.layer.key === key) return;
+    this.layer = TerrainLayer.build(state, this.tiles, this.specialIcon);
+  }
+
+  /**
+   * Terrain art arrives asynchronously, so the layer has to be rebuilt once it
+   * lands. Debounced, because otherwise thirty-odd image loads would each
+   * trigger a full re-render of the map.
+   */
+  private invalidateLayerSoon(): void {
+    if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer);
+    this.rebuildTimer = window.setTimeout(() => {
+      this.rebuildTimer = null;
+      this.layer = null;
+    }, 250);
+  }
+
+  /**
+   * Copy the visible slice of the pre-rendered map onto the screen.
+   *
+   * The source rectangle is snapped to whole layer pixels and the remainder
+   * paid back as a fractional destination offset; sampling on half-pixels with
+   * smoothing disabled makes the whole map shimmer while panning.
+   */
+  private blitTerrain(ctx: CanvasRenderingContext2D, cam: Camera): void {
+    const layer = this.layer;
+    if (!layer) return;
+    const zoom = cam.zoom;
+
+    const originX = Math.floor(cam.x);
+    const originY = Math.floor(cam.y);
+    const fracX = cam.x - originX;
+    const fracY = cam.y - originY;
+
+    let srcX = originX;
+    let srcY = originY;
+    let srcW = Math.ceil(cam.viewportW / zoom + fracX);
+    let srcH = Math.ceil(cam.viewportH / zoom + fracY);
+    let dstX = -fracX * zoom;
+    let dstY = -fracY * zoom;
+
+    // A world smaller than the viewport leaves the camera outside the layer.
+    if (srcX < 0) {
+      dstX += -srcX * zoom;
+      srcW += srcX;
+      srcX = 0;
+    }
+    if (srcY < 0) {
+      dstY += -srcY * zoom;
+      srcH += srcY;
+      srcY = 0;
+    }
+    srcW = Math.min(srcW, layer.canvas.width - srcX);
+    srcH = Math.min(srcH, layer.canvas.height - srcY);
+    if (srcW <= 0 || srcH <= 0) return;
+
+    ctx.drawImage(
+      layer.canvas,
+      srcX,
+      srcY,
+      srcW,
+      srcH,
+      dstX,
+      dstY,
+      srcW * zoom,
+      srcH * zoom,
+    );
   }
 
   draw(state: GameState, viewerId: number, cam: Camera, overlay: MapOverlay, dt: number): void {
@@ -70,28 +146,16 @@ export class MapRenderer {
     ctx.fillRect(0, 0, cam.viewportW, cam.viewportH);
 
     // --- terrain ---------------------------------------------------------
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        const i = idx(x, y, state.width);
-        if (!viewer.explored[i]) continue;
-        const s = cam.tileToScreen(x, y);
-        const art = this.tiles[state.terrain[i]][variantFor(x, y)];
-        ctx.drawImage(art, Math.round(s.x), Math.round(s.y), Math.ceil(size), Math.ceil(size));
-        if (state.specials[i]) {
-          ctx.drawImage(
-            this.specialIcon,
-            Math.round(s.x),
-            Math.round(s.y),
-            Math.ceil(size),
-            Math.ceil(size),
-          );
-        }
-      }
-    }
+    // One blit of a pre-rendered, edge-blended map rather than a loop over
+    // every visible tile. Unexplored ground is painted back out under fog.
+    this.ensureLayer(state);
+    this.blitTerrain(ctx, cam);
 
     // --- grid ------------------------------------------------------------
     if (overlay.showGrid && size >= 24) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      // Light touch: now that terrain feathers across tile boundaries, a strong
+      // grid is the only hard edge left and undoes the effect.
+      ctx.strokeStyle = 'rgba(0,0,0,0.09)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) {
@@ -156,13 +220,14 @@ export class MapRenderer {
     }
 
     // --- fog of war ------------------------------------------------------
-    ctx.fillStyle = 'rgba(4,6,10,0.5)';
+    // Unexplored ground is painted out solid; explored-but-unseen is dimmed.
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const i = idx(x, y, state.width);
-        if (!viewer.explored[i] || viewer.visible[i]) continue;
+        if (viewer.visible[i]) continue;
         const s = cam.tileToScreen(x, y);
-        ctx.fillRect(s.x, s.y, size, size);
+        ctx.fillStyle = viewer.explored[i] ? 'rgba(4,6,10,0.5)' : VOID_COLOR;
+        ctx.fillRect(s.x, s.y, Math.ceil(size), Math.ceil(size));
       }
     }
 

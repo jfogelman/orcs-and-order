@@ -125,12 +125,13 @@ export class SpriteCache {
    * everywhere else. Mutates the set in place so the renderer picks the new
    * tiles up on its next frame without any reload.
    */
-  installTerrainArt(tiles: TerrainTileSet, ids: TerrainId[]): void {
+  installTerrainArt(tiles: TerrainTileSet, ids: TerrainId[], onLoaded?: () => void): void {
     for (const id of ids) {
       for (let v = 0; v < TERRAIN_VARIANTS; v++) {
         loadImage(`${this.base}terrain/${id}_${v}.png`)
           .then((img) => {
             tiles[id][v] = img;
+            onLoaded?.();
           })
           .catch(() => {});
       }
