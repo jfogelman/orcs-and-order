@@ -15,6 +15,12 @@ import {
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 
+/** Where a building's icon lives. Missing icons are removed on error. */
+function buildingIconPath(id: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}buildings/${id}.png`;
+}
+
 /** Turns remaining on the current build, or null when it will never finish. */
 function turnsLeft(city: City, perTurn: number): number | null {
   const cost = productionCost(city.producing);
@@ -85,7 +91,13 @@ export function openCityPanel(
             city.buildings.length === 0
               ? '<span class="muted">Nothing but tents and optimism.</span>'
               : city.buildings
-                  .map((b) => `<div class="chip">${escapeHtml(BUILDINGS[b]?.name ?? b)}</div>`)
+                  .map(
+                    (b) =>
+                      `<div class="chip building-chip" title="${escapeHtml(BUILDINGS[b]?.blurb ?? '')}">
+                        <img class="building-icon" src="${buildingIconPath(b)}" alt="" />
+                        ${escapeHtml(BUILDINGS[b]?.name ?? b)}
+                      </div>`,
+                  )
                   .join('')
           }
         </div>
@@ -119,6 +131,9 @@ export function openCityPanel(
     body,
     width: 'min(920px, 94vw)',
     onMount: (root) => {
+      root.querySelectorAll<HTMLImageElement>('.building-icon').forEach((img) => {
+        img.addEventListener('error', () => img.remove());
+      });
       root.querySelectorAll<HTMLButtonElement>('.build-option').forEach((btn) => {
         btn.addEventListener('click', () => {
           const kind = btn.dataset.kind as ProductionItem['kind'];

@@ -865,3 +865,17 @@ input[type='range']::-moz-range-thumb {
   image-rendering: pixelated;
   border-radius: 3px;
 }
+
+/* --------------------------------------------------------- building chips */
+.building-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 4px;
+}
+
+.building-icon {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}

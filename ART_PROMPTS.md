@@ -249,6 +249,32 @@ went wrong.
 
 ---
 
+## Building icons — optional, 9 of them
+
+Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
+Same rules as advance icons: **plain magenta background, no text**, and a missing icon
+is simply left out.
+
+Same preamble as the advance icons, then:
+
+| id | Faction | Icon subject |
+|---|---|---|
+| `barracks` | both | a wooden weapon rack holding three spears and a shield |
+| `granary` | both | a fat clay storage jar overflowing with golden grain |
+| `walls` | both | a short run of grey stone battlement with a closed gate |
+| `totem` | orc | a carved wooden totem pole with a snarling painted face and feathers |
+| `chapel` | human | a small white chapel with a steep red roof and one round window |
+| `treasury` | orc | a battered wooden chest overflowing with gold coins, lid hanging off, entirely unguarded |
+| `market` | human | a single striped market stall awning above a wooden counter with one apple on it |
+| `thinkingRock` | orc | a large smooth grey boulder with a single worn seat-shaped dip on top |
+| `scriptorium` | human | a stack of leather-bound books with a quill and inkpot resting on top |
+
+The two economy pairs are where the joke lives, so lean into it: the **Goblin
+Treasury** should look valuable and *completely unprotected*, and the **Simple Market**
+should be conspicuously one stall selling one thing.
+
+---
+
 ## Terrain
 
 Terrain art is a **tiling sheet**, not a single tile — the ones supplied hold roughly

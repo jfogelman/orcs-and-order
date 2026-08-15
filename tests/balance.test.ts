@@ -11,7 +11,17 @@ import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
  * makes one side hopeless, not to pin down an exact win rate.
  */
 
-const SEEDS = [1, 42, 777, 12345, 20250813, 31337];
+/**
+ * Six seeds is enough to catch a faction being hopeless, but far too few to
+ * read a win rate from -- four wins out of six is well inside chance. Set
+ * BALANCE_SEEDS=20 when the question is actually "which side is stronger".
+ */
+// Declared rather than pulled in via @types/node: this is the only place the
+// project touches `process`, and it is not worth a dependency for one env var.
+declare const process: { env: Record<string, string | undefined> };
+
+const SEED_COUNT = Number(process.env.BALANCE_SEEDS ?? 6);
+const SEEDS = Array.from({ length: SEED_COUNT }, (_, i) => 1 + i * 7919);
 /** Enough to run past the turn limit, so every game reaches a verdict. */
 const HALF_TURNS = 700;
 

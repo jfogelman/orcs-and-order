@@ -88,6 +88,13 @@ TECH_ICONS = [
     "lordship",
 ]
 
+# Building icons, keyed by id from src/model/buildings.ts. Optional, like
+# advance icons: a missing one is simply left out.
+BUILDING_ICONS = [
+    "barracks", "granary", "walls", "totem", "chapel",
+    "treasury", "market", "thinkingRock", "scriptorium",
+]
+
 # Icons are read at a glance in a crowded tree, so they stay small.
 ICON_SIZE = 48
 # Composition happens at this size and is downscaled, so stamped copies keep
@@ -677,6 +684,13 @@ def main() -> int:
     icons, missing_icons, failed_icons = process_cutouts(
         "tech", TECH_ICONS, force, size=ICON_SIZE, quiet_missing=True
     )
+    print("Building icons:")
+    bicons, missing_bicons, failed_bicons = process_cutouts(
+        "buildings", BUILDING_ICONS, force, size=ICON_SIZE, quiet_missing=True
+    )
+    icons += bicons
+    missing_icons.extend(missing_bicons)
+    failed_icons.extend(failed_bicons)
     composed, missing_composed = compose_icons(force)
     icons += composed
     missing_icons.extend(missing_composed)
