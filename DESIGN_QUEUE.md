@@ -157,85 +157,54 @@ All royalty-free, all short. Filenames stay as downloaded; map them in `audio.ts
 
 ## 3. Rebalancing
 
-### Measured: orcs win 78% of games, and not by fighting
+### Resolved: the orcs were winning 78% of games
 
-Eighteen seeds, two identical AIs, played to a verdict:
+Eighteen seeds of AI-vs-AI found the orcs taking **14 of 18** while *behind* on both
+advances and units. Three things turned out to be involved, and it is worth recording
+which of them mattered, because the first guess was wrong.
 
-```
-wins            orc 14   human 4        (78% orc)
-avg cities      orc  8.2  human  7.6
-avg advances    orc 17.7  human 18.6
-avg units       orc 31.2  human 34.9
-reached turn limit                 16/18
-```
+**1. The scoring formula (fixed, changed nothing).** It paid a flat 10 points per city
+on top of population, so planting a settlement and never developing it was worth 13
+points. That is a genuine design flaw and is now gone — the formula is
+`population × 4 + advances × 6 + buildings × 4`, and buildings count at all for the
+first time. But measured on the same eighteen seeds it produced **identical results**:
+still 14–4, the same winner in every game. The flat term was worth about 6 points to
+the orcs; their real lead was population, worth about 44. Fixing it was right, but it
+was not the cause.
 
-Fourteen of eighteen on a fair coin is about a 1.5% result, so this is real. An
-earlier six-seed read of 4–2 was *not* significant, and should not have been used to
-draw any conclusion — six seeds is enough to catch a faction being hopeless and
-nothing more.
+**2. Rioting cities kept growing (the actual bug).** `cityYield` zeroed shields and
+trade during disorder but returned food in full, so a city past its content limit grew
+forever while producing nothing. Content limits are 5–6 and the AI never built a totem
+or chapel, yet average city size was 7.9–9.1: most cities in a typical game were
+permanently rioting. Fixing that lifted advance counts (17.7 → 20.5) and finally put
+the **deep end of the counting ladder in reach** — ×8 and ×10 units now appear, which
+they never did before.
 
-**The interesting part is how the orcs win.** They are behind on advances *and* behind
-on units. So they are not out-teching or out-fighting anyone. And 16 of 18 games ran
-to the turn limit, where the winner is decided by:
+It also made the imbalance *worse* — orcs went to 4–0, leading on every metric — which
+was the useful part, because it isolated the cause.
 
-```
-score = cities × 10  +  population × 3  +  advances × 5  +  units × 1
-```
+**3. The human AI was the problem all along.** Two numbers:
 
-Humans lead the two terms that were measured and still lose, so the whole margin sits
-in **cities and citizens** — the two heaviest terms. The orc AI sprawls, and sprawl is
-what the score pays for.
+| | was | now |
+|---|---|---|
+| `garrisonPerCity` | 2 | 1 |
+| `caution` | 0.6 | 0.45 |
 
-Both of the two games that ended by *conquest* were won by the humans.
+Two defenders per city tied up most of the Kingdom's army standing still, and at 0.6
+caution it declined fights it would have won while the Horde picked it apart a unit at
+a time. After the change the two sides are level: cities 7.5 / 8.8, population
+50.0 / 50.8, advances 22.0 / 20.8, wins 3–3.
 
-### Fixed: the scoring formula (done)
+**The lesson worth keeping:** the win column pointed at the factions, the metrics
+pointed at the score, and the cause was neither. Always check whether a fix actually
+moved the number before believing it.
 
-The flat per-city term is gone. It was:
+### Still open: nearly every game reaches the turn limit
 
-```
-cities × 10  +  population × 3  +  advances × 5  +  units × 1
-```
+Even now, essentially all games run to turn 300 and are decided on points rather than
+conquest. That remains the largest structural problem — see below.
 
-which paid 13 points for planting a size-1 settlement and never developing it, on top
-of whatever population it eventually grew. That made "found cities everywhere and
-ignore them" the winning line, which is exactly what the sprawlier AI was doing.
-
-It is now:
-
-```
-population × 4  +  advances × 6  +  buildings × 4
-```
-
-Cities still count — through the citizens living in them and the structures built
-there — but they are paid for the parts that took effort. Advances are weighted up,
-because the tech ladder is the entire point of the game. Units are no longer scored at
-all: an army is a means, not an achievement, and conquest already wins outright.
-
-**Still open:** roughly 90% of games reach the turn limit, so the score is deciding
-almost everything regardless of how it is weighted. Making conquest achievable is the
-larger fix and is untouched — see below.
-
-### Making conquest achievable — still open
-
-Attacking a walled, fortified city stacks x2 for Walls, x1.5 for fortifying and up to
-x3 for terrain, and the AI never concentrates force, so wars grind on without
-resolving. Worth trying, in order of cheapness:
-
-1. Have the AI mass units before attacking rather than feeding them in one at a time.
-2. Let siege units (`sapper`, `ballista`) ignore the Walls multiplier rather than
-   merely getting a bonus against cities.
-3. Reconsider whether Walls should be x2 on top of everything else.
-
-### Faction levers, if they are still needed afterwards
-
-1. **Human AI caution 0.6 → 0.45.** It declines fights it would win. Cheapest possible
-   change, one number.
-2. **Human `garrisonPerCity` 2 → 1 once Walls are built.** Two per city ties up much
-   of the army standing still.
-3. Only then look at unit stats. The per-shield numbers are close: orcs lead slightly
-   on attack, humans clearly on defence, which is the intended shape.
-
-### The ladder costs are lopsided, and it is not obvious which way
+### The ladder costs are lopsided, and it is not obvious which way### The ladder costs are lopsided, and it is not obvious which way
 
 ### The ladder costs are lopsided, and it is not obvious which way
 

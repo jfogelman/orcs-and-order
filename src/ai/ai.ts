@@ -57,7 +57,9 @@ const PERSONALITIES: Record<string, AiPersonality> = {
   },
   human: {
     targetCities: 6,
-    garrisonPerCity: 2,
+    // Was 2. Two defenders per city tied up most of the Kingdom's army
+    // standing still, which is in character but was costing it every game.
+    garrisonPerCity: 1,
     techPriority: [
       'brotherhood',
       'archery',
@@ -73,7 +75,9 @@ const PERSONALITIES: Record<string, AiPersonality> = {
       'run-you-through',
       'arrows-glory',
     ],
-    caution: 0.6,
+    // Was 0.6, at which it declined fights it would have won and let the Horde
+    // pick its army apart a unit at a time.
+    caution: 0.45,
   },
 };
 
