@@ -14,6 +14,7 @@ import {
   unitUpkeep,
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
+import { openPedia } from './pedia';
 
 /** Where a building's icon lives. Missing icons are removed on error. */
 function buildingIconPath(id: string): string {
@@ -57,6 +58,11 @@ export function openCityPanel(
               data-kind="${item.kind}" data-id="${'id' in item ? escapeHtml(item.id) : ''}">
         <span class="build-name">${escapeHtml(name)}</span>
         <span class="build-cost">${cost > 0 ? `${cost}s` : '—'}${turns !== null && cost > 0 ? ` · ${turns}t` : ''}</span>
+        ${
+          'id' in item
+            ? `<span class="build-info" data-pedia="${escapeHtml(item.id)}" title="Look it up in the Orcpedia">?</span>`
+            : ''
+        }
         <span class="build-blurb">${escapeHtml(blurb)}</span>
       </button>`;
   };
@@ -93,10 +99,11 @@ export function openCityPanel(
               : city.buildings
                   .map(
                     (b) =>
-                      `<div class="chip building-chip" title="${escapeHtml(BUILDINGS[b]?.blurb ?? '')}">
+                      `<a href="#" class="chip building-chip pedia-link" data-pedia="${escapeHtml(b)}"
+                          title="${escapeHtml(BUILDINGS[b]?.blurb ?? '')}">
                         <img class="building-icon" src="${buildingIconPath(b)}" alt="" />
                         ${escapeHtml(BUILDINGS[b]?.name ?? b)}
-                      </div>`,
+                      </a>`,
                   )
                   .join('')
           }
@@ -133,6 +140,14 @@ export function openCityPanel(
     onMount: (root) => {
       root.querySelectorAll<HTMLImageElement>('.building-icon').forEach((img) => {
         img.addEventListener('error', () => img.remove());
+      });
+      root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          // Stop the click reaching the build button underneath it.
+          e.preventDefault();
+          e.stopPropagation();
+          openPedia(state.players[city.owner], link.dataset.pedia);
+        });
       });
       root.querySelectorAll<HTMLButtonElement>('.build-option').forEach((btn) => {
         btn.addEventListener('click', () => {

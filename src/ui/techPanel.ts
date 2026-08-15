@@ -53,7 +53,9 @@ function unlockSummary(t: TechDef, player: Player): string {
   for (const b of t.buildings) {
     const def = BUILDINGS[b];
     if (def && (def.faction === 'both' || def.faction === player.faction)) {
-      bits.push(`<span class="pedia-building">${escapeHtml(def.name)}</span>`);
+      bits.push(
+        `<a href="#" class="pedia-link" data-pedia="${escapeHtml(def.id)}">${escapeHtml(def.name)}</a>`,
+      );
     }
   }
   for (const f of t.flags) bits.push(escapeHtml(FLAG_LABELS[f] ?? f));

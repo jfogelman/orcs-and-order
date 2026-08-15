@@ -91,7 +91,13 @@ function creatureSection(faction: FactionId): string {
     .join('');
 }
 
-export function openPedia(player: Player, focusUnit?: UnitTypeId): void {
+/**
+ * Open the encyclopedia, optionally jumping to one entry.
+ *
+ * `focus` takes either a unit type or a building id and works out which it is,
+ * so callers can pass whatever they happen to be showing without caring.
+ */
+export function openPedia(player: Player, focus?: string): void {
   const faction = player.faction;
   const other: FactionId = faction === 'orc' ? 'human' : 'orc';
 
@@ -128,7 +134,7 @@ export function openPedia(player: Player, focusUnit?: UnitTypeId): void {
     .filter((b) => b.faction === 'both' || b.faction === faction)
     .map(
       (b) => `
-      <div class="pedia-tech-row">
+      <div class="pedia-tech-row" id="pedia-b-${escapeHtml(b.id)}">
         <span class="pedia-tech-name">${escapeHtml(b.name)}</span>
         <span class="pedia-tech-cost">${b.cost}s &middot; ${b.upkeep}g/turn</span>
         <span class="pedia-tech-needs">${escapeHtml(
@@ -193,15 +199,22 @@ export function openPedia(player: Player, focusUnit?: UnitTypeId): void {
         });
       });
 
-      // Opened from a unit? Show that unit's faction and scroll to its entry.
-      if (focusUnit && UNIT_TYPES[focusUnit]) {
-        const def = unitType(focusUnit);
-        const creature = CREATURES_BY_ID[def.base];
-        const wanted = creature.faction === faction ? 'yours' : 'theirs';
-        root.querySelector<HTMLButtonElement>(`.pedia-tab[data-tab="${wanted}"]`)?.click();
-        const card = root.querySelector(`#pedia-${CSS.escape(creature.id)}`);
-        card?.scrollIntoView({ block: 'center' });
-        card?.classList.add('pedia-highlight');
+      // Jump to whatever we were asked to show.
+      const jumpTo = (tab: string, selector: string) => {
+        root.querySelector<HTMLButtonElement>(`.pedia-tab[data-tab="${tab}"]`)?.click();
+        const target = root.querySelector(selector);
+        target?.scrollIntoView({ block: 'center' });
+        target?.classList.add('pedia-highlight');
+      };
+
+      if (focus && UNIT_TYPES[focus]) {
+        const creature = CREATURES_BY_ID[unitType(focus).base];
+        jumpTo(
+          creature.faction === faction ? 'yours' : 'theirs',
+          `#pedia-${CSS.escape(creature.id)}`,
+        );
+      } else if (focus && BUILDINGS[focus]) {
+        jumpTo('buildings', `#pedia-b-${CSS.escape(focus)}`);
       }
     },
   });

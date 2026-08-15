@@ -883,3 +883,30 @@ input[type='range']::-moz-range-thumb {
 .pedia-building {
   color: #c8b98a;
 }
+
+.build-info {
+  align-self: center;
+  width: 17px;
+  height: 17px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  border: 1px solid var(--edge);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: help;
+}
+
+.build-info:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+a.building-chip {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.building-chip:hover {
+  border-color: var(--gold);
+}

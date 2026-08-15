@@ -48,7 +48,7 @@ npm test
 | Move into fog | Allowed. The unit marches on and **halts the moment it sights an enemy** |
 | Left-drag | Pan · **Wheel** zoom · **Arrows** pan |
 | `B` | Found a city (Peons and Peasants only) |
-| `P` | Orcpedia — also on the toolbar, from any unit's name, and from unit names in the Advances screen |
+| `P` | Orcpedia — also on the toolbar. Every unit and structure named in the Advances screen links into it, as do a city's standing structures and the `?` beside each build option |
 | `F` fortify · `S` sentry · `Space` skip · `N` next idle unit · `C` centre | |
 | `T` advances · `Ctrl+S` saves · `G` grid · `Enter` end turn · `Esc` deselect | |
 | `M` | Mute. The **Sound** button opens music and effects volume sliders |
