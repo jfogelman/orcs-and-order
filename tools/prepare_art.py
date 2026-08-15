@@ -79,11 +79,10 @@ TECH_ICONS = [
     "tower-building", "not-you-again", "hammers-of-glory", "joy-making",
     "happiness", "insanity",
     "first-orc", "goblin-smarts", "suicidal-goblins", "underground-smarts",
-    "orc-meaning", "orc-together", "idiots-stick-together", "next-level-stupid",
-    "beyond-stupid", "not-just-stupid", "stupidity-for-all", "to-be-an-orc",
+    "orc-meaning", "to-be-an-orc",
     "axes", "axes-crazy", "throwing-buddies", "my-little-friend",
     "dead-messed-up", "full-of-fire",
-    "first-human", "brotherhood", "join-army", "bunches-footmen", "ten-heads",
+    "first-human",
     "see-the-world", "archery", "pointed-ears", "arrows-glory",
     "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
     "lordship",
@@ -91,6 +90,29 @@ TECH_ICONS = [
 
 # Icons are read at a glance in a crowded tree, so they stay small.
 ICON_SIZE = 48
+# Composition happens at this size and is downscaled, so stamped copies keep
+# their edges instead of turning to mush.
+ICON_WORK_SIZE = 192
+
+# Counting-ladder icons, built by stamping a single head N times rather than
+# drawn. An image generator asked for "three orc heads" returns two or four --
+# the same failure that made the group unit sprites unusable. One good head
+# stamped three times is exactly three, every time, and it re-derives itself
+# if that head is ever redrawn.
+#
+# These always win over a drawn file of the same name.
+COMPOSED_ICONS = {
+    "orc-together": ("first-orc", 2),
+    "idiots-stick-together": ("first-orc", 3),
+    "next-level-stupid": ("first-orc", 4),
+    "beyond-stupid": ("first-orc", 6),
+    "not-just-stupid": ("first-orc", 8),
+    "stupidity-for-all": ("first-orc", 10),
+    "brotherhood": ("first-human", 2),
+    "join-army": ("first-human", 3),
+    "bunches-footmen": ("first-human", 5),
+    "ten-heads": ("first-human", 10),
+}
 
 
 def close_enough(a: tuple[int, int, int], b: tuple[int, int, int], tol: int) -> bool:
@@ -409,6 +431,78 @@ def process_cutouts(
     return done, missing, failed
 
 
+def cluster_layout(n: int) -> list[tuple[float, float]]:
+    """
+    Where each stamp sits, as a fraction of the icon, mirroring the layout the
+    renderer uses for group unit sprites so the two read as the same idea.
+    Rows come back to front, so drawing in order overlaps correctly.
+    """
+    if n <= 1:
+        return [(0.0, 0.0)]
+    per_row = 2 if n <= 4 else 3 if n <= 9 else 4
+    rows: list[int] = []
+    left = n
+    while left > 0:
+        take = min(per_row, left)
+        rows.append(take)
+        left -= take
+
+    cell_w = 0.84 / per_row
+    cell_h = 0.47 / len(rows) if len(rows) > 1 else 0.0
+    out: list[tuple[float, float]] = []
+    for r, count in enumerate(rows):
+        y = (r - (len(rows) - 1) / 2) * cell_h
+        for i in range(count):
+            out.append(((i - (count - 1) / 2) * cell_w, y))
+    return out
+
+
+def compose_icons(force: bool) -> tuple[int, list[str]]:
+    """Build the counting-ladder icons by stamping a single head N times."""
+    src = SRC / "tech"
+    out = OUT / "tech"
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+
+    for target, (source_name, count) in COMPOSED_ICONS.items():
+        path = find_source(src, source_name)
+        if path is None:
+            missing.append(f"{target} (needs {source_name})")
+            continue
+        dest = out / f"{target}.png"
+        if dest.exists() and not force and dest.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        head, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            missing.append(f"{target} (could not cut out {source_name})")
+            continue
+        bbox = head.getbbox()
+        if bbox:
+            head = head.crop(bbox)
+
+        scale = max(0.42, 1.05 / (count ** 0.38))
+        stamp_w = max(1, int(ICON_WORK_SIZE * scale))
+        stamp = head.resize(
+            (stamp_w, max(1, round(head.height * stamp_w / head.width))), Image.LANCZOS
+        )
+        flipped = stamp.transpose(Image.FLIP_LEFT_RIGHT)
+
+        canvas = Image.new("RGBA", (ICON_WORK_SIZE, ICON_WORK_SIZE), (0, 0, 0, 0))
+        for i, (nx, ny) in enumerate(cluster_layout(count)):
+            piece = flipped if i % 2 else stamp
+            x = round(ICON_WORK_SIZE / 2 + nx * ICON_WORK_SIZE - piece.width / 2)
+            y = round(ICON_WORK_SIZE / 2 + ny * ICON_WORK_SIZE - piece.height / 2)
+            canvas.alpha_composite(piece, (x, y))
+
+        trimmed = canvas.crop(canvas.getbbox() or (0, 0, ICON_WORK_SIZE, ICON_WORK_SIZE))
+        trim_and_square(trimmed, ICON_SIZE).save(dest, optimize=True)
+        print(f"  tech/{target}.png  composed from {source_name} x{count}")
+        done += 1
+    return done, missing
+
+
 def process_terrain(force: bool) -> tuple[int, list[str]]:
     """
     The terrain art is a tiling sheet holding many repeats of one motif, so a few
@@ -583,6 +677,9 @@ def main() -> int:
     icons, missing_icons, failed_icons = process_cutouts(
         "tech", TECH_ICONS, force, size=ICON_SIZE, quiet_missing=True
     )
+    composed, missing_composed = compose_icons(force)
+    icons += composed
+    missing_icons.extend(missing_composed)
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
     audio, audio_before, audio_after = process_audio()
