@@ -31,6 +31,8 @@ interface Outcome {
   winner: number | null;
   combats: number;
   cities: [number, number];
+  /** Total citizens. Weighted heavily by the score, so worth watching. */
+  population: [number, number];
   units: [number, number];
   techs: [number, number];
   ladder: [number, number];
@@ -55,6 +57,10 @@ function play(seed: number): Outcome {
     winner: state.winner,
     combats: state.log.filter((e) => e.kind === 'combat').length,
     cities: [playerCities(state, 0).length, playerCities(state, 1).length],
+    population: [
+      playerCities(state, 0).reduce((n, c) => n + c.size, 0),
+      playerCities(state, 1).reduce((n, c) => n + c.size, 0),
+    ],
     units: [playerUnits(state, 0).length, playerUnits(state, 1).length],
     techs: [state.players[0].techs.length, state.players[1].techs.length],
     ladder: [deepestGroup(per(0)), deepestGroup(per(1))],
@@ -74,16 +80,20 @@ describe('faction balance across seeds', () => {
       (o) =>
         `seed ${String(o.seed).padStart(9)} T${String(o.turns).padStart(4)} ` +
         `win=${o.winner === null ? '-' : o.winner} fights=${String(o.combats).padStart(4)} ` +
-        `| orc c${o.cities[0]} u${o.units[0]} t${o.techs[0]} max×${o.ladder[0]} ` +
-        `| human c${o.cities[1]} u${o.units[1]} t${o.techs[1]} max×${o.ladder[1]}`,
+        `| orc c${o.cities[0]} p${o.population[0]} u${o.units[0]} t${o.techs[0]} max×${o.ladder[0]} ` +
+        `| human c${o.cities[1]} p${o.population[1]} u${o.units[1]} t${o.techs[1]} max×${o.ladder[1]}`,
     );
     const avg = (pick: (o: Outcome) => number) =>
       (outcomes.reduce((s, o) => s + pick(o), 0) / outcomes.length).toFixed(1);
     console.log(
       [
         ...rows,
-        `AVG  orc: cities ${avg((o) => o.cities[0])} techs ${avg((o) => o.techs[0])}`,
-        `AVG  human: cities ${avg((o) => o.cities[1])} techs ${avg((o) => o.techs[1])}`,
+        `AVG  orc:   cities ${avg((o) => o.cities[0])} pop ${avg((o) => o.population[0])} ` +
+          `units ${avg((o) => o.units[0])} techs ${avg((o) => o.techs[0])}`,
+        `AVG  human: cities ${avg((o) => o.cities[1])} pop ${avg((o) => o.population[1])} ` +
+          `units ${avg((o) => o.units[1])} techs ${avg((o) => o.techs[1])}`,
+        `wins: orc ${outcomes.filter((o) => o.winner === 0).length} / human ${outcomes.filter((o) => o.winner === 1).length}`,
+        `reached the turn limit: ${outcomes.filter((o) => o.turns > 300).length}/${outcomes.length}`,
         `decisive: ${outcomes.filter((o) => o.winner !== null).length}/${outcomes.length}`,
       ].join('\n'),
     );

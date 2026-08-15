@@ -157,8 +157,63 @@ All royalty-free, all short. Filenames stay as downloaded; map them in `audio.ts
 
 ## 3. Rebalancing
 
-See the measured numbers in `README.md`. Two things are worth knowing before touching
-any dial.
+### Measured: orcs win 78% of games, and not by fighting
+
+Eighteen seeds, two identical AIs, played to a verdict:
+
+```
+wins            orc 14   human 4        (78% orc)
+avg cities      orc  8.2  human  7.6
+avg advances    orc 17.7  human 18.6
+avg units       orc 31.2  human 34.9
+reached turn limit                 16/18
+```
+
+Fourteen of eighteen on a fair coin is about a 1.5% result, so this is real. An
+earlier six-seed read of 4–2 was *not* significant, and should not have been used to
+draw any conclusion — six seeds is enough to catch a faction being hopeless and
+nothing more.
+
+**The interesting part is how the orcs win.** They are behind on advances *and* behind
+on units. So they are not out-teching or out-fighting anyone. And 16 of 18 games ran
+to the turn limit, where the winner is decided by:
+
+```
+score = cities × 10  +  population × 3  +  advances × 5  +  units × 1
+```
+
+Humans lead the two terms that were measured and still lose, so the whole margin sits
+in **cities and citizens** — the two heaviest terms. The orc AI sprawls, and sprawl is
+what the score pays for.
+
+Both of the two games that ended by *conquest* were won by the humans.
+
+### So this is probably a scoring problem, not a faction problem
+
+Before touching faction numbers, consider that a 4X being decided by a points formula
+in 89% of games is itself the defect. Options, roughly in order of how much they
+change:
+
+1. **Re-weight the score.** `cities × 10` rewards planting settlements more than doing
+   anything with them. Population already counts, and counts three times over per
+   citizen; the per-city bonus may be double-paying for the same thing.
+2. **Make conquest achievable.** Attacking a walled, fortified city is currently a x3
+   multiplier against the attacker, and the AI never concentrates force, so wars
+   grind. If a competent attacker could actually take cities, fewer games would reach
+   the limit and the score would matter less.
+3. **Raise the turn limit** past 300 so the late game gets played out. Cheap, but it
+   makes a long game longer rather than better.
+
+### Faction levers, if they are still needed afterwards
+
+1. **Human AI caution 0.6 → 0.45.** It declines fights it would win. Cheapest possible
+   change, one number.
+2. **Human `garrisonPerCity` 2 → 1 once Walls are built.** Two per city ties up much
+   of the army standing still.
+3. Only then look at unit stats. The per-shield numbers are close: orcs lead slightly
+   on attack, humans clearly on defence, which is the intended shape.
+
+### The ladder costs are lopsided, and it is not obvious which way
 
 ### The ladder costs are lopsided, and it is not obvious which way
 
@@ -187,12 +242,15 @@ accident — and if it stays, the orcs need something back for those extra 314 b
 4. **Intermediate human rungs** (×4, ×6, ×8) to match the orc granularity. More work,
    more content, and makes the two trees feel less distinct — probably the wrong call.
 
-### Do not tune on six seeds
+### Measuring it again
 
-Four wins from six is well inside chance. `BALANCE_SEEDS=18 npm test` (or higher) is
-the honest sample when the question is "which side is stronger". Watch the *average
-advance count and city count* rather than the win column — those are far less noisy
-and move first when something is genuinely off.
+```bash
+BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
+```
+
+The report now prints population, the win split, and how many games reached the turn
+limit — that last number is the one to watch, because while it stays near 100% the
+score formula is deciding the game and faction tuning is close to pointless.
 
 ---
 

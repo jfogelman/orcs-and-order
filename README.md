@@ -131,10 +131,12 @@ Everything below is built, tested, and playable end to end. 62 tests pass
 (`npm test`), including full 300-turn AI-vs-AI games, save round-trips, and a
 determinism check.
 
-Balance, measured over six seeds of AI-vs-AI to the turn limit: 4-2 to the orcs,
-average advance counts 21.7 orc / 20.0 human, ~90 battles per game, all six games
-decisive. Eight Orcs is now reached on some seeds -- the economy buildings pushed the
-deep end of the counting ladder into range.
+Balance, measured over **eighteen** seeds of AI-vs-AI played to a verdict: **orcs win
+14–4**, while being behind on both advances (17.7 vs 18.6) and units (31.2 vs 34.9).
+They win because 16 of the 18 games reach the turn limit and are settled on score,
+which pays heavily for cities and citizens — and the orc AI sprawls. Both games that
+ended by conquest went to the humans. See [DESIGN_QUEUE.md](DESIGN_QUEUE.md); the
+likeliest fix is the scoring formula rather than the factions.
 
 ### Art status
 
