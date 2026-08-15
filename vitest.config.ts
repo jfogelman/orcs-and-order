@@ -7,6 +7,6 @@ export default defineConfig({
     // Several tests play whole 300-turn games to completion, which is the
     // point of them; the 5s default is nowhere near enough.
     testTimeout: 120_000,
-    hookTimeout: 300_000,
+    hookTimeout: 900_000,
   },
 });

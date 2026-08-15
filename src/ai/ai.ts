@@ -2,7 +2,7 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
-import { buildOptions, canFoundCity, foundCity, tileYield } from '../sim/city';
+import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield } from '../sim/city';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
@@ -211,9 +211,16 @@ function chooseProduction(
     if (settler) return { kind: 'unit', id: settler.id };
   }
 
-  // 3. Infrastructure, once a city is big enough to be worth investing in.
-  // Economy buildings come first: a city that pays for its own research
-  // compounds, whereas a second barracks does not.
+  // 3. Keep the lid on first. A city at its content limit stops growing and
+  // produces nothing at all, so a happiness building is worth more than any
+  // amount of economy sitting on top of a riot.
+  if (city.size >= contentLimit(state, city) - 1) {
+    const calming = options.buildings.find((b) => b.contentBonus);
+    if (calming) return { kind: 'building', id: calming.id };
+  }
+
+  // 4. Then infrastructure. Economy buildings come before a second barracks:
+  // a city that pays for its own research compounds, and a barracks does not.
   const wanted =
     options.buildings.find((b) => b.scienceBonus || b.goldBonus) ??
     options.buildings.find((b) => b.id === 'barracks' || b.id === 'walls');

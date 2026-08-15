@@ -216,7 +216,13 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
   const yields = cityYield(state, city);
 
   // --- food ------------------------------------------------------------
-  const surplus = yields.food - city.size * FOOD_PER_CITIZEN;
+  // A city in disorder does not grow. Without this it keeps right on growing
+  // while producing no shields and no trade, so every empire drifts into a
+  // sprawl of large permanently-rioting cities that contribute nothing but
+  // population -- which then dominates the score. It can still starve, since
+  // disorder should not conjure food either.
+  const raw = yields.food - city.size * FOOD_PER_CITIZEN;
+  const surplus = city.disorder ? Math.min(0, raw) : raw;
   city.food += surplus;
   if (city.food < 0) {
     city.food = 0;
