@@ -297,18 +297,49 @@ happening constantly. The map is a meat grinder.
 18.8; the Horde captures 18.8 and loses 21.5. The +2.7 swing is exactly the difference
 in final city count. Nothing to do with expansion behaviour at all.
 
-That last point is the live question: **why does the Kingdom win the exchange?** The
-obvious suspect is that it still has Walls and the Horde now has none — the Broken
-Catapult makes an orc city dangerous to besiege but does nothing to make it hard to
-take. If that is the cause, the catapult is under-compensating and wants either a
-larger sally bonus or a small defensive component.
+### Answered: it was the garrison, working backwards
+
+Two hypotheses, both wrong, and the second was wrong in an interesting way.
+
+**Walls were not it.** Giving the Broken Catapult a x1.35 defensive bonus changed
+nothing at all (cities 8.3→7.9, wins 5–7 either way). The Horde was not losing the
+exchange for want of fortification.
+
+**The garrison was it, in reverse.** The guess was that the Kingdom held its cities
+because it kept two defenders on each and the Horde kept one. Raising the Horde to two
+made it *dramatically worse* — cities 7.9→5.6, population 46.8→29.0, wins 5–7→2–10.
+Setting both to one produced the best balance yet.
+
+| orc / human garrison | orc cities | human cities | orc pop | human pop | wins |
+|---|---|---|---|---|---|
+| 1 / 2 | 7.9 | 12.0 | 46.8 | 68.3 | 5–7 |
+| 2 / 2 | 5.6 | 11.3 | 29.0 | 66.8 | 2–10 |
+| **1 / 1** | **9.9** | **8.5** | **56.8** | **52.7** | **7–5** |
+
+**The mechanism is an interaction with `caution`.** A cautious AI was never going to
+attack with those units, so posting them on a wall is free defence. An aggressive one
+is spending its entire army on the offensive, and every unit told to stand still is a
+city not taken. The same setting is a gain for one personality and a tax on the other.
+
+That is worth remembering before touching either dial again: **`garrisonPerCity` and
+`caution` cannot be tuned independently.**
+
+At 1/1 over 18 seeds the game comes out **9–9**, with each side leading the columns it
+should — the Kingdom on cities (10.6 v 8.9) and population (64.1 v 49.5), the Horde on
+advances (25.2 v 21.7). The scoring formula nets those against each other, which is
+exactly what it is for.
 
 ### And it reframes the turn-limit problem
 
-Forty city changes per game, and the games still run to the limit. The war is not
-stalled — it is *perfectly reciprocal*. Both sides take cities at almost exactly the
-rate they lose them, so nothing ever compounds into a collapse. Raising the turn limit
-will not help; a mechanism that makes losing cities self-reinforcing would.
+Around fifty city changes per game. The war is not stalled — it is close to
+*reciprocal*, both sides taking cities at nearly the rate they lose them, so little
+compounds into a collapse.
+
+It is no longer absolute, though: at garrison 1/1, **3 of 18 games ended by conquest**
+rather than on points, where previously it was none. Fewer defenders means cities fall
+faster than they can be replaced, at least sometimes. Pushing further in that direction
+— rather than raising the turn limit — is the thing most likely to make conquest a
+normal way for a game to end.
 
 ## 5. Also queued, from earlier
 

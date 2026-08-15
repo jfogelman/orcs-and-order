@@ -35,6 +35,8 @@ const PERSONALITIES: Record<string, AiPersonality> = {
     // cities left it permanently behind on trade, and therefore permanently
     // stuck at the bottom of its own counting ladder.
     targetCities: 6,
+    // See the note on the Kingdom's copy of this field: one defender per city
+    // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
     // The Horde's research programme is the counting ladder, with a couple of
     // detours for things to hit people with. Straying too far from the ladder
@@ -63,9 +65,26 @@ const PERSONALITIES: Record<string, AiPersonality> = {
   },
   human: {
     targetCities: 6,
-    // Two defenders per city is in character for the Kingdom, and on its own
-    // it was not the problem -- see the caution note below.
-    garrisonPerCity: 2,
+    /*
+     * Was 2, and that turned out to be the single biggest lever on faction
+     * balance -- in the opposite direction to the obvious guess. Measured over
+     * 12 seeds, as orc/human garrison:
+     *
+     *   1 / 2   orc c7.9  hum c12.0   wins 5-7
+     *   2 / 2   orc c5.6  hum c11.3   wins 2-10
+     *   1 / 1   orc c9.9  hum c 8.5   wins 7-5
+     *
+     * Garrisoning helps the Kingdom and cripples the Horde, because it
+     * interacts with `caution`. A cautious AI was not going to attack with
+     * those units anyway, so posting them on a wall is free defence. An
+     * aggressive one is spending its whole army on the offensive, and every
+     * unit told to stand still is one not taking a city.
+     *
+     * At 1/1 over 18 seeds the game comes out 9-9, with each faction leading
+     * the columns it should: the Kingdom on cities and population, the Horde
+     * on advances.
+     */
+    garrisonPerCity: 1,
     techPriority: [
       'brotherhood',
       'archery',

@@ -140,19 +140,20 @@ Balance is measured over eighteen seeds of AI-vs-AI played to a verdict:
 BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
 ```
 
-The two sides now come out level: **wins 10–8**, populations 51.9 / 53.8, cities
-8.2 / 8.6, with orcs ahead on advances (23.6 vs 21.5) and humans on army size
-(52.3 vs 42.5) — each faction leading the column it should.
+The two sides come out level over eighteen seeds: **wins 9–9**, with each faction
+ahead on the columns it should be — the Kingdom on cities (10.6 v 8.9) and population
+(64.1 v 49.5), the Horde on advances (25.2 v 21.7). The scoring formula nets those
+against one another, which is what it is for.
 
 Getting there took three changes and only one of them was the cause; the diagnosis is
 written up in [DESIGN_QUEUE.md](DESIGN_QUEUE.md). Briefly: the scoring formula was
 genuinely flawed but fixing it changed nothing, rioting cities were growing forever
 which made everything worse, and the actual culprit was a single AI timidity constant.
 
-Around 90% of games still reach the turn limit — but not for want of fighting. Cities
-change hands roughly **40 times per game**; the war is perfectly reciprocal, with each
-side taking cities at almost exactly the rate it loses them, so nothing ever compounds
-into a collapse. That, rather than conquest being too hard, is the outstanding problem.
+Around 83% of games reach the turn limit — but not for want of fighting. Cities change
+hands roughly **50 times per game**; the war is close to reciprocal, each side taking
+cities at nearly the rate it loses them, so little compounds into a collapse. That,
+rather than conquest being too hard, is the outstanding problem.
 
 ### Art status
 
