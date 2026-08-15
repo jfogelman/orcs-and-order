@@ -261,7 +261,8 @@ Same preamble as the advance icons, then:
 |---|---|---|
 | `barracks` | both | a wooden weapon rack holding three spears and a shield |
 | `granary` | both | a fat clay storage jar overflowing with golden grain |
-| `walls` | both | a short run of grey stone battlement with a closed gate |
+| `walls` | human | a short run of grey stone battlement with a closed gate |
+| `catapult` | orc | a crude wooden catapult listing badly to one side, one wheel square and the other missing entirely, throwing arm snapped |
 | `totem` | orc | a carved wooden totem pole with a snarling painted face and feathers |
 | `chapel` | human | a small white chapel with a steep red roof and one round window |
 | `treasury` | orc | a battered wooden chest overflowing with gold coins, lid hanging off, entirely unguarded |

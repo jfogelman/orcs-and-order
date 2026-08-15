@@ -21,6 +21,12 @@ export interface BuildingDef {
   goldBonus?: number;
   /** Extra share of this city's research output, as a fraction. */
   scienceBonus?: number;
+  /**
+   * Extra attack, as a fraction, for a unit attacking *out of* this city.
+   * The opposite of Walls: it does nothing at all for a defender sitting
+   * still, and everything for one that comes out swinging.
+   */
+  sallyBonus?: number;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -45,11 +51,25 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   walls: {
     id: 'walls',
     name: 'Walls',
-    faction: 'both',
+    // Human-only. The Horde attempts the same advance and arrives somewhere
+    // else entirely -- see the Broken Catapult.
+    faction: 'human',
     cost: 60,
     upkeep: 1,
     defenseMult: 2,
     blurb: 'Doubles the defence of everyone inside. Astonishingly effective for a pile of rocks.',
+  },
+  catapult: {
+    id: 'catapult',
+    name: 'Broken Catapult',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    sallyBonus: 1,
+    blurb:
+      "This would have been a marvellous ranged weapon if anybody here " +
+      'understood wheels. As it stands, everyone gets very worked up and ' +
+      'runs out to fight instead, which turns out to work.',
   },
   totem: {
     id: 'totem',

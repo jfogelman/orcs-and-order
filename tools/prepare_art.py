@@ -91,7 +91,7 @@ TECH_ICONS = [
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
 # advance icons: a missing one is simply left out.
 BUILDING_ICONS = [
-    "barracks", "granary", "walls", "totem", "chapel",
+    "barracks", "granary", "walls", "catapult", "totem", "chapel",
     "treasury", "market", "thinkingRock", "scriptorium",
 ]
 

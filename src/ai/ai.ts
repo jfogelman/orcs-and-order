@@ -50,6 +50,9 @@ const PERSONALITIES: Record<string, AiPersonality> = {
       'beyond-stupid',
       'not-just-stupid',
       'stupidity-for-all',
+      // Wall Building, for the Horde, produces a Broken Catapult rather than
+      // a wall -- so it is worth having for entirely different reasons.
+      'wall-building',
       'axes-crazy',
       'my-little-friend',
       'dead-messed-up',
@@ -253,7 +256,9 @@ function chooseProduction(
   // a city that pays for its own research compounds, and a barracks does not.
   const wanted =
     options.buildings.find((b) => b.scienceBonus || b.goldBonus) ??
-    options.buildings.find((b) => b.id === 'barracks' || b.id === 'walls');
+    options.buildings.find(
+      (b) => b.id === 'barracks' || b.defenseMult !== undefined || b.sallyBonus !== undefined,
+    );
   if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
     return { kind: 'building', id: wanted.id };
   }

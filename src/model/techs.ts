@@ -78,9 +78,11 @@ export const TECHS: TechDef[] = [
     cost: 75,
     prereqs: ['bridge-building'],
     units: [],
-    buildings: ['walls'],
+    buildings: ['walls', 'catapult'],
     flags: [],
-    flavor: 'A bridge, but standing up and unwelcoming.',
+    flavor:
+      'A bridge, but standing up and unwelcoming. The Horde attends the same ' +
+      'lecture and comes away with a catapult.',
   },
   {
     id: 'tower-building',

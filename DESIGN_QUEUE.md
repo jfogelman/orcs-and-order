@@ -253,24 +253,30 @@ score formula is deciding the game and faction tuning is close to pointless.
 
 ---
 
-## 4. Give the orcs `wall-building`
+## 4. Fortification, resolved — and what it left behind
 
-`wall-building` sits in the human AI's `techPriority` and not the orc's, so in
-practice only the Kingdom ever puts walls up. That was a minor quirk until captured
-cities started keeping their walls, which made walls considerably more valuable and
-handed the advantage to whoever builds them.
+The orcs no longer get walls at all. Walls are human-only; **Wall Building** now yields
+a **Broken Catapult** for the Horde instead, which gives no defensive bonus whatsoever
+and doubles the attack of any unit attacking *out of* the city.
 
-A 10-seed run after that change had humans on 12.3 cities and 75.2 population against
-the orcs' 8.6 and 48.3 — though the win split was only 4–6, so this is a signal from
-the metrics rather than from the results.
+> *This would have been a marvellous ranged weapon if anybody here understood wheels.
+> As it stands, everyone gets very worked up and runs out to fight instead, which turns
+> out to work.*
 
-Add `'wall-building'` to the orc `techPriority` in `src/ai/ai.ts` and re-measure at 18
-seeds. Watch population and city counts rather than wins; they move first and are far
-less noisy.
+Both factions research the same advance and get the thing they are capable of, which
+is the joke the whole tech tree is built on. Mechanically it makes an orc city
+dangerous to stand next to rather than hard to get into — you cannot starve them out
+behind a wall, because there is no wall and they are coming out.
 
-Worth deciding at the same time whether the orcs *should* fortify at all — "the Horde
-does not build walls" is a defensible piece of characterisation, in which case they
-need compensation elsewhere instead.
+**Still open: the orcs are behind on the wider metrics.** Twelve seeds after the
+change: cities 8.3 / 11.6, population 48.7 / 65.9, units 42.5 / 63.8, with the orcs
+ahead only on advances (23.6 / 21.7). Wins were 5–7, which is level, but the metric
+gap is wide enough to be worth a look and it is *not* obviously caused by the catapult
+— the same gap was there before it existed. The likelier culprit is that the human AI
+now expands to 11-plus cities where the orc AI stops around 8.
+
+Both AIs use `targetCities: 6`, so something is letting the Kingdom keep founding past
+its own target. Worth finding before tuning anything else.
 
 ## 5. Also queued, from earlier
 

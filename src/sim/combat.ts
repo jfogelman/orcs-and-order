@@ -27,6 +27,8 @@ export interface StrengthBreakdown {
   terrainMult: number;
   wallsMult: number;
   siegeMult: number;
+  /** Attack multiplier from sallying out of a city that has the means. */
+  sallyMult: number;
   berserk: boolean;
 }
 
@@ -37,9 +39,20 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   const berserk = hasFlag(owner, 'berserk');
 
   const siegeMult = defenderCity ? type.siegeBonus : 1;
+
+  // Charging out of your own city with something encouraging behind you. The
+  // Horde's answer to walls: no help at all if you sit still, considerable
+  // help if you come out and meet them.
+  const homeCity = cityAt(state, attacker.x, attacker.y);
+  const sallyMult =
+    homeCity && homeCity.owner === attacker.owner
+      ? 1 + homeCity.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.sallyBonus ?? 0), 0)
+      : 1;
+
   let total = type.attack;
   if (attacker.veteran) total *= VETERAN_BONUS;
   total *= siegeMult;
+  total *= sallyMult;
   if (berserk) total *= 1.25;
 
   return {
@@ -50,6 +63,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
     terrainMult: 1,
     wallsMult: 1,
     siegeMult,
+    sallyMult,
     berserk,
   };
 }
@@ -97,6 +111,7 @@ export function defenseStrength(
     terrainMult: terrain.defense,
     wallsMult,
     siegeMult: 1,
+    sallyMult: 1,
     berserk,
   };
 }

@@ -4,7 +4,8 @@ import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
 import type { BuildingId, City, GameState } from '../src/model/types';
 import { cityGoldBonus, cityScienceBonus, foundCity } from '../src/sim/city';
-import { createGame, playerCities } from '../src/sim/gamestate';
+import { createGame, playerCities, spawnUnit } from '../src/sim/gamestate';
+import { attackStrength, defenseStrength } from '../src/sim/combat';
 import { unlockedBuildings } from '../src/sim/research';
 import {
   beginPlayerTurn,
@@ -184,5 +185,64 @@ describe('score', () => {
     expect(s.population + s.advances + s.buildings).toBe(s.total);
     expect(s.population).toBe(8 * SCORE_WEIGHTS.population);
     expect(s.buildings).toBe(3 * SCORE_WEIGHTS.building);
+  });
+});
+
+describe('the Broken Catapult', () => {
+  /** An orc city with the given buildings, and a defender parked next door. */
+  function skirmish(buildings: BuildingId[]) {
+    const state = createGame({ seed: 55, width: 30, height: 20 });
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.terrain.fill('grass');
+    state.cities.push({
+      id: 1, owner: 0, name: 'Skullgrind', x: 10, y: 10, size: 4,
+      food: 0, shields: 0, buildings: [...buildings],
+      producing: { kind: 'coin' }, workedTiles: [], disorder: false, foundedTurn: 1,
+    });
+    const garrison = spawnUnit(state, 0, 'orc', 10, 10);
+    const besieger = spawnUnit(state, 1, 'footman', 11, 10);
+    return { state, garrison, besieger };
+  }
+
+  it('is orc-only, and Walls are human-only', () => {
+    expect(BUILDINGS.catapult.faction).toBe('orc');
+    expect(BUILDINGS.walls.faction).toBe('human');
+    const tech = TECHS.find((t) => t.id === 'wall-building')!;
+    expect(tech.buildings).toEqual(expect.arrayContaining(['walls', 'catapult']));
+  });
+
+  it('does nothing at all for a defender standing still', () => {
+    const bare = skirmish([]);
+    const armed = skirmish(['catapult']);
+    // The garrison is the one being attacked here, not attacking.
+    expect(defenseStrength(armed.state, armed.garrison).total).toBe(
+      defenseStrength(bare.state, bare.garrison).total,
+    );
+  });
+
+  it('sharpens a garrison that comes out swinging', () => {
+    const bare = skirmish([]);
+    const armed = skirmish(['catapult']);
+    const before = attackStrength(bare.state, bare.garrison, bare.besieger).total;
+    const after = attackStrength(armed.state, armed.garrison, armed.besieger).total;
+    expect(after).toBeCloseTo(before * (1 + BUILDINGS.catapult.sallyBonus!));
+  });
+
+  it('does not help a unit attacking from open ground', () => {
+    const armed = skirmish(['catapult']);
+    // Same orc, same target, but standing outside the city.
+    armed.garrison.x = 9;
+    armed.garrison.y = 11;
+    armed.besieger.x = 10;
+    armed.besieger.y = 11;
+    const bare = skirmish([]);
+    bare.garrison.x = 9;
+    bare.garrison.y = 11;
+    bare.besieger.x = 10;
+    bare.besieger.y = 11;
+    expect(attackStrength(armed.state, armed.garrison, armed.besieger).total).toBe(
+      attackStrength(bare.state, bare.garrison, bare.besieger).total,
+    );
   });
 });
