@@ -30,7 +30,11 @@ interface Outcome {
   turns: number;
   winner: number | null;
   combats: number;
-  /** Cities that changed hands. The measure of whether conquest works. */
+  /**
+   * Cities that changed hands, counted by watching ownership rather than by
+   * reading the log: `log()` keeps only the last 400 entries, so anything
+   * counted from it over a 300-turn game is a floor and not a total.
+   */
   captures: number;
   cities: [number, number];
   /** Total citizens. Weighted heavily by the score, so worth watching. */
@@ -48,9 +52,21 @@ function play(seed: number): Outcome {
   const state = createGame({ seed });
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
+
+  const owners = new Map<number, number>();
+  let captures = 0;
+  const sweep = () => {
+    for (const c of state.cities) {
+      const was = owners.get(c.id);
+      if (was !== undefined && was !== c.owner) captures++;
+      owners.set(c.id, c.owner);
+    }
+  };
+  sweep();
   for (let i = 0; i < HALF_TURNS && state.winner === null; i++) {
     runAiTurn(state, state.activePlayer);
     endPlayerTurn(state);
+    sweep();
   }
   const per = (p: number) => playerUnits(state, p).map((u) => u.type);
   return {
@@ -58,7 +74,7 @@ function play(seed: number): Outcome {
     turns: state.turn,
     winner: state.winner,
     combats: state.log.filter((e) => e.kind === 'combat').length,
-    captures: state.log.filter((e) => e.cue === 'capture').length,
+    captures,
     cities: [playerCities(state, 0).length, playerCities(state, 1).length],
     population: [
       playerCities(state, 0).reduce((n, c) => n + c.size, 0),

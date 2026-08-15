@@ -149,8 +149,10 @@ written up in [DESIGN_QUEUE.md](DESIGN_QUEUE.md). Briefly: the scoring formula w
 genuinely flawed but fixing it changed nothing, rioting cities were growing forever
 which made everything worse, and the actual culprit was a single AI timidity constant.
 
-Around 94% of games still reach the turn limit and are decided on points rather than
-conquest, which is now the largest outstanding problem.
+Around 90% of games still reach the turn limit — but not for want of fighting. Cities
+change hands roughly **40 times per game**; the war is perfectly reciprocal, with each
+side taking cities at almost exactly the rate it loses them, so nothing ever compounds
+into a collapse. That, rather than conquest being too hard, is the outstanding problem.
 
 ### Art status
 

@@ -268,15 +268,47 @@ is the joke the whole tech tree is built on. Mechanically it makes an orc city
 dangerous to stand next to rather than hard to get into — you cannot starve them out
 behind a wall, because there is no wall and they are coming out.
 
-**Still open: the orcs are behind on the wider metrics.** Twelve seeds after the
-change: cities 8.3 / 11.6, population 48.7 / 65.9, units 42.5 / 63.8, with the orcs
-ahead only on advances (23.6 / 21.7). Wins were 5–7, which is level, but the metric
-gap is wide enough to be worth a look and it is *not* obviously caused by the catapult
-— the same gap was there before it existed. The likelier culprit is that the human AI
-now expands to 11-plus cities where the orc AI stops around 8.
+### Answered: why the Kingdom finishes with more cities
 
-Both AIs use `targetCities: 6`, so something is letting the Kingdom keep founding past
-its own target. Worth finding before tuning anything else.
+The premise was wrong, and so was the first round of measurement.
+
+Counting foundings and captures **from the log undercounts badly**: `log()` keeps only
+the last 400 entries, so over a 300-turn game most of the history has already been
+discarded. Every capture figure quoted before this — 5.5, then 9.4, then 11.4 per game
+— was a floor, not a total. Counting properly, by diffing city ownership every
+half-turn:
+
+| | founded | captured | lost | final |
+|---|---|---|---|---|
+| orc | 11.7 | 18.8 | 21.5 | 9.0 |
+| human | 9.8 | 21.5 | 18.8 | 12.5 |
+
+Three things fall out of that.
+
+**Neither side over-expands.** The orcs actually found *more* cities than the humans.
+`targetCities` is respected at every instant — what happens is that both sides keep
+*losing* cities and re-founding, twenty-odd times a game each, so the number founded
+over a whole game bears no relation to the target at any moment in it.
+
+**Cities change hands about 40 times per game.** Conquest is not failing; it is
+happening constantly. The map is a meat grinder.
+
+**The Kingdom's extra cities are entirely a combat margin.** It captures 21.5 and loses
+18.8; the Horde captures 18.8 and loses 21.5. The +2.7 swing is exactly the difference
+in final city count. Nothing to do with expansion behaviour at all.
+
+That last point is the live question: **why does the Kingdom win the exchange?** The
+obvious suspect is that it still has Walls and the Horde now has none — the Broken
+Catapult makes an orc city dangerous to besiege but does nothing to make it hard to
+take. If that is the cause, the catapult is under-compensating and wants either a
+larger sally bonus or a small defensive component.
+
+### And it reframes the turn-limit problem
+
+Forty city changes per game, and the games still run to the limit. The war is not
+stalled — it is *perfectly reciprocal*. Both sides take cities at almost exactly the
+rate they lose them, so nothing ever compounds into a collapse. Raising the turn limit
+will not help; a mechanism that makes losing cities self-reinforcing would.
 
 ## 5. Also queued, from earlier
 
