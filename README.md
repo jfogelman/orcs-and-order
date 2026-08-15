@@ -54,10 +54,12 @@ npm test
 | `M` | Mute. The **Sound** button opens music and effects volume sliders |
 
 **Reading the map.** A blue wash marks everywhere the selected unit can reach *this
-turn*; red marks what it can attack. Hovering shows a dashed line — a proposal. Once
-ordered, the route becomes a **solid blue line with a ring at the destination**: a
-standing march order the unit resumes every turn until it arrives. The readout tells
-you how many turns that will take.
+turn*; red marks what it can attack. Hovering anywhere shows the route, drawn in two
+tones: **solid for the part walked this turn, faded for everything beyond it**, with a
+ring at the destination and the number of turns the march will take.
+
+Clicking a destination out of reach this turn is fine — the unit sets off and keeps
+going each turn until it arrives, halting early if it sights an enemy.
 
 **Research is never chosen for you.** Beakers bank up until you pick a target, so you
 are asked rather than assigned; the tech tree opens by itself whenever nothing is

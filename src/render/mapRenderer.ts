@@ -9,6 +9,19 @@ import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
 import { TerrainLayer } from './terrainLayer';
 
+/**
+ * A planned route, split at the point this turn's movement runs out. Drawn in
+ * two colours so "how far do I get now" is readable at a glance rather than
+ * something to be counted out tile by tile.
+ */
+export interface RoutePreview {
+  tiles: Array<[number, number]>;
+  /** Index one past the last tile reachable this turn. */
+  thisTurn: number;
+  /** Whole turns the whole march will take. */
+  turns: number;
+}
+
 export interface MapOverlay {
   selectedUnitId: number | null;
   hover: { x: number; y: number } | null;
@@ -17,9 +30,9 @@ export interface MapOverlay {
   /** Tiles the selected unit could attack right now. */
   attacks: Set<number> | null;
   /** Preview of the route to the hovered tile. */
-  path: Array<[number, number]> | null;
+  path: RoutePreview | null;
   /** The selected unit's standing march order, if it has one. */
-  gotoPath: Array<[number, number]> | null;
+  gotoPath: RoutePreview | null;
   /** Tiles worked by the city currently open, drawn as a highlight ring. */
   workRing: Set<number> | null;
   showGrid: boolean;
@@ -237,18 +250,11 @@ export class MapRenderer {
     // --- march orders and path preview -----------------------------------
     // The standing order is a solid line the unit will actually walk; the
     // hover preview is dashed, because it is only a proposal.
-    if (overlay.gotoPath && overlay.gotoPath.length > 1) {
-      this.drawRoute(ctx, cam, overlay.gotoPath, 'rgba(140,215,255,0.85)', false);
-      const end = overlay.gotoPath[overlay.gotoPath.length - 1];
-      const s = cam.tileToScreen(end[0], end[1]);
-      ctx.strokeStyle = 'rgba(140,215,255,0.95)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.3, 0, Math.PI * 2);
-      ctx.stroke();
+    if (overlay.gotoPath) {
+      this.drawPreview(ctx, cam, overlay.gotoPath, '140,215,255', false);
     }
-    if (overlay.path && overlay.path.length > 1) {
-      this.drawRoute(ctx, cam, overlay.path, 'rgba(255,240,180,0.9)', true);
+    if (overlay.path) {
+      this.drawPreview(ctx, cam, overlay.path, '255,240,180', true);
     }
 
     // --- hover cursor ----------------------------------------------------
@@ -257,6 +263,49 @@ export class MapRenderer {
       ctx.strokeStyle = 'rgba(255,255,255,0.55)';
       ctx.lineWidth = 2;
       ctx.strokeRect(s.x + 1, s.y + 1, size - 2, size - 2);
+    }
+  }
+
+  /**
+   * Draw a route in two tones: solid for the part walked this turn, faded for
+   * everything beyond it, with the number of turns marked at the destination.
+   */
+  private drawPreview(
+    ctx: CanvasRenderingContext2D,
+    cam: Camera,
+    preview: RoutePreview,
+    rgb: string,
+    dashed: boolean,
+  ): void {
+    const { tiles, thisTurn, turns } = preview;
+    if (tiles.length < 2) return;
+    const size = cam.tileSize;
+
+    if (thisTurn < tiles.length) {
+      // The later legs first, so this turn's segment draws over the join.
+      this.drawRoute(ctx, cam, tiles.slice(thisTurn - 1), `rgba(${rgb},0.32)`, dashed);
+    }
+    this.drawRoute(ctx, cam, tiles.slice(0, thisTurn), `rgba(${rgb},0.95)`, dashed);
+
+    const end = tiles[tiles.length - 1];
+    const s = cam.tileToScreen(end[0], end[1]);
+    ctx.strokeStyle = `rgba(${rgb},0.95)`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (turns > 1 && size >= 24) {
+      const label = `${turns}`;
+      ctx.font = `bold ${Math.round(size * 0.3)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.19, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(${rgb},1)`;
+      ctx.fillText(label, s.x + size / 2, s.y + size / 2 + 1);
     }
   }
 

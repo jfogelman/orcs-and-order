@@ -160,6 +160,33 @@ export function estimateTurns(
   return turns;
 }
 
+/**
+ * How far along a route the unit gets before this turn's movement runs out.
+ *
+ * Returned as an index into `route`, one past the last tile it can reach, so
+ * `route.slice(0, stepsThisTurn(...))` is exactly the part of the march that
+ * happens now and the rest is what happens later.
+ */
+export function stepsThisTurn(
+  state: GameState,
+  unit: Unit,
+  route: Array<[number, number]>,
+): number {
+  if (route.length < 2) return route.length;
+  const owner = state.players[unit.owner];
+  const type = unitType(unit.type);
+  let left = unit.moves;
+  let i = 1;
+  for (; i < route.length; i++) {
+    if (left <= 0) break;
+    const [x, y] = route[i];
+    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    // Any movement left always buys one more step, however rough the ground.
+    left -= Math.min(cost, left);
+  }
+  return i;
+}
+
 /** Route to a destination, ignoring this turn's movement budget. */
 export function routeTo(
   state: GameState,

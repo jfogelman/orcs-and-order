@@ -11,7 +11,7 @@ import { unitType } from './model/units';
 import type { City, GameState, Unit } from './model/types';
 import { Camera } from './render/camera';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
-import type { MapOverlay } from './render/mapRenderer';
+import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
 import { canFoundCity, foundCity, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
@@ -22,6 +22,7 @@ import {
   moveToward,
   reachableTiles,
   routeTo,
+  stepsThisTurn,
   tryStep,
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
@@ -144,7 +145,7 @@ class App {
     this.overlay.attacks = attackTargets(this.state, unit);
     // A standing order is invisible otherwise, and looks like it was forgotten.
     this.overlay.gotoPath = unit.goto
-      ? routeTo(this.state, unit, unit.goto.x, unit.goto.y)
+      ? this.previewTo(unit, unit.goto.x, unit.goto.y)
       : null;
     this.updatePathPreview();
   }
@@ -160,7 +161,18 @@ class App {
       this.overlay.path = null;
       return;
     }
-    this.overlay.path = routeTo(this.state, unit, hover.x, hover.y);
+    this.overlay.path = this.previewTo(unit, hover.x, hover.y);
+  }
+
+  /** A route, split at the point this turn's movement runs out. */
+  private previewTo(unit: Unit, x: number, y: number): RoutePreview | null {
+    const tiles = routeTo(this.state, unit, x, y);
+    if (!tiles || tiles.length < 2) return null;
+    return {
+      tiles,
+      thisTurn: stepsThisTurn(this.state, unit, tiles),
+      turns: estimateTurns(this.state, unit, tiles),
+    };
   }
 
   /** Jump to the next unit that still has something to do. */
@@ -576,13 +588,18 @@ class App {
       return;
     }
 
-    // Left-click on open ground doubles as a move order, which is what most
-    // people reach for first. Ordering a unit *into* one of your own cities is
-    // a right-click, since a left-click there means "show me this city".
+    // Left-click on open ground is a move order at any distance. It used to
+    // act only within this turn's reach, so clicking anywhere further simply
+    // deselected the unit and nothing happened -- which reads as the game
+    // ignoring the click. Longer marches are carried over turn by turn.
     const selected = this.selected;
     if (selected) {
       const i = idx(x, y, this.state.width);
-      if (this.overlay.reachable?.has(i) || this.overlay.attacks?.has(i)) {
+      if (this.overlay.attacks?.has(i) || this.overlay.reachable?.has(i)) {
+        this.actOn(x, y);
+        return;
+      }
+      if (routeTo(this.state, selected, x, y)) {
         this.actOn(x, y);
         return;
       }
@@ -713,9 +730,7 @@ class App {
           ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
-                  this.overlay.gotoPath
-                    ? ` &middot; ~${estimateTurns(this.state, unit, this.overlay.gotoPath)} turns`
-                    : ''
+                  this.overlay.gotoPath ? ` &middot; ~${this.overlay.gotoPath.turns} turns` : ''
                 }</div>`
               : ''
           }

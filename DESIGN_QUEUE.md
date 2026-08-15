@@ -253,7 +253,26 @@ score formula is deciding the game and faction tuning is close to pointless.
 
 ---
 
-## 4. Also queued, from earlier
+## 4. Give the orcs `wall-building`
+
+`wall-building` sits in the human AI's `techPriority` and not the orc's, so in
+practice only the Kingdom ever puts walls up. That was a minor quirk until captured
+cities started keeping their walls, which made walls considerably more valuable and
+handed the advantage to whoever builds them.
+
+A 10-seed run after that change had humans on 12.3 cities and 75.2 population against
+the orcs' 8.6 and 48.3 — though the win split was only 4–6, so this is a signal from
+the metrics rather than from the results.
+
+Add `'wall-building'` to the orc `techPriority` in `src/ai/ai.ts` and re-measure at 18
+seeds. Watch population and city counts rather than wins; they move first and are far
+less noisy.
+
+Worth deciding at the same time whether the orcs *should* fortify at all — "the Horde
+does not build walls" is a defensible piece of characterisation, in which case they
+need compensation elsewhere instead.
+
+## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
   garrisons it. Would give idle late-game units a job, and would make the Goblin
