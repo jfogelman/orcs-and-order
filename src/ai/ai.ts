@@ -57,9 +57,9 @@ const PERSONALITIES: Record<string, AiPersonality> = {
   },
   human: {
     targetCities: 6,
-    // Was 2. Two defenders per city tied up most of the Kingdom's army
-    // standing still, which is in character but was costing it every game.
-    garrisonPerCity: 1,
+    // Two defenders per city is in character for the Kingdom, and on its own
+    // it was not the problem -- see the caution note below.
+    garrisonPerCity: 2,
     techPriority: [
       'brotherhood',
       'archery',
@@ -75,9 +75,18 @@ const PERSONALITIES: Record<string, AiPersonality> = {
       'run-you-through',
       'arrows-glory',
     ],
-    // Was 0.6, at which it declined fights it would have won and let the Horde
-    // pick its army apart a unit at a time.
-    caution: 0.45,
+    // The single most sensitive number in the file, and the only one that
+    // moved faction balance at all. Measured over 18 seeds:
+    //
+    //   0.60   orc 14-4   at this setting the Kingdom declined fights it
+    //                     would have won and was picked apart a unit at a time
+    //   0.52   orc 12-6
+    //   0.48   orc 10-8   populations 51.9 / 53.8 -- level
+    //   0.45   orc  7-11  overcorrected
+    //
+    // Garrison size, by contrast, changed the win split not at all: 1 and 2
+    // both gave 7-11 at caution 0.45.
+    caution: 0.48,
   },
 };
 

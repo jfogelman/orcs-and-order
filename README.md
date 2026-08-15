@@ -137,14 +137,17 @@ Balance is measured over eighteen seeds of AI-vs-AI played to a verdict:
 BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
 ```
 
-That measurement found the orcs winning 14–4 while *behind* on both advances and
-units — they were winning on a scoring formula that paid a flat 10 points per city on
-top of population, which rewarded planting settlements and never developing them. The
-formula is now `population × 4 + advances × 6 + buildings × 4`, with no per-city term
-and no credit for army size. See [DESIGN_QUEUE.md](DESIGN_QUEUE.md).
+The two sides now come out level: **wins 10–8**, populations 51.9 / 53.8, cities
+8.2 / 8.6, with orcs ahead on advances (23.6 vs 21.5) and humans on army size
+(52.3 vs 42.5) — each faction leading the column it should.
 
-Around 90% of games still reach the turn limit and are decided on points at all, which
-is the larger outstanding problem.
+Getting there took three changes and only one of them was the cause; the diagnosis is
+written up in [DESIGN_QUEUE.md](DESIGN_QUEUE.md). Briefly: the scoring formula was
+genuinely flawed but fixing it changed nothing, rioting cities were growing forever
+which made everything worse, and the actual culprit was a single AI timidity constant.
+
+Around 94% of games still reach the turn limit and are decided on points rather than
+conquest, which is now the largest outstanding problem.
 
 ### Art status
 

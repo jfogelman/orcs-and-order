@@ -183,17 +183,25 @@ they never did before.
 It also made the imbalance *worse* — orcs went to 4–0, leading on every metric — which
 was the useful part, because it isolated the cause.
 
-**3. The human AI was the problem all along.** Two numbers:
+**3. The human AI was the problem all along** — and specifically one number in it.
+`caution` is how good the odds must look before the AI will attack. At 0.6 the Kingdom
+declined fights it would have won, and the Horde picked it apart a unit at a time.
 
-| | was | now |
-|---|---|---|
-| `garrisonPerCity` | 2 | 1 |
-| `caution` | 0.6 | 0.45 |
+Swept over 18 seeds each:
 
-Two defenders per city tied up most of the Kingdom's army standing still, and at 0.6
-caution it declined fights it would have won while the Horde picked it apart a unit at
-a time. After the change the two sides are level: cities 7.5 / 8.8, population
-50.0 / 50.8, advances 22.0 / 20.8, wins 3–3.
+| `caution` | wins (orc–human) | orc pop | human pop |
+|---|---|---|---|
+| 0.60 | 14–4 | 74.9 | 60.4 |
+| 0.52 | 12–6 | 54.1 | 53.4 |
+| **0.48** | **10–8** | **51.9** | **53.8** |
+| 0.45 | 7–11 | 48.5 | 63.5 |
+
+Settled at **0.48**: wins 10–8, populations within 4%, cities 8.2 / 8.6. Each side
+leads a different column — orcs on advances (23.6 vs 21.5), humans on army size
+(52.3 vs 42.5) — which is the intended shape of the two factions.
+
+`garrisonPerCity` turned out to be a red herring: 1 and 2 gave *identical* 7–11 splits
+at caution 0.45, so it was left at 2, which suits the Kingdom's character.
 
 **The lesson worth keeping:** the win column pointed at the factions, the metrics
 pointed at the score, and the cause was neither. Always check whether a fix actually

@@ -71,9 +71,15 @@ describe('faction balance across seeds', () => {
   // Played once in setup rather than at import time, so vitest attributes the
   // cost to the suite and the summary actually reaches the console.
   let outcomes: Outcome[] = [];
-  beforeAll(() => {
-    outcomes = SEEDS.map(play);
-  }, 300_000);
+  beforeAll(
+    () => {
+      outcomes = SEEDS.map(play);
+    },
+    // Scale with the sample rather than hard-coding a number: an explicit
+    // timeout here overrides vitest.config.ts entirely, so a fixed value
+    // silently caps how many seeds can ever be run.
+    Math.max(120_000, SEED_COUNT * 40_000),
+  );
 
   it('reports the shape of a typical game', () => {
     const rows = outcomes.map(
