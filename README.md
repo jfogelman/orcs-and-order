@@ -131,12 +131,20 @@ Everything below is built, tested, and playable end to end. 62 tests pass
 (`npm test`), including full 300-turn AI-vs-AI games, save round-trips, and a
 determinism check.
 
-Balance, measured over **eighteen** seeds of AI-vs-AI played to a verdict: **orcs win
-14–4**, while being behind on both advances (17.7 vs 18.6) and units (31.2 vs 34.9).
-They win because 16 of the 18 games reach the turn limit and are settled on score,
-which pays heavily for cities and citizens — and the orc AI sprawls. Both games that
-ended by conquest went to the humans. See [DESIGN_QUEUE.md](DESIGN_QUEUE.md); the
-likeliest fix is the scoring formula rather than the factions.
+Balance is measured over eighteen seeds of AI-vs-AI played to a verdict:
+
+```bash
+BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
+```
+
+That measurement found the orcs winning 14–4 while *behind* on both advances and
+units — they were winning on a scoring formula that paid a flat 10 points per city on
+top of population, which rewarded planting settlements and never developing them. The
+formula is now `population × 4 + advances × 6 + buildings × 4`, with no per-city term
+and no credit for army size. See [DESIGN_QUEUE.md](DESIGN_QUEUE.md).
+
+Around 90% of games still reach the turn limit and are decided on points at all, which
+is the larger outstanding problem.
 
 ### Art status
 

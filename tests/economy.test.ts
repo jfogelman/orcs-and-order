@@ -6,7 +6,13 @@ import type { BuildingId, City, GameState } from '../src/model/types';
 import { cityGoldBonus, cityScienceBonus, foundCity } from '../src/sim/city';
 import { createGame, playerCities } from '../src/sim/gamestate';
 import { unlockedBuildings } from '../src/sim/research';
-import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
+import {
+  beginPlayerTurn,
+  endPlayerTurn,
+  playerScore,
+  scoreBreakdown,
+  SCORE_WEIGHTS,
+} from '../src/sim/turn';
 
 /**
  * The economy buildings multiply the city they stand in, not the empire, so
@@ -115,5 +121,68 @@ describe('economy buildings', () => {
       playerCities(state, p.id).flatMap((c) => c.buildings.filter((b) => economic.has(b))),
     );
     expect(built.length, 'no economy building was ever put up').toBeGreaterThan(0);
+  });
+});
+
+describe('score', () => {
+  /** A city with a given size and building count, on a throwaway map. */
+  function empire(spec: Array<{ size: number; buildings: number }>): GameState {
+    const state = createGame({ seed: 99, width: 40, height: 30 });
+    state.cities.length = 0;
+    spec.forEach((s, i) => {
+      state.cities.push({
+        id: i + 1,
+        owner: 0,
+        name: `City ${i}`,
+        x: 5 + i * 3,
+        y: 5,
+        size: s.size,
+        food: 0,
+        shields: 0,
+        buildings: (['barracks', 'granary', 'walls', 'totem'] as BuildingId[]).slice(
+          0,
+          s.buildings,
+        ),
+        producing: { kind: 'coin' },
+        workedTiles: [],
+        disorder: false,
+        foundedTurn: 1,
+      });
+    });
+    return state;
+  }
+
+  it('pays nothing for merely owning a city', () => {
+    // Six empty size-1 outposts versus one of them. The difference must be
+    // exactly the five extra citizens, with no per-city bonus on top.
+    const sprawl = playerScore(empire(Array(6).fill({ size: 1, buildings: 0 })), 0);
+    const single = playerScore(empire([{ size: 1, buildings: 0 }]), 0);
+    expect(sprawl - single).toBe(5 * SCORE_WEIGHTS.population);
+  });
+
+  it('ranks a developed empire above a wider empty one', () => {
+    // This is the behaviour the old formula got wrong: planting flags beat
+    // building anything.
+    const wide = playerScore(empire(Array(10).fill({ size: 1, buildings: 0 })), 0);
+    const deep = playerScore(empire(Array(3).fill({ size: 8, buildings: 3 })), 0);
+    expect(deep).toBeGreaterThan(wide);
+  });
+
+  it('counts structures and advances', () => {
+    const bare = empire([{ size: 4, buildings: 0 }]);
+    const built = empire([{ size: 4, buildings: 3 }]);
+    expect(playerScore(built, 0) - playerScore(bare, 0)).toBe(3 * SCORE_WEIGHTS.building);
+
+    const learned = empire([{ size: 4, buildings: 0 }]);
+    learned.players[0].techs.push('mapmaking', 'not-you-again');
+    expect(playerScore(learned, 0) - playerScore(bare, 0)).toBe(2 * SCORE_WEIGHTS.advance);
+  });
+
+  it('adds up to its own breakdown', () => {
+    const state = empire([{ size: 5, buildings: 2 }, { size: 3, buildings: 1 }]);
+    const s = scoreBreakdown(state, 0);
+    expect(s.population + s.advances + s.buildings).toBe(s.total);
+    expect(s.population).toBe(8 * SCORE_WEIGHTS.population);
+    expect(s.buildings).toBe(3 * SCORE_WEIGHTS.building);
   });
 });

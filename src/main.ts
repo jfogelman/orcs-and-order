@@ -24,7 +24,7 @@ import {
   tryStep,
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
-import { beginPlayerTurn, endPlayerTurn, idleUnits, playerScore } from './sim/turn';
+import { beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { openAudioMenu, openNewGameMenu, openSaveMenu } from './ui/menus';
@@ -293,15 +293,19 @@ class App {
     const winner = this.state.players[this.state.winner!];
     const you = winner.id === this.viewerId;
     audio.playMusic('victory');
+    // Show the breakdown, not just a total: a player who lost on points
+    // deserves to see which column beat them.
     const scores = this.state.players
       .map((p) => {
-        const cities = playerCities(this.state, p.id);
+        const s = scoreBreakdown(this.state, p.id);
         return `
           <div class="stat-row">
             <span class="label" style="color:${p.color}">${escapeHtml(p.name)}</span>
-            <span class="value">${playerScore(this.state, p.id)} pts
-              <span class="muted">(${cities.length} cities, ${p.techs.length} advances)</span>
-            </span>
+            <span class="value">${s.total} pts</span>
+          </div>
+          <div class="stat-row">
+            <span class="label muted" style="padding-left:12px">citizens · advances · structures</span>
+            <span class="value muted">${s.population} + ${s.advances} + ${s.buildings}</span>
           </div>`;
       })
       .join('');

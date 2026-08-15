@@ -188,21 +188,43 @@ what the score pays for.
 
 Both of the two games that ended by *conquest* were won by the humans.
 
-### So this is probably a scoring problem, not a faction problem
+### Fixed: the scoring formula (done)
 
-Before touching faction numbers, consider that a 4X being decided by a points formula
-in 89% of games is itself the defect. Options, roughly in order of how much they
-change:
+The flat per-city term is gone. It was:
 
-1. **Re-weight the score.** `cities × 10` rewards planting settlements more than doing
-   anything with them. Population already counts, and counts three times over per
-   citizen; the per-city bonus may be double-paying for the same thing.
-2. **Make conquest achievable.** Attacking a walled, fortified city is currently a x3
-   multiplier against the attacker, and the AI never concentrates force, so wars
-   grind. If a competent attacker could actually take cities, fewer games would reach
-   the limit and the score would matter less.
-3. **Raise the turn limit** past 300 so the late game gets played out. Cheap, but it
-   makes a long game longer rather than better.
+```
+cities × 10  +  population × 3  +  advances × 5  +  units × 1
+```
+
+which paid 13 points for planting a size-1 settlement and never developing it, on top
+of whatever population it eventually grew. That made "found cities everywhere and
+ignore them" the winning line, which is exactly what the sprawlier AI was doing.
+
+It is now:
+
+```
+population × 4  +  advances × 6  +  buildings × 4
+```
+
+Cities still count — through the citizens living in them and the structures built
+there — but they are paid for the parts that took effort. Advances are weighted up,
+because the tech ladder is the entire point of the game. Units are no longer scored at
+all: an army is a means, not an achievement, and conquest already wins outright.
+
+**Still open:** roughly 90% of games reach the turn limit, so the score is deciding
+almost everything regardless of how it is weighted. Making conquest achievable is the
+larger fix and is untouched — see below.
+
+### Making conquest achievable — still open
+
+Attacking a walled, fortified city stacks x2 for Walls, x1.5 for fortifying and up to
+x3 for terrain, and the AI never concentrates force, so wars grind on without
+resolving. Worth trying, in order of cheapness:
+
+1. Have the AI mass units before attacking rather than feeding them in one at a time.
+2. Let siege units (`sapper`, `ballista`) ignore the Walls multiplier rather than
+   merely getting a bonus against cities.
+3. Reconsider whether Walls should be x2 on top of everything else.
 
 ### Faction levers, if they are still needed afterwards
 

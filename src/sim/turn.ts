@@ -103,18 +103,52 @@ function runEconomy(state: GameState, player: Player): void {
 }
 
 /**
- * Standing in the history books: cities and citizens mostly, with credit for
- * advances and a little for the army still in the field.
+ * What the history books count.
+ *
+ * Deliberately measures what a civilisation *built*, not how much ground it
+ * claimed. An earlier version paid a flat 10 points per city on top of
+ * population, which meant planting a settlement and never developing it was
+ * worth 13 points for the act of planting it. Since most games run to the turn
+ * limit and are decided here, that quietly made "found cities everywhere and
+ * ignore them" the winning strategy, and the sprawlier AI won 78% of games
+ * while being behind on both research and army size.
+ *
+ * So there is no per-city term at all now. Cities still count, through the
+ * citizens living in them and the things built there — which is the same
+ * reward, paid for the parts that took effort.
  */
-export function playerScore(state: GameState, playerId: number): number {
+export const SCORE_WEIGHTS = {
+  /** Citizens fed and housed. The main measure of a civilisation's size. */
+  population: 4,
+  /** The whole point of the game, so it had better be worth something. */
+  advance: 6,
+  /** Standing structures: what a city has actually invested in. */
+  building: 4,
+} as const;
+
+export interface ScoreBreakdown {
+  population: number;
+  advances: number;
+  buildings: number;
+  total: number;
+}
+
+export function scoreBreakdown(state: GameState, playerId: number): ScoreBreakdown {
   const cities = playerCities(state, playerId);
   const population = cities.reduce((sum, c) => sum + c.size, 0);
-  return (
-    cities.length * 10 +
-    population * 3 +
-    state.players[playerId].techs.length * 5 +
-    playerUnits(state, playerId).length
-  );
+  const buildings = cities.reduce((sum, c) => sum + c.buildings.length, 0);
+  const advances = state.players[playerId].techs.length;
+
+  const parts = {
+    population: population * SCORE_WEIGHTS.population,
+    advances: advances * SCORE_WEIGHTS.advance,
+    buildings: buildings * SCORE_WEIGHTS.building,
+  };
+  return { ...parts, total: parts.population + parts.advances + parts.buildings };
+}
+
+export function playerScore(state: GameState, playerId: number): number {
+  return scoreBreakdown(state, playerId).total;
 }
 
 /** Grace period before losing your last city counts as losing the game. */
