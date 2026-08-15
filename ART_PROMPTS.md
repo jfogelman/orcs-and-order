@@ -138,12 +138,17 @@ should be too.
 | `mage` | A human wizard in deep blue robes with gold trim, long white beard, wide-brimmed pointed hat, holding a staff topped with a pale glowing stone |
 | `paladin` | A holy warrior in ornate golden plate armour with a white surcoat, mounted on an armoured white horse, broadsword raised, faint warm glow |
 
-## Still to draw
+## Still to draw — one icon
 
-Nothing. All 17 units, all 6 city sprites, all 8 terrains, the sound effects and the
-music are in and rendering.
+Everything else is done: 17 unit sprites, 6 city sprites, 8 terrain sets, all 42
+advance icons, 9 of the 10 building icons, and the full sound set.
 
-`npm run art` lists anything missing if that ever changes.
+| id | Faction | Icon subject |
+|---|---|---|
+| `catapult` | orc | a crude wooden catapult listing badly to one side, one wheel square and the other missing entirely, throwing arm snapped |
+
+Save it as `art_src/buildings/catapult.png`, magenta background, then `npm run art`.
+Until it exists the city screen simply omits the icon and shows the name.
 
 ### Not needed, deliberately
 

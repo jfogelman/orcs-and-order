@@ -212,12 +212,22 @@ describe('the Broken Catapult', () => {
     expect(tech.buildings).toEqual(expect.arrayContaining(['walls', 'catapult']));
   });
 
-  it('does nothing at all for a defender standing still', () => {
+  it('helps a defender a little, but far less than a wall would', () => {
     const bare = skirmish([]);
     const armed = skirmish(['catapult']);
-    // The garrison is the one being attacked here, not attacking.
-    expect(defenseStrength(armed.state, armed.garrison).total).toBe(
-      defenseStrength(bare.state, bare.garrison).total,
+    const plain = defenseStrength(bare.state, bare.garrison).total;
+    const behindCatapult = defenseStrength(armed.state, armed.garrison).total;
+    expect(behindCatapult).toBeCloseTo(plain * BUILDINGS.catapult.defenseMult!);
+    // The point of the thing is offence; the defence is a consolation.
+    expect(BUILDINGS.catapult.defenseMult!).toBeLessThan(BUILDINGS.walls.defenseMult!);
+  });
+
+  it('keeps its defence against siege, where a wall would not', () => {
+    const armed = skirmish(['catapult']);
+    const ram = spawnUnit(armed.state, 1, 'ballista', 9, 10);
+    // A ballista knocks walls down. There is nothing here to knock down.
+    expect(defenseStrength(armed.state, armed.garrison, ram).total).toBeCloseTo(
+      defenseStrength(armed.state, armed.garrison).total,
     );
   });
 

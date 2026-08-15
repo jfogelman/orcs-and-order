@@ -88,12 +88,17 @@ export function defenseStrength(
   const city = cityAt(state, defender.x, defender.y);
   const berserk = hasFlag(owner, 'berserk');
 
-  // Siege units bring the walls down; that is what they are for.
+  // Siege units bring the walls down; that is what they are for. Anything a
+  // siege engine cannot simply knock over still counts.
   const siegeAttacker = attacker !== undefined && unitType(attacker.type).siegeBonus > 1;
-  const wallsMult =
-    city && city.buildings.includes('walls') && !siegeAttacker
-      ? (BUILDINGS.walls.defenseMult ?? 1)
-      : 1;
+  const wallsMult = city
+    ? city.buildings.reduce((mult, id) => {
+        const def = BUILDINGS[id];
+        if (!def?.defenseMult) return mult;
+        if (siegeAttacker && def.negatedBySiege) return mult;
+        return mult * def.defenseMult;
+      }, 1)
+    : 1;
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;

@@ -11,6 +11,14 @@ export interface BuildingDef {
   blurb: string;
   /** Multiplies the defence of units inside the city. */
   defenseMult?: number;
+  /**
+   * Whether a siege unit's attack ignores this building's defence.
+   *
+   * True of Walls, which is what a siege engine is built to bring down. Not
+   * true of a Broken Catapult, which is not a wall and has nothing to knock
+   * over -- so the Horde keeps its modest bonus even against a ballista.
+   */
+  negatedBySiege?: boolean;
   /** Extra content citizens, offsetting disorder. */
   contentBonus?: number;
   /** Fraction of the food box kept when the city grows. */
@@ -57,6 +65,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     cost: 60,
     upkeep: 1,
     defenseMult: 2,
+    negatedBySiege: true,
     blurb: 'Doubles the defence of everyone inside. Astonishingly effective for a pile of rocks.',
   },
   catapult: {
@@ -66,6 +75,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     cost: 60,
     upkeep: 1,
     sallyBonus: 1,
+    // Deliberately far short of the x2 a wall gives. It is a large broken
+    // object in the way, not a fortification.
+    defenseMult: 1.35,
     blurb:
       "This would have been a marvellous ranged weapon if anybody here " +
       'understood wheels. As it stands, everyone gets very worked up and ' +
