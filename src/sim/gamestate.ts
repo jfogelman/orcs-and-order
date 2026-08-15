@@ -80,8 +80,9 @@ export function log(
   text: string,
   kind: LogEntry['kind'] = 'info',
   forPlayer: number | null = null,
+  cue?: string,
 ): void {
-  state.log.push({ turn: state.turn, player: forPlayer, text, kind });
+  state.log.push({ turn: state.turn, player: forPlayer, text, kind, cue });
   // The log is a UI convenience, not a historical record; keep it bounded.
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
 }

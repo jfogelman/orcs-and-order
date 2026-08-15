@@ -2,6 +2,7 @@ import './style.css';
 
 import { runAiTurn } from './ai/ai';
 import { audio } from './audio/audio';
+import type { SfxId } from './audio/audio';
 import { idx } from './engine/grid';
 import { FACTIONS } from './model/factions';
 import { TERRAIN } from './model/terrain';
@@ -62,6 +63,8 @@ class App {
   private lastPointer: { x: number; y: number } | null = null;
   /** Turn on which the battle theme may give way to the world theme again. */
   private calmAgainOnTurn = -1;
+  /** How much of the log has already been turned into noise. */
+  private soundedLogEntries = 0;
 
   constructor() {
     this.state = createGame({ playerFaction: 'orc' });
@@ -122,6 +125,7 @@ class App {
   }
 
   private select(unit: Unit | null): void {
+    if (unit && this.overlay.selectedUnitId !== unit.id) audio.play('select');
     this.overlay.selectedUnitId = unit?.id ?? null;
     this.refreshOverlays();
     this.refreshSidebar();
@@ -191,13 +195,13 @@ class App {
 
     if (outcome.kind === 'blocked') {
       this.flash(outcome.reason);
+    } else if (outcome.kind === 'moved') {
+      audio.play('move');
     } else if (outcome.kind === 'combat') {
       audio.playForUnit(attackerType, 'attack');
       const loser = outcome.defenderDied ? defenderType : attackerType;
       // Let the swing land before the scream.
       if (loser) window.setTimeout(() => audio.playForUnit(loser, 'death'), 280);
-    } else if (outcome.kind === 'captured') {
-      audio.play('sword');
     }
     // The unit may have died attacking.
     if (!this.state.units.includes(unit)) this.select(null);
@@ -242,11 +246,31 @@ class App {
     const city = foundCity(this.state, unit);
     this.select(null);
     this.refreshHud();
+    this.playLogCues();
     if (city) this.openCity(city);
   }
 
   private openCity(city: City): void {
     openCityPanel(this.state, city, () => this.refreshHud());
+  }
+
+  /**
+   * Play a sound for anything that happened to the viewing player since last
+   * checked. Driven off the log rather than hooked into each rule, so events
+   * that happen during the AI's turn are heard too.
+   */
+  private playLogCues(): void {
+    const entries = this.state.log.slice(this.soundedLogEntries);
+    this.soundedLogEntries = this.state.log.length;
+    const heard = new Set<string>();
+    for (const entry of entries) {
+      if (!entry.cue) continue;
+      if (entry.player !== null && entry.player !== this.viewerId) continue;
+      // One of each per batch: ten cities growing on one turn is a machine gun.
+      if (heard.has(entry.cue)) continue;
+      heard.add(entry.cue);
+      audio.play(entry.cue as SfxId, 0);
+    }
   }
 
   private endTurn(): void {
@@ -268,10 +292,12 @@ class App {
     this.select(null);
     this.selectNextIdle();
     this.refreshHud();
+    this.playLogCues();
     if (this.state.winner !== null) {
       this.showVictory();
       return;
     }
+    audio.play('turn', 0);
     this.promptResearchIfIdle();
   }
 
@@ -336,6 +362,7 @@ class App {
   }
 
   private flash(message: string): void {
+    audio.play('blocked');
     const box = el('logbox');
     const div = document.createElement('div');
     div.className = 'entry k-bad';

@@ -54,15 +54,32 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   };
 }
 
-export function defenseStrength(state: GameState, defender: Unit): StrengthBreakdown {
+/**
+ * Defensive strength, optionally against a specific attacker.
+ *
+ * The attacker matters because siege engines are built to ignore walls. A
+ * defender otherwise stacks terrain (up to x3), the free fortify bonus for
+ * standing in a city (x1.5), walls (x2) and veterancy (x1.5) — up to x13.5,
+ * which put a walled hill city beyond anything the AI would willingly attack
+ * and left almost every game to be decided on points.
+ */
+export function defenseStrength(
+  state: GameState,
+  defender: Unit,
+  attacker?: Unit,
+): StrengthBreakdown {
   const type = unitType(defender.type);
   const owner = state.players[defender.owner];
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
   const city = cityAt(state, defender.x, defender.y);
   const berserk = hasFlag(owner, 'berserk');
 
+  // Siege units bring the walls down; that is what they are for.
+  const siegeAttacker = attacker !== undefined && unitType(attacker.type).siegeBonus > 1;
   const wallsMult =
-    city && city.buildings.includes('walls') ? (BUILDINGS.walls.defenseMult ?? 1) : 1;
+    city && city.buildings.includes('walls') && !siegeAttacker
+      ? (BUILDINGS.walls.defenseMult ?? 1)
+      : 1;
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;
@@ -108,7 +125,7 @@ export interface CombatResult {
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
   const atk = attackStrength(state, attacker, defender);
-  const def = defenseStrength(state, defender);
+  const def = defenseStrength(state, defender, attacker);
   const atkMax = unitType(attacker.type).hp;
   const defMax = unitType(defender.type).hp;
   const dmg = damagePerRound(atkMax, defMax);

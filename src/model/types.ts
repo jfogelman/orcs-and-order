@@ -107,6 +107,12 @@ export interface LogEntry {
   player: number | null;
   text: string;
   kind: 'info' | 'combat' | 'growth' | 'research' | 'bad' | 'good';
+  /**
+   * Optional name of a sound this event should make. The simulation says what
+   * happened; the interface decides what that sounds like, so `sim/` still
+   * knows nothing about audio.
+   */
+  cue?: string;
 }
 
 export interface GameSettings {

@@ -650,10 +650,19 @@ def adopt_raw_files() -> list[str]:
     adopted: list[str] = []
     if not OUT.exists():
         return adopted
+    # Audio counts too. `public/` is gitignored build output, so a sound file
+    # left there is one clean checkout away from being gone for good.
+    adoptable = {".jpg", ".jpeg", ".webp", ".bmp", ".mp3", ".ogg", ".wav", ".m4a"}
     for path in sorted(OUT.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".jpg", ".jpeg", ".webp", ".bmp"}:
+        if not path.is_file() or path.suffix.lower() not in adoptable:
             continue
         target = SRC / path.relative_to(OUT)
+        # Never adopt over an existing source. Audio keeps the same name and
+        # extension on both sides, so without this the compressed output would
+        # be copied back over its own original and re-encoded from a lossy copy
+        # on every subsequent run.
+        if target.exists():
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(path.read_bytes())
         path.unlink()

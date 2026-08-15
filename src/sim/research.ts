@@ -105,7 +105,7 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
   player.beakers -= cost;
   player.techs.push(def.id);
   player.researching = null;
-  log(state, `${def.name} discovered.`, 'research', player.id);
+  log(state, `${def.name} discovered.`, 'research', player.id, 'discovery');
   log(state, def.flavor, 'info', player.id);
 
   const newUnits = def.units.filter((u) => UNIT_TYPES[u] !== undefined).map((u) => unitType(u).name);

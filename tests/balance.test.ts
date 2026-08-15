@@ -30,6 +30,8 @@ interface Outcome {
   turns: number;
   winner: number | null;
   combats: number;
+  /** Cities that changed hands. The measure of whether conquest works. */
+  captures: number;
   cities: [number, number];
   /** Total citizens. Weighted heavily by the score, so worth watching. */
   population: [number, number];
@@ -56,6 +58,7 @@ function play(seed: number): Outcome {
     turns: state.turn,
     winner: state.winner,
     combats: state.log.filter((e) => e.kind === 'combat').length,
+    captures: state.log.filter((e) => e.cue === 'capture').length,
     cities: [playerCities(state, 0).length, playerCities(state, 1).length],
     population: [
       playerCities(state, 0).reduce((n, c) => n + c.size, 0),
@@ -86,6 +89,7 @@ describe('faction balance across seeds', () => {
       (o) =>
         `seed ${String(o.seed).padStart(9)} T${String(o.turns).padStart(4)} ` +
         `win=${o.winner === null ? '-' : o.winner} fights=${String(o.combats).padStart(4)} ` +
+        `caps=${String(o.captures).padStart(2)} ` +
         `| orc c${o.cities[0]} p${o.population[0]} u${o.units[0]} t${o.techs[0]} max×${o.ladder[0]} ` +
         `| human c${o.cities[1]} p${o.population[1]} u${o.units[1]} t${o.techs[1]} max×${o.ladder[1]}`,
     );
@@ -99,6 +103,7 @@ describe('faction balance across seeds', () => {
         `AVG  human: cities ${avg((o) => o.cities[1])} pop ${avg((o) => o.population[1])} ` +
           `units ${avg((o) => o.units[1])} techs ${avg((o) => o.techs[1])}`,
         `wins: orc ${outcomes.filter((o) => o.winner === 0).length} / human ${outcomes.filter((o) => o.winner === 1).length}`,
+        `avg city captures per game: ${avg((o) => o.captures)}`,
         `reached the turn limit: ${outcomes.filter((o) => o.turns > 300).length}/${outcomes.length}`,
         `decisive: ${outcomes.filter((o) => o.winner !== null).length}/${outcomes.length}`,
       ].join('\n'),

@@ -325,7 +325,7 @@ export function foundCity(state: GameState, unit: Unit): City | null {
   const i = state.units.indexOf(unit);
   if (i >= 0) state.units.splice(i, 1);
 
-  log(state, `${city.name} is founded.`, 'good', city.owner);
+  log(state, `${city.name} is founded.`, 'good', city.owner, 'city-founded');
   recomputeVisibility(state, city.owner);
   return city;
 }

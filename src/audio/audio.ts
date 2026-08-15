@@ -32,7 +32,21 @@ export type SfxId =
   | 'death-monster'
   | 'death-goblin'
   | 'cry'
-  | 'grunt-beast';
+  | 'grunt-beast'
+  // Interface and event cues, as opposed to combat.
+  | 'discovery'
+  | 'city-founded'
+  | 'city-lost'
+  | 'capture'
+  | 'built'
+  | 'growth'
+  | 'blocked'
+  | 'turn'
+  | 'select'
+  | 'move'
+  | 'promote'
+  | 'coin'
+  | 'explosion';
 
 const SFX_FILES: Record<SfxId, string> = {
   melee: 'daviddumaisaudio-monster-05-grunt-and-growl-195715.mp3',
@@ -55,6 +69,22 @@ const SFX_FILES: Record<SfxId, string> = {
   'death-goblin': 'freesound_community-goblin-death-6729.mp3',
   cry: 'freesound_community-gryffin-cry-6995.mp3',
   'grunt-beast': 'dragon-studio-deer-grunt-472371.mp3',
+
+  discovery: 'discovery.mp3',
+  'city-founded': 'city-founded.mp3',
+  'city-lost': 'city-lost.mp3',
+  capture: 'capture.mp3',
+  built: 'built.mp3',
+  growth: 'growth.mp3',
+  blocked: 'blocked.mp3',
+  turn: 'turn.mp3',
+  select: 'select.mp3',
+  move: 'move.mp3',
+  promote: 'promote.mp3',
+  coin: 'coin.mp3',
+  // Named without its leading vowel on disk; kept as supplied so the credit
+  // trail still matches the download.
+  explosion: 'xplosion.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */
@@ -75,7 +105,7 @@ const CREATURE_VOICE: Record<string, { attack: SfxId; death: SfxId }> = {
   knight: { attack: 'grunt-knight', death: 'grunt-human' },
   ballista: { attack: 'siege', death: 'sword' },
   mage: { attack: 'magic', death: 'grunt-human' },
-  paladin: { attack: 'holy', death: 'grunt-knight' },
+  paladin: { attack: 'sword', death: 'grunt-knight' },
 };
 
 export type MusicTrack = 'world' | 'battle' | 'victory';

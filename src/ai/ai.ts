@@ -25,6 +25,8 @@ export interface AiPersonality {
   techPriority: string[];
   /** How readily it attacks at poor odds. 1 = only good odds, 0 = always. */
   caution: number;
+  /** Units it wants gathered around a city before storming it. */
+  stormingParty: number;
 }
 
 const PERSONALITIES: Record<string, AiPersonality> = {
@@ -54,6 +56,7 @@ const PERSONALITIES: Record<string, AiPersonality> = {
       'full-of-fire',
     ],
     caution: 0.25,
+    stormingParty: 3,
   },
   human: {
     targetCities: 6,
@@ -87,6 +90,7 @@ const PERSONALITIES: Record<string, AiPersonality> = {
     // Garrison size, by contrast, changed the win split not at all: 1 and 2
     // both gave 7-11 at caution 0.45.
     caution: 0.48,
+    stormingParty: 3,
   },
 };
 
@@ -232,6 +236,19 @@ function chooseProduction(
     if (calming) return { kind: 'building', id: calming.id };
   }
 
+  // 3b. If the enemy is turtling behind walls, build something that ignores
+  // them. Without this the AI keeps making melee units that cannot get in.
+  const enemyHasWalls = state.cities.some(
+    (c) => c.owner !== city.owner && c.buildings.includes('walls'),
+  );
+  if (enemyHasWalls) {
+    const siege = options.units.find((u) => u.siegeBonus > 1);
+    const haveSiege = playerUnits(state, city.owner).some(
+      (u) => unitType(u.type).siegeBonus > 1,
+    );
+    if (siege && !haveSiege) return { kind: 'unit', id: siege.id };
+  }
+
   // 4. Then infrastructure. Economy buildings come before a second barracks:
   // a city that pays for its own research compounds, and a barracks does not.
   const wanted =
@@ -315,6 +332,26 @@ function actSoldier(
   }
   if (bestTarget && bestTarget.odds >= personality.caution) {
     tryStep(state, unit, bestTarget.x, bestTarget.y);
+    return;
+  }
+
+  // Besieging: a city is worth far more than a field unit and is defended by
+  // stacked multipliers, so single units thrown at it die one at a time and
+  // the war never resolves. Gather next to it first, then everyone goes in.
+  const targetCity = state.cities.find(
+    (c) => c.owner !== unit.owner && distance(unit.x, unit.y, c.x, c.y) === 1,
+  );
+  if (targetCity) {
+    const besiegers = state.units.filter(
+      (u) => u.owner === unit.owner && distance(u.x, u.y, targetCity.x, targetCity.y) === 1,
+    ).length;
+    const defender = state.units.find((u) => u.x === targetCity.x && u.y === targetCity.y);
+    const odds = defender ? attackOdds(state, unit, defender) : 1;
+    if (besiegers >= personality.stormingParty || odds >= personality.caution) {
+      if (tryStep(state, unit, targetCity.x, targetCity.y).kind !== 'blocked') return;
+    }
+    // Not enough of us yet. Dig in where we stand and wait for the rest.
+    unit.order = 'fortified';
     return;
   }
 

@@ -73,13 +73,15 @@ function runEconomy(state: GameState, player: Player): void {
     beakerIncome += Math.round(split.beakers * (1 + cityScienceBonus(city)));
     upkeep += buildingUpkeep(city);
 
-    if (events.grew) log(state, `${city.name} grows to ${city.size}.`, 'growth', player.id);
+    if (events.grew) {
+      log(state, `${city.name} grows to ${city.size}.`, 'growth', player.id, 'growth');
+    }
     if (events.starved) log(state, `${city.name} is starving.`, 'bad', player.id);
     if (events.enteredDisorder) {
       log(state, `${city.name} has fallen into disorder.`, 'bad', player.id);
     }
     if (events.completed) {
-      log(state, `${city.name} completes ${events.completed}.`, 'good', player.id);
+      log(state, `${city.name} completes ${events.completed}.`, 'good', player.id, 'built');
     }
     if (events.blocked) {
       log(state, `${city.name} has nowhere to put what it just built.`, 'bad', player.id);

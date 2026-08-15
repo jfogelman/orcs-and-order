@@ -155,8 +155,8 @@ function captureCity(state: GameState, unit: Unit, city: City): void {
   city.buildings = city.buildings.filter((b) => b !== 'walls');
   city.producing = { kind: 'coin' };
   city.shields = 0;
-  log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner);
-  log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id);
+  log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture');
+  log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id, 'city-lost');
 }
 
 /**
@@ -215,7 +215,13 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     }
     if (result.promoted) {
       const winner = result.attackerWon ? type.name : defenderType.name;
-      log(state, `${winner} is promoted to veteran.`, 'good', result.attackerWon ? unit.owner : occupant.owner);
+      log(
+        state,
+        `${winner} is promoted to veteran.`,
+        'good',
+        result.attackerWon ? unit.owner : occupant.owner,
+        'promote',
+      );
     }
     recomputeVisibility(state, unit.owner);
     recomputeVisibility(state, occupant.owner);
