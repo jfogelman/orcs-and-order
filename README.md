@@ -45,9 +45,10 @@ npm test
 | Left-click again | On a unit standing in a city, opens the city underneath it |
 | Left-click open ground | Move there, if it is in range |
 | Right-click | Move or attack at any distance — including into your own cities |
+| Move into fog | Allowed. The unit marches on and **halts the moment it sights an enemy** |
 | Left-drag | Pan · **Wheel** zoom · **Arrows** pan |
 | `B` | Found a city (Peons and Peasants only) |
-| `P` | Orcpedia — also reachable by clicking any unit's name |
+| `P` | Orcpedia — also on the toolbar, from any unit's name, and from unit names in the Advances screen |
 | `F` fortify · `S` sentry · `Space` skip · `N` next idle unit · `C` centre | |
 | `T` advances · `Ctrl+S` saves · `G` grid · `Enter` end turn · `Esc` deselect | |
 | `M` | Mute. The **Sound** button opens music and effects volume sliders |

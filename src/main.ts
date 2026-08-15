@@ -361,11 +361,21 @@ class App {
     });
   }
 
+  /** Something the player tried to do and could not. Sounds like refusal. */
   private flash(message: string): void {
     audio.play('blocked');
+    this.notify(message, 'k-bad');
+  }
+
+  /**
+   * A neutral or positive aside, such as "Game saved". Deliberately separate
+   * from `flash`: routing both through one method meant saving a game played
+   * the rejection sound.
+   */
+  private notify(message: string, cls = 'k-info'): void {
     const box = el('logbox');
     const div = document.createElement('div');
-    div.className = 'entry k-bad';
+    div.className = `entry ${cls}`;
     div.textContent = message;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
@@ -466,6 +476,9 @@ class App {
 
     el<HTMLButtonElement>('btn-new').addEventListener('click', () => this.openNewGame());
     el<HTMLButtonElement>('btn-save').addEventListener('click', () => this.openSaves());
+    el<HTMLButtonElement>('btn-pedia').addEventListener('click', () =>
+      openPedia(this.state.players[this.viewerId], this.selected?.type),
+    );
     el<HTMLButtonElement>('btn-mute').addEventListener('click', () =>
       openAudioMenu(() => this.refreshMuteButton()),
     );
@@ -524,9 +537,9 @@ class App {
       (loaded) => {
         this.adopt(loaded);
         this.selectNextIdle();
-        this.flash('Game loaded.');
+        this.notify('Game loaded.', 'k-good');
       },
-      (message) => this.flash(message),
+      (message, ok) => (ok ? this.notify(message, 'k-good') : this.flash(message)),
     );
   }
 
@@ -674,6 +687,14 @@ class App {
       const t = unitType(unit.type);
       const canSettle = t.settler && canFoundCity(this.state, unit, unit.x, unit.y).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
+      // Left-clicking one of your own cities opens it, so there was no obvious
+      // gesture for "go and stand in it". Right-click always did; this says so.
+      const garrisonTarget = this.state.cities.find(
+        (c) =>
+          c.owner === this.viewerId &&
+          Math.max(Math.abs(c.x - unit.x), Math.abs(c.y - unit.y)) === 1 &&
+          !unitAt(this.state, c.x, c.y),
+      );
       panel.innerHTML = `
         <div class="panel-title">
           <a href="#" class="pedia-link" data-pedia="${escapeHtml(t.id)}"
@@ -705,6 +726,11 @@ class App {
           ${
             cityHere
               ? `<button class="small" data-act="city">Open ${escapeHtml(cityHere.name)}</button>`
+              : ''
+          }
+          ${
+            !cityHere && garrisonTarget
+              ? `<button class="small" data-act="garrison">Enter ${escapeHtml(garrisonTarget.name)}</button>`
               : ''
           }
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
@@ -739,6 +765,9 @@ class App {
             case 'city':
               if (cityHere) this.openCity(cityHere);
               break;
+            case 'garrison':
+              if (garrisonTarget) this.actOn(garrisonTarget.x, garrisonTarget.y);
+              break;
           }
         });
       });
@@ -761,7 +790,7 @@ class App {
     const h = this.overlay.hover;
     if (!h) {
       return `<div class="panel-title">Nothing selected</div>
-        <div class="panel-body muted">Left-click a unit to select it. Right-click to send it somewhere.</div>`;
+        <div class="panel-body muted">Left-click a unit to select it. Right-click to send it somewhere &mdash; including into your own cities.</div>`;
     }
     const i = idx(h.x, h.y, this.state.width);
     const viewer = this.state.players[this.viewerId];

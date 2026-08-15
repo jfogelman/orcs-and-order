@@ -182,7 +182,8 @@ const SLOTS = ['1', '2', '3'];
 export function openSaveMenu(
   state: GameState,
   onLoad: (loaded: GameState) => void,
-  onNotice: (message: string) => void,
+  /** `ok` distinguishes 'saved' from 'that would not load'. */
+  onNotice: (message: string, ok: boolean) => void,
 ): void {
   const existing = new Map(listSlots().map((s) => [s.slot, s]));
   const rows = SLOTS.map((slot) => {
@@ -220,7 +221,7 @@ export function openSaveMenu(
       root.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) =>
         b.addEventListener('click', () => {
           saveToSlot(state, b.dataset.save!);
-          onNotice(`Game saved to slot ${b.dataset.save}.`);
+          onNotice(`Game saved to slot ${b.dataset.save}.`, true);
           close();
         }),
       );
@@ -233,7 +234,7 @@ export function openSaveMenu(
               onLoad(loaded);
             }
           } catch (err) {
-            onNotice(err instanceof SaveError ? err.message : 'That save would not load.');
+            onNotice(err instanceof SaveError ? err.message : 'That save would not load.', false);
           }
         }),
       );
@@ -247,7 +248,7 @@ export function openSaveMenu(
 
       root.querySelector('#btn-download')?.addEventListener('click', () => {
         downloadSave(state);
-        onNotice('Save file downloaded.');
+        onNotice('Save file downloaded.', true);
         close();
       });
       root.querySelector('#btn-upload')?.addEventListener('click', () => {
@@ -257,7 +258,7 @@ export function openSaveMenu(
             onLoad(loaded);
           })
           .catch((err: unknown) => {
-            onNotice(err instanceof SaveError ? err.message : 'That file would not load.');
+            onNotice(err instanceof SaveError ? err.message : 'That file would not load.', false);
           });
       });
     },

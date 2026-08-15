@@ -6,7 +6,7 @@ import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import type { CombatResult } from './combat';
 import { destroyUnit, resolveCombat } from './combat';
-import { cityAt, log, recomputeVisibility, unitAt } from './gamestate';
+import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
 
 /**
@@ -44,15 +44,31 @@ export const FRIENDLY_BLOCK_PENALTY = 6;
 export function costFnFor(state: GameState, unit: Unit): CostFn {
   const owner = state.players[unit.owner];
   const type = unitType(unit.type);
+
+  // Route by what this player actually knows, not by the true state of the
+  // board. An enemy standing unseen in the fog used to block the route, so a
+  // move order across unexplored ground silently failed and the unit just
+  // stood there -- and the failure itself leaked the enemy's position.
   const occupants = new Map<number, number>();
-  for (const u of state.units) occupants.set(idx(u.x, u.y, state.width), u.owner);
+  for (const u of state.units) {
+    if (u.owner === unit.owner || owner.visible[idx(u.x, u.y, state.width)]) {
+      occupants.set(idx(u.x, u.y, state.width), u.owner);
+    }
+  }
   const foreignCities = new Set<number>();
   for (const c of state.cities) {
-    if (c.owner !== unit.owner) foreignCities.add(idx(c.x, c.y, state.width));
+    if (c.owner !== unit.owner && owner.explored[idx(c.x, c.y, state.width)]) {
+      foreignCities.add(idx(c.x, c.y, state.width));
+    }
   }
 
   return (x, y) => {
     const i = idx(x, y, state.width);
+    // Unexplored ground is assumed walkable and ordinary. If it turns out to
+    // be sea or occupied, the step is refused when the unit gets there, which
+    // is the correct way to find out.
+    if (!owner.explored[i]) return type.flies ? 1 : 1;
+
     const terrain = state.terrain[i];
     if (!type.flies && TERRAIN[terrain].water) return null;
     // Enemy ground is entered by attacking or capturing, never by pathing.
@@ -62,6 +78,16 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     const base = type.flies ? 1 : terrainMoveCost(owner, terrain);
     return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
   };
+}
+
+/** Ids of enemy units this player can currently see. */
+function visibleEnemies(state: GameState, playerId: number): Set<number> {
+  const seen = new Set<number>();
+  const viewer = state.players[playerId];
+  for (const u of state.units) {
+    if (u.owner !== playerId && viewer.visible[idx(u.x, u.y, state.width)]) seen.add(u.id);
+  }
+  return seen;
 }
 
 /**
@@ -150,9 +176,22 @@ function captureCity(state: GameState, unit: Unit, city: City): void {
   city.owner = unit.owner;
   city.disorder = false;
   city.workedTiles = [];
-  // A sacked city loses a citizen and its garrison buildings.
+  // A sacked city loses a citizen and one of its structures.
   city.size = Math.max(1, city.size - 1);
-  city.buildings = city.buildings.filter((b) => b !== 'walls');
+
+  // The walls, however, stay standing and change hands with the city.
+  //
+  // Levelling them on capture made a taken city markedly easier to take back
+  // than it had been to take, so cities flipped back and forth for the rest of
+  // the game and no war ever resolved. Whoever holds the city holds its walls.
+  const sackable = city.buildings.filter((b) => b !== 'walls');
+  if (sackable.length > 0) {
+    const lost = withRng(state, (rng) => rng.pick(sackable));
+    city.buildings = city.buildings.filter((b) => b !== lost);
+  }
+
+  // Whoever took it is now holding it, and digs in without being told.
+  unit.order = 'fortified';
   city.producing = { kind: 'coin' };
   city.shields = 0;
   log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture');
@@ -299,8 +338,17 @@ export function moveToward(state: GameState, unit: Unit, x: number, y: number): 
     }
 
     const [nx, ny] = route[step];
+    const seenBefore = visibleEnemies(state, unit.owner);
     last = tryStep(state, unit, nx, ny);
     if (last.kind === 'moved') {
+      // Walking into the unknown stops the moment the unknown has someone in
+      // it. Marching blindly past a waiting army is never what was intended.
+      for (const id of visibleEnemies(state, unit.owner)) {
+        if (!seenBefore.has(id)) {
+          unit.goto = null;
+          return last;
+        }
+      }
       step++;
       continue;
     }

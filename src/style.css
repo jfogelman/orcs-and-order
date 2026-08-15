@@ -879,3 +879,7 @@ input[type='range']::-moz-range-thumb {
   height: 18px;
   image-rendering: pixelated;
 }
+
+.pedia-building {
+  color: #c8b98a;
+}
