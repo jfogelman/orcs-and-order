@@ -5,7 +5,14 @@ import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import type { CombatResult } from './combat';
-import { breatheThrough, destroyUnit, detonate, rearm, resolveCombat } from './combat';
+import {
+  breatheThrough,
+  destroyUnit,
+  detonate,
+  rearm,
+  resolveCombat,
+  stormEmptyCity,
+} from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
 
@@ -197,22 +204,41 @@ export function routeTo(
   return findPath(state.width, state.height, [unit.x, unit.y], [x, y], costFnFor(state, unit));
 }
 
+/**
+ * How thoroughly a city is wrecked when it changes hands.
+ *
+ * Scales with whoever turned up. One goblin takes a city; Ten Orcs take it and
+ * there is visibly less of it afterwards. Capped, because a city reduced to
+ * nothing is not worth taking and the war would stop meaning anything.
+ */
+export const SACKING = { cap: 3, perAttack: 8 };
+
+export function sackSeverity(attacker: Unit): number {
+  return Math.min(
+    SACKING.cap,
+    Math.max(1, Math.round(unitType(attacker.type).attack / SACKING.perAttack)),
+  );
+}
+
 function captureCity(state: GameState, unit: Unit, city: City): void {
   const from = state.players[city.owner];
   const to = state.players[unit.owner];
+  const severity = sackSeverity(unit);
   city.owner = unit.owner;
   city.disorder = false;
   city.workedTiles = [];
-  // A sacked city loses a citizen and one of its structures.
-  city.size = Math.max(1, city.size - 1);
+  // Citizens do not survive a sacking in proportion to how large the sacking
+  // was. Never taken below one: an empty tile is not a captured city.
+  city.size = Math.max(1, city.size - severity);
 
   // The walls, however, stay standing and change hands with the city.
   //
   // Levelling them on capture made a taken city markedly easier to take back
   // than it had been to take, so cities flipped back and forth for the rest of
   // the game and no war ever resolved. Whoever holds the city holds its walls.
-  const sackable = city.buildings.filter((b) => b !== 'walls');
-  if (sackable.length > 0) {
+  for (let razed = 0; razed < severity; razed++) {
+    const sackable = city.buildings.filter((b) => b !== 'walls');
+    if (sackable.length === 0) break;
     const lost = withRng(state, (rng) => rng.pick(sackable));
     city.buildings = city.buildings.filter((b) => b !== lost);
   }
@@ -360,6 +386,35 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
 
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
+
+  // Nobody is holding the gate -- there is no unit here, or the attack branch
+  // above would have run -- but the people who live here are still in it.
+  if (capturing && city) {
+    const stand = stormEmptyCity(state, unit, city);
+    if (stand.damage > 0) {
+      log(
+        state,
+        `The people of ${city.name} throw what they have at ${type.name}.`,
+        'combat',
+        city.owner,
+        undefined,
+        [city.x, city.y],
+      );
+    }
+    if (!stand.taken) {
+      log(
+        state,
+        `${type.name} is driven off by the citizens of ${city.name}, which is embarrassing for everyone.`,
+        'combat',
+        unit.owner,
+        undefined,
+        [city.x, city.y],
+      );
+      destroyUnit(state, unit, 'is seen off by a mob');
+      recomputeVisibility(state, city.owner);
+      return { kind: 'blocked', reason: `${city.name} threw them back.`, retryable: false };
+    }
+  }
   const cost = type.flies ? 1 : terrainMoveCost(owner, terrain);
   unit.x = x;
   unit.y = y;

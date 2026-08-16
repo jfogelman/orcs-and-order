@@ -2,8 +2,9 @@ import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
-import type { GameState, Unit } from '../model/types';
+import type { City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
+import { militiaStrength } from './city';
 import { hasFlag } from './rules';
 
 /**
@@ -281,6 +282,44 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     promoted: result.promoted,
     executed: false,
   };
+}
+
+/** Rounds the townsfolk will stand there throwing things before giving up. */
+export const MILITIA_ROUNDS = 3;
+
+export interface MilitiaResult {
+  /** True if the attacker got in. */
+  taken: boolean;
+  /** Damage the attacker took doing it. */
+  damage: number;
+}
+
+/**
+ * An attempt to walk into a city nobody is guarding.
+ *
+ * The citizens are not a unit -- they have no health, cannot be killed, and
+ * never appear on the board. They simply make the attacker pay something on
+ * the way in, and occasionally kill a weak enough attacker outright.
+ *
+ * A strong attacker still walks in; that is intended. The point is not to make
+ * cities safe, it is to stop a single wandering goblin annexing a town of
+ * eight people for free.
+ */
+export function stormEmptyCity(state: GameState, attacker: Unit, city: City): MilitiaResult {
+  const atk = attackStrength(state, attacker, attacker).total;
+  const def = militiaStrength(city);
+  if (def <= 0) return { taken: true, damage: 0 };
+
+  const dmg = Math.max(1, Math.round(unitType(attacker.type).hp / 12));
+  const pAttack = atk / Math.max(0.0001, atk + def);
+
+  const damage = withRng(state, (rng) => {
+    let taken = 0;
+    for (let i = 0; i < MILITIA_ROUNDS; i++) if (rng.float() >= pAttack) taken += dmg;
+    return taken;
+  });
+  attacker.hp -= damage;
+  return { taken: attacker.hp > 0, damage };
 }
 
 /**

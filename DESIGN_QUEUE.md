@@ -566,6 +566,47 @@ The war is a see-saw of undefended cities, and the only things that can change t
 Both are mechanics rather than AI constants. (1) is the more interesting and the more
 in keeping — an orc city that shrugs off a lone footman is funnier than one with a wall.
 
+## 4g. Empty cities now cost something — measured
+
+Two mechanics, in response to the 96% walk-in finding.
+
+**The citizens fight.** An ungarrisoned city defends at 0.3 per citizen over three
+rounds. It cannot hold off an army — Ten Orcs walk in every time — but a lone goblin
+no longer annexes a town of eight for free.
+
+**Sacking scales with who turned up.** Up to three citizens and three buildings,
+by attacker strength, instead of one of each. Walls still survive, since levelling
+them was what caused the original see-saw.
+
+### The militia sweep, eighteen seeds
+
+| toll | wins | changes of hands | orc median hold |
+|---|---|---|---|
+| 0 | **8 – 10** | 45.8 | 21.3 |
+| 0.3 | 5 – 13 | **37.1** | **37.2** |
+| 0.6 | 5 – 13 | 42.5 | 34.3 |
+| 1.0 | 5 – 13 | 40.2 | 32.4 |
+
+It does exactly what it was built to do: a captured city's median tenure goes from 21
+turns to 37 and the see-saw slows markedly. And **it costs three wins**, consistently,
+at every non-zero setting — because making cities sticky helps whoever already holds
+more of them. That is the per-city lesson from 4e again, in a new coat.
+
+Kept at **0.3** regardless: it does the most good of the three settings for the same
+cost, and a game where 96% of cities are taken by walking into them unopposed is a
+worse game than one three wins out of eighteen off level. The balance is better
+attacked somewhere that is not defensive.
+
+### The thing worth noticing in the control arm
+
+That 8-10 is with the **new sacking and no militia**, on the same eighteen seeds that
+gave 6-12 before either change. Sacking was never a controlled arm, so this is
+suggestive rather than established — but if it holds it is the best balance movement
+of the session, and the mechanism is plausible: population is 82% of the score gap,
+the Kingdom is where the population is, and sacking suppresses it on every capture.
+
+Being measured properly now, militia held at 0.3, sack cap swept 1/2/3/5.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit

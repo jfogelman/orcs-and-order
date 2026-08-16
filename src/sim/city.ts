@@ -152,6 +152,43 @@ function sumBonus(
   return total;
 }
 
+/**
+ * Defence a city puts up with nobody garrisoning it.
+ *
+ * Cities were being taken by walking into them: measured over four games, 228
+ * of 237 changes of hands were into a city with nobody standing in it. That
+ * made every defensive rule in the game -- walls, terrain, fortification,
+ * veterancy -- a bonus applied to a defender who was not there, and turned the
+ * war into a see-saw of unattended towns.
+ *
+ * So the citizens do something. Not much, and not enough to hold off an army,
+ * but enough that a lone goblin cannot annex a city of eight people by walking
+ * up to it. Scales with size, because that is what there is more of.
+ */
+export function militiaStrength(city: City): number {
+  return city.size * MILITIA.perCitizen;
+}
+
+/**
+ * Defence contributed by each citizen of an ungarrisoned city.
+ *
+ * Swept over eighteen seeds at 0, 0.3, 0.6 and 1.0. A light toll does the most
+ * good: it takes a captured city's median tenure from 21 turns to 37 and drops
+ * changes of hands from 45.8 a game to 37.1, and the heavier settings achieve
+ * less of both while costing the same.
+ *
+ * It is *not* free. All three non-zero settings land on 5-13 against 8-10 with
+ * no toll -- making cities sticky helps whoever already holds more of them,
+ * which is the Kingdom. Kept anyway: a game where 96% of cities are taken by
+ * walking into them unopposed is a worse game than one that is three wins out
+ * of eighteen off level, and the balance is better attacked somewhere that is
+ * not defensive.
+ *
+ * Held in an object rather than as a bare constant so a measurement can sweep
+ * it without editing this file; 0 restores the old behaviour exactly.
+ */
+export const MILITIA = { perCitizen: 0.3 };
+
 /** Units a city supports for free before shields start going to rations. */
 export function freeSupport(city: City): number {
   return Math.max(2, city.size);
