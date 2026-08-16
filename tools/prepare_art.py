@@ -683,6 +683,90 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
     return done, failed
 
 
+def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Per-creature attack animations, sliced the same way the effect strips are.
+
+    Output is one strip per creature at `units/<id>_attack.png`, so the renderer
+    can find it from a unit's base creature and recover the frame count by
+    dividing the strip's width by its height -- the same contract the effects
+    use, and no table to keep in step.
+
+    The vertical crop is taken once across the whole strip rather than per
+    frame. Trimming each frame to its own content would re-centre a creature on
+    itself every frame, so a lunging orc would appear to stand still while
+    changing shape. Horizontal extent is left exactly as drawn, which is what
+    carries the lunge.
+    """
+    src = SRC / "unit effects"
+    if not src.is_dir():
+        src = SRC / "unit_effects"
+    out = OUT / "units"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+
+    known = {c for c in CREATURES}
+    # A re-roll usually keeps the old file beside it, tagged in parentheses
+    # ("(green bg)"). Prefer whichever holds more frames, and on a tie the one
+    # generated most recently -- a second attempt supersedes the first.
+    best: dict[str, tuple[int, Path, int, int]] = {}
+    unknown: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
+        name = re.sub(r"\s*attack$", "", name).strip()
+        name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
+        if name not in known:
+            unknown.append(f"{path.name} -> '{name}'")
+            continue
+        with Image.open(path) as probe:
+            w, h = probe.size
+        frames = max(1, round(w / h))
+        prev = best.get(name)
+        if prev is None or (frames, path.stat().st_mtime) > (prev[0], prev[1].stat().st_mtime):
+            best[name] = (frames, path, w, h)
+
+    done = 0
+    problems: list[str] = []
+    for name, (frames, path, w, h) in sorted(best.items()):
+        if frames < 2:
+            problems.append(f"{name}: {w}x{h} is a single square image, not a strip")
+            continue
+        target = out / f"{name}_attack.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        clear_panel_borders(strip, frames)
+
+        bbox = strip.getbbox()
+        if bbox is None:
+            problems.append(f"{name}: nothing left after keying")
+            continue
+        # One vertical window for every frame, so the creature keeps its footing.
+        top, bottom = bbox[1], bbox[3]
+        kw = strip.size[0]
+        sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
+        for i in range(frames):
+            left = round(i * kw / frames)
+            right = round((i + 1) * kw / frames)
+            frame = strip.crop((left, top, right, bottom)).resize(
+                (UNIT_SIZE, UNIT_SIZE), Image.LANCZOS
+            )
+            sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
+        sheet.save(target, optimize=True)
+        print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
+        done += 1
+
+    missing = sorted(known - set(best))
+    return done, problems + [f"no animation for {m}" for m in missing], unknown
+
+
 def have_ffmpeg() -> bool:
     try:
         subprocess.run(
@@ -825,11 +909,14 @@ def main() -> int:
     terrain, missing_terrain = process_terrain(force)
     print("Effects:")
     effects, failed_effects = process_effects(force)
+    print("Unit attack animations:")
+    anims, anim_problems, anim_unknown = process_unit_effects(force)
     audio, audio_before, audio_after = process_audio()
 
     print(
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
-        f"{terrain} terrain sets, {effects} effect strips, {audio} audio files "
+        f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
+        f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
     for label, missing in (
@@ -841,6 +928,11 @@ def main() -> int:
         if missing:
             # Plain ASCII: the Windows console default codepage cannot print dashes.
             print(f"Still needed ({label}): {', '.join(missing)} - placeholders in use")
+    for label, items in (("unusable", anim_problems), ("unrecognised", anim_unknown)):
+        if items:
+            print(f"Attack animations {label}:")
+            for item in items:
+                print(f"  {item}")
     print("\nGroup sprites (Two Orcs, Ten Footmen...) are composed at runtime")
     print("from the single-unit art. They do not need their own files.")
     return 0
