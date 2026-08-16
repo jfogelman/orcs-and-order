@@ -32,6 +32,66 @@ export interface StrengthBreakdown {
   berserk: boolean;
 }
 
+/**
+ * What a thrower is worth once it has thrown the thing it fights with.
+ *
+ * Deliberately brutal. The throw itself hits hard and from two tiles away with
+ * no reply, so the price of using it has to be steep enough that an axethrower
+ * is a decision rather than a free opening move every turn.
+ */
+export const DISARMED_ATTACK = 0.25;
+
+/** What a dragon's breath does to whatever is standing behind its target. */
+export const BREATH_CARRY = 0.6;
+
+/**
+ * Give a thrower its weapon back.
+ *
+ * Two ways to earn it, both requiring the unit to do something rather than
+ * wait: walk into a friendly city, or kill somebody and pick their axe up off
+ * the floor.
+ */
+export function rearm(state: GameState, unit: Unit, how: string): void {
+  if (!unit.disarmed) return;
+  unit.disarmed = false;
+  log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner);
+}
+
+/**
+ * A dragon's breath carries past whatever it hit, into the tile directly
+ * behind, along the line it was already travelling.
+ *
+ * It does not check whose side that unit is on. Positioning is the whole
+ * mechanic: a dragon lined up behind your own front rank will cook it.
+ *
+ * Returns whatever it caught, or null.
+ */
+export function breatheThrough(
+  state: GameState,
+  attacker: Unit,
+  target: Unit,
+  damageDealt: number,
+): Unit | null {
+  if (!unitType(attacker.type).lineBreath || damageDealt <= 0) return null;
+  const bx = target.x + (target.x - attacker.x);
+  const by = target.y + (target.y - attacker.y);
+  const behind = state.units.find((u) => u.x === bx && u.y === by);
+  if (!behind) return null;
+
+  const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
+  behind.hp -= carried;
+  log(
+    state,
+    `The breath carries on into ${unitType(behind.type).name} for ${carried}.`,
+    behind.owner === attacker.owner ? 'bad' : 'combat',
+    attacker.owner,
+    undefined,
+    [behind.x, behind.y],
+  );
+  if (behind.hp <= 0) destroyUnit(state, behind, 'is burned away behind the line');
+  return behind;
+}
+
 export function attackStrength(state: GameState, attacker: Unit, defender: Unit): StrengthBreakdown {
   const type = unitType(attacker.type);
   const owner = state.players[attacker.owner];
@@ -50,6 +110,8 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
       : 1;
 
   let total = type.attack;
+  // Nothing left to fight with but hands and regret.
+  if (attacker.disarmed) total *= DISARMED_ATTACK;
   if (attacker.veteran) total *= VETERAN_BONUS;
   total *= siegeMult;
   total *= sallyMult;

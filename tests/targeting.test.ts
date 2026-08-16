@@ -13,6 +13,14 @@ import { createGame, recomputeVisibility, spawnUnit } from '../src/sim/gamestate
 import { runAiTurn } from '../src/ai/ai';
 import { SFX_FILES } from '../src/audio/audio';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
+import {
+  attackStrength,
+  breatheThrough,
+  BREATH_CARRY,
+  DISARMED_ATTACK,
+} from '../src/sim/combat';
+import { THROW_BONUS } from '../src/sim/abilities';
+import { tryStep } from '../src/sim/movement';
 
 /**
  * Targeted abilities: who can be picked, and what happens when they are.
@@ -301,5 +309,132 @@ describe('every sound the simulation asks for actually exists', () => {
     for (const entry of state.log) {
       if (entry.cue) expect(known.has(entry.cue), `no sound named ${entry.cue}`).toBe(true);
     }
+  });
+});
+
+describe('the axethrower has exactly one axe', () => {
+  function thrower(): { state: GameState; axe: Unit; foe: Unit } {
+    const state = board();
+    revealAll(state, 0);
+    const axe = spawnUnit(state, 0, 'axethrower', 10, 10);
+    const foe = spawnUnit(state, 1, 'ogre', 12, 10);
+    return { state, axe, foe };
+  }
+
+  it('starts armed, and is disarmed by throwing', () => {
+    const { state, axe, foe } = thrower();
+    expect(axe.disarmed).toBe(false);
+    useAbility(state, axe, 'ranged', foe);
+    expect(axe.disarmed).toBe(true);
+  });
+
+  it('cannot throw again once it has thrown', () => {
+    const { state, axe, foe } = thrower();
+    useAbility(state, axe, 'ranged', foe);
+    axe.moves = 2;
+    expect(abilityReady(axe, 'ranged')).toMatch(/thrown its axe/i);
+    expect(abilityTargets(state, axe, 'ranged')).toEqual([]);
+  });
+
+  it('fights at a quarter strength while disarmed', () => {
+    const { state, axe, foe } = thrower();
+    const armedStrength = attackStrength(state, axe, foe).total;
+    axe.disarmed = true;
+    expect(attackStrength(state, axe, foe).total).toBeCloseTo(armedStrength * DISARMED_ATTACK);
+  });
+
+  it('throws harder than it swings', () => {
+    // The whole trade: one big hit at range, then a much worse unit.
+    const { state, axe, foe } = thrower();
+    expect(unitType('axethrower').throwsWeapon).toBe(true);
+    expect(THROW_BONUS).toBeGreaterThan(1);
+    expect(attackStrength(state, axe, foe).total * THROW_BONUS).toBeGreaterThan(
+      attackStrength(state, axe, foe).total,
+    );
+  });
+
+  it('gets an axe back by walking into a friendly city', () => {
+    const { state, axe } = thrower();
+    axe.disarmed = true;
+    state.cities.push({
+      id: 1, owner: 0, name: 'Axeholm', x: 11, y: 10, size: 3,
+      food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+      workedTiles: [], disorder: false, foundedTurn: 1,
+    });
+    axe.moves = 2;
+    tryStep(state, axe, 11, 10);
+    expect(axe.disarmed).toBe(false);
+  });
+
+  it('gets an axe back by killing somebody', () => {
+    const { state, axe } = thrower();
+    axe.disarmed = true;
+    const victim = spawnUnit(state, 1, 'peasant', 11, 10);
+    victim.hp = 1;
+    axe.moves = 2;
+    // Keep swinging until it wins; disarmed it may well lose the first try.
+    for (let i = 0; i < 40 && state.units.includes(victim); i++) {
+      axe.hp = unitType('axethrower').hp;
+      axe.moves = 2;
+      tryStep(state, axe, victim.x, victim.y);
+      if (!state.units.includes(axe)) break;
+    }
+    if (!state.units.includes(victim) && state.units.includes(axe)) {
+      expect(axe.disarmed, 'killing somebody should have got the axe back').toBe(false);
+    }
+  });
+});
+
+describe("a dragon's breath carries past its target", () => {
+  function line(behindOwner: number): { state: GameState; dragon: Unit; front: Unit; behind: Unit } {
+    const state = board();
+    revealAll(state, 0);
+    const dragon = spawnUnit(state, 0, 'dragon', 10, 10);
+    const front = spawnUnit(state, 1, 'footman', 11, 10);
+    const behind = spawnUnit(state, behindOwner, 'footman', 12, 10);
+    return { state, dragon, front, behind };
+  }
+
+  it('hits the unit directly beyond, for a share of the damage', () => {
+    const { state, dragon, front, behind } = line(1);
+    const before = behind.hp;
+    breatheThrough(state, dragon, front, 10);
+    expect(behind.hp).toBe(before - Math.round(10 * BREATH_CARRY));
+  });
+
+  it('does not care whose side that unit is on', () => {
+    // Positioning is the mechanic. A dragon lined up behind your own front
+    // rank will cook it, and that is deliberate.
+    const { state, dragon, front, behind } = line(0);
+    const before = behind.hp;
+    breatheThrough(state, dragon, front, 10);
+    expect(behind.hp, 'the breath spared a friendly unit').toBeLessThan(before);
+  });
+
+  it('follows the line the attack was already travelling, including diagonals', () => {
+    const state = board();
+    revealAll(state, 0);
+    const dragon = spawnUnit(state, 0, 'dragon', 10, 10);
+    const front = spawnUnit(state, 1, 'footman', 11, 11);
+    const behind = spawnUnit(state, 1, 'footman', 12, 12);
+    const aside = spawnUnit(state, 1, 'footman', 11, 12);
+    const asideBefore = aside.hp;
+    breatheThrough(state, dragon, front, 10);
+    expect(behind.hp).toBeLessThan(unitType('footman').hp);
+    expect(aside.hp, 'the breath bent around a corner').toBe(asideBefore);
+  });
+
+  it('does nothing when the tile behind is empty, and nothing for other creatures', () => {
+    const state = board();
+    revealAll(state, 0);
+    const dragon = spawnUnit(state, 0, 'dragon', 10, 10);
+    const front = spawnUnit(state, 1, 'footman', 11, 10);
+    expect(breatheThrough(state, dragon, front, 10)).toBeNull();
+
+    const orc = spawnUnit(state, 0, 'orc', 5, 5);
+    const target = spawnUnit(state, 1, 'footman', 6, 5);
+    const behind = spawnUnit(state, 1, 'footman', 7, 5);
+    expect(breatheThrough(state, orc, target, 10)).toBeNull();
+    expect(behind.hp).toBe(unitType('footman').hp);
   });
 });

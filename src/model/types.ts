@@ -70,6 +70,11 @@ export interface Unit {
   goto: { x: number; y: number } | null;
   /** City that supports this unit, or null for free units. */
   homeCity: number | null;
+  /**
+   * Has thrown its one weapon and not yet got it back. Only ever true for
+   * creatures that throw the thing they fight with.
+   */
+  disarmed: boolean;
 }
 
 // --------------------------------------------------------------------- cities

@@ -858,6 +858,11 @@ class App {
               ? `<div class="stat-row"><span class="label">Crowd</span><span class="value k-bad">${t.count} of them, nobody agreeing</span></div>`
               : ''
           }
+          ${
+            unit.disarmed
+              ? `<div class="stat-row"><span class="label">Disarmed</span><span class="value k-bad">threw its axe &middot; quarter strength until it gets one back</span></div>`
+              : ''
+          }
           ${unit.order !== 'none' ? `<div class="chip">${unit.order}</div>` : ''}
           ${
             unit.goto

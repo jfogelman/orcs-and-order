@@ -1,7 +1,13 @@
 import { distance } from '../engine/grid';
 import { unitType } from '../model/units';
 import type { GameState, Unit } from '../model/types';
-import { attackStrength, defenseStrength, damagePerRound, destroyUnit } from './combat';
+import {
+  attackStrength,
+  defenseStrength,
+  damagePerRound,
+  destroyUnit,
+  rearm,
+} from './combat';
 import { log, recomputeVisibility, withRng } from './gamestate';
 
 /**
@@ -35,6 +41,9 @@ export const ABILITIES: Record<AbilityId, AbilitySpec> = {
 /** Rounds a ranged attack resolves before both sides stop. */
 export const RANGED_ROUNDS = 3;
 
+/** How much harder a thrown weapon hits than the same creature swinging it. */
+export const THROW_BONUS = 1.5;
+
 /** What a unit is in principle capable of, ignoring its current state. */
 export function abilitiesOf(unit: Unit): AbilityId[] {
   const type = unitType(unit.type);
@@ -52,6 +61,10 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
 export function abilityReady(unit: Unit, ability: AbilityId): string | null {
   if (!abilitiesOf(unit).includes(ability)) return 'This unit cannot do that.';
   if (unit.moves <= 0) return 'No movement left this turn.';
+  // You get one axe. Having thrown it, there is nothing to throw.
+  if (ability === 'ranged' && unit.disarmed && unitType(unit.type).throwsWeapon) {
+    return 'It has thrown its axe and has not got it back yet.';
+  }
   return null;
 }
 
@@ -109,10 +122,14 @@ export interface AbilityOutcome {
  * capture a capital from outside the walls.
  */
 function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
+  const type = unitType(unit.type);
   const atk = attackStrength(state, unit, target);
   const def = defenseStrength(state, target, unit);
-  const dmg = damagePerRound(unitType(unit.type).hp, unitType(target.type).hp);
-  const pHit = atk.total / Math.max(0.0001, atk.total + def.total);
+  const dmg = damagePerRound(type.hp, unitType(target.type).hp);
+  // A thrown weapon lands harder than a swung one -- that is what you are
+  // buying with the axe you are about to be without.
+  const power = type.throwsWeapon ? atk.total * THROW_BONUS : atk.total;
+  const pHit = power / Math.max(0.0001, power + def.total);
 
   const landed = withRng(state, (rng) => {
     let hits = 0;
@@ -123,6 +140,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const amount = landed * dmg;
   target.hp -= amount;
   unit.moves = 0;
+  if (type.throwsWeapon) unit.disarmed = true;
 
   const attackerName = unitType(unit.type).name;
   const targetName = unitType(target.type).name;
@@ -144,6 +162,8 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   if (killed) {
     const where: readonly [number, number] = [target.x, target.y];
     destroyUnit(state, target, 'is shot down where it stands');
+    // Killing somebody means there is an axe on the ground to pick up.
+    rearm(state, unit, 'retrieves its axe from the wreckage');
     recomputeVisibility(state, unit.owner);
     recomputeVisibility(state, target.owner);
     log(state, `${targetName} falls.`, 'combat', unit.owner, undefined, where);

@@ -21,9 +21,9 @@ ones introduce.
 | 2 | Troll regeneration | (1) |
 | 3 | Sapper death blast | a hook in `destroyUnit` |
 | 4 | Ranged attack | ~~target-select mode~~ — **done** |
-| 5 | Axethrower disarm | (4), plus a new `Unit` field |
+| 5 | Axethrower disarm | ~~(4), plus a new `Unit` field~~ — **done**, `SAVE_VERSION` now 2 |
 | 6 | Death Knight execution | nothing new |
-| 7 | Dragon line attack | (4) |
+| 7 | Dragon line attack | ~~(4)~~ — **done** (needed no target select in the end) |
 | 8 | Paladin heal | ~~(4), plus friendly targeting~~ — **done** |
 
 ~~**Steps 4–8 all hang off one piece of UI that does not exist yet:**~~ **Built.**

@@ -17,7 +17,8 @@ import type {
 import { generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
 
-export const SAVE_VERSION = 1;
+// 2: units carry `disarmed`, for the axethrower that has thrown its axe.
+export const SAVE_VERSION = 2;
 
 export interface NewGameOptions {
   seed?: number;
@@ -147,6 +148,7 @@ export function spawnUnit(
     order: 'none',
     goto: null,
     homeCity: null,
+    disarmed: false,
   };
   state.units.push(u);
   return u;

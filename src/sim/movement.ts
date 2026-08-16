@@ -5,7 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import type { CombatResult } from './combat';
-import { destroyUnit, detonate, resolveCombat } from './combat';
+import { breatheThrough, destroyUnit, detonate, rearm, resolveCombat } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
 
@@ -296,10 +296,14 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         undefined,
         [occupant.x, occupant.y],
       );
+      // A dragon's breath does not stop at the thing it hit. Measured before
+      // the defender is removed, since the damage it took is the input.
+      breatheThrough(state, unit, occupant, unitType(occupant.type).hp - Math.max(0, occupant.hp));
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
       const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
       destroyUnit(state, occupant, 'is wiped out');
+      rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
       if (blastVictims.some((v) => v.id === unit.id)) {
         recomputeVisibility(state, unit.owner);
@@ -361,6 +365,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   unit.y = y;
   unit.moves = Math.max(0, unit.moves - cost);
   if (unit.order === 'fortified') unit.order = 'none';
+  // Somewhere with a forge, and somebody to complain to about losing an axe.
+  if (city && city.owner === unit.owner) rearm(state, unit, 'is handed a new axe');
   recomputeVisibility(state, unit.owner);
 
   if (capturing && city) {

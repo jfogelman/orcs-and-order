@@ -507,6 +507,25 @@ export class MapRenderer {
         ctx.textBaseline = 'top';
         ctx.fillText('*', s.x + 2, s.y + size * 0.55);
       }
+      // A disarmed thrower fights at a quarter strength, which without a mark
+      // on the map looks exactly like the unit being broken.
+      if (u.disarmed) {
+        const r = size * 0.15;
+        const cx = s.x + size - r - 2;
+        const cy = s.y + r + 2;
+        ctx.fillStyle = 'rgba(20,16,12,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#e0603c';
+        ctx.lineWidth = Math.max(1.5, size / 22);
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.5, cy - r * 0.5);
+        ctx.lineTo(cx + r * 0.5, cy + r * 0.5);
+        ctx.moveTo(cx + r * 0.5, cy - r * 0.5);
+        ctx.lineTo(cx - r * 0.5, cy + r * 0.5);
+        ctx.stroke();
+      }
       if (u.order === 'fortified') {
         ctx.strokeStyle = 'rgba(240,230,200,0.8)';
         ctx.lineWidth = 2;

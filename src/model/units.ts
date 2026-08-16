@@ -74,6 +74,16 @@ export interface CreatureDef {
    */
   range?: number;
   /**
+   * Throws the weapon it fights with, so a ranged attack costs it that weapon
+   * until it can get another. Hits harder for the throw; much weaker after.
+   */
+  throwsWeapon?: boolean;
+  /**
+   * Breath carries past whatever it hits, into the tile directly behind.
+   * Friend or enemy — it does not look first.
+   */
+  lineBreath?: boolean;
+  /**
    * Fraction of a wounded friend's maximum health this creature can restore,
    * per member of the group: one Paladin patches a unit up to half, two get it
    * all the way. Absent for everyone who cannot do it at all.
@@ -180,6 +190,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'axethrower',
+    throwsWeapon: true,
     range: 2,
     name: 'Axethrower',
     plural: 'Axethrowers',
@@ -259,6 +270,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'dragon',
+    lineBreath: true,
     name: 'Dragon',
     plural: 'Dragons',
     faction: 'orc',
@@ -488,6 +500,10 @@ export interface UnitTypeDef {
   executeChance: number;
   /** Tiles this unit can strike across. 1 means adjacent only. */
   range: number;
+  /** Throws its weapon when it strikes at range, and is the worse for it. */
+  throwsWeapon: boolean;
+  /** Attacks carry into the tile beyond the target. */
+  lineBreath: boolean;
   /**
    * Health a target is restored to, as a fraction of its maximum. Scales with
    * the group, so Two Paladins heal outright where one leaves the job half
@@ -535,6 +551,8 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     demolishes: c.demolishes === true,
     executeChance: c.executeChance ?? 0,
     range: c.range ?? 1,
+    throwsWeapon: c.throwsWeapon === true,
+    lineBreath: c.lineBreath === true,
     healsTo: Math.min(1, (c.healFraction ?? 0) * count),
     artScale: c.artScale ?? 1,
     silhouette: c.silhouette,
