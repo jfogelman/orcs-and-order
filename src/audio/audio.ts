@@ -53,6 +53,23 @@ export type SfxId =
  * sound that exists. A cue that does not is silently ignored at runtime, so
  * nothing ever fails -- it just goes quiet, which is hard to notice.
  */
+/** How long the fade at the end of a capped sound takes, in milliseconds. */
+const FADE_MS = 140;
+
+/**
+ * Sounds allowed to ring out a little: the ones that mark an occasion rather
+ * than an action. Everything else is an event in a turn and should be over
+ * before the next one happens.
+ */
+const LINGERING: ReadonlySet<SfxId> = new Set<SfxId>([
+  'discovery',
+  'promote',
+  'city-founded',
+  'city-lost',
+  'capture',
+  'turn',
+]);
+
 export const SFX_FILES: Record<SfxId, string> = {
   melee: 'daviddumaisaudio-monster-05-grunt-and-growl-195715.mp3',
   sword: 'dragon-studio-sword-clashhit-393837.mp3',
@@ -220,6 +237,39 @@ export class AudioManager {
 
   // ----------------------------------------------------------------- sfx
 
+  /**
+   * Cut a sound off after this long, with a short fade so it does not click.
+   *
+   * The source clips are as recorded, and several of them are far longer than
+   * a game event: the troll roar runs eleven seconds, which is still going
+   * long after the troll has finished whatever it was doing, and overlaps the
+   * next three things that happen. Capping on playback rather than trimming
+   * the files keeps the originals intact and the licence trail with them.
+   */
+  private capFor(id: SfxId): number {
+    if (LINGERING.has(id)) return 2.6;
+    return 1.1;
+  }
+
+  private fadeOutAndStop(el: HTMLAudioElement, after: number): void {
+    window.setTimeout(() => {
+      if (el.paused) return;
+      const from = el.volume;
+      const steps = 6;
+      let step = 0;
+      const tick = window.setInterval(() => {
+        step++;
+        el.volume = Math.max(0, from * (1 - step / steps));
+        if (step >= steps) {
+          window.clearInterval(tick);
+          el.pause();
+          el.currentTime = 0;
+          el.volume = from;
+        }
+      }, FADE_MS / steps);
+    }, after * 1000);
+  }
+
   play(id: SfxId, throttleMs = 90): void {
     if (this.prefs.muted || !this.unlocked) return;
     const now = performance.now();
@@ -241,6 +291,7 @@ export class AudioManager {
     free.currentTime = 0;
     free.volume = this.prefs.sfxVolume;
     void free.play().catch(() => {});
+    this.fadeOutAndStop(free, this.capFor(id));
   }
 
   /** The right noise for a specific unit doing a specific thing. */

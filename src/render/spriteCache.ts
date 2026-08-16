@@ -55,6 +55,13 @@ export class SpriteCache {
       this.units.set(typeId, sprite);
     }
     this.resolveArt(typeId);
+    // Start the attack strip loading as soon as a unit of this type is drawn.
+    //
+    // It used to be fetched at the moment of attacking, which meant the answer
+    // was always "not yet" and the swing was skipped -- the animation was
+    // effectively never seen. Warming it here costs one request per creature
+    // that appears on screen, well before anyone throws a punch.
+    this.attackFrames(typeId);
     return sprite;
   }
 
