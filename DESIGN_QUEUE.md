@@ -483,6 +483,49 @@ candidate — turns the Horde's dead 476 into buildings or units. It needs measu
 like everything else, but unlike `caution` it does not cost the faction its character:
 an orc spending a hoard on getting something built *now* is entirely in keeping.
 
+## 4e. Rush-buying: measured, and actively harmful to the AI
+
+Gold now buys production. As a *feature* this is right -- gold previously had no
+sink at all and the Horde banked ~476 a game into nothing. As a **balance lever it is
+the worst thing tried all session.**
+
+| arm | wins |
+|---|---|
+| AI never spends | 6 – 12 |
+| reserve 60, cheapest first | 5 – 13 |
+| reserve 400, cheapest first | **2 – 16** |
+| reserve 400, buildings first | **1 – 17** |
+
+The better the AI got at spending, the worse the Horde did. A six-seed probe had
+suggested the opposite, on the strength of the Horde's building count alone (12.2
+against 9.8) -- which was true and irrelevant, because over the same arms the Kingdom
+went from 12.7 cities to 14.1 and from 83.5 population to 89.2.
+
+**AI rush-buying is off** (`AI_TUNING.rushBuying`). The mechanic stays for the human
+player, and the switch is left in place to re-measure if the city gap ever closes.
+
+### The general lesson, which retires a class of ideas
+
+Rush-buying scales with **how many cities you have to spend it in.** The Kingdom has
+roughly twice as many, so it gets roughly twice the benefit. The mechanic amplified
+the very gap it was meant to close.
+
+That is the same reason the unit-driven buildings did nothing (4c): a per-city bonus
+paid to a side with more cities cannot close a city-count deficit. Both ideas failed
+for one structural reason, and it generalises:
+
+> **Any per-city mechanic amplifies a city-count lead rather than closing it.**
+
+So the remaining levers are the ones that are *not* per-city:
+
+- **Per-unit**: the Horde fields fewer units too (30 against 76), so this is no better.
+- **Flat, per-player**: a fixed bonus regardless of size — untried, and the only
+  category that does not scale with the lead.
+- **Retention itself**: make a Horde-held city harder to take back, which attacks the
+  cause rather than compensating for it. Still the most direct route, and 4b's
+  unexplained half — why a Kingdom city survives ~30 turns and a Horde one ~14
+  regardless of `caution` — remains the thing to find out.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit

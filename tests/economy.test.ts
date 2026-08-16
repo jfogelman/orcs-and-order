@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runAiTurn } from '../src/ai/ai';
+import { AI_TUNING, runAiTurn } from '../src/ai/ai';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
 import type { BuildingId, City, GameState } from '../src/model/types';
@@ -398,9 +398,12 @@ describe('rush-buying', () => {
     expect(g.state.players[0].gold).toBeGreaterThanOrEqual(0);
   });
 
-  it('is used by the AI, and stops it hoarding', () => {
-    // The whole point: gold that buys nothing scores nothing. Before this,
-    // the Horde ended games sitting on hundreds of unspent gold.
+  it('is used by the AI when switched on, and stops it hoarding', () => {
+    // Off by default: measured over eighteen seeds, an AI that spends gold
+    // well makes the balance markedly worse, because rush-buying scales with
+    // how many cities you have to spend it in. The machinery still has to
+    // work, though, so the test turns it on.
+    AI_TUNING.rushBuying = true;
     const state = createGame({ seed: 4242 });
     state.players[0].controller = 'ai';
     beginPlayerTurn(state, 0);
@@ -411,6 +414,19 @@ describe('rush-buying', () => {
       endPlayerTurn(state);
       if (state.log.slice(before).some((e) => /gold to have/.test(e.text))) everBought = true;
     }
+    AI_TUNING.rushBuying = false;
     expect(everBought, 'the AI never once spent gold on production').toBe(true);
+  });
+
+  it('leaves the AI alone by default', () => {
+    const state = createGame({ seed: 4242 });
+    state.players[0].controller = 'ai';
+    beginPlayerTurn(state, 0);
+    for (let i = 0; i < 120 && state.winner === null; i++) {
+      runAiTurn(state, state.activePlayer);
+      endPlayerTurn(state);
+    }
+    expect(AI_TUNING.rushBuying).toBe(false);
+    expect(state.log.some((e) => /gold to have/.test(e.text))).toBe(false);
   });
 });

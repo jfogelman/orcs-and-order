@@ -473,6 +473,21 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
  * selling its own buildings off the moment upkeep exceeded income.
  */
 export const AI_TUNING = {
+  /**
+   * Whether the AI spends gold on production at all. **Off, and measured.**
+   *
+   * Rush-buying scales with the number of cities you have to spend it in, so
+   * it amplifies a city-count lead instead of closing one. Over eighteen seeds
+   * the better the AI got at spending, the worse the Horde did: 6-12 not
+   * spending, 5-13 with a thin reserve, 2-16 with a fat one, and 1-17 when
+   * taught to prefer buildings. The Kingdom simply had twice as many queues to
+   * accelerate.
+   *
+   * The mechanic stays -- a human player can still buy things, which is the
+   * whole reason gold exists now -- but the AI does not use it. Flip this back
+   * on to re-measure if the city gap ever closes.
+   */
+  rushBuying: false,
   goldReserve: 60,
   /**
    * Buy the thing that lasts, rather than the thing that is cheapest.
@@ -517,7 +532,7 @@ export function runAiTurn(state: GameState, playerId: number): void {
   for (const city of playerCities(state, playerId)) {
     city.producing = chooseProduction(state, city, personality);
   }
-  spendGold(state, player);
+  if (AI_TUNING.rushBuying) spendGold(state, player);
 
   const frontier = frontierTiles(state, player);
 
