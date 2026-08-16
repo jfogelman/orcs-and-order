@@ -526,6 +526,46 @@ So the remaining levers are the ones that are *not* per-city:
   unexplained half — why a Kingdom city survives ~30 turns and a Horde one ~14
   regardless of `caution` — remains the thing to find out.
 
+## 4f. Walls are innocent — and 96% of captures are walk-ins
+
+Walls were the strongest remaining suspect: human-only, kept on capture, so the
+Kingdom can add defence to anything it holds while the Horde can only inherit it.
+Three arms — as shipped, buildable by both, and standing-but-inert — came back
+**byte-identical across all three.** Not similar: identical, meaning no decision
+anywhere in any game was affected.
+
+The plumbing was checked before the null was believed (defence 9 with walls, 4.5
+inert), so the result is real. The explanation is the finding:
+
+> **Over four games, 237 cities changed hands. 9 of them (4%) were taken from a
+> defended city. 228 (96%) were walked into empty.**
+
+A walled city changed hands 3 times in an entire game. Walls cannot matter, because
+defence almost never happens: cities are not besieged, they are *found unattended*.
+
+### What this retires
+
+Every defensive lever tried or contemplated, all at once. Walls, the Broken Catapult,
+regeneration, terrain, unit defence stats, veterancy — none of them can move retention,
+because 96% of the time there is nobody standing there for them to apply to. It also
+explains 4b's stubborn half: `caution` changed the Horde's hold time because a cautious
+AI leaves units at home, and the Kingdom held on regardless because it simply has more
+units (76 to 30) and therefore more cities with somebody in them.
+
+### What is actually left
+
+The war is a see-saw of undefended cities, and the only things that can change that:
+
+1. **Make an empty city not free.** A city that resists on its own — militia, a turn
+   spent taking it, population-scaled defence — changes the nature of the war rather
+   than adding another bonus nobody is present to receive.
+2. **Make units stay.** `garrisonPerCity` is a *production* target, not a standing
+   order: it builds a defender when the garrison is short, and that defender then walks
+   off to attack. Nothing keeps anyone at home.
+
+Both are mechanics rather than AI constants. (1) is the more interesting and the more
+in keeping — an orc city that shrugs off a lone footman is funnier than one with a wall.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
