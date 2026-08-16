@@ -27,6 +27,7 @@ Usage:  python tools/prepare_art.py [--force]
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from collections import Counter, deque
@@ -97,6 +98,11 @@ BUILDING_ICONS = [
 
 # Icons are read at a glance in a crowded tree, so they stay small.
 ICON_SIZE = 48
+
+# One animation frame. The renderer draws these over a 32px tile at 2x, so 64
+# is native size -- large enough that a fireball is not a smudge, small enough
+# that an eleven-effect set stays a few hundred KB.
+EFFECT_SIZE = 64
 # Composition happens at this size and is downscaled, so stamped copies keep
 # their edges instead of turning to mush.
 ICON_WORK_SIZE = 192
@@ -565,6 +571,118 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
     return done, missing
 
 
+def clear_panel_borders(strip: Image.Image, frames: int) -> None:
+    """
+    Rub out the white rules some strips draw between their frames.
+
+    A generator asked for a row of frames often returns them as separate panels
+    with a hairline border, and that border is not the background colour, so
+    keying leaves it behind -- every animation then plays inside a visible box.
+
+    Only lines sitting on a panel edge are considered, and only if they run
+    almost the full span. That is what separates a divider from artwork: an
+    effect can easily be a solid vertical bar somewhere, but not one that
+    happens to be exactly on a frame boundary and reaches both ends of it.
+    """
+    w, h = strip.size
+    px = strip.load()
+    span = w / frames
+    edge = max(2, round(span * 0.02))
+
+    def solid_column(x: int) -> bool:
+        opaque = sum(1 for y in range(h) if px[x, y][3] > 200)
+        return opaque > h * 0.85
+
+    def solid_row(y: int) -> bool:
+        opaque = sum(1 for x in range(w) if px[x, y][3] > 200)
+        return opaque > w * 0.85
+
+    for i in range(frames + 1):
+        centre = round(i * span)
+        for x in range(max(0, centre - edge), min(w, centre + edge + 1)):
+            if solid_column(x):
+                for y in range(h):
+                    px[x, y] = (0, 0, 0, 0)
+
+    band = max(2, round(h * 0.02))
+    for y in list(range(0, band)) + list(range(h - band, h)):
+        if solid_row(y):
+            for x in range(w):
+                px[x, y] = (0, 0, 0, 0)
+
+
+def process_effects(force: bool) -> tuple[int, list[str]]:
+    """
+    Effect art arrives as a horizontal strip of animation frames on magenta.
+
+    Nothing declares how many frames a strip holds, and asking would mean
+    maintaining a table that has to be edited every time a file is re-rolled.
+    The frames are square, so the strip's own proportions say it: a 2064x512
+    sheet is four frames across, a 2544x416 one is six. Round the ratio and
+    that is the count.
+
+    The whole strip is keyed in one pass rather than frame by frame, so every
+    frame ends up with the same background decision -- a frame that happens to
+    be nearly all fire would otherwise be read as having a different background
+    from its neighbours and come out cut differently.
+
+    Frames are never trimmed or re-centred, which the unit pipeline does and
+    this one must not: trimming each frame to its own content would re-centre
+    an expanding fireball on itself every frame, and the explosion would sit
+    still while merely getting bigger.
+    """
+    src = SRC / "effects"
+    out = OUT / "effects"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    # A generator asked for "6 frames" names the file that way, so the count
+    # lives in the filename as often as not. It is not needed -- the ratio
+    # already says it -- so drop it, and let the better version of a duplicate
+    # win rather than whichever happened to sort last.
+    best: dict[str, tuple[int, Path, int, int]] = {}
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
+        name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
+        with Image.open(path) as probe:
+            w, h = probe.size
+        frames = max(1, round(w / h))
+        if name not in best or frames > best[name][0]:
+            best[name] = (frames, path, w, h)
+
+    done = 0
+    failed: list[str] = []
+    for name, (frames, path, w, h) in sorted(best.items()):
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            failed.append(name)
+            continue
+
+        # Slice from the keyed strip's own width: crop_letterbox may have taken
+        # a bar off, and the frames divide whatever is actually left.
+        kw, kh = strip.size
+        clear_panel_borders(strip, frames)
+        sheet = Image.new("RGBA", (frames * EFFECT_SIZE, EFFECT_SIZE), (0, 0, 0, 0))
+        for i in range(frames):
+            left = round(i * kw / frames)
+            right = round((i + 1) * kw / frames)
+            frame = strip.crop((left, 0, right, kh)).resize(
+                (EFFECT_SIZE, EFFECT_SIZE), Image.LANCZOS
+            )
+            sheet.paste(frame, (i * EFFECT_SIZE, 0), frame)
+        sheet.save(target, optimize=True)
+        print(f"  effects/{name}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, failed
+
+
 def have_ffmpeg() -> bool:
     try:
         subprocess.run(
@@ -705,11 +823,13 @@ def main() -> int:
     missing_icons.extend(missing_composed)
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
+    print("Effects:")
+    effects, failed_effects = process_effects(force)
     audio, audio_before, audio_after = process_audio()
 
     print(
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
-        f"{terrain} terrain sets, {audio} audio files "
+        f"{terrain} terrain sets, {effects} effect strips, {audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
     for label, missing in (
