@@ -8,6 +8,7 @@ import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
 import { TerrainLayer } from './terrainLayer';
+import { UnitAnimator } from './unitAnimator';
 
 /**
  * A planned route, split at the point this turn's movement runs out. Drawn in
@@ -66,6 +67,8 @@ export class MapRenderer {
   /** Advances every frame; drives the selection pulse. */
   private clock = 0;
   private layer: TerrainLayer | null = null;
+  /** Which units are mid-swing. Purely visual; never touches game state. */
+  readonly animator = new UnitAnimator();
   private rebuildTimer: number | null = null;
 
   constructor(
@@ -160,6 +163,7 @@ export class MapRenderer {
 
   draw(state: GameState, viewerId: number, cam: Camera, overlay: MapOverlay, dt: number): void {
     this.clock += dt;
+    this.animator.update(dt);
     const ctx = this.ctx();
     const viewer = state.players[viewerId];
     const { x0, y0, x1, y1 } = cam.visibleTileRange();
@@ -348,6 +352,30 @@ export class MapRenderer {
     }
   }
 
+  /**
+   * Which picture this unit should be showing right now.
+   *
+   * Three states, in order of precedence: mid-swing, having thrown its weapon,
+   * or standing there. The disarmed pose is the last frame of the unit's own
+   * attack -- the moment after the axe has left -- so it can never disagree
+   * with the animation it came from.
+   *
+   * Every branch falls back to the idle sprite, so a creature with no
+   * animation art simply never animates rather than disappearing.
+   */
+  private spriteFor(u: Unit): CanvasImageSource {
+    const frame = this.animator.frameFor(u.id);
+    if (frame !== null) {
+      const frames = this.sprites.attackFrames(u.type);
+      if (frames && frames[frame]) return frames[frame];
+    }
+    if (u.disarmed) {
+      const thrown = this.sprites.disarmedSprite(u.type);
+      if (thrown) return thrown;
+    }
+    return this.sprites.unit(u.type);
+  }
+
   private drawRoute(
     ctx: CanvasRenderingContext2D,
     cam: Camera,
@@ -465,7 +493,7 @@ export class MapRenderer {
     // however tall it is drawn.
     const drawSize = size * art;
     ctx.drawImage(
-      this.sprites.unit(u.type),
+      this.spriteFor(u),
       Math.round(s.x + (size - drawSize) / 2),
       Math.round(s.y + (size - drawSize) + yOff),
       Math.ceil(drawSize),

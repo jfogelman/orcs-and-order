@@ -472,7 +472,17 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
  * Without a floor the AI would spend down to nothing every turn and then start
  * selling its own buildings off the moment upkeep exceeded income.
  */
-export const AI_TUNING = { goldReserve: 60 };
+export const AI_TUNING = {
+  goldReserve: 60,
+  /**
+   * Buy the thing that lasts, rather than the thing that is cheapest.
+   *
+   * Cheapest-first turned out to mean "a cheap unit, every single turn": with
+   * a thin reserve the AI bought about thirty times a game and finished with
+   * *fewer* standing buildings than when it could not spend at all.
+   */
+  preferBuildings: false,
+};
 
 /**
  * Turn banked gold into things that exist.
@@ -486,9 +496,11 @@ function spendGold(state: GameState, player: Player): void {
   // Bounded: each purchase is meant to be cheap, and an unbounded loop here
   // would be one rounding error away from hanging a turn.
   for (let bought = 0; bought < 12; bought++) {
+    const rank = (c: City) =>
+      AI_TUNING.preferBuildings && c.producing.kind === 'building' ? 0 : 1;
     const affordable = playerCities(state, player.id)
       .filter((c) => rushBlocked(state, c) === null)
-      .sort((a, b) => rushCost(a) - rushCost(b))[0];
+      .sort((a, b) => rank(a) - rank(b) || rushCost(a) - rushCost(b))[0];
     if (!affordable) break;
     if (player.gold - rushCost(affordable) < AI_TUNING.goldReserve) break;
     if (!rushBuy(state, affordable)) break;

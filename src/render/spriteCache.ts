@@ -1,7 +1,7 @@
 import type { FactionId, TerrainId, UnitTypeId } from '../model/types';
 import { unitType } from '../model/units';
 import { buildCitySprite, buildUnitSprite, composeGroupSprite } from './placeholders';
-import { TERRAIN_VARIANTS } from './tileArt';
+import { makeCanvas, TERRAIN_VARIANTS } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
 
 /**
@@ -33,6 +33,9 @@ export class SpriteCache {
   private units = new Map<UnitTypeId, CanvasImageSource>();
   private cities = new Map<string, CanvasImageSource>();
   private baseArt = new Map<string, Promise<HTMLImageElement>>();
+  /** Per-type attack frames; null means "looked, and there are none". */
+  private attacks = new Map<UnitTypeId, CanvasImageSource[] | null>();
+  private attackAttempted = new Set<UnitTypeId>();
   private attempted = new Set<string>();
   private readonly base: string;
 
@@ -87,6 +90,61 @@ export class SpriteCache {
       this.baseArt.set(creatureId, pending);
     }
     return pending;
+  }
+
+  /**
+   * The frames of a creature's attack animation, composed for the group size.
+   *
+   * Returns null until the strip has loaded, and permanently for any creature
+   * that has no animation art -- the caller falls back to the idle sprite, so
+   * a missing file costs nothing but the animation.
+   *
+   * Frame count comes from the strip's own proportions, exactly as it does for
+   * the effect layer: square frames, so width over height is the count.
+   */
+  attackFrames(typeId: UnitTypeId): CanvasImageSource[] | null {
+    const ready = this.attacks.get(typeId);
+    if (ready !== undefined) return ready;
+    if (this.attackAttempted.has(typeId)) return null;
+    this.attackAttempted.add(typeId);
+
+    const def = unitType(typeId);
+    loadImage(`${this.base}units/${def.base}_attack.png`)
+      .then((strip) => {
+        const size = strip.height;
+        const count = Math.max(1, Math.round(strip.width / size));
+        const frames: CanvasImageSource[] = [];
+        for (let i = 0; i < count; i++) {
+          const cut = makeCanvas(size, size);
+          const ctx = cut.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(strip, i * size, 0, size, size, 0, 0, size, size);
+          // A group animates by stamping the same frame the same way its idle
+          // sprite is stamped, so Three Orcs swing as three orcs.
+          frames.push(
+            def.count === 1 ? cut : composeGroupSprite(cut, def.count, COMPOSED_SIZE),
+          );
+        }
+        this.attacks.set(typeId, frames);
+      })
+      .catch(() => {
+        // No animation for this creature. Remembered as null so the fallback
+        // to the idle sprite is decided once rather than every frame.
+        this.attacks.set(typeId, null);
+      });
+    return null;
+  }
+
+  /**
+   * How a thrower looks having thrown: the last frame of its own attack, which
+   * is the pose with the weapon already gone.
+   *
+   * Reusing the animation's final frame means the disarmed state is drawn from
+   * art that already exists and can never disagree with it.
+   */
+  disarmedSprite(typeId: UnitTypeId): CanvasImageSource | null {
+    const frames = this.attackFrames(typeId);
+    return frames && frames.length > 0 ? frames[frames.length - 1] : null;
   }
 
   private resolveArt(typeId: UnitTypeId): void {

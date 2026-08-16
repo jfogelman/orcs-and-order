@@ -227,7 +227,11 @@ class App {
     const defenderType = unitAt(this.state, x, y)?.type;
 
     const targets = attackTargets(this.state, unit);
-    const outcome = targets.has(idx(x, y, this.state.width))
+    const attacking = targets.has(idx(x, y, this.state.width));
+    // Started before the fight resolves, so the swing is already playing while
+    // the result is worked out -- and so it still plays if the attacker dies.
+    if (attacking) this.animateAttack(unit);
+    const outcome = attacking
       ? tryStep(this.state, unit, x, y)
       : moveToward(this.state, unit, x, y);
 
@@ -650,6 +654,17 @@ class App {
    * Handle a click while an ability is armed. Returns whether the click was
    * consumed, so a miss cannot fall through and order a march instead.
    */
+  /**
+   * Play a unit's attack animation, if it has art for one.
+   *
+   * Asked of the sprite cache rather than a table, so a creature whose
+   * animation has not loaded (or does not exist) simply does not animate.
+   */
+  private animateAttack(unit: Unit): void {
+    const frames = this.renderer.sprites.attackFrames(unit.type);
+    if (frames) this.renderer.animator.attack(unit.id, frames.length);
+  }
+
   private clickWhileArmed(x: number, y: number): boolean {
     const unit = this.selected;
     const ability = this.armed;
@@ -663,6 +678,7 @@ class App {
     }
 
     const from = { x: unit.x, y: unit.y };
+    this.animateAttack(unit);
     const outcome = useAbility(this.state, unit, ability, target);
     this.disarm(false);
     if (!outcome.ok) {

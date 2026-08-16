@@ -54,7 +54,7 @@ export const BREATH_CARRY = 0.6;
 export function rearm(state: GameState, unit: Unit, how: string): void {
   if (!unit.disarmed) return;
   unit.disarmed = false;
-  log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner);
+  log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
 }
 
 /**

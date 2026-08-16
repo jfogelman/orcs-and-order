@@ -744,20 +744,42 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
             continue
         clear_panel_borders(strip, frames)
 
-        bbox = strip.getbbox()
-        if bbox is None:
-            problems.append(f"{name}: nothing left after keying")
+        kw, kh = strip.size
+        span = kw / frames
+        # Measure the creature in its first frame and derive one fixed camera
+        # from it, then hold that camera still for every other frame.
+        #
+        # This is what keeps an attacking unit the same size as the idle one.
+        # The idle sprites are trimmed to the figure and scaled to fill 90% of
+        # the tile (trim_and_square); scaling these frames to fill the frame
+        # instead made an attacking creature suddenly a head taller and cropped
+        # at the knees. Same 90%, same 6% floor margin, measured once.
+        first = strip.crop((0, 0, round(span), kh)).getbbox()
+        if first is None:
+            problems.append(f"{name}: first frame is empty after keying")
             continue
-        # One vertical window for every frame, so the creature keeps its footing.
-        top, bottom = bbox[1], bbox[3]
-        kw = strip.size[0]
+        fx0, fy0, fx1, fy1 = first
+        figure_h = fy1 - fy0
+        if figure_h <= 0:
+            problems.append(f"{name}: nothing measurable in the first frame")
+            continue
+
+        scale = (UNIT_SIZE * 0.90) / figure_h
+        window = UNIT_SIZE / scale
+        # A common floor line, so feet stay planted while the body moves.
+        floor = fy1 + window * 0.06
+        rel_centre = (fx0 + fx1) / 2
+
         sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
         for i in range(frames):
-            left = round(i * kw / frames)
-            right = round((i + 1) * kw / frames)
-            frame = strip.crop((left, top, right, bottom)).resize(
-                (UNIT_SIZE, UNIT_SIZE), Image.LANCZOS
+            cx = i * span + rel_centre
+            box = (
+                round(cx - window / 2),
+                round(floor - window),
+                round(cx + window / 2),
+                round(floor),
             )
+            frame = strip.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
             sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
         sheet.save(target, optimize=True)
         print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
