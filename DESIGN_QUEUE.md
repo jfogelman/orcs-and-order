@@ -430,6 +430,59 @@ in the right direction for a reason nobody has established.
    joke is that it does not think things through. A fix that wins on the numbers and
    loses the character is not obviously the right trade — worth asking before taking.
 
+## 4c. Unit-driven buildings: measured, and balance-neutral
+
+Built and tested as a balance lever. **It is not one.** Eighteen seeds, three arms:
+
+| arm | wins | orc score | human score |
+|---|---|---|---|
+| flat 50%, no condition | 7 – 11 | 378.9 | 546.4 |
+| doubled + gated, both sides | 6 – 12 | 359.7 | 559.8 |
+| doubled + gated, Horde only | 6 – 12 | 373.8 | 554.6 |
+
+One win in eighteen is noise, so the honest reading is **no measurable effect either
+way**. Keep it for the flavour — the Goblin Treasury's blurb finally describes a real
+rule — but it is not a lever and should not be tuned as one.
+
+The reason is structural and was visible before the run: the AI's garrison logic
+governs *production* (whether to build a defender), not whether a unit stays put.
+Units leave whenever odds beat `caution`. A reward for garrisoning that the AI cannot
+perceive changes outcomes by a rounding error.
+
+## 4d. The score gap is population, and gold is a dead resource
+
+The three-arm run collected the score breakdown that every previous measurement
+missed. Taking the unmodified arm:
+
+| | population | advances | buildings | total |
+|---|---|---|---|---|
+| Horde | 186.8 | 146.4 | 45.2 | 378.9 |
+| Kingdom | 323.6 | 143.4 | 79.2 | 546.4 |
+
+**Population is 82% of the gap** (136.8 of 167.5). Research is level — the Horde is
+marginally *ahead*. Buildings are the rest. Everything therefore reduces to cities
+held and how big they grow, which is the retention finding in 4b restated in points.
+
+### Gold buys nothing, and the Horde has the most of it
+
+Final treasuries: **Horde 475.6, Kingdom 189.6.**
+
+There is no rush-buy, no hurry-production, no sink of any kind. Grep for
+`player.gold -=` and there are no hits: gold's only use is covering building upkeep,
+and a bankruptcy path that sells a building off. `taxRate` defaults to 4 of 10 and no
+AI ever changes it.
+
+So roughly half a thousand gold per game is trade converted into a number that does
+nothing at all, and the Horde accumulates two and a half times as much of it. The
+Kingdom's is lower precisely because it *spends*: 19.8 buildings at 1g upkeep against
+the Horde's 11.3, and those buildings are worth 4 points each.
+
+**This is the most promising lever left, and it is a mechanic rather than an AI
+constant.** Giving gold something to buy — rush-buying production is the obvious
+candidate — turns the Horde's dead 476 into buildings or units. It needs measuring
+like everything else, but unlike `caution` it does not cost the faction its character:
+an orc spending a hoard on getting something built *now* is entirely in keeping.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
