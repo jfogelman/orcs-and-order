@@ -807,7 +807,8 @@ input[type='range']::-moz-range-thumb {
 
 .pedia-tech-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.1fr) 120px minmax(120px, 1fr);
+  /* Leading icon column, then name / cost / requirement. */
+  grid-template-columns: 32px minmax(140px, 1.1fr) 120px minmax(120px, 1fr);
   gap: 4px 12px;
   padding: 7px 4px;
   border-bottom: 1px solid rgba(107, 85, 55, 0.28);
@@ -830,7 +831,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 .pedia-tech-row .pedia-flavor {
-  grid-column: 1 / -1;
+  grid-column: 2 / -1;
   margin: 0;
 }
 
@@ -909,4 +910,18 @@ a.building-chip {
 
 a.building-chip:hover {
   border-color: var(--gold);
+}
+
+/* Icons in the Orcpedia's list tabs: advances, structures, terrain. */
+.pedia-row-icon {
+  width: 32px;
+  height: 32px;
+  grid-row: span 2;
+  align-self: center;
+  image-rendering: pixelated;
+}
+
+.pedia-row-icon.terrain {
+  border-radius: 3px;
+  border: 1px solid var(--edge);
 }

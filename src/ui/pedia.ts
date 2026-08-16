@@ -31,6 +31,12 @@ function artPath(creatureId: string): string {
   return `${base.endsWith('/') ? base : `${base}/`}units/${creatureId}.png`;
 }
 
+/** Icons for the non-unit tabs, all of which are already on disk. */
+function assetPath(folder: string, name: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}${folder}/${name}.png`;
+}
+
 /** The procedural drawing, for when there is no artwork to point at. */
 function placeholderFor(id: UnitTypeId): string {
   if (!sprites) sprites = new SpriteCache();
@@ -105,6 +111,7 @@ export function openPedia(player: Player, focus?: string): void {
     .map(
       (t) => `
       <div class="pedia-tech-row">
+        <img class="pedia-row-icon" src="${assetPath('tech', t.id)}" alt="" />
         <span class="pedia-tech-name">${escapeHtml(t.name)}</span>
         <span class="pedia-tech-cost">${t.cost === 0 ? 'known from the start' : `${t.cost} beakers`}</span>
         <span class="pedia-tech-needs">${
@@ -121,6 +128,7 @@ export function openPedia(player: Player, focus?: string): void {
     const t = TERRAIN[id];
     return `
       <div class="pedia-tech-row">
+        <img class="pedia-row-icon terrain" src="${assetPath('terrain', `${id}_0`)}" alt="" />
         <span class="pedia-tech-name">${escapeHtml(t.name)}</span>
         <span class="pedia-tech-cost">${t.food}/${t.shields}/${t.trade}</span>
         <span class="pedia-tech-needs">move ${t.moveCost} &middot; defence x${t.defense}</span>
@@ -135,6 +143,7 @@ export function openPedia(player: Player, focus?: string): void {
     .map(
       (b) => `
       <div class="pedia-tech-row" id="pedia-b-${escapeHtml(b.id)}">
+        <img class="pedia-row-icon" src="${assetPath('buildings', b.id)}" alt="" />
         <span class="pedia-tech-name">${escapeHtml(b.name)}</span>
         <span class="pedia-tech-cost">${b.cost}s &middot; ${b.upkeep}g/turn</span>
         <span class="pedia-tech-needs">${escapeHtml(
@@ -180,6 +189,9 @@ export function openPedia(player: Player, focus?: string): void {
     onMount: (root) => {
       // Swap in the procedural drawing wherever there is no artwork yet, so a
       // gap in the art shows a sprite rather than a broken-image icon.
+      root.querySelectorAll<HTMLImageElement>('.pedia-row-icon').forEach((img) => {
+        img.addEventListener('error', () => img.remove());
+      });
       root.querySelectorAll<HTMLImageElement>('.pedia-art').forEach((img) => {
         img.addEventListener('error', () => {
           const id = img.dataset.unit;
