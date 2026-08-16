@@ -130,6 +130,10 @@ function buildingEffects(b: BuildingDef): string[] {
       `+${pct(b.sallyBonus)} attack for a unit attacking out of this city — and nothing whatsoever for one that sits still`,
     );
   }
+  // Said first, because it is the condition on everything below it.
+  if (b.needsGarrison) {
+    out.push('pays nothing at all unless a unit is standing in the city');
+  }
   if (b.goldBonus) out.push(`+${pct(b.goldBonus)} gold from this city`);
   if (b.scienceBonus) out.push(`+${pct(b.scienceBonus)} research from this city`);
   if (b.contentBonus) {

@@ -72,13 +72,17 @@ describe('economy buildings', () => {
   });
 
   it('reports its bonus from the city that holds it', () => {
-    const bare = cityGame().city;
-    expect(cityGoldBonus(bare)).toBe(0);
-    expect(cityScienceBonus(bare)).toBe(0);
+    const plain = cityGame();
+    expect(cityGoldBonus(plain.state, plain.city)).toBe(0);
+    expect(cityScienceBonus(plain.state, plain.city)).toBe(0);
 
-    const rich = cityGame(['treasury', 'thinkingRock']).city;
-    expect(cityGoldBonus(rich)).toBeCloseTo(BUILDINGS.treasury.goldBonus!);
-    expect(cityScienceBonus(rich)).toBeCloseTo(BUILDINGS.thinkingRock.scienceBonus!);
+    const rich = cityGame(['treasury', 'thinkingRock']);
+    // The treasury wants guarding; the thinking rock does not.
+    spawnUnit(rich.state, 0, 'orc', rich.city.x, rich.city.y);
+    expect(cityGoldBonus(rich.state, rich.city)).toBeCloseTo(BUILDINGS.treasury.goldBonus!);
+    expect(cityScienceBonus(rich.state, rich.city)).toBeCloseTo(
+      BUILDINGS.thinkingRock.scienceBonus!,
+    );
   });
 
   it('raises gold income above the same city without one', () => {
@@ -87,6 +91,8 @@ describe('economy buildings', () => {
     plain.state.players[0].taxRate = 10;
     const withTreasury = cityGame(['treasury']);
     withTreasury.state.players[0].taxRate = 10;
+    // The treasury pays only while it is being watched, so post somebody.
+    spawnUnit(withTreasury.state, 0, 'orc', withTreasury.city.x, withTreasury.city.y);
 
     const before = incomeOver(plain.state);
     const after = incomeOver(withTreasury.state);
@@ -254,5 +260,68 @@ describe('the Broken Catapult', () => {
     expect(attackStrength(armed.state, armed.garrison, armed.besieger).total).toBe(
       attackStrength(bare.state, bare.garrison, bare.besieger).total,
     );
+  });
+});
+
+describe('buildings that want somebody standing in them', () => {
+  /** A city with the given buildings, and optionally a unit posted in it. */
+  function guarded(buildings: BuildingId[], post: boolean) {
+    const g = cityGame(buildings);
+    g.state.players[0].taxRate = 10;
+    if (post) spawnUnit(g.state, 0, 'orc', g.city.x, g.city.y);
+    return g;
+  }
+
+  it('pays nothing while the city stands empty', () => {
+    const empty = guarded(['treasury'], false);
+    expect(BUILDINGS.treasury.needsGarrison).toBe(true);
+    expect(cityGoldBonus(empty.state, empty.city)).toBe(0);
+  });
+
+  it('pays in full the moment somebody is posted there', () => {
+    const held = guarded(['treasury'], true);
+    expect(cityGoldBonus(held.state, held.city)).toBeCloseTo(BUILDINGS.treasury.goldBonus!);
+  });
+
+  it('does not count a settler as cover', () => {
+    // A peon wandering through is not a garrison, and letting it count would
+    // make the whole condition trivial to satisfy by accident.
+    const g = cityGame(['treasury']);
+    spawnUnit(g.state, 0, 'peon', g.city.x, g.city.y);
+    expect(cityGoldBonus(g.state, g.city)).toBe(0);
+  });
+
+  it('does not count a unit merely standing next door', () => {
+    const g = cityGame(['treasury']);
+    spawnUnit(g.state, 0, 'orc', g.city.x + 1, g.city.y);
+    expect(cityGoldBonus(g.state, g.city)).toBe(0);
+  });
+
+  it('does not count somebody else\u2019s soldier', () => {
+    const g = cityGame(['treasury']);
+    spawnUnit(g.state, 1, 'footman', g.city.x, g.city.y);
+    expect(cityGoldBonus(g.state, g.city)).toBe(0);
+  });
+
+  it('leaves unconditional buildings alone', () => {
+    // The thinking rock asks nothing of anybody.
+    const g = cityGame(['thinkingRock']);
+    expect(BUILDINGS.thinkingRock.needsGarrison).toBeUndefined();
+    expect(cityScienceBonus(g.state, g.city)).toBeCloseTo(BUILDINGS.thinkingRock.scienceBonus!);
+  });
+
+  it('shows up as real income over a turn, not just in the helper', () => {
+    const empty = guarded(['treasury'], false);
+    const held = guarded(['treasury'], true);
+    expect(incomeOver(held.state).gold).toBeGreaterThan(incomeOver(empty.state).gold);
+  });
+
+  it('is a trade, not a tax: it pays better than an unconditional building would', () => {
+    // Both factions' garrison-gated buildings pay double what the old flat
+    // 50% did, so posting a unit is worth doing rather than merely avoided.
+    for (const id of ['treasury', 'market'] as const) {
+      expect(BUILDINGS[id].needsGarrison).toBe(true);
+      expect(BUILDINGS[id].goldBonus).toBeGreaterThan(0.5);
+    }
   });
 });

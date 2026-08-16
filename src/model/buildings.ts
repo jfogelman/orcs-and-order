@@ -35,6 +35,18 @@ export interface BuildingDef {
    * still, and everything for one that comes out swinging.
    */
   sallyBonus?: number;
+  /**
+   * Only works while somebody is standing in the city.
+   *
+   * The economic buildings that carry this pay roughly double what an
+   * unconditional one would, so it is a trade rather than a tax: leave a unit
+   * at home and the place earns its keep, march everybody out and it is a
+   * warehouse full of things nobody is watching.
+   *
+   * Only ever gates economic output. A defensive bonus needs no such rule --
+   * it is already worth nothing unless there is a defender to apply it to.
+   */
+  needsGarrison?: boolean;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -109,10 +121,11 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     faction: 'orc',
     cost: 60,
     upkeep: 1,
-    goldBonus: 0.5,
+    goldBonus: 1,
+    needsGarrison: true,
     blurb:
       'The goblins love gold. It has not yet occurred to any of them that ' +
-      'somebody else might also love gold.',
+      'somebody else might also love gold, so somebody had better stand on it.',
   },
   market: {
     id: 'market',
@@ -120,10 +133,11 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     faction: 'human',
     cost: 60,
     upkeep: 1,
-    goldBonus: 0.5,
+    goldBonus: 1,
+    needsGarrison: true,
     blurb:
-      'Buy and sell, but only one thing at a time. A queue forms. In due ' +
-      'course the queue becomes the point.',
+      'Buy and sell, but only one thing at a time, and only while a soldier ' +
+      'is present to make sure the queue is observed.',
   },
 
   // --------------------------------------------------------- places to think

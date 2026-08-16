@@ -111,13 +111,45 @@ export function buildingUpkeep(city: City): number {
 }
 
 /** Extra share of this city's gold income from its buildings. */
-export function cityGoldBonus(city: City): number {
-  return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.goldBonus ?? 0), 0);
+export function cityGoldBonus(state: GameState, city: City): number {
+  return sumBonus(state, city, (b) => b.goldBonus);
 }
 
 /** Extra share of this city's research output from its buildings. */
-export function cityScienceBonus(city: City): number {
-  return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.scienceBonus ?? 0), 0);
+export function cityScienceBonus(state: GameState, city: City): number {
+  return sumBonus(state, city, (b) => b.scienceBonus);
+}
+
+/** Is anybody actually standing in this city? Settlers do not count as cover. */
+export function isGarrisoned(state: GameState, city: City): boolean {
+  return state.units.some(
+    (u) => u.owner === city.owner && u.x === city.x && u.y === city.y && !unitType(u.type).settler,
+  );
+}
+
+/**
+ * Add up one kind of bonus across a city's buildings, skipping any that wants
+ * a garrison and has not got one.
+ */
+function sumBonus(
+  state: GameState,
+  city: City,
+  pick: (b: BuildingDef) => number | undefined,
+): number {
+  let garrisoned: boolean | null = null;
+  let total = 0;
+  for (const id of city.buildings) {
+    const def = BUILDINGS[id];
+    const value = def ? pick(def) : undefined;
+    if (!def || !value) continue;
+    if (def.needsGarrison) {
+      // Worked out at most once per city, not once per building.
+      garrisoned ??= isGarrisoned(state, city);
+      if (!garrisoned) continue;
+    }
+    total += value;
+  }
+  return total;
 }
 
 /** Units a city supports for free before shields start going to rations. */

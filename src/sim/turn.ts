@@ -89,8 +89,8 @@ function runEconomy(state: GameState, player: Player): void {
     }
     const events = processCity(state, city);
     const split = splitTrade(player, cityYield(state, city).trade);
-    goldIncome += Math.round(split.gold * (1 + cityGoldBonus(city)));
-    beakerIncome += Math.round(split.beakers * (1 + cityScienceBonus(city)));
+    goldIncome += Math.round(split.gold * (1 + cityGoldBonus(state, city)));
+    beakerIncome += Math.round(split.beakers * (1 + cityScienceBonus(state, city)));
     upkeep += buildingUpkeep(city);
 
     if (events.grew) {

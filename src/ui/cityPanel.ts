@@ -11,8 +11,7 @@ import {
   freeSupport,
   productionCost,
   productionName,
-  unitUpkeep,
-} from '../sim/city';
+  unitUpkeep, isGarrisoned } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
 
@@ -40,8 +39,14 @@ export function openCityPanel(
   const options = buildOptions(state, city);
   const limit = contentLimit(state, city);
   const upkeep = unitUpkeep(state, city);
-  const goldBonus = cityGoldBonus(city);
-  const scienceBonus = cityScienceBonus(city);
+  const goldBonus = cityGoldBonus(state, city);
+  const scienceBonus = cityScienceBonus(state, city);
+  // A building that has stopped paying because nobody is standing in the city
+  // otherwise just shows as a bonus of zero, which reads as the building being
+  // broken rather than as a rule the player can act on.
+  const idleGuarded = city.buildings.filter(
+    (b) => BUILDINGS[b]?.needsGarrison && !isGarrisoned(state, city),
+  );
   const netShields = yields.shields - upkeep;
   const eta = turnsLeft(city, netShields);
 
@@ -87,6 +92,13 @@ export function openCityPanel(
           ${
             scienceBonus > 0
               ? `<div class="stat-row"><span class="label">Research here</span><span class="value">+${Math.round(scienceBonus * 100)}%</span></div>`
+              : ''
+          }
+          ${
+            idleGuarded.length
+              ? `<div class="stat-row"><span class="label k-bad">Unguarded</span><span class="value k-bad">${idleGuarded
+                  .map((b) => escapeHtml(BUILDINGS[b]?.name ?? b))
+                  .join(', ')} pays nothing until a unit stands here</span></div>`
               : ''
           }
           <div class="stat-row"><span class="label">Founded</span><span class="value">Turn ${city.foundedTurn}</span></div>
