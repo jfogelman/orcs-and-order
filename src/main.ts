@@ -15,7 +15,7 @@ import type { EffectId } from './render/effects';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
 import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
-import { canFoundCity, foundCity, productionName } from './sim/city';
+import { canFoundCity, foundCity, inSupply, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
 import { cityAt, createGame, playerCities, playerUnits, unitAt } from './sim/gamestate';
 import {
@@ -877,6 +877,11 @@ class App {
           ${
             unit.disarmed
               ? `<div class="stat-row"><span class="label">Disarmed</span><span class="value k-bad">threw its axe &middot; quarter strength until it gets one back</span></div>`
+              : ''
+          }
+          ${
+            !inSupply(this.state, unit)
+              ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from any city of yours &middot; fights weakly and cannot heal</span></div>`
               : ''
           }
           ${unit.order !== 'none' ? `<div class="chip">${unit.order}</div>` : ''}

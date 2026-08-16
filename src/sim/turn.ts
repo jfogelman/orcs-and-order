@@ -3,6 +3,7 @@ import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
+  inSupply,
   cityGoldBonus,
   cityScienceBonus,
   cityYield,
@@ -46,6 +47,8 @@ function regenRateFor(state: GameState, unit: Unit): number {
     (c) => c.x === unit.x && c.y === unit.y && c.owner === unit.owner,
   );
   if (city) return city.buildings.includes('barracks') ? REGEN.barracks : REGEN.inCity;
+  // Nobody is bringing bandages out here either.
+  if (!inSupply(state, unit)) return 0;
   if (unit.order === 'fortified') return REGEN.fortified;
   if (unit.order === 'sentry') return REGEN.sentry;
   return REGEN.afield;
@@ -58,6 +61,10 @@ function healUnits(state: GameState, playerId: number): void {
     const max = type.hp;
     if (unit.hp >= max) continue;
     const rate = regenRateFor(state, unit) * type.regenMultiplier;
+    // A rate of zero means zero. The floor below exists so that a very small
+    // unit still recovers *something* from a small percentage, and without
+    // this guard it would quietly heal anyone out of supply by a point a turn.
+    if (rate <= 0) continue;
     unit.hp = Math.min(max, unit.hp + Math.max(1, Math.round(max * rate)));
   }
 }

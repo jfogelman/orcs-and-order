@@ -1,4 +1,4 @@
-import { fatCrossIndices, idx } from '../engine/grid';
+import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import { unitType, UNIT_TYPES } from '../model/units';
@@ -188,6 +188,33 @@ export function militiaStrength(city: City): number {
  * it without editing this file; 0 restores the old behaviour exactly.
  */
 export const MILITIA = { perCitizen: 0.3 };
+
+/**
+ * Supply.
+ *
+ * A unit within `range` tiles of any city its owner holds is in supply. Beyond
+ * that it fights badly and does not heal -- the Horde, in particular, has a
+ * long history of setting off without deciding who is carrying the food.
+ *
+ * Deliberately keyed on *any* friendly city, including one just captured. That
+ * is the interesting part: a deep raid is punished right up until it actually
+ * takes something, at which point the ground it took becomes the supply it
+ * needed. It rewards consolidating over raiding, which is the difference
+ * between the two sides' behaviour.
+ */
+export const SUPPLY = {
+  /** Tiles from a friendly city. Anything at or beyond 99 turns it off. */
+  range: 4,
+  /** Attack multiplier while out of supply. */
+  attackPenalty: 0.6,
+};
+
+export function inSupply(state: GameState, unit: Unit): boolean {
+  if (SUPPLY.range >= 99) return true;
+  return state.cities.some(
+    (c) => c.owner === unit.owner && distance(c.x, c.y, unit.x, unit.y) <= SUPPLY.range,
+  );
+}
 
 /** Units a city supports for free before shields start going to rations. */
 export function freeSupport(city: City): number {

@@ -7,6 +7,7 @@ import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
+import { inSupply } from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
 
@@ -275,7 +276,7 @@ export class MapRenderer {
       const i = idx(u.x, u.y, state.width);
       if (!viewer.visible[i]) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
-      this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id);
+      this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id, viewerId);
     }
 
     // --- fog of war ------------------------------------------------------
@@ -449,6 +450,7 @@ export class MapRenderer {
     u: Unit,
     cam: Camera,
     selected: boolean,
+    viewerId: number,
   ): void {
     const type = unitType(u.type);
     const owner = state.players[u.owner];
@@ -553,6 +555,22 @@ export class MapRenderer {
         ctx.moveTo(cx + r * 0.5, cy - r * 0.5);
         ctx.lineTo(cx - r * 0.5, cy + r * 0.5);
         ctx.stroke();
+      }
+      // Out of supply. Marked because a unit quietly fighting at 60% and
+      // never healing is indistinguishable from one that is simply losing.
+      if (u.owner === viewerId && !inSupply(state, u)) {
+        const r = size * 0.15;
+        const cx = s.x + r + 2;
+        const cy = s.y + r + 2;
+        ctx.fillStyle = 'rgba(20,16,12,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e8b23c';
+        ctx.font = `bold ${Math.round(r * 1.5)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', cx, cy + 1);
       }
       if (u.order === 'fortified') {
         ctx.strokeStyle = 'rgba(240,230,200,0.8)';
