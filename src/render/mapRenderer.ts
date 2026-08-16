@@ -29,6 +29,13 @@ export interface MapOverlay {
   reachable: Set<number> | null;
   /** Tiles the selected unit could attack right now. */
   attacks: Set<number> | null;
+  /**
+   * Tiles holding a legal target for the ability the selected unit has armed.
+   * Distinct from `attacks`, which is what a normal move would pick a fight
+   * with — these are picked deliberately and nothing else on the map is
+   * clickable while they are showing.
+   */
+  targets: Set<number> | null;
   /** Preview of the route to the hovered tile. */
   path: RoutePreview | null;
   /** The selected unit's standing march order, if it has one. */
@@ -43,6 +50,7 @@ export const EMPTY_OVERLAY: MapOverlay = {
   hover: null,
   reachable: null,
   attacks: null,
+  targets: null,
   path: null,
   gotoPath: null,
   workRing: null,
@@ -207,6 +215,37 @@ export class MapRenderer {
         const s = cam.tileToScreen(x, y);
         ctx.fillRect(s.x, s.y, size, size);
       }
+    }
+
+    // A pulsing reticle on everything the armed ability could be aimed at. It
+    // moves, because these appear over units that are already drawn and a
+    // static outline reads as part of the sprite.
+    if (overlay.targets && overlay.targets.size > 0) {
+      const pulse = 0.6 + 0.4 * Math.sin(this.clock * 6);
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,214,120,${pulse.toFixed(3)})`;
+      ctx.lineWidth = Math.max(2, size / 14);
+      const inset = size * 0.16;
+      const arm = size * 0.22;
+      for (const i of overlay.targets) {
+        const x = i % state.width;
+        const y = Math.floor(i / state.width);
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+        const s = cam.tileToScreen(x, y);
+        const l = s.x + inset;
+        const r = s.x + size - inset;
+        const t = s.y + inset;
+        const b = s.y + size - inset;
+        ctx.beginPath();
+        // Four corner brackets rather than a full box, so the unit underneath
+        // stays readable.
+        ctx.moveTo(l, t + arm); ctx.lineTo(l, t); ctx.lineTo(l + arm, t);
+        ctx.moveTo(r - arm, t); ctx.lineTo(r, t); ctx.lineTo(r, t + arm);
+        ctx.moveTo(r, b - arm); ctx.lineTo(r, b); ctx.lineTo(r - arm, b);
+        ctx.moveTo(l + arm, b); ctx.lineTo(l, b); ctx.lineTo(l, b - arm);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
     if (overlay.workRing) {
       ctx.strokeStyle = 'rgba(255,215,120,0.7)';

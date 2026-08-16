@@ -69,6 +69,17 @@ export interface CreatureDef {
    */
   executeChance?: number;
   /**
+   * How far this creature can strike without closing. 1, the default, means it
+   * has to walk up to whatever it is hitting.
+   */
+  range?: number;
+  /**
+   * Fraction of a wounded friend's maximum health this creature can restore,
+   * per member of the group: one Paladin patches a unit up to half, two get it
+   * all the way. Absent for everyone who cannot do it at all.
+   */
+  healFraction?: number;
+  /**
    * How large this creature is drawn, relative to an Orc at 1.0.
    *
    * Art is trimmed and scaled to fill a fixed frame, so without this a goblin
@@ -169,6 +180,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'axethrower',
+    range: 2,
     name: 'Axethrower',
     plural: 'Axethrowers',
     faction: 'orc',
@@ -327,6 +339,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'archer',
+    range: 2,
     name: 'Archer',
     plural: 'Archers',
     faction: 'human',
@@ -365,6 +378,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'ballista',
+    range: 2,
     name: 'Ballista',
     plural: 'Ballistae',
     faction: 'human',
@@ -385,6 +399,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'mage',
+    range: 2,
     name: 'Mage',
     plural: 'Mages',
     faction: 'human',
@@ -404,6 +419,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'paladin',
+    healFraction: 0.5,
     name: 'Paladin',
     plural: 'Paladins',
     faction: 'human',
@@ -470,6 +486,14 @@ export interface UnitTypeDef {
   explodes: number;
   demolishes: boolean;
   executeChance: number;
+  /** Tiles this unit can strike across. 1 means adjacent only. */
+  range: number;
+  /**
+   * Health a target is restored to, as a fraction of its maximum. Scales with
+   * the group, so Two Paladins heal outright where one leaves the job half
+   * done, and is capped at full health.
+   */
+  healsTo: number;
   /** Drawn size relative to an Orc. See CreatureDef.artScale. */
   artScale: number;
   silhouette: SilhouetteId;
@@ -510,6 +534,8 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     explodes: c.explodes ?? 0,
     demolishes: c.demolishes === true,
     executeChance: c.executeChance ?? 0,
+    range: c.range ?? 1,
+    healsTo: Math.min(1, (c.healFraction ?? 0) * count),
     artScale: c.artScale ?? 1,
     silhouette: c.silhouette,
     body: c.body,

@@ -20,15 +20,22 @@ ones introduce.
 | 1 | Regeneration | nothing new |
 | 2 | Troll regeneration | (1) |
 | 3 | Sapper death blast | a hook in `destroyUnit` |
-| 4 | Ranged attack | **target-select mode** in the UI |
+| 4 | Ranged attack | ~~target-select mode~~ — **done** |
 | 5 | Axethrower disarm | (4), plus a new `Unit` field |
 | 6 | Death Knight execution | nothing new |
 | 7 | Dragon line attack | (4) |
-| 8 | Paladin heal | (4), plus friendly targeting |
+| 8 | Paladin heal | ~~(4), plus friendly targeting~~ — **done** |
 
-**Steps 4–8 all hang off one piece of UI that does not exist yet:** a mode where the
-selected unit has an ability armed and the next click picks a *target* rather than a
-destination. Build that once, carefully, and the rest are small.
+~~**Steps 4–8 all hang off one piece of UI that does not exist yet:**~~ **Built.**
+`src/sim/abilities.ts` holds the rules and `arm`/`disarm`/`clickWhileArmed` in
+`main.ts` hold the mode. Ranged (4) and heal (8) are in and playable; 5 and 7 are now
+small, as predicted.
+
+What the mode does, for whatever plugs in next: `abilitiesOf` says what a unit could
+ever do, `abilityReady` says why it cannot right now, `abilityTargets` returns the
+legal targets **filtered by what the acting player can see**, and `useAbility`
+re-checks all of it before changing anything. Adding an ability means a new entry in
+`ABILITIES`, a branch in `abilityTargets`, and a resolver — no UI work.
 
 ### 1.1 Regeneration — all units
 
@@ -212,7 +219,7 @@ moved the number before believing it.
 Even now, essentially all games run to turn 300 and are decided on points rather than
 conquest. That remains the largest structural problem — see below.
 
-### The ladder costs are lopsided, and it is not obvious which way### The ladder costs are lopsided, and it is not obvious which way
+### The ladder costs are lopsided, and it is not obvious which way
 
 ### The ladder costs are lopsided, and it is not obvious which way
 
@@ -361,6 +368,33 @@ Two things a first pass will get wrong:
   leak as the pathfinder using the true board instead of the player's map.
 - **A batch arrives at once.** Ten fights resolved during an AI turn would all play on
   the same frame. `spawn` takes a `delay` for this; the drain should stagger them.
+
+## 4b. Why the Kingdom keeps what it takes
+
+**Open, and the most promising lead on balance.** Three arms of the regeneration
+diagnostic disagreed about regeneration and agreed about everything else:
+
+| | orc | human |
+|---|---|---|
+| cities | 7.7 – 8.4 | 12.7 – 13.8 |
+| population | 42 – 47 | 81 – 85 |
+
+Both personalities carry `targetCities: 6` and both stop building settlers at
+`targetCities + 2`, so a five-city surplus is not expansion — it is conquest that
+stuck. Roughly 50 cities change hands per game and the humans end up holding more of
+them, which population then multiplies, and population is weighted 4 a citizen.
+
+So the question is not who takes cities, it is who *keeps* them. Things to measure
+before changing anything, given four balance hypotheses have already been wrong:
+
+- Captures and losses per side separately, not just the combined churn. The 50.9
+  figure hides the direction entirely.
+- How long a captured city survives, by captor. If orc-held cities fall straight back
+  and human-held ones do not, that is the whole result.
+- Whether `caution` explains it: the human AI garrisons before it attacks, so it may
+  simply be leaving a defender behind where the orcs walk on.
+- Whether the orcs are re-taking cities they already lost, i.e. churn on the same few
+  tiles rather than a moving front.
 
 ## 5. Also queued, from earlier
 

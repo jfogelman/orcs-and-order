@@ -31,6 +31,8 @@ import { researchableTechs, techCost } from './sim/research';
 import { beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
+import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
+import type { AbilityId } from './sim/abilities';
 import { openAudioMenu, openNewGameMenu, openSaveMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
@@ -56,6 +58,12 @@ class App {
   private renderer: MapRenderer;
   private minimap: Minimap;
   private effects = new EffectLayer();
+  /**
+   * The ability the selected unit has armed, if any. While this is set the map
+   * is in target-select mode: the next click picks a *target* rather than a
+   * destination, and nothing but a legal target does anything.
+   */
+  private armed: AbilityId | null = null;
   private overlay: MapOverlay = { ...EMPTY_OVERLAY };
 
   /** The person at the keyboard. */
@@ -129,6 +137,10 @@ class App {
   }
 
   private select(unit: Unit | null): void {
+    // Selecting anything at all abandons an armed ability; keeping it armed
+    // across a change of unit is how you fire the wrong thing at the wrong
+    // target.
+    this.disarm(false);
     if (unit && this.overlay.selectedUnitId !== unit.id) audio.play('select');
     this.overlay.selectedUnitId = unit?.id ?? null;
     this.refreshOverlays();
@@ -136,6 +148,17 @@ class App {
   }
 
   private refreshOverlays(): void {
+    // Target-select mode owns the overlay while it is armed.
+    if (this.armed !== null) {
+      const unit = this.selected;
+      const tiles = unit
+        ? abilityTargets(this.state, unit, this.armed).map((t) => idx(t.x, t.y, this.state.width))
+        : [];
+      this.overlay.targets = new Set(tiles);
+      if (tiles.length === 0) this.disarm(false);
+    } else {
+      this.overlay.targets = null;
+    }
     const unit = this.selected;
     if (!unit || unit.owner !== this.viewerId) {
       this.overlay.reachable = null;
@@ -583,7 +606,86 @@ class App {
     return t;
   }
 
+  /**
+   * Arm an ability, so the next click on the map picks a target for it.
+   *
+   * Refuses up front and says why rather than arming into a state where every
+   * click is silently rejected -- a mode you cannot get out of and that does
+   * nothing is worse than no mode at all.
+   */
+  private arm(ability: AbilityId): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (this.armed === ability) {
+      this.disarm();
+      return;
+    }
+    const blocked = abilityReady(unit, ability);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    const targets = abilityTargets(this.state, unit, ability);
+    if (targets.length === 0) {
+      this.flash(`Nothing in reach to ${ABILITIES[ability].verb}.`);
+      return;
+    }
+    this.armed = ability;
+    this.refreshOverlays();
+    this.refreshSidebar();
+    this.notify(`${ABILITIES[ability].label}: pick a target. Escape to cancel.`);
+  }
+
+  private disarm(redraw = true): void {
+    if (this.armed === null) return;
+    this.armed = null;
+    this.overlay.targets = null;
+    if (redraw) {
+      this.refreshOverlays();
+      this.refreshSidebar();
+    }
+  }
+
+  /**
+   * Handle a click while an ability is armed. Returns whether the click was
+   * consumed, so a miss cannot fall through and order a march instead.
+   */
+  private clickWhileArmed(x: number, y: number): boolean {
+    const unit = this.selected;
+    const ability = this.armed;
+    if (!unit || ability === null) return false;
+
+    const target = abilityTargets(this.state, unit, ability).find((t) => t.x === x && t.y === y);
+    if (!target) {
+      this.disarm();
+      this.flash('Not a target. Ability cancelled.');
+      return true;
+    }
+
+    const from = { x: unit.x, y: unit.y };
+    const outcome = useAbility(this.state, unit, ability, target);
+    this.disarm(false);
+    if (!outcome.ok) {
+      this.flash(outcome.reason ?? 'That did not work.');
+      return true;
+    }
+
+    // The interface knows which creature acted, so it can throw the right
+    // thing; the log only knows that a fight happened.
+    const thrown = PROJECTILES[unitType(unit.type).base];
+    if (ability === 'ranged' && thrown) {
+      this.effects.spawn(thrown.effect, x, y, { from });
+      audio.play(thrown.sound, 0);
+    }
+    this.playLogCues();
+    this.refreshOverlays();
+    this.refreshSidebar();
+    this.refreshHud();
+    return true;
+  }
+
   private onLeftClick(x: number, y: number): void {
+    if (this.clickWhileArmed(x, y)) return;
     const unit = unitAt(this.state, x, y);
     const city = cityAt(this.state, x, y);
     const visible = this.state.players[this.viewerId].visible[idx(x, y, this.state.width)] === 1;
@@ -676,8 +778,17 @@ class App {
       case 'p':
         openPedia(this.state.players[this.viewerId], this.selected?.type);
         break;
+      case 'r':
+        this.arm('ranged');
+        break;
+      case 'h':
+        this.arm('heal');
+        break;
       case 'escape':
-        this.select(null);
+        // Back out of the ability first: escape should undo the most recent
+        // thing, not drop the selection out from under it.
+        if (this.armed !== null) this.disarm();
+        else this.select(null);
         break;
       default:
         break;
@@ -769,6 +880,13 @@ class App {
               ? `<button class="small" data-act="garrison">Enter ${escapeHtml(garrisonTarget.name)}</button>`
               : ''
           }
+          ${abilitiesOf(unit)
+            .map((a) => {
+              const spec = ABILITIES[a];
+              const on = this.armed === a ? ' armed' : '';
+              return `<button class="small${on}" data-act="ability" data-ability="${a}">${spec.label} (${spec.key.toUpperCase()})</button>`;
+            })
+            .join('')}
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
@@ -783,6 +901,9 @@ class App {
       panel.querySelectorAll<HTMLButtonElement>('button[data-act]').forEach((btn) => {
         btn.addEventListener('click', () => {
           switch (btn.dataset.act) {
+            case 'ability':
+              this.arm(btn.dataset.ability as AbilityId);
+              break;
             case 'found':
               this.orderFound();
               break;
@@ -910,6 +1031,17 @@ class App {
   };
 }
 
+/**
+ * What each ranged creature throws. Keyed on the base creature, so Two Archers
+ * loose the same arrow as one.
+ */
+const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
+  archer: { effect: 'arrow', sound: 'arrow' },
+  axethrower: { effect: 'axe', sound: 'axe-throw' },
+  ballista: { effect: 'bolt', sound: 'siege' },
+  mage: { effect: 'magic', sound: 'magic' },
+};
+
 /** Most animations played for one drain of the log. */
 const EFFECT_BURST = 8;
 /** Seconds between them, so a busy turn reads as a sequence, not a flash. */
@@ -928,6 +1060,8 @@ function effectFor(entry: { kind: string; cue?: string }): EffectId | null {
     case 'capture':
     case 'city-lost':
       return 'demolish';
+    case 'holy':
+      return 'heal';
     default:
       return entry.kind === 'combat' ? 'clash' : null;
   }

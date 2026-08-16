@@ -48,7 +48,12 @@ export type SfxId =
   | 'coin'
   | 'explosion';
 
-const SFX_FILES: Record<SfxId, string> = {
+/**
+ * Exported so tests can check that every cue the simulation emits names a
+ * sound that exists. A cue that does not is silently ignored at runtime, so
+ * nothing ever fails -- it just goes quiet, which is hard to notice.
+ */
+export const SFX_FILES: Record<SfxId, string> = {
   melee: 'daviddumaisaudio-monster-05-grunt-and-growl-195715.mp3',
   sword: 'dragon-studio-sword-clashhit-393837.mp3',
   arrow: 'djartmusic-arrow-swish_03-306040.mp3',

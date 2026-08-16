@@ -925,3 +925,10 @@ a.building-chip:hover {
   border-radius: 3px;
   border: 1px solid var(--edge);
 }
+
+/* A button whose ability is armed and waiting for a target. */
+button.small.armed {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}
