@@ -597,15 +597,26 @@ cost, and a game where 96% of cities are taken by walking into them unopposed is
 worse game than one three wins out of eighteen off level. The balance is better
 attacked somewhere that is not defensive.
 
-### The thing worth noticing in the control arm
+### Sacking, measured properly: it does nothing
 
-That 8-10 is with the **new sacking and no militia**, on the same eighteen seeds that
-gave 6-12 before either change. Sacking was never a controlled arm, so this is
-suggestive rather than established — but if it holds it is the best balance movement
-of the session, and the mechanism is plausible: population is 82% of the score gap,
-the Kingdom is where the population is, and sacking suppresses it on every capture.
+The 8-10 control arm looked like sacking had helped, and it was flagged at the time as
+suggestive rather than established. It was noise. Militia held at 0.3, sack cap swept:
 
-Being measured properly now, militia held at 0.3, sack cap swept 1/2/3/5.
+| sack cap | wins | orc score | human score |
+|---|---|---|---|
+| 1 (as it was) | 4 – 14 | 324.0 | 558.3 |
+| 2 | 5 – 13 | 335.4 | 555.4 |
+| 3 (as built) | 5 – 13 | 318.8 | 564.8 |
+| 5 | 5 – 13 | 316.8 | 561.4 |
+
+Flat across a fivefold change in severity. **Sacking is balance-neutral**, and the
+earlier two-win difference was eighteen seeds being eighteen seeds. Kept for flavour
+and for the turn-limit problem — a sacked city is worth less to flip — but it is not
+a lever.
+
+So the balance now sits at **5-13**, against roughly 7-11 before this section. The
+militia bought a much better game for two or three wins, and those wins have to come
+back from somewhere that is neither per-city nor defensive.
 
 ## 5. Also queued, from earlier
 
