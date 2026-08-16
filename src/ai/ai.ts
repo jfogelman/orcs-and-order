@@ -29,7 +29,12 @@ export interface AiPersonality {
   stormingParty: number;
 }
 
-const PERSONALITIES: Record<string, AiPersonality> = {
+/**
+ * Exported so a measurement can vary one trait and hold the rest still.
+ * Tuning these by reasoning about them has produced four wrong answers; the
+ * only thing that has ever worked is swapping a number and counting.
+ */
+export const PERSONALITIES: Record<string, AiPersonality> = {
   orc: {
     // The Horde is supposed to be the numerous one. Expanding to only four
     // cities left it permanently behind on trade, and therefore permanently

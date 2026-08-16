@@ -369,32 +369,66 @@ Two things a first pass will get wrong:
 - **A batch arrives at once.** Ten fights resolved during an AI turn would all play on
   the same frame. `spawn` takes a `delay` for this; the drain should stagger them.
 
-## 4b. Why the Kingdom keeps what it takes
+## 4b. Why the Kingdom keeps what it takes — measured
 
-**Open, and the most promising lead on balance.** Three arms of the regeneration
-diagnostic disagreed about regeneration and agreed about everything else:
+**Answered in part, and the remaining part is not what was expected.**
 
-| | orc | human |
+### It is retention, and only retention
+
+Eighteen seeds, tracking every city's ownership turn by turn rather than reading a
+combined churn figure:
+
+| | took | kept to the end | median hold | founded | final |
+|---|---|---|---|---|---|
+| Horde | 23.8 | 5.6 | **14.1 turns** | **11.7** | 8.4 |
+| Kingdom | 27.1 | 9.6 | **30.9 turns** | 9.3 | 12.7 |
+
+Three things this kills off:
+
+- **Expansion is not the problem.** The Horde founds *more* cities, 11.7 to 9.3.
+- **Capture rate is not the problem.** A 14% edge cannot make a 4.3-city gap.
+- **Retention is the whole of it.** The gap in cities kept to the end is 4.0 against a
+  final gap of 4.3. Nothing else needs to be invoked.
+
+Also worth keeping: 15.2 distinct cities are ever conquered across 50.9 changes of
+hands, about 3.3 changes each. That is not a front moving, it is a see-saw over the
+same handful of tiles — the same fact underneath the turn-limit problem in 3.
+
+### Swapping `caution` answers half of it
+
+A controlled swap: give the Horde the Kingdom's 0.48 and the Kingdom the Horde's 0.25.
+
+| | median hold, control | median hold, swapped |
 |---|---|---|
-| cities | 7.7 – 8.4 | 12.7 – 13.8 |
-| population | 42 – 47 | 81 – 85 |
+| Horde | 14.1 | **22.3** |
+| Kingdom | 30.9 | **29.8** |
 
-Both personalities carry `targetCities: 6` and both stop building settlers at
-`targetCities + 2`, so a five-city surplus is not expansion — it is conquest that
-stuck. Roughly 50 cities change hands per game and the humans end up holding more of
-them, which population then multiplies, and population is weighted 4 a citizen.
+- **The Horde's half follows the number.** Made cautious, it holds cities 58% longer.
+  So `caution` genuinely drives how long the Horde keeps a city.
+- **The Kingdom's half does not.** Made reckless, it still holds for ~30 turns. Its
+  retention advantage is **faction-intrinsic and still unexplained** — not caution,
+  and not anything tuned so far.
 
-So the question is not who takes cities, it is who *keeps* them. Things to measure
-before changing anything, given four balance hypotheses have already been wrong:
+### The part that does not add up yet
 
-- Captures and losses per side separately, not just the combined churn. The 50.9
-  figure hides the direction entirely.
-- How long a captured city survives, by captor. If orc-held cities fall straight back
-  and human-held ones do not, that is the whole result.
-- Whether `caution` explains it: the human AI garrisons before it attacks, so it may
-  simply be leaving a defender behind where the orcs walk on.
-- Whether the orcs are re-taking cities they already lost, i.e. churn on the same few
-  tiles rather than a moving front.
+Wins went 7–11 to **9–9** on the swap, but final city counts barely moved (Horde 8.4
+to 8.6, Kingdom 12.7 to 12.4). So the win swing did **not** come through city count,
+and therefore came through population, advances or buildings — none of which this
+measurement collected. **Do not treat 9–9 as a fix until that is measured.** It is
+exactly the shape of the four hypotheses that were already wrong: a number that moved
+in the right direction for a reason nobody has established.
+
+### Next, in order
+
+1. Re-run the swap collecting population, advances and buildings, and find where the
+   9–9 actually comes from. Until then the mechanism is unknown.
+2. Find what makes a Kingdom-held city hard to retake independently of caution.
+   Candidates not yet separated: Walls (human-only, and captured cities keep them),
+   defender unit stats, and which advances each side reaches first.
+3. Only then decide whether to raise the Horde's `caution`. Note the design cost:
+   0.48 makes the Horde play carefully, which is backwards for the faction whose whole
+   joke is that it does not think things through. A fix that wins on the numbers and
+   loses the character is not obviously the right trade — worth asking before taking.
 
 ## 5. Also queued, from earlier
 
