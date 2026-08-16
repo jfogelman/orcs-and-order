@@ -1,4 +1,5 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
+import type { BuildingDef } from '../model/buildings';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
 import { TECHS, TECHS_BY_ID } from '../model/techs';
@@ -50,13 +51,98 @@ function unlockedBy(id: UnitTypeId): string | null {
   return tech ? tech.name : null;
 }
 
-function unitCard(def: UnitTypeDef): string {
-  const tech = unlockedBy(def.id);
+/**
+ * Everything this unit can do that the four numbers above it do not say.
+ *
+ * Written out rather than left as icons: a player who cannot find out that a
+ * sapper detonates, or that an axethrower is ruined by throwing its axe, will
+ * read both as the unit being broken.
+ */
+function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
-  if (def.flies) notes.push('flies over anything');
-  if (def.siegeBonus > 1) notes.push(`x${def.siegeBonus} against cities`);
-  if (def.crowded) notes.push('-1 movement until coordinated');
+  if (def.flies) notes.push('flies over anything, at no extra cost');
+  if (def.siegeBonus > 1) notes.push(`×${def.siegeBonus} attacking a city`);
+  if (def.range > 1) {
+    notes.push(
+      `strikes from exactly ${def.range} tiles for a few rounds, and is not struck back — costs the whole turn`,
+    );
+  }
+  if (def.throwsWeapon) {
+    notes.push(
+      'throws harder than it swings, but has only the one axe: afterwards it fights at a quarter strength until it reaches a friendly city or kills somebody',
+    );
+  }
+  if (def.healsTo > 0) {
+    // The card is the single-creature one, but the interesting fact is that
+    // the heal scales -- a pair finish the job a lone one leaves half done.
+    const counts = CREATURES_BY_ID[def.base]?.counts ?? [1];
+    const biggest = UNIT_TYPES[`${def.base}_x${counts[counts.length - 1]}`];
+    const scales =
+      def.count === 1 && biggest !== undefined && biggest.healsTo > def.healsTo
+        ? ` — ${biggest.name} take them all the way to ${Math.round(biggest.healsTo * 100)}%`
+        : '';
+    notes.push(
+      `patches up a neighbour to ${Math.round(def.healsTo * 100)}% of their health, for the whole turn${scales}`,
+    );
+  }
+  if (def.lineBreath) {
+    notes.push('breath carries into the tile behind the target — including your own units');
+  }
+  if (def.explodes > 0) {
+    notes.push(
+      `killed defending, it detonates for ${Math.round(def.explodes * 100)}% of the health of everything adjacent — friend and enemy alike`,
+    );
+  }
+  if (def.demolishes) notes.push('brings a city’s walls down, and goes with them');
+  if (def.executeChance > 0) {
+    notes.push(
+      `${Math.round(def.executeChance * 100)}% chance to finish off a defender already under half health, if it is no larger`,
+    );
+  }
+  if (def.regenMultiplier > 1) notes.push(`heals ${def.regenMultiplier}× as fast as anything else`);
+  if (def.crowded) notes.push('−1 movement until coordinated: too many of them, nobody agreeing');
+  return notes;
+}
+
+/**
+ * What a structure actually does, in words.
+ *
+ * The blurbs are jokes and the cost is a number; between them a player had no
+ * way to find out that Walls stop mattering the moment a siege engine turns
+ * up, or that a Broken Catapult does nothing whatsoever for a garrison that
+ * stays put. Read off the data so it cannot drift from the rules.
+ */
+function buildingEffects(b: BuildingDef): string[] {
+  const out: string[] = [];
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+  if (b.defenseMult !== undefined && b.defenseMult !== 1) {
+    out.push(
+      `×${b.defenseMult} defence for units in this city` +
+        (b.negatedBySiege
+          ? ' — but a siege engine ignores it entirely'
+          : ', and a siege engine cannot ignore it'),
+    );
+  }
+  if (b.sallyBonus) {
+    out.push(
+      `+${pct(b.sallyBonus)} attack for a unit attacking out of this city — and nothing whatsoever for one that sits still`,
+    );
+  }
+  if (b.goldBonus) out.push(`+${pct(b.goldBonus)} gold from this city`);
+  if (b.scienceBonus) out.push(`+${pct(b.scienceBonus)} research from this city`);
+  if (b.contentBonus) {
+    out.push(`${b.contentBonus} more content citizens, holding off disorder`);
+  }
+  if (b.foodKept) out.push(`keeps ${pct(b.foodKept)} of the food store each time the city grows`);
+  if (b.veteranUnits) out.push('land units built here start as veterans');
+  return out;
+}
+
+function unitCard(def: UnitTypeDef): string {
+  const tech = unlockedBy(def.id);
+  const notes = abilityNotes(def);
 
   return `
     <div class="pedia-card" id="pedia-${escapeHtml(def.id)}">
@@ -71,7 +157,11 @@ function unitCard(def: UnitTypeDef): string {
           <span title="Shield cost">${def.cost}s</span>
         </div>
         ${tech ? `<div class="pedia-tech">Needs ${escapeHtml(tech)}</div>` : ''}
-        ${notes.length ? `<div class="pedia-notes">${escapeHtml(notes.join(' &middot; '))}</div>` : ''}
+        ${
+          notes.length
+            ? `<ul class="pedia-notes">${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
+            : ''
+        }
         <div class="pedia-flavor">${escapeHtml(def.blurb)}</div>
       </div>
     </div>`;
@@ -150,6 +240,13 @@ export function openPedia(player: Player, focus?: string): void {
           TECHS.find((t) => t.buildings.includes(b.id))?.name ?? '&mdash;',
         )}</span>
         <span class="pedia-flavor">${escapeHtml(b.blurb)}</span>
+        ${
+          buildingEffects(b).length
+            ? `<ul class="pedia-notes">${buildingEffects(b)
+                .map((n) => `<li>${escapeHtml(n)}</li>`)
+                .join('')}</ul>`
+            : ''
+        }
       </div>`,
     )
     .join('');

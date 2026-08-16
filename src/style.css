@@ -932,3 +932,21 @@ button.small.armed {
   color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold) inset;
 }
+
+/* Ability and effect lists in the Orcpedia. */
+ul.pedia-notes {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  list-style: disc;
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+ul.pedia-notes li {
+  margin: 1px 0;
+}
+
+.pedia-tech-row ul.pedia-notes {
+  grid-column: 2 / -1;
+}
