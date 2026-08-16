@@ -97,7 +97,9 @@ describe('faction balance across seeds', () => {
     // Scale with the sample rather than hard-coding a number: an explicit
     // timeout here overrides vitest.config.ts entirely, so a fixed value
     // silently caps how many seeds can ever be run.
-    Math.max(120_000, SEED_COUNT * 40_000),
+    // 60s a seed. Games got markedly longer once the AI started researching
+    // to a plan and cities began changing hands ~70 times a game.
+    Math.max(120_000, SEED_COUNT * 60_000),
   );
 
   it('reports the shape of a typical game', () => {

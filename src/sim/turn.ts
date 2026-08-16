@@ -1,6 +1,6 @@
 import { unitType } from '../model/units';
 import { BUILDINGS } from '../model/buildings';
-import type { GameState, Player } from '../model/types';
+import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
   cityGoldBonus,
@@ -22,23 +22,43 @@ import { effectiveMove } from './rules';
  * control passes to them. The calendar advances once everyone has played.
  */
 
-/** Fraction of maximum health recovered per turn in each situation. */
-const HEAL_IN_CITY = 1 / 3;
-const HEAL_BARRACKS = 1;
-const HEAL_FORTIFIED = 1 / 10;
+/**
+ * Fraction of maximum health recovered per turn, by situation. The best
+ * applicable rate applies; they do not stack.
+ *
+ * Everything regenerates a little now. A damaged unit previously had no way
+ * back except a long walk home, so a scratched Ten Orcs was devalued for the
+ * rest of the game. Recovering slowly in the field makes withdrawing a real
+ * option and gives fortifying a purpose beyond the defence bonus.
+ */
+export const REGEN = {
+  /** Standing in the open, having done something with its turn. */
+  afield: 0.05,
+  sentry: 0.08,
+  fortified: 0.15,
+  inCity: 1 / 3,
+  /** Somewhere with people whose job is putting soldiers back together. */
+  barracks: 1,
+} as const;
+
+function regenRateFor(state: GameState, unit: Unit): number {
+  const city = state.cities.find(
+    (c) => c.x === unit.x && c.y === unit.y && c.owner === unit.owner,
+  );
+  if (city) return city.buildings.includes('barracks') ? REGEN.barracks : REGEN.inCity;
+  if (unit.order === 'fortified') return REGEN.fortified;
+  if (unit.order === 'sentry') return REGEN.sentry;
+  return REGEN.afield;
+}
 
 function healUnits(state: GameState, playerId: number): void {
   for (const unit of state.units) {
     if (unit.owner !== playerId) continue;
-    const max = unitType(unit.type).hp;
+    const type = unitType(unit.type);
+    const max = type.hp;
     if (unit.hp >= max) continue;
-    const city = state.cities.find(
-      (c) => c.x === unit.x && c.y === unit.y && c.owner === playerId,
-    );
-    let rate = 0;
-    if (city) rate = city.buildings.includes('barracks') ? HEAL_BARRACKS : HEAL_IN_CITY;
-    else if (unit.order === 'fortified') rate = HEAL_FORTIFIED;
-    if (rate > 0) unit.hp = Math.min(max, unit.hp + Math.max(1, Math.round(max * rate)));
+    const rate = regenRateFor(state, unit) * type.regenMultiplier;
+    unit.hp = Math.min(max, unit.hp + Math.max(1, Math.round(max * rate)));
   }
 }
 

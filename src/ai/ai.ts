@@ -38,26 +38,36 @@ const PERSONALITIES: Record<string, AiPersonality> = {
     // See the note on the Kingdom's copy of this field: one defender per city
     // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
-    // The Horde's research programme is the counting ladder, with a couple of
-    // detours for things to hit people with. Straying too far from the ladder
-    // meant the late-game units were never fielded at all.
+    /*
+     * Roughly cost-ordered, and deliberately not all military. An earlier
+     * version listed only weapons; once the list was actually being consulted
+     * that left the Horde with no economy at all and it fell behind on every
+     * measure. Cheap enablers first, then the counting ladder interleaved with
+     * the things that pay for it.
+     */
     techPriority: [
+      'mapmaking',
+      'goblin-smarts',
       'orc-meaning',
       'orc-together',
-      'idiots-stick-together',
+      'not-you-again',
       'to-be-an-orc',
+      'suicidal-goblins',
       'axes',
-      'next-level-stupid',
+      'tree-hugging',
+      'idiots-stick-together',
+      'joy-making',
+      'hammers-of-glory',
       'throwing-buddies',
-      'beyond-stupid',
-      'not-just-stupid',
-      'stupidity-for-all',
-      // Wall Building, for the Horde, produces a Broken Catapult rather than
-      // a wall -- so it is worth having for entirely different reasons.
       'wall-building',
+      'next-level-stupid',
+      'happiness',
       'axes-crazy',
+      'beyond-stupid',
       'my-little-friend',
+      'not-just-stupid',
       'dead-messed-up',
+      'stupidity-for-all',
       'full-of-fire',
     ],
     caution: 0.25,
@@ -86,19 +96,25 @@ const PERSONALITIES: Record<string, AiPersonality> = {
      */
     garrisonPerCity: 1,
     techPriority: [
+      'mapmaking',
       'brotherhood',
       'archery',
+      'not-you-again',
       'join-army',
-      'mapmaking',
-      'horses-sneeze',
-      'bunches-footmen',
       'tree-hugging',
-      'ten-heads',
+      'horses-sneeze',
+      'joy-making',
+      'hammers-of-glory',
+      'bunches-footmen',
       'wall-building',
+      'happiness',
       'pointed-ears',
+      'ten-heads',
       'let-us-ride',
-      'run-you-through',
       'arrows-glory',
+      'run-you-through',
+      'rumbling-voice',
+      'lordship',
     ],
     // The single most sensitive number in the file, and the only one that
     // moved faction balance at all. Measured over 18 seeds:

@@ -88,10 +88,15 @@ export interface ResearchEvent {
 }
 
 export function addBeakers(state: GameState, player: Player, amount: number): ResearchEvent {
-  // The AI picks its own next project. A human is asked, so the choice of what
-  // to work towards stays theirs -- but the beakers still bank up meanwhile,
-  // so being asked costs nothing.
-  if (player.controller === 'ai') autoPickResearch(state, player);
+  // Nobody's next project is chosen here.
+  //
+  // This used to call autoPickResearch for AI players, which picks the
+  // cheapest available advance. Because the economy runs at the start of a
+  // player's turn and the AI chooses its research later in that same turn,
+  // the cheapest pick always got there first and the AI's techPriority list
+  // was never consulted once -- both factions researched cheapest-first for
+  // the whole of the game's life. The AI now decides in `chooseResearch`, and
+  // a human is asked; beakers bank up either way, so the delay costs nothing.
   if (!player.researching) {
     player.beakers += amount;
     return { completed: null };
@@ -121,7 +126,6 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
     log(state, `Now buildable: ${newBuildings.join(', ')}.`, 'good', player.id);
   }
 
-  if (player.controller === 'ai') autoPickResearch(state, player);
   return { completed: def };
 }
 

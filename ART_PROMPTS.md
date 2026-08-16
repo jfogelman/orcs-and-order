@@ -138,17 +138,13 @@ should be too.
 | `mage` | A human wizard in deep blue robes with gold trim, long white beard, wide-brimmed pointed hat, holding a staff topped with a pale glowing stone |
 | `paladin` | A holy warrior in ornate golden plate armour with a white surcoat, mounted on an armoured white horse, broadsword raised, faint warm glow |
 
-## Still to draw — one icon
+## Still to draw
 
-Everything else is done: 17 unit sprites, 6 city sprites, 8 terrain sets, all 42
-advance icons, 9 of the 10 building icons, and the full sound set.
+**Every static asset is done**: 17 unit sprites, 6 city sprites, 8 terrain sets, 42
+advance icons, 10 building icons, 33 sound effects and 3 music tracks.
 
-| id | Faction | Icon subject |
-|---|---|---|
-| `catapult` | orc | a crude wooden catapult listing badly to one side, one wheel square and the other missing entirely, throwing arm snapped |
-
-Save it as `art_src/buildings/catapult.png`, magenta background, then `npm run art`.
-Until it exists the city screen simply omits the icon and shows the name.
+The only outstanding art is the **effect animations** further down, and those are
+optional too — nothing breaks without them.
 
 ### Not needed, deliberately
 
@@ -158,7 +154,7 @@ Until it exists the city screen simply omits the icon and shows the name.
 
 ---
 
-## Advance icons — optional, 29 left to draw
+## Advance icons — all 42 done
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -254,7 +250,7 @@ went wrong.
 
 ---
 
-## Building icons — optional, 9 of them
+## Building icons — all 10 done
 
 Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
 Same rules as advance icons: **plain magenta background, no text**, and a missing icon
@@ -278,6 +274,65 @@ Same preamble as the advance icons, then:
 The two economy pairs are where the joke lives, so lean into it: the **Goblin
 Treasury** should look valuable and *completely unprotected*, and the **Simple Market**
 should be conspicuously one stall selling one thing.
+
+---
+
+## Effect animations — the next batch
+
+Short bursts played over the map when something happens: a sapper going up, an arrow
+landing, a wounded unit being finished off. **None of these are wired up yet** — the
+playback layer is a small piece of work still to do — but the format below is what it
+will read, so anything generated now will drop straight in.
+
+### Format
+
+**A horizontal strip of 4 frames**, each frame square, on a **plain solid magenta
+background (#FF00FF)**. So a 4-frame effect is one image 4x as wide as it is tall — for
+example 512x128 or 256x64. Save as `art_src/effects/<id>.png`.
+
+Magenta suits these even better than it suits sprites: effects are full of glows, smoke
+and soft edges, and the pipeline keys on *hue* rather than colour distance, so a
+half-transparent flame edge is cut correctly instead of leaving a pink rim.
+
+Preamble for all of them:
+
+> pixel art visual effect animation, a horizontal strip of exactly 4 frames left to
+> right showing the effect starting, growing, peaking and fading, each frame square and
+> the same size, plain solid magenta background (#FF00FF) behind every frame, mid-1990s
+> fantasy strategy game style, bright saturated colours, thick readable shapes, no
+> characters, no text, no frame borders or dividing lines, no background scenery.
+
+⚠️ **No magenta, hot pink or violet in the effect itself** — it will be keyed out with
+the background. For anything that wants to be purple, say **solid green background
+(#00FF00)** instead; the pipeline picks the key colour up off the border either way.
+The Death Knight's effect below is exactly that case.
+
+### For abilities that already exist
+
+| id | Effect |
+|---|---|
+| `explosion` | an orange and yellow fireball bursting outward, thickening into black smoke, with debris flying out at the edges |
+| `demolish` | grey stone blocks blowing apart in a cloud of pale dust, tumbling outward and settling |
+| `clash` | two crossed white sparks at the point of impact, flaring and fading, with three short motion streaks |
+| `death-touch` | **green background** — a violet skull-shaped wisp closing over its target and collapsing inward to nothing |
+
+### For the abilities still queued
+
+| id | Effect |
+|---|---|
+| `heal` | a warm golden ring rising upward with soft white sparkles inside it |
+| `arrow` | a single arrow streaking left to right, then a small burst where it strikes |
+| `axe` | a throwing axe tumbling end over end, then a chopping impact spark |
+| `magic` | a bright cyan-white orb streaking and bursting into a ring of sparks |
+| `bolt` | a heavy iron ballista bolt driving in and splintering on impact |
+| `dragonfire` | a cone of orange flame billowing forward and guttering out into smoke |
+
+### If four frames is awkward
+
+Four is a suggestion, not a constraint — the pipeline can slice any number as long as
+the strip is a whole multiple of the frame height. Six or eight frames will look
+smoother; two will look like a stamp. Keep every frame the same width and leave no gaps
+or dividing lines between them.
 
 ---
 

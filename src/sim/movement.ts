@@ -5,7 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import type { CombatResult } from './combat';
-import { destroyUnit, resolveCombat } from './combat';
+import { destroyUnit, detonate, resolveCombat } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
 
@@ -247,6 +247,28 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   const occupant = unitAt(state, x, y);
   const city = cityAt(state, x, y);
 
+  // --- demolition ------------------------------------------------------
+  // A sapper walked into a walled city brings the walls down and is spent
+  // doing it. Cheap, one-use, and the only way the Horde gets through a
+  // Kingdom wall -- the rest of the army walks in afterwards.
+  if (city && city.owner !== unit.owner && type.demolishes && city.buildings.includes('walls')) {
+    city.buildings = city.buildings.filter((b) => b !== 'walls');
+    log(
+      state,
+      `${type.name} brings the walls of ${city.name} down, and goes with them.`,
+      'combat',
+      unit.owner,
+      'explosion',
+    );
+    log(state, `The walls of ${city.name} are gone.`, 'bad', city.owner);
+    // Everything adjacent is caught, including whoever is holding the gate.
+    detonate(state, unit);
+    destroyUnit(state, unit, 'is spent bringing down a wall');
+    recomputeVisibility(state, unit.owner);
+    recomputeVisibility(state, city.owner);
+    return { kind: 'blocked', reason: `The walls of ${city.name} come down.`, retryable: false };
+  }
+
   // --- attack ----------------------------------------------------------
   if (occupant && occupant.owner !== unit.owner) {
     if (type.attack <= 0) {
@@ -265,11 +287,22 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     if (result.attackerWon) {
       log(
         state,
-        `${type.name} defeats ${defenderType.name} after ${result.rounds} rounds.`,
+        result.executed
+          ? `${type.name} finishes off a wounded ${defenderType.name} without a fight.`
+          : `${type.name} defeats ${defenderType.name} after ${result.rounds} rounds.`,
         'combat',
         unit.owner,
       );
+      // A defender that goes up on death does so before it leaves the board,
+      // so the attacker standing next to it is very much included.
+      const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
       destroyUnit(state, occupant, 'is wiped out');
+      // The attacker may not have survived its own victory.
+      if (blastVictims.some((v) => v.id === unit.id)) {
+        recomputeVisibility(state, unit.owner);
+        recomputeVisibility(state, occupant.owner);
+        return { kind: 'combat', result, defenderDied: true, attackerDied: true };
+      }
     } else {
       log(
         state,

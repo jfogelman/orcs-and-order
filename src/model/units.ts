@@ -51,6 +51,23 @@ export interface CreatureDef {
   flies?: boolean;
   /** Multiplier when attacking a city. */
   siegeBonus?: number;
+  /** Multiplies this creature's natural healing. Trolls are famously hard to keep down. */
+  regenMultiplier?: number;
+  /**
+   * Fraction of each neighbour's maximum health lost when this creature is
+   * killed *defending*. Friend and enemy alike — the joke is that you cannot
+   * aim it.
+   */
+  explodes?: number;
+  /**
+   * Spends itself bringing a city's walls down, once. Expendable by design.
+   */
+  demolishes?: boolean;
+  /**
+   * Chance of destroying a wounded defender outright instead of fighting it.
+   * Only ever applies to a defender no larger than the attacker.
+   */
+  executeChance?: number;
   /**
    * How large this creature is drawn, relative to an Orc at 1.0.
    *
@@ -123,6 +140,8 @@ export const CREATURES: CreatureDef[] = [
     sight: 1,
     counts: [1, 2],
     siegeBonus: 2,
+    explodes: 0.4,
+    demolishes: true,
     artScale: 0.72,
     silhouette: 'engine',
     body: '#7f9440',
@@ -180,6 +199,7 @@ export const CREATURES: CreatureDef[] = [
     cost: 35,
     sight: 1,
     counts: [1, 2, 3],
+    regenMultiplier: 2,
     artScale: 1.14,
     silhouette: 'brute',
     body: '#4f7f6a',
@@ -218,6 +238,7 @@ export const CREATURES: CreatureDef[] = [
     cost: 55,
     sight: 2,
     counts: [1, 2],
+    executeChance: 0.3,
     artScale: 1.1,
     silhouette: 'robed',
     body: '#3d3348',
@@ -444,6 +465,11 @@ export interface UnitTypeDef {
    * disagreement, until the owner researches their coordination advance.
    */
   crowded: boolean;
+  regenMultiplier: number;
+  /** Fraction of a neighbour's health lost when this dies defending; 0 for most. */
+  explodes: number;
+  demolishes: boolean;
+  executeChance: number;
   /** Drawn size relative to an Orc. See CreatureDef.artScale. */
   artScale: number;
   silhouette: SilhouetteId;
@@ -480,6 +506,10 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     flies: c.flies === true,
     siegeBonus: c.siegeBonus ?? 1,
     crowded: count >= CROWD_THRESHOLD,
+    regenMultiplier: c.regenMultiplier ?? 1,
+    explodes: c.explodes ?? 0,
+    demolishes: c.demolishes === true,
+    executeChance: c.executeChance ?? 0,
     artScale: c.artScale ?? 1,
     silhouette: c.silhouette,
     body: c.body,

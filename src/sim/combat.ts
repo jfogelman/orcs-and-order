@@ -1,4 +1,4 @@
-import { idx } from '../engine/grid';
+import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
@@ -141,9 +141,45 @@ export interface CombatResult {
   defenseStrength: number;
   /** Set when the winner earned a promotion out of it. */
   promoted: boolean;
+  /** The defender was finished off outright rather than fought. */
+  executed: boolean;
+}
+
+/**
+ * Can this attacker simply finish off a wounded defender?
+ *
+ * Deliberately restricted to a defender no larger than the attacker. Without
+ * that guard a single Death Knight could delete Ten Orcs by catching them
+ * wounded, which would make it far and away the strongest thing in the game.
+ */
+export function canExecute(attacker: Unit, defender: Unit): boolean {
+  const a = unitType(attacker.type);
+  const d = unitType(defender.type);
+  if (a.executeChance <= 0) return false;
+  if (d.hp > a.hp) return false;
+  return defender.hp < d.hp * 0.5;
 }
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
+  if (canExecute(attacker, defender)) {
+    const executed = withRng(state, (rng) => rng.chance(unitType(attacker.type).executeChance));
+    if (executed) {
+      defender.hp = 0;
+      return {
+        attackerId: attacker.id,
+        defenderId: defender.id,
+        attackerWon: true,
+        rounds: 0,
+        attackerHp: attacker.hp,
+        defenderHp: 0,
+        attackStrength: 0,
+        defenseStrength: 0,
+        promoted: false,
+        executed: true,
+      };
+    }
+  }
+
   const atk = attackStrength(state, attacker, defender);
   const def = defenseStrength(state, defender, attacker);
   const atkMax = unitType(attacker.type).hp;
@@ -181,7 +217,44 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     attackStrength: atk.total,
     defenseStrength: def.total,
     promoted: result.promoted,
+    executed: false,
   };
+}
+
+/**
+ * A sapper killed while defending takes the neighbourhood with it.
+ *
+ * Deliberately does not chain: a unit killed *by* a blast never detonates in
+ * turn, or one sapper in a line clears a continent. And it only fires on
+ * defence, because the whole joke is that you cannot aim it.
+ *
+ * Returns the units it killed, already removed from the board.
+ */
+export function detonate(state: GameState, sapper: Unit): Unit[] {
+  const power = unitType(sapper.type).explodes;
+  if (power <= 0) return [];
+
+  const caught = state.units.filter(
+    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) === 1,
+  );
+  const killed: Unit[] = [];
+  for (const victim of caught) {
+    victim.hp -= Math.max(1, Math.round(unitType(victim.type).hp * power));
+    if (victim.hp <= 0) killed.push(victim);
+  }
+  log(
+    state,
+    `${unitType(sapper.type).name} goes up, taking ${caught.length} unit(s) with it.`,
+    'combat',
+    sapper.owner,
+    'explosion',
+  );
+  for (const victim of killed) {
+    const i = state.units.indexOf(victim);
+    if (i >= 0) state.units.splice(i, 1);
+    log(state, `${unitType(victim.type).name} is caught in the blast.`, 'bad', victim.owner);
+  }
+  return killed;
 }
 
 /** Remove a dead unit and narrate it to both sides. */
