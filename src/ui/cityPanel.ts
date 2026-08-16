@@ -11,7 +11,11 @@ import {
   freeSupport,
   productionCost,
   productionName,
-  unitUpkeep, isGarrisoned } from '../sim/city';
+  unitUpkeep, isGarrisoned,
+  rushBlocked,
+  rushBuy,
+  rushCost
+} from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
 
@@ -126,6 +130,14 @@ export function openCityPanel(
         <div class="panel-title">Building: ${escapeHtml(productionName(city.producing))}${eta !== null ? ` <span class="muted">(${eta} turns)</span>` : ''}</div>
         <div class="panel-body">
           ${bar(city.shields, Math.max(1, productionCost(city.producing)))}
+          ${
+            rushCost(city) > 0
+              ? `<button class="small rush" data-rush="1"${rushBlocked(state, city) ? ' disabled' : ''}>
+                   Buy for ${rushCost(city)}g
+                 </button>
+                 <span class="muted">${escapeHtml(rushBlocked(state, city) ?? `you have ${state.players[city.owner].gold}g`)}</span>`
+              : ''
+          }
         </div>
         <div class="panel-title">Units</div>
         <div class="build-list">
@@ -160,6 +172,11 @@ export function openCityPanel(
           e.stopPropagation();
           openPedia(state.players[city.owner], link.dataset.pedia);
         });
+      });
+      root.querySelector<HTMLButtonElement>('[data-rush]')?.addEventListener('click', () => {
+        if (!rushBuy(state, city)) return;
+        onChange();
+        openCityPanel(state, city, onChange);
       });
       root.querySelectorAll<HTMLButtonElement>('.build-option').forEach((btn) => {
         btn.addEventListener('click', () => {

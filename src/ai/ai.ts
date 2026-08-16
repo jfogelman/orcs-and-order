@@ -2,7 +2,11 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
-import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield } from '../sim/city';
+import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
+  rushBlocked,
+  rushBuy,
+  rushCost
+} from '../sim/city';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
@@ -462,6 +466,35 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
   setResearch(state, player, cheapest.id);
 }
 
+/**
+ * Gold kept back rather than spent, to cover upkeep and the bankruptcy path.
+ *
+ * Without a floor the AI would spend down to nothing every turn and then start
+ * selling its own buildings off the moment upkeep exceeded income.
+ */
+export const AI_TUNING = { goldReserve: 60 };
+
+/**
+ * Turn banked gold into things that exist.
+ *
+ * Cheapest completion first, so a given pile of gold buys as many finished
+ * items as it can rather than one expensive one. Measured before it was
+ * believed: the Horde was ending games sitting on ~476 gold, which scored
+ * exactly nothing, because there was previously no way to spend it at all.
+ */
+function spendGold(state: GameState, player: Player): void {
+  // Bounded: each purchase is meant to be cheap, and an unbounded loop here
+  // would be one rounding error away from hanging a turn.
+  for (let bought = 0; bought < 12; bought++) {
+    const affordable = playerCities(state, player.id)
+      .filter((c) => rushBlocked(state, c) === null)
+      .sort((a, b) => rushCost(a) - rushCost(b))[0];
+    if (!affordable) break;
+    if (player.gold - rushCost(affordable) < AI_TUNING.goldReserve) break;
+    if (!rushBuy(state, affordable)) break;
+  }
+}
+
 export function runAiTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
@@ -472,6 +505,7 @@ export function runAiTurn(state: GameState, playerId: number): void {
   for (const city of playerCities(state, playerId)) {
     city.producing = chooseProduction(state, city, personality);
   }
+  spendGold(state, player);
 
   const frontier = frontierTiles(state, player);
 

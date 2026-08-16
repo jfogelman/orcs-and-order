@@ -3,7 +3,14 @@ import { runAiTurn } from '../src/ai/ai';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
 import type { BuildingId, City, GameState } from '../src/model/types';
-import { cityGoldBonus, cityScienceBonus, foundCity } from '../src/sim/city';
+import {
+  cityGoldBonus,
+  cityScienceBonus,
+  foundCity,
+  rushBlocked,
+  rushBuy,
+  rushCost,
+} from '../src/sim/city';
 import { createGame, playerCities, spawnUnit } from '../src/sim/gamestate';
 import { attackStrength, defenseStrength } from '../src/sim/combat';
 import { unlockedBuildings } from '../src/sim/research';
@@ -323,5 +330,87 @@ describe('buildings that want somebody standing in them', () => {
       expect(BUILDINGS[id].needsGarrison).toBe(true);
       expect(BUILDINGS[id].goldBonus).toBeGreaterThan(0.5);
     }
+  });
+});
+
+describe('rush-buying', () => {
+  /** A city part-way through building something, and a treasury to spend. */
+  function shop(gold: number, shields = 0) {
+    const g = cityGame();
+    g.city.producing = { kind: 'building', id: 'granary' };
+    g.city.shields = shields;
+    g.state.players[0].gold = gold;
+    return g;
+  }
+
+  it('costs more the further there is to go', () => {
+    const near = shop(999, BUILDINGS.granary.cost - 5);
+    const far = shop(999, BUILDINGS.granary.cost - 40);
+    expect(rushCost(near.city)).toBeLessThan(rushCost(far.city));
+  });
+
+  it('charges a penalty for starting from nothing', () => {
+    // Otherwise gold simply replaces having a city worth building in.
+    const fromNothing = shop(999, 0);
+    const barelyStarted = shop(999, 1);
+    expect(rushCost(fromNothing.city)).toBeGreaterThan(rushCost(barelyStarted.city) * 1.5);
+  });
+
+  it('fills the shield box and takes the gold', () => {
+    const g = shop(999, 10);
+    const price = rushCost(g.city);
+    expect(rushBuy(g.state, g.city)).toBe(true);
+    expect(g.city.shields).toBe(BUILDINGS.granary.cost);
+    expect(g.state.players[0].gold).toBe(999 - price);
+  });
+
+  it('actually produces the thing on the next turn', () => {
+    const g = shop(999, 10);
+    rushBuy(g.state, g.city);
+    beginPlayerTurn(g.state, 0);
+    expect(g.city.buildings).toContain('granary');
+  });
+
+  it('refuses when the gold is not there, and changes nothing', () => {
+    const g = shop(1, 10);
+    expect(rushBlocked(g.state, g.city)).toMatch(/needs \d+ gold/i);
+    expect(rushBuy(g.state, g.city)).toBe(false);
+    expect(g.state.players[0].gold).toBe(1);
+    expect(g.city.shields).toBe(10);
+  });
+
+  it('cannot be used on Coin, which is not a thing being built', () => {
+    const g = shop(999);
+    g.city.producing = { kind: 'coin' };
+    expect(rushCost(g.city)).toBe(0);
+    expect(rushBuy(g.state, g.city)).toBe(false);
+  });
+
+  it('cannot be used on something already paid for', () => {
+    const g = shop(999, BUILDINGS.granary.cost);
+    expect(rushCost(g.city)).toBe(0);
+    expect(rushBuy(g.state, g.city)).toBe(false);
+  });
+
+  it('never drives a player into debt', () => {
+    const g = shop(999, 5);
+    rushBuy(g.state, g.city);
+    expect(g.state.players[0].gold).toBeGreaterThanOrEqual(0);
+  });
+
+  it('is used by the AI, and stops it hoarding', () => {
+    // The whole point: gold that buys nothing scores nothing. Before this,
+    // the Horde ended games sitting on hundreds of unspent gold.
+    const state = createGame({ seed: 4242 });
+    state.players[0].controller = 'ai';
+    beginPlayerTurn(state, 0);
+    let everBought = false;
+    for (let i = 0; i < 240 && state.winner === null; i++) {
+      const before = state.log.length;
+      runAiTurn(state, state.activePlayer);
+      endPlayerTurn(state);
+      if (state.log.slice(before).some((e) => /gold to have/.test(e.text))) everBought = true;
+    }
+    expect(everBought, 'the AI never once spent gold on production').toBe(true);
   });
 });

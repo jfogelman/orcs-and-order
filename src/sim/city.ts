@@ -177,6 +177,55 @@ export function productionCost(item: ProductionItem): number {
   return 0;
 }
 
+/**
+ * Gold to finish what a city is building, right now.
+ *
+ * Superlinear in what is left to do, so buying a nearly-finished thing is
+ * cheap and buying something from nothing is punishing. Starting from an empty
+ * shield box costs double on top of that, which stops gold from replacing
+ * production outright -- it should shorten a wait, not remove the need to have
+ * a city worth building in.
+ *
+ * Returns 0 for anything that cannot be bought.
+ */
+export function rushCost(city: City): number {
+  const item = city.producing;
+  if (item.kind === 'coin') return 0;
+  const remaining = productionCost(item) - city.shields;
+  if (remaining <= 0) return 0;
+  const base = 2 * remaining + (remaining * remaining) / 20;
+  return Math.ceil(city.shields === 0 ? base * 2 : base);
+}
+
+/** Why this city cannot be rushed, or null if it can. */
+export function rushBlocked(state: GameState, city: City): string | null {
+  if (city.producing.kind === 'coin') return 'This city is not building anything.';
+  const cost = rushCost(city);
+  if (cost <= 0) return 'This is already paid for.';
+  if (state.players[city.owner].gold < cost) return `Needs ${cost} gold.`;
+  return null;
+}
+
+/**
+ * Pay to fill the shield box. The thing itself appears on the next turn, the
+ * same as if the shields had been earned, so nothing else has to know that
+ * gold was involved.
+ */
+export function rushBuy(state: GameState, city: City): boolean {
+  if (rushBlocked(state, city) !== null) return false;
+  const cost = rushCost(city);
+  state.players[city.owner].gold -= cost;
+  city.shields = productionCost(city.producing);
+  log(
+    state,
+    `${city.name} pays ${cost} gold to have ${productionName(city.producing)} finished at once.`,
+    'good',
+    city.owner,
+    'coin',
+  );
+  return true;
+}
+
 export function productionName(item: ProductionItem): string {
   if (item.kind === 'unit') return unitType(item.id).name;
   if (item.kind === 'building') return BUILDINGS[item.id].name;

@@ -950,3 +950,17 @@ ul.pedia-notes li {
 .pedia-tech-row ul.pedia-notes {
   grid-column: 2 / -1;
 }
+
+/* Rush-buy, beside the production bar. */
+button.small.rush {
+  margin-top: 6px;
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+button.small.rush[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--edge);
+  color: var(--ink-dim);
+}
