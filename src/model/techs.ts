@@ -67,7 +67,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: [],
+    buildings: ['outpost', 'depot'],
     flags: ['bridges'],
     flavor: 'Walking around the swamp was, in hindsight, a choice.',
   },

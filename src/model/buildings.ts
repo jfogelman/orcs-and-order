@@ -47,6 +47,14 @@ export interface BuildingDef {
    * it is already worth nothing unless there is a defender to apply it to.
    */
   needsGarrison?: boolean;
+  /**
+   * Extends supply to this city, so units near it fight and heal normally.
+   *
+   * Without one, only the capital supplies anything -- which is what stops a
+   * conquest from feeding itself. Taking a city gives you the ground; making
+   * it useful to the army standing on it costs you the shields.
+   */
+  suppliesArmy?: boolean;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -115,6 +123,28 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
 
   // ------------------------------------------------------------- treasuries
+  outpost: {
+    id: 'outpost',
+    name: 'Attempted Outpost',
+    faction: 'orc',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'It has a roof, mostly, and a pile of food near it. Supplies now reach ' +
+      'this part of the map, or at any rate they reach somewhere close to it.',
+  },
+  depot: {
+    id: 'depot',
+    name: 'Forward Depot',
+    faction: 'human',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'Requisitions may be submitted here in triplicate. Two of the copies ' +
+      'are for the depot. Nobody has established what the third is for.',
+  },
   treasury: {
     id: 'treasury',
     name: 'Goblin Treasury',

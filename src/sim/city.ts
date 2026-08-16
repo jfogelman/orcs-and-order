@@ -192,27 +192,59 @@ export const MILITIA = { perCitizen: 0.3 };
 /**
  * Supply.
  *
- * A unit within `range` tiles of any city its owner holds is in supply. Beyond
- * that it fights badly and does not heal -- the Horde, in particular, has a
- * long history of setting off without deciding who is carrying the food.
+ * A unit within `range` tiles of somewhere that supplies an army fights and
+ * heals normally. Beyond that it attacks weakly and does not heal at all --
+ * the Horde in particular has a long history of setting off without deciding
+ * who is carrying the food.
  *
- * Deliberately keyed on *any* friendly city, including one just captured. That
- * is the interesting part: a deep raid is punished right up until it actually
- * takes something, at which point the ground it took becomes the supply it
- * needed. It rewards consolidating over raiding, which is the difference
- * between the two sides' behaviour.
+ * What supplies an army is deliberately *not* "any city you own". That would
+ * scale with how many cities you have, and the side with more cities would get
+ * a denser network as a reward for already being ahead -- the same trap that
+ * caught rush-buying, unit-driven buildings and the militia.
+ *
+ * Instead: **your capital, and any city where you have built an outpost.**
+ * Every player has exactly one capital, so the base network is identical
+ * whatever the size of the empire, and extending it costs shields in a
+ * building that a sacking destroys. Conquest does not feed itself for free.
  */
 export const SUPPLY = {
-  /** Tiles from a friendly city. Anything at or beyond 99 turns it off. */
+  /** Tiles from a supplying city. Anything at or beyond 99 turns it off. */
   range: 4,
   /** Attack multiplier while out of supply. */
   attackPenalty: 0.6,
 };
 
+/**
+ * The seat of a player's power: the oldest city they still hold.
+ *
+ * Derived rather than stored, so it needs no save migration and cannot go
+ * stale. Losing your capital promotes the next oldest, which is the right
+ * behaviour anyway -- the front collapses toward whatever you have left.
+ */
+export function capitalOf(state: GameState, playerId: number): City | null {
+  let best: City | null = null;
+  for (const c of state.cities) {
+    if (c.owner !== playerId) continue;
+    if (!best || c.foundedTurn < best.foundedTurn || (c.foundedTurn === best.foundedTurn && c.id < best.id)) {
+      best = c;
+    }
+  }
+  return best;
+}
+
+/** Does this city feed an army standing near it? */
+export function suppliesArmy(state: GameState, city: City): boolean {
+  if (city.buildings.some((b) => BUILDINGS[b]?.suppliesArmy)) return true;
+  return capitalOf(state, city.owner)?.id === city.id;
+}
+
 export function inSupply(state: GameState, unit: Unit): boolean {
   if (SUPPLY.range >= 99) return true;
   return state.cities.some(
-    (c) => c.owner === unit.owner && distance(c.x, c.y, unit.x, unit.y) <= SUPPLY.range,
+    (c) =>
+      c.owner === unit.owner &&
+      distance(c.x, c.y, unit.x, unit.y) <= SUPPLY.range &&
+      suppliesArmy(state, c),
   );
 }
 

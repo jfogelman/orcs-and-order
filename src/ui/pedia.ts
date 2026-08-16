@@ -130,6 +130,11 @@ function buildingEffects(b: BuildingDef): string[] {
       `+${pct(b.sallyBonus)} attack for a unit attacking out of this city — and nothing whatsoever for one that sits still`,
     );
   }
+  if (b.suppliesArmy) {
+    out.push(
+      'supplies your army here, so units nearby fight at full strength and heal — without one, only your capital does',
+    );
+  }
   // Said first, because it is the condition on everything below it.
   if (b.needsGarrison) {
     out.push('pays nothing at all unless a unit is standing in the city');

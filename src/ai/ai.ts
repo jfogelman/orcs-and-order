@@ -5,7 +5,10 @@ import type { City, GameState, Player, ProductionItem, Unit } from '../model/typ
 import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
   rushBlocked,
   rushBuy,
-  rushCost
+  rushCost,
+  capitalOf,
+  suppliesArmy,
+  SUPPLY
 } from '../sim/city';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
@@ -294,6 +297,19 @@ function chooseProduction(
       (u) => unitType(u.type).siegeBonus > 1,
     );
     if (siege && !haveSiege) return { kind: 'unit', id: siege.id };
+  }
+
+  // 3c. A forward city that feeds nobody is where the army is trying to
+  // operate from, and every unit around it is fighting at a penalty and not
+  // healing. That is worth more than any amount of economy, so it comes first.
+  //
+  // Only when an outpost would actually add coverage: a city already inside
+  // the capital's range does not need one.
+  const seat = capitalOf(state, city.owner);
+  const covered = seat !== null && distance(seat.x, seat.y, city.x, city.y) <= SUPPLY.range;
+  if (!covered && !suppliesArmy(state, city)) {
+    const supplyHouse = options.buildings.find((b) => b.suppliesArmy);
+    if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
   }
 
   // 4. Then infrastructure. Economy buildings come before a second barracks:
