@@ -10,6 +10,8 @@ import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
 import type { City, GameState, Unit } from './model/types';
 import { Camera } from './render/camera';
+import { EffectLayer } from './render/effects';
+import type { EffectId } from './render/effects';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
 import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
@@ -53,6 +55,7 @@ class App {
   private camera: Camera;
   private renderer: MapRenderer;
   private minimap: Minimap;
+  private effects = new EffectLayer();
   private overlay: MapOverlay = { ...EMPTY_OVERLAY };
 
   /** The person at the keyboard. */
@@ -275,13 +278,31 @@ class App {
     const entries = this.state.log.slice(this.soundedLogEntries);
     this.soundedLogEntries = this.state.log.length;
     const heard = new Set<string>();
+    let shown = 0;
     for (const entry of entries) {
-      if (!entry.cue) continue;
       if (entry.player !== null && entry.player !== this.viewerId) continue;
-      // One of each per batch: ten cities growing on one turn is a machine gun.
-      if (heard.has(entry.cue)) continue;
-      heard.add(entry.cue);
-      audio.play(entry.cue as SfxId, 0);
+
+      if (entry.cue) {
+        // One of each per batch: ten cities growing on one turn is a machine gun.
+        if (!heard.has(entry.cue)) {
+          heard.add(entry.cue);
+          audio.play(entry.cue as SfxId, 0);
+        }
+      }
+
+      // Animations are not deduplicated the way sounds are -- three separate
+      // fights should be three explosions -- but they are staggered and
+      // capped, because a whole AI turn drains at once and would otherwise
+      // play every one of them on a single frame.
+      const effect = effectFor(entry);
+      if (!effect || !entry.at || shown >= EFFECT_BURST) continue;
+      const [ex, ey] = entry.at;
+      // Never draw an event the viewer cannot see. The layer will happily
+      // paint over unexplored black, and an explosion in fog would give away
+      // exactly where an enemy is.
+      if (!this.state.players[this.viewerId].visible[idx(ex, ey, this.state.width)]) continue;
+      this.effects.spawn(effect, ex, ey, { delay: shown * EFFECT_STAGGER });
+      shown++;
     }
   }
 
@@ -859,6 +880,10 @@ class App {
     if (ctx) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.renderer.draw(this.state, this.viewerId, this.camera, this.overlay, dt);
+      // Over the map and under nothing: these are meant to read as happening
+      // on the battlefield, not as part of the interface.
+      this.effects.update(dt);
+      this.effects.draw(ctx, this.camera);
     }
     this.minimap.draw(this.state, this.viewerId, this.camera);
   }
@@ -885,6 +910,29 @@ class App {
   };
 }
 
+/** Most animations played for one drain of the log. */
+const EFFECT_BURST = 8;
+/** Seconds between them, so a busy turn reads as a sequence, not a flash. */
+const EFFECT_STAGGER = 0.11;
+
+/**
+ * What an event looks like, if it looks like anything.
+ *
+ * Keyed off the cue the simulation already emits wherever there is one, so the
+ * two presentation layers stay in step and `sim/` gains nothing new to know.
+ */
+function effectFor(entry: { kind: string; cue?: string }): EffectId | null {
+  switch (entry.cue) {
+    case 'explosion':
+      return 'explosion';
+    case 'capture':
+    case 'city-lost':
+      return 'demolish';
+    default:
+      return entry.kind === 'combat' ? 'clash' : null;
+  }
+}
+
 const app = new App();
 
 // Development handle: lets a console (or a headless check) poke at the running
@@ -892,6 +940,7 @@ const app = new App();
 if (import.meta.env.DEV) {
   const scope = window as unknown as Record<string, unknown>;
   scope.game = app;
+  scope.effects = (app as unknown as { effects: unknown }).effects;
   // The audio manager is a module singleton; exposing the app's own reference
   // avoids a console `import()` handing back a second, unrelated instance.
   scope.audio = audio;

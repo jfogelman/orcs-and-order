@@ -113,6 +113,12 @@ export interface LogEntry {
    * knows nothing about audio.
    */
   cue?: string;
+  /**
+   * Where on the map this happened, for anything that wants to draw it there.
+   * Sound does not need it, animation does; keeping it beside `cue` means the
+   * simulation still says only what happened and where, never how to show it.
+   */
+  at?: readonly [number, number];
 }
 
 export interface GameSettings {

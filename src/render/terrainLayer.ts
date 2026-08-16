@@ -19,8 +19,17 @@ import type { TerrainTileSet } from './tileArt';
  * against water instead of stopping at a hard square boundary.
  */
 
-/** How far a terrain reaches into its neighbour, in tile pixels. */
-const FEATHER = 15;
+/**
+ * How far a terrain reaches into its neighbour, in tile pixels.
+ *
+ * Must stay well under half a tile. A tile is soaked from up to eight sides at
+ * once, so at 15 the gradients from opposite edges met in the middle and a lone
+ * water tile in a forest kept a core of about two pixels by two -- it read as a
+ * smear of forest rather than as water, which is worse than ugly, because that
+ * tile is one a unit cannot walk onto. At 10 the middle 14x14 of every tile is
+ * left completely alone whatever surrounds it.
+ */
+const FEATHER = 10;
 
 type MaskedTiles = Record<TerrainId, HTMLCanvasElement[][]>;
 

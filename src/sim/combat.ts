@@ -248,6 +248,7 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
     'combat',
     sapper.owner,
     'explosion',
+    [sapper.x, sapper.y],
   );
   for (const victim of killed) {
     const i = state.units.indexOf(victim);

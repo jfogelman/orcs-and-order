@@ -341,6 +341,27 @@ faster than they can be replaced, at least sometimes. Pushing further in that di
 — rather than raising the turn limit — is the thing most likely to make conquest a
 normal way for a game to end.
 
+## 4a. Effect animations
+
+The art is processed (`public/effects/`, ten strips) and the playback layer exists
+(`src/render/effects.ts`, wired into the frame loop). What is left is the wiring that
+decides *when* one plays.
+
+The natural seam is the one the audio already uses: `LogEntry.cue`, drained by
+`playLogCues` after the AI has moved, so events from another player's turn are seen
+and not just the viewer's own. Audio does not care where a thing happened, though, and
+an animation does — so this needs a position on the log entry as well, `at?: [x, y]`,
+set where combat, capture and demolition are logged. That keeps `sim/` free of any
+render import, exactly as `cue` does today.
+
+Two things a first pass will get wrong:
+
+- **Effects must be gated on visibility.** The layer happily draws over unexplored
+  black, so an explosion in fog would announce where an enemy is — the same class of
+  leak as the pathfinder using the true board instead of the player's map.
+- **A batch arrives at once.** Ten fights resolved during an AI turn would all play on
+  the same frame. `spawn` takes a `delay` for this; the drain should stagger them.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit

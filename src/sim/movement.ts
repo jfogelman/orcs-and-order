@@ -221,8 +221,8 @@ function captureCity(state: GameState, unit: Unit, city: City): void {
   unit.order = 'fortified';
   city.producing = { kind: 'coin' };
   city.shields = 0;
-  log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture');
-  log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id, 'city-lost');
+  log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture', [city.x, city.y]);
+  log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id, 'city-lost', [city.x, city.y]);
 }
 
 /**
@@ -259,6 +259,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       'combat',
       unit.owner,
       'explosion',
+      [city.x, city.y],
     );
     log(state, `The walls of ${city.name} are gone.`, 'bad', city.owner);
     // Everything adjacent is caught, including whoever is holding the gate.
@@ -292,6 +293,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
           : `${type.name} defeats ${defenderType.name} after ${result.rounds} rounds.`,
         'combat',
         unit.owner,
+        undefined,
+        [occupant.x, occupant.y],
       );
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
@@ -309,6 +312,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         `${defenderType.name} holds against ${type.name}.`,
         'combat',
         occupant.owner,
+        undefined,
+        [occupant.x, occupant.y],
       );
       destroyUnit(state, unit, 'is destroyed attacking');
     }
