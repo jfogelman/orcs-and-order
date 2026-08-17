@@ -400,12 +400,57 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
     return canvas
 
 
+# Words that mark a re-roll of the same picture rather than a different one.
+# A re-rolled file is usually left beside the original -- "troll magenta.jpg"
+# next to "troll.jpg" -- so these are stripped from the name and the newest
+# file wins. Kept deliberately short: anything here is a word no creature can
+# be called.
+REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new")
+
+
+def normalise_stem(stem: str) -> tuple[str, str]:
+    """
+    Split a filename into the thing it depicts and which variant of it.
+
+    Two different kinds of annotation end up in these names. A re-roll tag
+    means "the same picture, generated again" and must collapse onto the base
+    name. A variant tag names a genuinely different picture of the same
+    creature -- an axethrower with no axe left, or the moment it gets one back
+    -- and must not collide with it.
+    """
+    note = " ".join(re.findall(r"\(([^)]*)\)", stem)).lower()
+    base = re.sub(r"\s*\([^)]*\)", " ", stem).lower()
+    # Split on whitespace and drop whole re-roll words. Deliberately not a
+    # regex: a word-boundary escape here was silently mangled once already,
+    # and matched nothing at all without failing.
+    base = " ".join(w for w in base.split() if w not in REROLL_WORDS)
+    base = re.sub(r"\s+", " ", base).strip()
+
+    variant = ""
+    for needle, suffix in VARIANTS.items():
+        if needle in note:
+            variant = suffix
+            break
+    return base, variant
+
+
 def find_source(folder: Path, name: str) -> Path | None:
-    for suffix in IMAGE_SUFFIXES:
-        candidate = folder / f"{name}{suffix}"
-        if candidate.exists():
-            return candidate
-    return None
+    """
+    The newest file depicting `name`, ignoring any re-roll tag on it.
+
+    Used to match by exact filename, which meant a re-rolled "troll magenta"
+    sitting beside "troll" was simply never found and the old cut-out stayed.
+    """
+    best: Path | None = None
+    for path in folder.iterdir():
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        if variant or base != name.lower():
+            continue
+        if best is None or path.stat().st_mtime > best.stat().st_mtime:
+            best = path
+    return best
 
 
 def process_cutouts(
@@ -784,23 +829,14 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     for path in sorted(src.iterdir()):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
-        tag = re.search(r"\(([^)]*)\)", path.stem)
-        note = (tag.group(1) if tag else "").lower()
-        name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
-        name = re.sub(r"\s*attack$", "", name).strip()
-        name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
+        base, variant = normalise_stem(path.stem)
+        base = re.sub(r"\s*attack$", "", base).strip()
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
         if name not in known:
             unknown.append(f"{path.name} -> '{name}'")
             continue
-        # A parenthetical is usually a re-roll tag on the same picture -- "(green
-        # bg)" -- and those collapse onto the base name so the newer one wins.
-        # Some of them name a genuinely different picture, though, and those must
-        # not collide with it: an axethrower with no axe left, and the moment it
-        # gets one back, are three separate animations of the same creature.
-        for needle, suffix in VARIANTS.items():
-            if needle in note:
-                name = f"{name}-{suffix}"
-                break
+        if variant:
+            name = f"{name}-{variant}"
         keyed, cut_out = remove_background(Image.open(path))
         if not cut_out:
             problems_early.append(f"{name}: background would not key")

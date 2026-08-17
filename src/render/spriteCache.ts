@@ -34,8 +34,9 @@ export class SpriteCache {
   private cities = new Map<string, CanvasImageSource>();
   private baseArt = new Map<string, Promise<HTMLImageElement>>();
   /** Per-type attack frames; null means "looked, and there are none". */
-  private attacks = new Map<UnitTypeId, CanvasImageSource[] | null>();
-  private attackAttempted = new Set<UnitTypeId>();
+  /** Keyed by unit type plus variant; null means "looked, and there are none". */
+  private attacks = new Map<string, CanvasImageSource[] | null>();
+  private attackAttempted = new Set<string>();
   private attempted = new Set<string>();
   private readonly base: string;
 
@@ -62,6 +63,15 @@ export class SpriteCache {
     // effectively never seen. Warming it here costs one request per creature
     // that appears on screen, well before anyone throws a punch.
     this.attackFrames(typeId);
+    // A thrower has two more sheets -- swinging with nothing, and getting the
+    // weapon back. Warmed here for the same reason as the attack itself: asked
+    // for at the moment they are needed, the answer is always "not yet" and the
+    // animation is simply skipped. Only for creatures the model says throw,
+    // so this is not thirty-four requests that will never exist.
+    if (unitType(typeId).throwsWeapon) {
+      this.attackFrames(typeId, true);
+      this.rearmFrames(typeId);
+    }
     return sprite;
   }
 
@@ -109,14 +119,28 @@ export class SpriteCache {
    * Frame count comes from the strip's own proportions, exactly as it does for
    * the effect layer: square frames, so width over height is the count.
    */
-  attackFrames(typeId: UnitTypeId): CanvasImageSource[] | null {
-    const ready = this.attacks.get(typeId);
+  attackFrames(typeId: UnitTypeId, disarmed = false): CanvasImageSource[] | null {
+    // A thrower that has thrown swings at nothing, and has its own animation
+    // for it. Falls back to the armed one, so a creature with only the single
+    // sheet still animates rather than freezing.
+    if (disarmed) return this.variantFrames(typeId, '-disarmed') ?? this.variantFrames(typeId, '');
+    return this.variantFrames(typeId, '');
+  }
+
+  /** The single pose for getting a thrown weapon back, if there is one. */
+  rearmFrames(typeId: UnitTypeId): CanvasImageSource[] | null {
+    return this.variantFrames(typeId, '-rearm');
+  }
+
+  private variantFrames(typeId: UnitTypeId, variant: string): CanvasImageSource[] | null {
+    const key = `${typeId}${variant}`;
+    const ready = this.attacks.get(key);
     if (ready !== undefined) return ready;
-    if (this.attackAttempted.has(typeId)) return null;
-    this.attackAttempted.add(typeId);
+    if (this.attackAttempted.has(key)) return null;
+    this.attackAttempted.add(key);
 
     const def = unitType(typeId);
-    loadImage(`${this.base}units/${def.base}_attack.png`)
+    loadImage(`${this.base}units/${def.base}${variant}_attack.png`)
       .then((strip) => {
         const size = strip.height;
         const count = Math.max(1, Math.round(strip.width / size));
@@ -132,12 +156,12 @@ export class SpriteCache {
             def.count === 1 ? cut : composeGroupSprite(cut, def.count, COMPOSED_SIZE),
           );
         }
-        this.attacks.set(typeId, frames);
+        this.attacks.set(key, frames);
       })
       .catch(() => {
-        // No animation for this creature. Remembered as null so the fallback
-        // to the idle sprite is decided once rather than every frame.
-        this.attacks.set(typeId, null);
+        // No animation of this kind for this creature. Remembered as null so
+        // the fallback is decided once rather than every frame.
+        this.attacks.set(key, null);
       });
     return null;
   }
@@ -150,7 +174,10 @@ export class SpriteCache {
    * art that already exists and can never disagree with it.
    */
   disarmedSprite(typeId: UnitTypeId): CanvasImageSource | null {
-    const frames = this.attackFrames(typeId);
+    // Prefer the sheet drawn without the weapon; failing that, the last frame
+    // of the armed swing, which is the moment after the axe has left.
+    const own = this.variantFrames(typeId, '-disarmed');
+    const frames = own ?? this.variantFrames(typeId, '');
     return frames && frames.length > 0 ? frames[frames.length - 1] : null;
   }
 

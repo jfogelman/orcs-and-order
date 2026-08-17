@@ -70,6 +70,8 @@ export class MapRenderer {
   private layer: TerrainLayer | null = null;
   /** Which units are mid-swing. Purely visual; never touches game state. */
   readonly animator = new UnitAnimator();
+  /** Last seen disarmed state per unit, to spot the moment it changes back. */
+  private wasDisarmed = new Map<number, boolean>();
   private rebuildTimer: number | null = null;
 
   constructor(
@@ -365,16 +367,36 @@ export class MapRenderer {
    * animation art simply never animates rather than disappearing.
    */
   private spriteFor(u: Unit): CanvasImageSource {
-    const frame = this.animator.frameFor(u.id);
-    if (frame !== null) {
-      const frames = this.sprites.attackFrames(u.type);
-      if (frames && frames[frame]) return frames[frame];
+    const playing = this.animator.playingFor(u.id);
+    if (playing) {
+      const frames =
+        playing.kind === 'rearm'
+          ? this.sprites.rearmFrames(u.type)
+          : // A thrower that has thrown swings with nothing in its hand.
+            this.sprites.attackFrames(u.type, u.disarmed);
+      if (frames && frames[playing.frame]) return frames[playing.frame];
     }
     if (u.disarmed) {
       const thrown = this.sprites.disarmedSprite(u.type);
       if (thrown) return thrown;
     }
     return this.sprites.unit(u.type);
+  }
+
+  /**
+   * Catch the moment a thrower gets its weapon back and hold the pose.
+   *
+   * Watched here rather than triggered from the rules, because the rules would
+   * have to reach into the renderer to say so -- and this way it fires for the
+   * enemy's units too, which the player can see happen. First sighting of a
+   * unit never counts as a change, or every unit would salute on appearing.
+   */
+  private noticeRearm(u: Unit): void {
+    const was = this.wasDisarmed.get(u.id);
+    this.wasDisarmed.set(u.id, u.disarmed);
+    if (was !== true || u.disarmed) return;
+    const frames = this.sprites.rearmFrames(u.type);
+    if (frames) this.animator.rearm(u.id, frames.length);
   }
 
   private drawRoute(
@@ -454,6 +476,7 @@ export class MapRenderer {
   ): void {
     const type = unitType(u.type);
     const owner = state.players[u.owner];
+    this.noticeRearm(u);
     const s = cam.tileToScreen(u.x, u.y);
     const size = cam.tileSize;
     const onCity = state.cities.some((c) => c.x === u.x && c.y === u.y);
