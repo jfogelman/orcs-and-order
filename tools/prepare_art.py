@@ -571,6 +571,74 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
     return done, missing
 
 
+# Parenthetical notes that name a different picture rather than a re-roll of
+# the same one. Matched as substrings, so "(without axe)" and "(no axe)" both
+# land on the same variant.
+VARIANTS = {
+    "without": "disarmed",
+    "no axe": "disarmed",
+    "got back": "rearm",
+    "back axe": "rearm",
+}
+
+
+def seams_are_empty(img: Image.Image) -> bool:
+    """
+    Do the middle column and middle row of a keyed image contain nothing?
+
+    This is what separates a 2x2 sheet of four frames from one square picture.
+    Both are square, so the shape cannot tell them apart -- but a grid has a
+    gutter through the middle in both directions, and a single figure drawn to
+    fill the frame lies straight across it.
+    """
+    w, h = img.size
+    px = img.load()
+    band = max(2, round(min(w, h) * 0.02))
+
+    def opaque_fraction(xs: range, ys: range) -> float:
+        hits = 0
+        total = 0
+        for y in ys:
+            for x in xs:
+                total += 1
+                if px[x, y][3] > 40:
+                    hits += 1
+        return hits / max(1, total)
+
+    mid_x = range(w // 2 - band, w // 2 + band)
+    mid_y = range(h // 2 - band, h // 2 + band)
+    # Sampled rather than exhaustive: this runs on every sheet and the answer
+    # does not need every pixel to be certain.
+    vertical = opaque_fraction(mid_x, range(0, h, 4))
+    horizontal = opaque_fraction(range(0, w, 4), mid_y)
+    # Measured on the two square sheets to hand: the 2x2 archer reads 0.016 and
+    # 0.065, and a single figure filling the frame reads 0.738 and 0.532. A
+    # quarter sits comfortably between them with room on both sides -- a grid
+    # whose art nudges into the gutter still passes, and no single figure comes
+    # close to failing.
+    return vertical < 0.25 and horizontal < 0.25
+
+
+def grid_of(w: int, h: int, keyed: Image.Image | None = None) -> tuple[int, int]:
+    """
+    How many columns and rows of frames a sheet holds.
+
+    Generators return these several ways round and never say which. A sheet
+    well wider than it is tall is a single row of frames. A roughly square one
+    is ambiguous -- it could be four frames in a 2x2, or one picture -- so when
+    the keyed image is available the gutters decide it, and without one the
+    safer assumption is a single frame.
+    """
+    ratio = w / h
+    if ratio >= 1.6:
+        return max(2, round(ratio)), 1
+    if ratio <= 0.62:
+        return 1, max(2, round(h / w))
+    if keyed is not None and seams_are_empty(keyed):
+        return 2, 2
+    return 1, 1
+
+
 def clear_panel_borders(strip: Image.Image, frames: int) -> None:
     """
     Rub out the white rules some strips draw between their frames.
@@ -710,42 +778,54 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     # A re-roll usually keeps the old file beside it, tagged in parentheses
     # ("(green bg)"). Prefer whichever holds more frames, and on a tie the one
     # generated most recently -- a second attempt supersedes the first.
-    best: dict[str, tuple[int, Path, int, int]] = {}
+    best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
     unknown: list[str] = []
+    problems_early: list[str] = []
     for path in sorted(src.iterdir()):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
+        tag = re.search(r"\(([^)]*)\)", path.stem)
+        note = (tag.group(1) if tag else "").lower()
         name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
         name = re.sub(r"\s*attack$", "", name).strip()
         name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
         if name not in known:
             unknown.append(f"{path.name} -> '{name}'")
             continue
-        with Image.open(path) as probe:
-            w, h = probe.size
-        frames = max(1, round(w / h))
+        # A parenthetical is usually a re-roll tag on the same picture -- "(green
+        # bg)" -- and those collapse onto the base name so the newer one wins.
+        # Some of them name a genuinely different picture, though, and those must
+        # not collide with it: an axethrower with no axe left, and the moment it
+        # gets one back, are three separate animations of the same creature.
+        for needle, suffix in VARIANTS.items():
+            if needle in note:
+                name = f"{name}-{suffix}"
+                break
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems_early.append(f"{name}: background would not key")
+            continue
+        w, h = keyed.size
+        cols, rows = grid_of(w, h, keyed)
+        frames = cols * rows
         prev = best.get(name)
         if prev is None or (frames, path.stat().st_mtime) > (prev[0], prev[1].stat().st_mtime):
-            best[name] = (frames, path, w, h)
+            best[name] = (frames, path, w, h, keyed)
 
     done = 0
-    problems: list[str] = []
-    for name, (frames, path, w, h) in sorted(best.items()):
-        if frames < 2:
-            problems.append(f"{name}: {w}x{h} is a single square image, not a strip")
-            continue
+    problems: list[str] = list(problems_early)
+    for name, (frames, path, w, h, keyed) in sorted(best.items()):
         target = out / f"{name}_attack.png"
         if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
             continue
 
-        strip, cut_out = remove_background(Image.open(path))
-        if not cut_out:
-            problems.append(f"{name}: background would not key")
-            continue
-        clear_panel_borders(strip, frames)
+        strip = keyed
+        cols, rows = grid_of(w, h, keyed)
+        clear_panel_borders(strip, cols)
 
         kw, kh = strip.size
-        span = kw / frames
+        cell_w = kw / cols
+        cell_h = kh / rows
         # Measure the creature in its first frame and derive one fixed camera
         # from it, then hold that camera still for every other frame.
         #
@@ -754,7 +834,7 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
         # the tile (trim_and_square); scaling these frames to fill the frame
         # instead made an attacking creature suddenly a head taller and cropped
         # at the knees. Same 90%, same 6% floor margin, measured once.
-        first = strip.crop((0, 0, round(span), kh)).getbbox()
+        first = strip.crop((0, 0, round(cell_w), round(cell_h))).getbbox()
         if first is None:
             problems.append(f"{name}: first frame is empty after keying")
             continue
@@ -772,12 +852,16 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
 
         sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
         for i in range(frames):
-            cx = i * span + rel_centre
+            # Reading order: left to right, then top to bottom. A single row is
+            # just the case where there is only ever one row.
+            ox = (i % cols) * cell_w
+            oy = (i // cols) * cell_h
+            cx = ox + rel_centre
             box = (
                 round(cx - window / 2),
-                round(floor - window),
+                round(oy + floor - window),
                 round(cx + window / 2),
-                round(floor),
+                round(oy + floor),
             )
             frame = strip.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
             sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
@@ -785,7 +869,7 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
         print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
         done += 1
 
-    missing = sorted(known - set(best))
+    missing = sorted(known - {n for n in best if "-" not in n})
     return done, problems + [f"no animation for {m}" for m in missing], unknown
 
 
