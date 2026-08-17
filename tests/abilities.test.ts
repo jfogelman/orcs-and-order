@@ -14,6 +14,24 @@ function arena(): GameState {
   return state;
 }
 
+/**
+ * An arena with a capital in the middle of it.
+ *
+ * Regeneration is now gated on supply, and a bare arena has no cities at all,
+ * so every unit in it is stranded and heals nothing. Without this the healing
+ * tests below are really testing the supply rule -- and the troll test passed
+ * *vacuously* for a while, comparing a gain of zero against a gain of zero.
+ */
+function suppliedArena(): GameState {
+  const state = arena();
+  state.cities.push({
+    id: 1, owner: 0, name: 'Base', x: 6, y: 5, size: 3,
+    food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+    workedTiles: [], disorder: false, foundedTurn: 1,
+  });
+  return state;
+}
+
 describe('regeneration', () => {
   const hurt = (u: Unit) => {
     u.hp = 1;
@@ -21,16 +39,16 @@ describe('regeneration', () => {
   };
 
   it('heals a unit standing in the open', () => {
-    const state = arena();
+    const state = suppliedArena();
     const u = hurt(spawnUnit(state, 0, 'orc', 5, 5));
     beginPlayerTurn(state, 0);
     expect(u.hp).toBeGreaterThan(1);
   });
 
   it('rewards digging in over standing about', () => {
-    const open = arena();
+    const open = suppliedArena();
     const a = hurt(spawnUnit(open, 0, 'orc', 5, 5));
-    const dug = arena();
+    const dug = suppliedArena();
     const b = hurt(spawnUnit(dug, 0, 'orc', 5, 5));
     b.order = 'fortified';
     beginPlayerTurn(open, 0);
@@ -39,7 +57,7 @@ describe('regeneration', () => {
   });
 
   it('never exceeds maximum health', () => {
-    const state = arena();
+    const state = suppliedArena();
     const u = spawnUnit(state, 0, 'orc', 5, 5);
     u.hp = UNIT_TYPES.orc.hp - 1;
     for (let i = 0; i < 10; i++) beginPlayerTurn(state, 0);
@@ -47,17 +65,30 @@ describe('regeneration', () => {
   });
 
   it('puts trolls back together twice as fast', () => {
-    const state = arena();
+    const state = suppliedArena();
     const troll = hurt(spawnUnit(state, 0, 'troll', 5, 5));
     const orc = hurt(spawnUnit(state, 0, 'orc', 7, 5));
     beginPlayerTurn(state, 0);
     const trollGain = troll.hp - 1;
     const orcGain = orc.hp - 1;
+    // Guard against the comparison below passing on nothing at all: when both
+    // units were out of supply this read 0 against 0 and was perfectly happy.
+    expect(trollGain, 'the troll healed nothing').toBeGreaterThan(0);
+    expect(orcGain, 'the orc healed nothing').toBeGreaterThan(0);
     // Compare as a fraction of maximum, since the two have different pools.
     expect(trollGain / UNIT_TYPES.troll.hp).toBeCloseTo(
       (orcGain / UNIT_TYPES.orc.hp) * UNIT_TYPES.troll.regenMultiplier,
       1,
     );
+  });
+
+  it('does not heal a unit that is out of supply at all', () => {
+    // The rule that broke the three tests above, stated on purpose so the
+    // interaction is documented rather than merely survived.
+    const state = arena();
+    const stranded = hurt(spawnUnit(state, 0, 'orc', 5, 5));
+    beginPlayerTurn(state, 0);
+    expect(stranded.hp).toBe(1);
   });
 
   it('agrees with its own rate table', () => {
