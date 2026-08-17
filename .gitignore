@@ -25,3 +25,7 @@ Thumbs.db
 *.local
 .env
 .env.*
+
+# Python bytecode from the art tooling.
+__pycache__/
+*.pyc
