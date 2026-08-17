@@ -61,6 +61,15 @@ export const EMPTY_OVERLAY: MapOverlay = {
 
 const VOID_COLOR = '#0a0806';
 
+/**
+ * Share of maximum health at which a unit starts to look it.
+ *
+ * Purely cosmetic -- nothing in the rules changes at these numbers. The health
+ * bar already carries the exact figure; this is so a battered army reads as
+ * battered at a glance, without counting bars.
+ */
+const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
+
 export class MapRenderer {
   private tiles: TerrainTileSet;
   private specialIcon: HTMLCanvasElement;
@@ -375,6 +384,17 @@ export class MapRenderer {
           : // A thrower that has thrown swings with nothing in its hand.
             this.sprites.attackFrames(u.type, u.disarmed);
       if (frames && frames[playing.frame]) return frames[playing.frame];
+    }
+    // Standing still, health decides how it looks. Checked before the
+    // disarmed pose, since a dying axethrower is more usefully drawn as dying
+    // than as short of an axe.
+    const share = u.hp / Math.max(1, unitType(u.type).hp);
+    if (share < HURT_LEVELS.hurt) {
+      const frames = this.sprites.hurtFrames(u.type, u.disarmed);
+      if (frames && frames.length > 0) {
+        const worst = frames.length - 1;
+        return share < HURT_LEVELS.dying ? frames[worst] : frames[0];
+      }
     }
     if (u.disarmed) {
       const thrown = this.sprites.disarmedSprite(u.type);

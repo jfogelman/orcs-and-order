@@ -63,6 +63,8 @@ export class SpriteCache {
     // effectively never seen. Warming it here costs one request per creature
     // that appears on screen, well before anyone throws a punch.
     this.attackFrames(typeId);
+    // Wanted the instant the unit takes a hit, so fetched before it does.
+    this.hurtFrames(typeId);
     // A thrower has two more sheets -- swinging with nothing, and getting the
     // weapon back. Warmed here for the same reason as the attack itself: asked
     // for at the moment they are needed, the answer is always "not yet" and the
@@ -71,6 +73,7 @@ export class SpriteCache {
     if (unitType(typeId).throwsWeapon) {
       this.attackFrames(typeId, true);
       this.rearmFrames(typeId);
+      this.hurtFrames(typeId, true);
     }
     return sprite;
   }
@@ -132,15 +135,31 @@ export class SpriteCache {
     return this.variantFrames(typeId, '-rearm');
   }
 
-  private variantFrames(typeId: UnitTypeId, variant: string): CanvasImageSource[] | null {
-    const key = `${typeId}${variant}`;
+  /**
+   * How badly hurt a unit looks. Two poses: bloodied but upright, and down on
+   * one knee. Null for a creature with no such sheet, which falls back to
+   * looking perfectly fine however close to death it is.
+   */
+  hurtFrames(typeId: UnitTypeId, disarmed = false): CanvasImageSource[] | null {
+    if (disarmed) {
+      return this.variantFrames(typeId, '-disarmed', 'hurt') ?? this.variantFrames(typeId, '', 'hurt');
+    }
+    return this.variantFrames(typeId, '', 'hurt');
+  }
+
+  private variantFrames(
+    typeId: UnitTypeId,
+    variant: string,
+    sheet = 'attack',
+  ): CanvasImageSource[] | null {
+    const key = `${typeId}${variant}_${sheet}`;
     const ready = this.attacks.get(key);
     if (ready !== undefined) return ready;
     if (this.attackAttempted.has(key)) return null;
     this.attackAttempted.add(key);
 
     const def = unitType(typeId);
-    loadImage(`${this.base}units/${def.base}${variant}_attack.png`)
+    loadImage(`${this.base}units/${def.base}${variant}_${sheet}.png`)
       .then((strip) => {
         const size = strip.height;
         const count = Math.max(1, Math.round(strip.width / size));

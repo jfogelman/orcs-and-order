@@ -796,6 +796,128 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
     return done, failed
 
 
+# Trailing words in art_src/unit states that name which sheet this is.
+STATE_KINDS = {"weakened": "hurt", "regenerating": "regen"}
+
+
+def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Sheets for the states a unit can be *in*, as opposed to things it does.
+
+    A "weakened" sheet holds two poses -- bloodied but upright, and down on one
+    knee -- which stand in for the idle sprite as health falls. A
+    "regenerating" sheet is an ordinary animation.
+
+    Same naming rules as the attack sheets: a re-roll tag collapses onto the
+    base name and a variant tag does not, so an axethrower who is both hurt and
+    out of axes has its own picture.
+    """
+    src = SRC / "unit states"
+    out = OUT / "units"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+
+    known = {c for c in CREATURES}
+    best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
+    unknown: list[str] = []
+    problems: list[str] = []
+
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        words = base.split()
+        kind = STATE_KINDS.get(words[-1]) if words else None
+        if kind is None:
+            unknown.append(f"{path.name}: no idea which state '{base}' is")
+            continue
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
+        if name not in known:
+            unknown.append(f"{path.name} -> '{name}'")
+            continue
+
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        w, h = keyed.size
+        key = f"{name}-{variant}_{kind}" if variant else f"{name}_{kind}"
+        frames = grid_of(w, h, keyed)[0] * grid_of(w, h, keyed)[1]
+        prev = best.get(key)
+        if prev is None or (frames, path.stat().st_mtime) > (prev[0], prev[1].stat().st_mtime):
+            best[key] = (frames, path, w, h, keyed)
+
+    done = 0
+    for key, (frames, path, w, h, keyed) in sorted(best.items()):
+        target = out / f"{key}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        sheet, why = build_frame_strip(keyed, w, h)
+        if sheet is None:
+            problems.append(f"{key}: {why}")
+            continue
+        sheet.save(target, optimize=True)
+        print(f"  units/{key}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, problems, unknown
+
+
+def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image | None, str]:
+    """
+    Cut a sheet of frames into one horizontal strip at unit size.
+
+    Shared by every kind of unit sheet -- attacking, hurt, regenerating --
+    because the awkward parts are the same for all of them: the frames may be a
+    row or a grid, the vertical window has to be measured once and held still,
+    and the result has to end up the same size on screen as the idle sprite.
+
+    Returns the strip, or None and a reason.
+    """
+    cols, rows = grid_of(w, h, keyed)
+    frames = cols * rows
+    clear_panel_borders(keyed, cols)
+
+    kw, kh = keyed.size
+    cell_w = kw / cols
+    cell_h = kh / rows
+
+    # Measure the creature in its first frame and derive one fixed camera from
+    # it, then hold that camera still for every other frame. This is what keeps
+    # a unit the same size whatever state it is in: the idle sprites are
+    # trimmed and scaled to fill 90% of the tile, and scaling each frame to
+    # fill its own frame instead made a creature suddenly a head taller.
+    first = keyed.crop((0, 0, round(cell_w), round(cell_h))).getbbox()
+    if first is None:
+        return None, "first frame is empty after keying"
+    fx0, fy0, fx1, fy1 = first
+    figure_h = fy1 - fy0
+    if figure_h <= 0:
+        return None, "nothing measurable in the first frame"
+
+    scale = (UNIT_SIZE * 0.90) / figure_h
+    window = UNIT_SIZE / scale
+    # A common floor line, so feet stay planted while the body moves.
+    floor = fy1 + window * 0.06
+    rel_centre = (fx0 + fx1) / 2
+
+    sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
+    for i in range(frames):
+        # Reading order: left to right, then top to bottom.
+        ox = (i % cols) * cell_w
+        oy = (i // cols) * cell_h
+        cx = ox + rel_centre
+        box = (
+            round(cx - window / 2),
+            round(oy + floor - window),
+            round(cx + window / 2),
+            round(oy + floor),
+        )
+        frame = keyed.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
+        sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
+    return sheet, ""
+
+
 def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     """
     Per-creature attack animations, sliced the same way the effect strips are.
@@ -856,51 +978,10 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
             continue
 
         strip = keyed
-        cols, rows = grid_of(w, h, keyed)
-        clear_panel_borders(strip, cols)
-
-        kw, kh = strip.size
-        cell_w = kw / cols
-        cell_h = kh / rows
-        # Measure the creature in its first frame and derive one fixed camera
-        # from it, then hold that camera still for every other frame.
-        #
-        # This is what keeps an attacking unit the same size as the idle one.
-        # The idle sprites are trimmed to the figure and scaled to fill 90% of
-        # the tile (trim_and_square); scaling these frames to fill the frame
-        # instead made an attacking creature suddenly a head taller and cropped
-        # at the knees. Same 90%, same 6% floor margin, measured once.
-        first = strip.crop((0, 0, round(cell_w), round(cell_h))).getbbox()
-        if first is None:
-            problems.append(f"{name}: first frame is empty after keying")
+        sheet, why = build_frame_strip(strip, w, h)
+        if sheet is None:
+            problems.append(f"{name}: {why}")
             continue
-        fx0, fy0, fx1, fy1 = first
-        figure_h = fy1 - fy0
-        if figure_h <= 0:
-            problems.append(f"{name}: nothing measurable in the first frame")
-            continue
-
-        scale = (UNIT_SIZE * 0.90) / figure_h
-        window = UNIT_SIZE / scale
-        # A common floor line, so feet stay planted while the body moves.
-        floor = fy1 + window * 0.06
-        rel_centre = (fx0 + fx1) / 2
-
-        sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
-        for i in range(frames):
-            # Reading order: left to right, then top to bottom. A single row is
-            # just the case where there is only ever one row.
-            ox = (i % cols) * cell_w
-            oy = (i // cols) * cell_h
-            cx = ox + rel_centre
-            box = (
-                round(cx - window / 2),
-                round(oy + floor - window),
-                round(cx + window / 2),
-                round(oy + floor),
-            )
-            frame = strip.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
-            sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
         sheet.save(target, optimize=True)
         print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
         done += 1
@@ -1053,11 +1134,16 @@ def main() -> int:
     effects, failed_effects = process_effects(force)
     print("Unit attack animations:")
     anims, anim_problems, anim_unknown = process_unit_effects(force)
+    print("Unit states:")
+    states, state_problems, state_unknown = process_unit_states(force)
+    anim_problems.extend(state_problems)
+    anim_unknown.extend(state_unknown)
     audio, audio_before, audio_after = process_audio()
 
     print(
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
+        f"{states} state sheets, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
