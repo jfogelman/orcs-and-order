@@ -651,12 +651,54 @@ It also made the turn-limit problem worse -- changes of hands up from 37.1 to 47
 and only 1 of 18 games decided before turn 300. Supply lets an army push, and pushing
 flips cities.
 
-### Next
+### The finer sweep, and a correction
 
-Worth a finer sweep between range 3 and 5, since the two neighbouring arms behave
-quite differently and the optimum is clearly somewhere in that band. Keeping range 4,
-penalty 0.6 in the meantime -- it is what closed the structural gap, and structure is
-what everything else has failed to touch.
+Separating the two dimensions produced an alarming shape. The control reproduced
+exactly, and every neighbour was far worse:
+
+| arm | mean score gap |
+|---|---|
+| range 3, ×0.6 | 205.0 |
+| range 4, ×0.45 | 194.3 |
+| **range 4, ×0.6** | **52.1** |
+| range 4, ×0.75 | 193.2 |
+| range 5, ×0.45 | 130.1 |
+| range 5, ×0.6 | 214.0 |
+
+A real mechanism varies smoothly. An isolated spike ringed by flat neighbours is what
+fitting to the sample looks like — so the same setting was run on a **completely
+different eighteen seeds**:
+
+| | gap, seed set A | gap, seed set B |
+|---|---|---|
+| off | 246 | 170 |
+| range 4, ×0.6 | **52** | **96** |
+| wins | 5-13 → 6-12 | 5-13 → 7-11 |
+
+**The effect is real, and roughly half the size first reported.** It reduces the score
+gap by 40–60% and is worth about one to two wins, consistently, on two independent
+samples. What was *not* real is the dramatic version — "the city gap closes to 10.1
+against 10.4" was set A being kind. On set B the Horde's cities barely move (8.2 to
+8.1) and the Kingdom's fall instead (13.0 to 11.7).
+
+Note the neighbours were only ever measured on set A, where they sat at ~195 against
+an off-baseline of 246 — so they help too, modestly. The spike was luck stacked on a
+real but gentle slope.
+
+### The methodological finding, which matters more
+
+**Eighteen seeds cannot separate settings whose true difference is small.** The gap
+between neighbouring arms in that table is smaller than the difference the same
+setting shows between two seed sets. That noise floor explains a good share of this
+session's false positives, and the rule that follows is:
+
+- Judge a mechanic on whether it survives a *fresh* seed set, never on the sweep it
+  was found in.
+- Do not fine-tune parameters on eighteen seeds. Pick a defensible middle value and
+  leave it.
+
+Range 4, penalty 0.6 stays on those grounds — a sensible middle, not a measured
+optimum, and it should not be tuned further without far more seeds.
 
 ## 5. Also queued, from earlier
 
