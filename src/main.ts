@@ -246,8 +246,17 @@ class App {
       if (loser) window.setTimeout(() => audio.playForUnit(loser, 'death'), 280);
     }
     // The unit may have died attacking.
-    if (!this.state.units.includes(unit)) this.select(null);
-    else if (unit.moves <= 0) this.selectNextIdle();
+    if (!this.state.units.includes(unit)) {
+      this.select(null);
+    } else if (unit.moves <= 0) {
+      // Let the swing finish before moving on. Advancing immediately centred
+      // the camera on the next idle unit somewhere else entirely, so the
+      // animation played faithfully off the edge of the screen -- which is
+      // why attacks looked like they simply were not animated.
+      window.setTimeout(() => {
+        if (this.state.units.includes(unit) && unit.moves <= 0) this.selectNextIdle();
+      }, ATTACK_HOLD_MS);
+    }
 
     this.refreshHud();
     this.refreshOverlays();
@@ -307,15 +316,26 @@ class App {
     const heard = new Set<string>();
     let shown = 0;
     for (const entry of entries) {
-      if (entry.player !== null && entry.player !== this.viewerId) continue;
-
-      if (entry.cue) {
+      // Sound is addressed: you hear about your own empire.
+      const addressed = entry.player === null || entry.player === this.viewerId;
+      if (addressed && entry.cue) {
         // One of each per batch: ten cities growing on one turn is a machine gun.
         if (!heard.has(entry.cue)) {
           heard.add(entry.cue);
           audio.play(entry.cue as SfxId, 0);
         }
       }
+
+      // Sight is not addressed. A fight happening next to you is one you can
+      // watch, whoever the message was written for -- and the common case is
+      // an enemy killing one of your units, where the message is addressed to
+      // them. Filtering visuals by the recipient meant most of the fighting on
+      // screen animated nothing at all.
+      const doer =
+        entry.actor === undefined
+          ? undefined
+          : this.state.units.find((u) => u.id === entry.actor);
+      if (doer && this.canSee(doer.x, doer.y)) this.animateAttack(doer);
 
       // Animations are not deduplicated the way sounds are -- three separate
       // fights should be three explosions -- but they are staggered and
@@ -327,7 +347,7 @@ class App {
       // Never draw an event the viewer cannot see. The layer will happily
       // paint over unexplored black, and an explosion in fog would give away
       // exactly where an enemy is.
-      if (!this.state.players[this.viewerId].visible[idx(ex, ey, this.state.width)]) continue;
+      if (!this.canSee(ex, ey)) continue;
       this.effects.spawn(effect, ex, ey, { delay: shown * EFFECT_STAGGER });
       shown++;
     }
@@ -660,6 +680,11 @@ class App {
    * Asked of the sprite cache rather than a table, so a creature whose
    * animation has not loaded (or does not exist) simply does not animate.
    */
+  /** Can the viewer see this tile right now? */
+  private canSee(x: number, y: number): boolean {
+    return this.state.players[this.viewerId].visible[idx(x, y, this.state.width)] === 1;
+  }
+
   private animateAttack(unit: Unit): void {
     const frames = this.renderer.sprites.attackFrames(unit.type);
     if (frames) this.renderer.animator.attack(unit.id, frames.length);
@@ -1067,6 +1092,12 @@ const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined
   ballista: { effect: 'bolt', sound: 'siege' },
   mage: { effect: 'magic', sound: 'magic' },
 };
+
+/**
+ * How long to leave a unit alone after it attacks, before jumping the
+ * selection onward. Slightly longer than the swing itself.
+ */
+const ATTACK_HOLD_MS = 420;
 
 /** Most animations played for one drain of the log. */
 const EFFECT_BURST = 8;

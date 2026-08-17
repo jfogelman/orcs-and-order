@@ -124,6 +124,13 @@ export interface LogEntry {
    * simulation still says only what happened and where, never how to show it.
    */
   at?: readonly [number, number];
+  /**
+   * The unit that did it, for anything that wants to animate the doer rather
+   * than the place. Kept as an id and not a reference so the log stays
+   * serialisable, and looked up defensively -- by the time this is read the
+   * unit may well be dead.
+   */
+  actor?: number;
 }
 
 export interface GameSettings {

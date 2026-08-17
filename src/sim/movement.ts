@@ -321,6 +321,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         unit.owner,
         undefined,
         [occupant.x, occupant.y],
+        unit.id,
       );
       // A dragon's breath does not stop at the thing it hit. Measured before
       // the defender is removed, since the damage it took is the input.
@@ -344,6 +345,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         occupant.owner,
         undefined,
         [occupant.x, occupant.y],
+        // The swinger, not the one who held: it is the attacker that moves.
+        unit.id,
       );
       destroyUnit(state, unit, 'is destroyed attacking');
     }

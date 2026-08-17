@@ -83,8 +83,9 @@ export function log(
   forPlayer: number | null = null,
   cue?: string,
   at?: readonly [number, number],
+  actor?: number,
 ): void {
-  state.log.push({ turn: state.turn, player: forPlayer, text, kind, cue, at });
+  state.log.push({ turn: state.turn, player: forPlayer, text, kind, cue, at, actor });
   // The log is a UI convenience, not a historical record; keep it bounded.
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
 }

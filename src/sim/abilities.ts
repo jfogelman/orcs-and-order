@@ -157,6 +157,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
     // between them is the interface's job, not this one's.
     undefined,
     [target.x, target.y],
+    unit.id,
   );
 
   if (killed) {
