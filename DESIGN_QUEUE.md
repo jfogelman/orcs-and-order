@@ -618,6 +618,46 @@ So the balance now sits at **5-13**, against roughly 7-11 before this section. T
 militia bought a much better game for two or three wins, and those wins have to come
 back from somewhere that is neither per-city nor defensive.
 
+## 4h. Supply lines — the first lever that worked
+
+Supply drawn from the **capital plus built outposts**, so the base network does not
+scale with empire size. Eighteen seeds:
+
+| arm | wins | orc score | human score | orc cities | human cities |
+|---|---|---|---|---|---|
+| off | 5 – 13 | 318.8 | 564.8 | 5.9 | 13.7 |
+| range 6, ×0.75 | 5 – 13 | 352.1 | 565.0 | 6.8 | 13.8 |
+| **range 4, ×0.6** | **6 – 12** | **425.1** | **477.2** | **10.1** | **10.4** |
+| range 3, ×0.45 | 7 – 11 | 357.0 | 528.8 | 7.3 | 12.8 |
+
+At range 4 the **city gap closes almost completely — 10.1 against 10.4**, from 5.9
+against 13.7. The score gap goes from 246 points to 52, a 79% reduction. Nothing else
+tried this session moved the structural numbers at all, let alone that far.
+
+Why this one and not the others: it is the first lever that was neither per-city nor
+defensive. Supply from one capital is identical for both sides regardless of how much
+either owns, and extending it costs shields in a building a sacking destroys. It
+punishes over-extension, which is what the Horde does, and rewards consolidating,
+which is what it fails to do.
+
+### What it did not fix
+
+**Wins moved much less than the scores: 5-13 to 6-12.** A mean score gap of 52 still
+resolves to the Kingdom winning most games, so the variance is doing the work. The
+harsher arm gets 7-11 with a *wider* mean gap, which says the same thing from the
+other side.
+
+It also made the turn-limit problem worse -- changes of hands up from 37.1 to 47.7,
+and only 1 of 18 games decided before turn 300. Supply lets an army push, and pushing
+flips cities.
+
+### Next
+
+Worth a finer sweep between range 3 and 5, since the two neighbouring arms behave
+quite differently and the optimum is clearly somewhere in that band. Keeping range 4,
+penalty 0.6 in the meantime -- it is what closed the structural gap, and structure is
+what everything else has failed to touch.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
