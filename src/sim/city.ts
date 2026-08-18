@@ -210,9 +210,35 @@ export const MILITIA = { perCitizen: 0.3 };
 export const SUPPLY = {
   /** Tiles from a supplying city. Anything at or beyond 99 turns it off. */
   range: 4,
-  /** Attack multiplier while out of supply. */
+  /** Attack multiplier when supply has run out entirely. */
   attackPenalty: 0.6,
+  /**
+   * How far supply can jump from one post to the next along the chain.
+   *
+   * Wider than `range`, because a supply line runs between places rather than
+   * to a unit standing in a field -- outposts a little too far apart to cover
+   * the same ground can still hand things along.
+   */
+  linkRange: 7,
 };
+
+/**
+ * Shields an outpost costs, per tile of distance from the capital.
+ *
+ * A depot on the doorstep is cheap and one at the far end of the map is not,
+ * which is both the obvious logistics of the thing and what stops a player
+ * simply papering the map with them.
+ */
+export const OUTPOST_DISTANCE_COST = 6;
+
+/** What this city would charge to build the given thing. */
+export function productionCostIn(state: GameState, city: City, item: ProductionItem): number {
+  const base = productionCost(item);
+  if (item.kind !== 'building' || !BUILDINGS[item.id]?.suppliesArmy) return base;
+  const seat = capitalOf(state, city.owner);
+  if (!seat) return base;
+  return base + Math.round(distance(seat.x, seat.y, city.x, city.y) * OUTPOST_DISTANCE_COST);
+}
 
 /**
  * The seat of a player's power: the oldest city they still hold.
@@ -238,14 +264,69 @@ export function suppliesArmy(state: GameState, city: City): boolean {
   return capitalOf(state, city.owner)?.id === city.id;
 }
 
-export function inSupply(state: GameState, unit: Unit): boolean {
-  if (SUPPLY.range >= 99) return true;
-  return state.cities.some(
-    (c) =>
-      c.owner === unit.owner &&
-      distance(c.x, c.y, unit.x, unit.y) <= SUPPLY.range &&
-      suppliesArmy(state, c),
+/**
+ * The chain of places a player can actually get supplies to, and how far along
+ * the chain each one sits.
+ *
+ * Supply starts at the capital and walks outward: an outpost within `range` of
+ * somewhere already supplied joins the chain, and one stranded beyond that
+ * reach does not, however much was spent on it. Returns each supplying city's
+ * distance in hops from the capital -- zero for the capital itself.
+ *
+ * This is what makes a run of outposts worth more than a single distant one.
+ * A chain laid out across the map carries supply the whole way; a lone depot
+ * planted deep in somebody else's country carries nothing, because there is
+ * nothing behind it.
+ */
+export function supplyChain(state: GameState, playerId: number): Map<number, number> {
+  const hops = new Map<number, number>();
+  const seat = capitalOf(state, playerId);
+  if (!seat) return hops;
+
+  const posts = state.cities.filter(
+    (c) => c.owner === playerId && c.buildings.some((b) => BUILDINGS[b]?.suppliesArmy),
   );
+  hops.set(seat.id, 0);
+  const frontier: City[] = [seat];
+  while (frontier.length > 0) {
+    const here = frontier.shift()!;
+    const depth = hops.get(here.id)!;
+    for (const post of posts) {
+      if (hops.has(post.id)) continue;
+      if (distance(here.x, here.y, post.x, post.y) > SUPPLY.linkRange) continue;
+      hops.set(post.id, depth + 1);
+      frontier.push(post);
+    }
+  }
+  return hops;
+}
+
+/**
+ * How well supplied a unit is, from 0 (nothing at all) to 1 (fully).
+ *
+ * Falls away with distance rather than stopping at a cliff edge, so an army
+ * a step past the line is slightly worse off rather than suddenly useless.
+ */
+export function supplyQuality(state: GameState, unit: Unit): number {
+  if (SUPPLY.range >= 99) return 1;
+  const chain = supplyChain(state, unit.owner);
+  if (chain.size === 0) return 0;
+
+  let best = 0;
+  for (const c of state.cities) {
+    if (c.owner !== unit.owner || !chain.has(c.id)) continue;
+    const d = distance(c.x, c.y, unit.x, unit.y);
+    if (d <= SUPPLY.range) return 1;
+    // Beyond the ring, thinning out over the same distance again before it
+    // runs out entirely.
+    const fade = 1 - (d - SUPPLY.range) / SUPPLY.range;
+    best = Math.max(best, fade);
+  }
+  return Math.max(0, best);
+}
+
+export function inSupply(state: GameState, unit: Unit): boolean {
+  return supplyQuality(state, unit) >= 1;
 }
 
 /** Units a city supports for free before shields start going to rations. */
@@ -284,10 +365,10 @@ export function productionCost(item: ProductionItem): number {
  *
  * Returns 0 for anything that cannot be bought.
  */
-export function rushCost(city: City): number {
+export function rushCost(state: GameState, city: City): number {
   const item = city.producing;
   if (item.kind === 'coin') return 0;
-  const remaining = productionCost(item) - city.shields;
+  const remaining = productionCostIn(state, city, item) - city.shields;
   if (remaining <= 0) return 0;
   const base = 2 * remaining + (remaining * remaining) / 20;
   return Math.ceil(city.shields === 0 ? base * 2 : base);
@@ -296,7 +377,7 @@ export function rushCost(city: City): number {
 /** Why this city cannot be rushed, or null if it can. */
 export function rushBlocked(state: GameState, city: City): string | null {
   if (city.producing.kind === 'coin') return 'This city is not building anything.';
-  const cost = rushCost(city);
+  const cost = rushCost(state, city);
   if (cost <= 0) return 'This is already paid for.';
   if (state.players[city.owner].gold < cost) return `Needs ${cost} gold.`;
   return null;
@@ -309,9 +390,9 @@ export function rushBlocked(state: GameState, city: City): string | null {
  */
 export function rushBuy(state: GameState, city: City): boolean {
   if (rushBlocked(state, city) !== null) return false;
-  const cost = rushCost(city);
+  const cost = rushCost(state, city);
   state.players[city.owner].gold -= cost;
-  city.shields = productionCost(city.producing);
+  city.shields = productionCostIn(state, city, city.producing);
   log(
     state,
     `${city.name} pays ${cost} gold to have ${productionName(city.producing)} finished at once.`,
@@ -424,7 +505,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     owner.gold += Math.max(0, net);
     city.shields = 0;
   } else {
-    const cost = productionCost(item);
+    const cost = productionCostIn(state, city, item);
     if (city.shields >= cost) {
       if (item.kind === 'unit') {
         const spot = placementFor(state, city);

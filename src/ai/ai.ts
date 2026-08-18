@@ -8,7 +8,8 @@ import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
   rushCost,
   capitalOf,
   suppliesArmy,
-  SUPPLY
+  SUPPLY,
+  supplyChain
 } from '../sim/city';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
@@ -308,7 +309,16 @@ function chooseProduction(
   const seat = capitalOf(state, city.owner);
   const covered = seat !== null && distance(seat.x, seat.y, city.x, city.y) <= SUPPLY.range;
   if (!covered && !suppliesArmy(state, city)) {
-    const supplyHouse = options.buildings.find((b) => b.suppliesArmy);
+    // Only where it would actually join the chain. Supply is carried hand to
+    // hand from the capital, so a depot beyond the last link supplies nothing
+    // at all -- and the further out it is the more it costs, which would make
+    // a stranded one the most expensive way in the game to achieve nothing.
+    const chain = supplyChain(state, city.owner);
+    const linked = state.cities.some(
+      (c) =>
+        chain.has(c.id) && distance(c.x, c.y, city.x, city.y) <= SUPPLY.linkRange,
+    );
+    const supplyHouse = linked ? options.buildings.find((b) => b.suppliesArmy) : undefined;
     if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
   }
 
@@ -531,9 +541,9 @@ function spendGold(state: GameState, player: Player): void {
       AI_TUNING.preferBuildings && c.producing.kind === 'building' ? 0 : 1;
     const affordable = playerCities(state, player.id)
       .filter((c) => rushBlocked(state, c) === null)
-      .sort((a, b) => rank(a) - rank(b) || rushCost(a) - rushCost(b))[0];
+      .sort((a, b) => rank(a) - rank(b) || rushCost(state, a) - rushCost(state, b))[0];
     if (!affordable) break;
-    if (player.gold - rushCost(affordable) < AI_TUNING.goldReserve) break;
+    if (player.gold - rushCost(state, affordable) < AI_TUNING.goldReserve) break;
     if (!rushBuy(state, affordable)) break;
   }
 }

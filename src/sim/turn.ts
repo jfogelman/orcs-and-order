@@ -3,7 +3,7 @@ import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
-  inSupply,
+  supplyQuality,
   cityGoldBonus,
   cityScienceBonus,
   cityYield,
@@ -47,11 +47,17 @@ function regenRateFor(state: GameState, unit: Unit): number {
     (c) => c.x === unit.x && c.y === unit.y && c.owner === unit.owner,
   );
   if (city) return city.buildings.includes('barracks') ? REGEN.barracks : REGEN.inCity;
-  // Nobody is bringing bandages out here either.
-  if (!inSupply(state, unit)) return 0;
-  if (unit.order === 'fortified') return REGEN.fortified;
-  if (unit.order === 'sentry') return REGEN.sentry;
-  return REGEN.afield;
+
+  // In the field, two things decide it: what the unit is doing, and whether
+  // anyone can reach it with bandages. Beyond the supply line that second
+  // factor is zero, and an army out there does not recover at all.
+  const posture =
+    unit.order === 'fortified'
+      ? REGEN.fortified
+      : unit.order === 'sentry'
+        ? REGEN.sentry
+        : REGEN.afield;
+  return posture * supplyQuality(state, unit);
 }
 
 function healUnits(state: GameState, playerId: number): void {

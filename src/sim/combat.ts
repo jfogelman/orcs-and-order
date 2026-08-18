@@ -4,7 +4,7 @@ import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
-import { inSupply, militiaStrength, SUPPLY } from './city';
+import { militiaStrength, supplyQuality, SUPPLY } from './city';
 import { hasFlag } from './rules';
 
 /**
@@ -113,8 +113,11 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   let total = type.attack;
   // Nothing left to fight with but hands and regret.
   if (attacker.disarmed) total *= DISARMED_ATTACK;
-  // Hungry, lost, and a long way from anyone who knows the way home.
-  if (!inSupply(state, attacker)) total *= SUPPLY.attackPenalty;
+  // Hungry, lost, and a long way from anyone who knows the way home. Graded
+  // rather than a cliff edge: a step past the line is slightly worse off, not
+  // suddenly useless.
+  const supplied = supplyQuality(state, attacker);
+  if (supplied < 1) total *= SUPPLY.attackPenalty + (1 - SUPPLY.attackPenalty) * supplied;
   if (attacker.veteran) total *= VETERAN_BONUS;
   total *= siegeMult;
   total *= sallyMult;

@@ -132,7 +132,13 @@ function buildingEffects(b: BuildingDef): string[] {
   }
   if (b.suppliesArmy) {
     out.push(
-      'supplies your army here, so units nearby fight at full strength and heal — without one, only your capital does',
+      'links this city into your supply chain, so units nearby fight at full strength and heal',
+    );
+    out.push(
+      'must be within reach of somewhere already supplied — a depot with nothing behind it carries nothing',
+    );
+    out.push(
+      'costs more the further it is from your capital',
     );
   }
   // Said first, because it is the condition on everything below it.

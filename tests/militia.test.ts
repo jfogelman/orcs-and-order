@@ -139,3 +139,50 @@ describe('sacking a captured city', () => {
     expect(city.buildings).toContain('walls');
   });
 });
+
+describe('a city sacked to nothing', () => {
+  it('is wiped off the map rather than handed over', () => {
+    const state = board();
+    town(state, 1);
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    expect(state.cities).toHaveLength(0);
+  });
+
+  it('survives if there are citizens left over', () => {
+    const state = board();
+    const city = town(state, 8);
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    expect(state.cities).toHaveLength(1);
+    expect(city.owner).toBe(0);
+    expect(city.size).toBe(8 - sackSeverity(horde));
+  });
+
+  it('takes a small city two sackings to erase, not one', () => {
+    // A goblin sacks one citizen at a time, so a town of three survives the
+    // first two visits and goes on the third.
+    const state = board();
+    town(state, 3);
+    for (let round = 0; round < 3; round++) {
+      const raider = spawnUnit(state, round % 2 === 0 ? 0 : 1, 'goblin', 11, 10);
+      raider.moves = 2;
+      tryStep(state, raider, 10, 10);
+      state.units = state.units.filter((u) => u.id !== raider.id);
+    }
+    expect(state.cities, 'a city ground down by repeated capture should be gone').toHaveLength(0);
+  });
+
+  it('orphans anything that was homed there', () => {
+    const state = board();
+    const city = town(state, 1);
+    const garrisonedElsewhere = spawnUnit(state, 1, 'footman', 15, 15);
+    garrisonedElsewhere.homeCity = city.id;
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    expect(garrisonedElsewhere.homeCity, 'a unit kept a home that no longer exists').toBeNull();
+  });
+});

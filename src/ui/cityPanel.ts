@@ -14,7 +14,8 @@ import {
   unitUpkeep, isGarrisoned,
   rushBlocked,
   rushBuy,
-  rushCost
+  rushCost,
+  productionCostIn
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
@@ -131,9 +132,9 @@ export function openCityPanel(
         <div class="panel-body">
           ${bar(city.shields, Math.max(1, productionCost(city.producing)))}
           ${
-            rushCost(city) > 0
+            rushCost(state, city) > 0
               ? `<button class="small rush" data-rush="1"${rushBlocked(state, city) ? ' disabled' : ''}>
-                   Buy for ${rushCost(city)}g
+                   Buy for ${rushCost(state, city)}g
                  </button>
                  <span class="muted">${escapeHtml(rushBlocked(state, city) ?? `you have ${state.players[city.owner].gold}g`)}</span>`
               : ''
@@ -149,7 +150,16 @@ export function openCityPanel(
             options.buildings.length === 0
               ? '<div class="panel-body muted">Nothing new to put up.</div>'
               : options.buildings
-                  .map((b) => optionRow({ kind: 'building', id: b.id }, b.name, b.cost, b.blurb))
+                  .map((b) =>
+                    optionRow(
+                      { kind: 'building', id: b.id },
+                      b.name,
+                      // What this city will actually charge, which for an
+                      // outpost depends on how far out it is.
+                      productionCostIn(state, city, { kind: 'building', id: b.id }),
+                      b.blurb,
+                    ),
+                  )
                   .join('')
           }
           ${optionRow({ kind: 'coin' }, 'Coin', 0, 'Turn production straight into gold.')}

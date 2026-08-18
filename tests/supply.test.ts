@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { BUILDINGS } from '../src/model/buildings';
 import type { City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
-import { capitalOf, inSupply, SUPPLY, suppliesArmy } from '../src/sim/city';
+import {
+  capitalOf,
+  inSupply,
+  productionCostIn,
+  supplyChain,
+  supplyQuality,
+  SUPPLY,
+  suppliesArmy,
+} from '../src/sim/city';
 import { attackStrength } from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
@@ -70,9 +78,10 @@ describe('what actually supplies an army', () => {
   it('is extended by an outpost, and only by building one', () => {
     const state = board();
     place(state, 0, 5, 5);
-    const taken = place(state, 0, 30, 20);
+    // Close enough to link back to the capital, which an outpost must be.
+    const taken = place(state, 0, 5 + SUPPLY.linkRange, 5);
     taken.foundedTurn = 40;
-    const unit = spawnUnit(state, 0, 'orc', 30, 20);
+    const unit = spawnUnit(state, 0, 'orc', taken.x, taken.y);
     expect(inSupply(state, unit)).toBe(false);
     taken.buildings.push('outpost');
     expect(inSupply(state, unit)).toBe(true);
@@ -106,9 +115,9 @@ describe('who is in supply', () => {
   it('measures to the nearest supplying city, not merely the nearest one', () => {
     const state = board();
     place(state, 0, 5, 5);
-    const forward = place(state, 0, 30, 20);
+    const forward = place(state, 0, 5 + SUPPLY.linkRange, 5);
     forward.foundedTurn = 40;
-    const unit = spawnUnit(state, 0, 'orc', 30, 20 + SUPPLY.range);
+    const unit = spawnUnit(state, 0, 'orc', forward.x, forward.y + SUPPLY.range);
     // Standing next to a city of yours is not enough if it feeds nobody.
     expect(inSupply(state, unit)).toBe(false);
     forward.buildings.push('outpost');
@@ -120,13 +129,13 @@ describe('who is in supply', () => {
     // it costs shields, which is what stops a conquest paying for itself.
     const state = board();
     place(state, 0, 2, 2);
-    const deep = place(state, 1, 30, 20);
-    deep.foundedTurn = 30;
-    const orc = spawnUnit(state, 0, 'orc', 30, 20);
+    const taken = place(state, 1, 2 + SUPPLY.linkRange, 2);
+    taken.foundedTurn = 30;
+    const orc = spawnUnit(state, 0, 'orc', taken.x, taken.y);
     expect(inSupply(state, orc)).toBe(false);
-    deep.owner = 0;
+    taken.owner = 0;
     expect(inSupply(state, orc), 'a captured city fed the army for free').toBe(false);
-    deep.buildings.push('outpost');
+    taken.buildings.push('outpost');
     expect(inSupply(state, orc)).toBe(true);
   });
 });
@@ -193,5 +202,74 @@ describe('the AI keeps its army fed', () => {
       c.buildings.some((b) => BUILDINGS[b]?.suppliesArmy),
     ).length;
     expect(built, 'neither AI ever built anywhere to supply from').toBeGreaterThan(0);
+  });
+});
+
+describe('supply as a chain rather than a switch', () => {
+  it('carries supply along a run of outposts', () => {
+    const state = board();
+    place(state, 0, 5, 5);
+    // Two posts stepping outward, each within linking distance of the last.
+    const near = place(state, 0, 5 + SUPPLY.linkRange, 5);
+    const far = place(state, 0, 5 + SUPPLY.linkRange * 2, 5);
+    for (const c of [near, far]) {
+      c.foundedTurn = 50;
+      c.buildings.push('outpost');
+    }
+    const chain = supplyChain(state, 0);
+    expect(chain.get(near.id)).toBe(1);
+    expect(chain.get(far.id), 'the far post should link through the near one').toBe(2);
+  });
+
+  it('leaves a lone distant depot out of the chain entirely', () => {
+    // The whole point of the redesign: one outpost planted deep in somebody
+    // else's country supplies nothing, because there is nothing behind it.
+    const state = board();
+    place(state, 0, 5, 5);
+    const stranded = place(state, 0, 5 + SUPPLY.linkRange * 2, 5);
+    stranded.foundedTurn = 50;
+    stranded.buildings.push('outpost');
+    expect(supplyChain(state, 0).has(stranded.id)).toBe(false);
+
+    // Filling the gap connects it.
+    const bridge = place(state, 0, 5 + SUPPLY.linkRange, 5);
+    bridge.foundedTurn = 60;
+    bridge.buildings.push('outpost');
+    expect(supplyChain(state, 0).has(stranded.id)).toBe(true);
+  });
+
+  it('fades with distance instead of stopping dead', () => {
+    const state = board();
+    place(state, 0, 10, 10);
+    const inside = spawnUnit(state, 0, 'orc', 10 + SUPPLY.range, 10);
+    const justPast = spawnUnit(state, 0, 'orc', 10 + SUPPLY.range + 1, 10);
+    const wayOut = spawnUnit(state, 0, 'orc', 10 + SUPPLY.range * 3, 10);
+    expect(supplyQuality(state, inside)).toBe(1);
+    const edge = supplyQuality(state, justPast);
+    expect(edge, 'a step past the line should not be total collapse').toBeGreaterThan(0);
+    expect(edge).toBeLessThan(1);
+    expect(supplyQuality(state, wayOut)).toBe(0);
+  });
+
+  it('charges more for an outpost the further out it is', () => {
+    const state = board();
+    place(state, 0, 5, 5);
+    const near = place(state, 0, 8, 5);
+    const far = place(state, 0, 30, 5);
+    for (const c of [near, far]) c.foundedTurn = 50;
+    const item = { kind: 'building', id: 'outpost' } as const;
+    const nearCost = productionCostIn(state, near, item);
+    const farCost = productionCostIn(state, far, item);
+    expect(nearCost).toBeGreaterThan(BUILDINGS.outpost.cost);
+    expect(farCost, 'distance should cost something').toBeGreaterThan(nearCost);
+  });
+
+  it('does not inflate the price of anything else', () => {
+    const state = board();
+    place(state, 0, 5, 5);
+    const far = place(state, 0, 30, 5);
+    far.foundedTurn = 50;
+    const granary = { kind: 'building', id: 'granary' } as const;
+    expect(productionCostIn(state, far, granary)).toBe(BUILDINGS.granary.cost);
   });
 });

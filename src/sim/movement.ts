@@ -3,7 +3,7 @@ import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
-import type { City, GameState, Unit } from '../model/types';
+import type { City, GameState, Player, Unit } from '../model/types';
 import type { CombatResult } from './combat';
 import {
   breatheThrough,
@@ -220,16 +220,53 @@ export function sackSeverity(attacker: Unit): number {
   );
 }
 
-function captureCity(state: GameState, unit: Unit, city: City): void {
+/**
+ * Wipe a city off the map.
+ *
+ * A place that has been sacked to nothing is not a prize, it is a ruin. This
+ * is what stops the see-saw: measured over eighteen seeds, roughly fifty
+ * cities changed hands per game across about fifteen tiles, and neither side
+ * was ever pushed near elimination because whatever they lost they took
+ * straight back. A city ground down by repeated capture now stops existing,
+ * so the thing being fought over eventually leaves the board.
+ */
+function razeCity(state: GameState, city: City, taker: Player, loser: Player): void {
+  const at = state.cities.indexOf(city);
+  if (at >= 0) state.cities.splice(at, 1);
+  // Anything homed here is on its own now, rather than vanishing with it.
+  for (const u of state.units) {
+    if (u.homeCity === city.id) u.homeCity = null;
+  }
+  log(
+    state,
+    `${city.name} is sacked down to nothing and ceases to be a place.`,
+    'combat',
+    taker.id,
+    'capture',
+    [city.x, city.y],
+  );
+  log(state, `${city.name} is gone.`, 'bad', loser.id, 'city-lost', [city.x, city.y]);
+}
+
+/** Returns whether there is still a city here afterwards. */
+function captureCity(state: GameState, unit: Unit, city: City): boolean {
   const from = state.players[city.owner];
   const to = state.players[unit.owner];
   const severity = sackSeverity(unit);
+
+  // Citizens do not survive a sacking, in proportion to how large it was. A
+  // city taken with nobody left in it is razed rather than handed over.
+  if (city.size - severity < 1) {
+    razeCity(state, city, to, from);
+    recomputeVisibility(state, to.id);
+    recomputeVisibility(state, from.id);
+    return false;
+  }
+
   city.owner = unit.owner;
   city.disorder = false;
   city.workedTiles = [];
-  // Citizens do not survive a sacking in proportion to how large the sacking
-  // was. Never taken below one: an empty tile is not a captured city.
-  city.size = Math.max(1, city.size - severity);
+  city.size = city.size - severity;
 
   // The walls, however, stay standing and change hands with the city.
   //
@@ -249,6 +286,7 @@ function captureCity(state: GameState, unit: Unit, city: City): void {
   city.shields = 0;
   log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture', [city.x, city.y]);
   log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id, 'city-lost', [city.x, city.y]);
+  return true;
 }
 
 /**
@@ -428,10 +466,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   recomputeVisibility(state, unit.owner);
 
   if (capturing && city) {
-    captureCity(state, unit, city);
+    const held = captureCity(state, unit, city);
     unit.moves = 0;
     unit.goto = null;
-    return { kind: 'captured', city };
+    // A city sacked out of existence was not captured; the unit is simply
+    // standing on the ground where one used to be.
+    return held ? { kind: 'captured', city } : { kind: 'moved' };
   }
   return { kind: 'moved' };
 }

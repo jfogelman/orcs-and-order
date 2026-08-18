@@ -346,19 +346,19 @@ describe('rush-buying', () => {
   it('costs more the further there is to go', () => {
     const near = shop(999, BUILDINGS.granary.cost - 5);
     const far = shop(999, BUILDINGS.granary.cost - 40);
-    expect(rushCost(near.city)).toBeLessThan(rushCost(far.city));
+    expect(rushCost(near.state, near.city)).toBeLessThan(rushCost(far.state, far.city));
   });
 
   it('charges a penalty for starting from nothing', () => {
     // Otherwise gold simply replaces having a city worth building in.
     const fromNothing = shop(999, 0);
     const barelyStarted = shop(999, 1);
-    expect(rushCost(fromNothing.city)).toBeGreaterThan(rushCost(barelyStarted.city) * 1.5);
+    expect(rushCost(fromNothing.state, fromNothing.city)).toBeGreaterThan(rushCost(barelyStarted.state, barelyStarted.city) * 1.5);
   });
 
   it('fills the shield box and takes the gold', () => {
     const g = shop(999, 10);
-    const price = rushCost(g.city);
+    const price = rushCost(g.state, g.city);
     expect(rushBuy(g.state, g.city)).toBe(true);
     expect(g.city.shields).toBe(BUILDINGS.granary.cost);
     expect(g.state.players[0].gold).toBe(999 - price);
@@ -382,13 +382,13 @@ describe('rush-buying', () => {
   it('cannot be used on Coin, which is not a thing being built', () => {
     const g = shop(999);
     g.city.producing = { kind: 'coin' };
-    expect(rushCost(g.city)).toBe(0);
+    expect(rushCost(g.state, g.city)).toBe(0);
     expect(rushBuy(g.state, g.city)).toBe(false);
   });
 
   it('cannot be used on something already paid for', () => {
     const g = shop(999, BUILDINGS.granary.cost);
-    expect(rushCost(g.city)).toBe(0);
+    expect(rushCost(g.state, g.city)).toBe(0);
     expect(rushBuy(g.state, g.city)).toBe(false);
   });
 
