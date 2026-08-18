@@ -15,10 +15,15 @@ import {
   rushBlocked,
   rushBuy,
   rushCost,
-  productionCostIn
+  productionCostIn,
+  syncCitizens
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
+import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
+
+/** Edge of one citizen portrait, matching tools/prepare_art.py. */
+const CITIZEN_FACE = 64;
 
 /** Where a building's icon lives. Missing icons are removed on error. */
 function buildingIconPath(id: string): string {
@@ -27,6 +32,49 @@ function buildingIconPath(id: string): string {
 }
 
 /** Turns remaining on the current build, or null when it will never finish. */
+/**
+ * How the people here feel, from 0 (delighted) to 3 (furious).
+ *
+ * Rioting is its own answer. Otherwise it is how much room the city has left
+ * before it stops being content: plenty of room and everyone is pleased,
+ * standing at the limit and they are not.
+ */
+function moodOf(city: City, limit: number): number {
+  if (city.disorder) return CITIZEN_MOODS - 1;
+  const headroom = limit - city.size;
+  if (headroom >= 3) return 0;
+  if (headroom >= 2) return 1;
+  if (headroom >= 1) return 2;
+  return CITIZEN_MOODS - 1;
+}
+
+/**
+ * A face per citizen.
+ *
+ * The roster is filled in on demand rather than required to exist, so a city
+ * from an older save simply acquires people the first time it is opened.
+ */
+function citizenFaces(state: GameState, city: City, limit: number): string {
+  const folk = syncCitizens(state, city);
+  const mood = moodOf(city, limit);
+  const base = import.meta.env.BASE_URL;
+  const root = base.endsWith('/') ? base : `${base}/`;
+  return folk
+    .map((raceId, i) => {
+      const race = CITIZEN_BY_ID[raceId];
+      const name = race ? race.name : raceId;
+      // Alternate the two sheets where a race has both, so a crowd is not
+      // uniformly one or the other.
+      const variant = race?.hasFemale && i % 2 === 1 ? `${raceId}-female` : raceId;
+      return (
+        `<span class="citizen" title="${escapeHtml(name)}${race ? ` — ${escapeHtml(race.blurb)}` : ''}" ` +
+        `style="background-image:url('${root}citizens/${variant}.png');` +
+        `background-position:-${mood * CITIZEN_FACE}px 0"></span>`
+      );
+    })
+    .join('');
+}
+
 function turnsLeft(city: City, perTurn: number): number | null {
   const cost = productionCost(city.producing);
   if (city.producing.kind === 'coin') return null;
@@ -84,6 +132,7 @@ export function openCityPanel(
         <div class="panel-body">
           <div class="stat-row"><span class="label">Citizens</span><span class="value">${city.size}${city.disorder ? ' <span class="k-bad">(disorder)</span>' : ''}</span></div>
           <div class="stat-row"><span class="label">Content up to</span><span class="value">${limit}</span></div>
+          <div class="citizen-row">${citizenFaces(state, city, limit)}</div>
           <div class="stat-row"><span class="label">Food</span><span class="value">${yields.food} (${surplus >= 0 ? '+' : ''}${surplus})</span></div>
           ${bar(city.food, foodToGrow(city.size))}
           <div class="stat-row"><span class="label">Shields</span><span class="value">${netShields}/turn${upkeep > 0 ? ` <span class="muted">(${yields.shields} − ${upkeep} rations)</span>` : ''}</span></div>

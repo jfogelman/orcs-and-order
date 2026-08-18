@@ -405,7 +405,9 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
 # next to "troll.jpg" -- so these are stripped from the name and the newest
 # file wins. Kept deliberately short: anything here is a word no creature can
 # be called.
-REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new")
+# "2x2" describes how the frames are laid out, which is worked out from the
+# picture, not from the name.
+REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new", "2x2")
 
 
 def normalise_stem(stem: str) -> tuple[str, str]:
@@ -863,6 +865,92 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
     return done, problems, unknown
 
 
+CITIZEN_SIZE = 64
+CITIZEN_MOODS = 4
+
+
+def process_citizens(force: bool) -> tuple[int, list[str]]:
+    """
+    Portrait strips of the people who live in your cities.
+
+    Always four frames -- delighted, pleased, flat, furious -- so the count is
+    a fact about the game rather than something to read off the sheet. That
+    matters here: these frames are not square (one sheet is 1408x768, four
+    portraits of 352x768), so the proportions would give the wrong answer.
+
+    Sheets are named "<race> citizens", optionally "female <race> citizens",
+    and any parenthetical is a note rather than part of the name.
+    """
+    src = SRC / "cities"
+    out = OUT / "citizens"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    best: dict[str, tuple[Path, Image.Image]] = {}
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        words = base.split()
+        if "citizens" not in words:
+            continue
+        words = [w for w in words if w != "citizens"]
+        female = "female" in words
+        words = [w for w in words if w != "female"]
+        if not words:
+            problems.append(f"{path.name}: no idea whose citizens these are")
+            continue
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words)).strip("-")
+        key = f"{name}-female" if female else name
+
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{key}: background would not key")
+            continue
+        prev = best.get(key)
+        if prev is None or path.stat().st_mtime > prev[0].stat().st_mtime:
+            best[key] = (path, keyed)
+
+    done = 0
+    for key, (path, keyed) in sorted(best.items()):
+        target = out / f"{key}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        w, h = keyed.size
+        # Four moods, laid out across or in a 2x2 when the sheet is square.
+        cols, rows = (2, 2) if 0.6 < w / h < 1.6 else (CITIZEN_MOODS, 1)
+        cell_w, cell_h = w / cols, h / rows
+        sheet = Image.new(
+            "RGBA", (CITIZEN_MOODS * CITIZEN_SIZE, CITIZEN_SIZE), (0, 0, 0, 0)
+        )
+        for i in range(CITIZEN_MOODS):
+            box = (
+                round((i % cols) * cell_w),
+                round((i // cols) * cell_h),
+                round((i % cols + 1) * cell_w),
+                round((i // cols + 1) * cell_h),
+            )
+            face = keyed.crop(box)
+            # Trim to the face and square it up: these are portraits, so each
+            # one is centred on its own rather than sharing a camera.
+            bbox = face.getbbox()
+            if bbox:
+                face = face.crop(bbox)
+            side = max(face.width, face.height)
+            padded = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            padded.paste(face, ((side - face.width) // 2, (side - face.height) // 2), face)
+            sheet.paste(
+                padded.resize((CITIZEN_SIZE, CITIZEN_SIZE), Image.LANCZOS),
+                (i * CITIZEN_SIZE, 0),
+            )
+        sheet.save(target, optimize=True)
+        print(f"  citizens/{key}.png (4 moods from {w}x{h})")
+        done += 1
+    return done, problems
+
+
 def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image | None, str]:
     """
     Cut a sheet of frames into one horizontal strip at unit size.
@@ -1136,6 +1224,9 @@ def main() -> int:
     anims, anim_problems, anim_unknown = process_unit_effects(force)
     print("Unit states:")
     states, state_problems, state_unknown = process_unit_states(force)
+    print("Citizens:")
+    folk, folk_problems = process_citizens(force)
+    state_problems.extend(folk_problems)
     anim_problems.extend(state_problems)
     anim_unknown.extend(state_unknown)
     audio, audio_before, audio_after = process_audio()
@@ -1143,7 +1234,7 @@ def main() -> int:
     print(
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
-        f"{states} state sheets, "
+        f"{states} state sheets, {folk} citizen sheets, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )

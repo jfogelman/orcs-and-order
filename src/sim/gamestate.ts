@@ -18,7 +18,8 @@ import { generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
 
 // 2: units carry `disarmed`, for the axethrower that has thrown its axe.
-export const SAVE_VERSION = 2;
+// 3: cities carry `citizens`, naming who lives in them.
+export const SAVE_VERSION = 3;
 
 export interface NewGameOptions {
   seed?: number;

@@ -964,3 +964,20 @@ button.small.rush[disabled] {
   border-color: var(--edge);
   color: var(--ink-dim);
 }
+
+/* The people who live here, shown as faces under the population line. */
+.citizen-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 4px 0 2px;
+}
+
+.citizen {
+  width: 32px;
+  height: 32px;
+  background-size: auto 32px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  border-radius: 3px;
+}

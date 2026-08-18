@@ -2,10 +2,11 @@ import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import { unitType, UNIT_TYPES } from '../model/units';
+import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
 import type { City, GameState, ProductionItem, Unit } from '../model/types';
-import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt } from './gamestate';
+import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { unlockedBuildings, unlockedUnits } from './research';
 
 /**
@@ -329,6 +330,42 @@ export function inSupply(state: GameState, unit: Unit): boolean {
   return supplyQuality(state, unit) >= 1;
 }
 
+/**
+ * Pick who has just been born here.
+ *
+ * Weighted across whatever sorts the owner can currently attract, so a Horde
+ * that has learned about ogres starts seeing the occasional ogre without the
+ * goblins going anywhere. Uses the game's own RNG, so a replay produces the
+ * same people.
+ */
+export function rollCitizen(state: GameState, city: City): string {
+  const options = availableRaces(state.players[city.owner]);
+  if (options.length === 0) return 'goblin';
+  const total = options.reduce((sum, r) => sum + r.weight, 0);
+  return withRng(state, (rng) => {
+    let roll = rng.float() * total;
+    for (const race of options) {
+      roll -= race.weight;
+      if (roll <= 0) return race.id;
+    }
+    return options[options.length - 1].id;
+  });
+}
+
+/**
+ * Make the roster match the size, filling any gap with fresh rolls.
+ *
+ * Cities from before this existed, and every test fixture, have no roster at
+ * all; rather than demand one everywhere, they get people the first time
+ * anybody looks. Existing entries are never touched.
+ */
+export function syncCitizens(state: GameState, city: City): string[] {
+  if (!city.citizens) city.citizens = [];
+  while (city.citizens.length > city.size) city.citizens.pop();
+  while (city.citizens.length < city.size) city.citizens.push(rollCitizen(state, city));
+  return city.citizens;
+}
+
 /** Units a city supports for free before shields start going to rations. */
 export function freeSupport(city: City): number {
   return Math.max(2, city.size);
@@ -486,6 +523,8 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     city.food = 0;
     if (city.size > 1) {
       city.size -= 1;
+      // Somebody has left, or worse. Last in, first out.
+      syncCitizens(state, city);
       events.starved = true;
     }
   } else if (city.food >= foodToGrow(city.size)) {
@@ -493,6 +532,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     const kept = granary ? Math.floor(foodToGrow(city.size) * (BUILDINGS.granary.foodKept ?? 0)) : 0;
     city.size += 1;
     city.food = kept;
+    syncCitizens(state, city);
     events.grew = true;
     assignWorkers(state, city);
   }
@@ -568,6 +608,7 @@ export function foundCity(state: GameState, unit: Unit): City | null {
     x: unit.x,
     y: unit.y,
     size: 1,
+    citizens: [],
     food: 0,
     shields: 0,
     buildings: [],

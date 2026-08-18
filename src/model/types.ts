@@ -102,6 +102,14 @@ export interface City {
   /** True while the city is rioting; it produces nothing. */
   disorder: boolean;
   foundedTurn: number;
+  /**
+   * Who actually lives here, one entry per point of size.
+   *
+   * Purely descriptive -- nothing in the rules reads it. Rolled once when a
+   * citizen is born and kept thereafter, so a city that filled up before you
+   * could attract ogres keeps the goblins it already had.
+   */
+  citizens?: string[];
 }
 
 // ------------------------------------------------------------------ game meta
