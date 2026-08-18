@@ -921,6 +921,9 @@ def process_citizens(force: bool) -> tuple[int, list[str]]:
         w, h = keyed.size
         # Four moods, laid out across or in a 2x2 when the sheet is square.
         cols, rows = (2, 2) if 0.6 < w / h < 1.6 else (CITIZEN_MOODS, 1)
+        # These sheets carry panel rules between the frames just as the unit
+        # ones do -- the goblins came out in a navy box without this.
+        clear_panel_borders(keyed, cols)
         cell_w, cell_h = w / cols, h / rows
         sheet = Image.new(
             "RGBA", (CITIZEN_MOODS * CITIZEN_SIZE, CITIZEN_SIZE), (0, 0, 0, 0)
