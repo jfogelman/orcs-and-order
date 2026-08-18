@@ -13,6 +13,8 @@ public/cities/
 public/terrain/
 public/sfx/
 public/music/
+public/effects/
+public/citizens/
 
 # Editor and OS noise
 .vscode/
