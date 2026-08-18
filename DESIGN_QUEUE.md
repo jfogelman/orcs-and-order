@@ -791,6 +791,94 @@ the same effect noted in 4h. It reduces the score gap (210 to 139) while making 
 turn-limit problem slightly worse. The two mechanics pull in opposite directions on
 churn and roughly cancel, which is why "both" and "razing only" land together.
 
+## 6. Requested, and what state it is actually in
+
+Five of these were asked for after they had already been built, which is a
+reporting problem rather than a design one -- they are listed here with what
+exists so nothing gets built twice.
+
+### Already done
+
+- ~~**A captured city loses citizens based on the attacker.**~~ `sackSeverity`
+  scales with the attacker's strength, and now takes a share of the city as well,
+  so a large place costs about as many visits to erase as a small one.
+- ~~**A weakened look, and a nearly-dead one.**~~ Below half health and below a
+  tenth, from the two poses on each `unit states` sheet.
+- ~~**The axethrower looks different without its axe.**~~ Three sheets: swinging
+  armed, swinging with nothing, and the pose for getting one back, with the
+  promotion sound.
+- ~~**Outposts cost more the further out, and a chain is worth more than one.**~~
+  Supply walks outward from the capital, an outpost only counts if it links back,
+  and its price scales with distance from the capital.
+
+### Half done
+
+- **The troll regeneration animation.** `public/units/troll_regen.png` is
+  processed and sitting there; nothing references it. Needs a trigger -- the
+  obvious one is the moment `healUnits` puts a meaningful amount back on a troll,
+  watched by the renderer the way the rearm pose is.
+
+### Pending
+
+- **Mood changes output.** Very happy citizens double what the city produces;
+  disorder halves it. Note the existing disorder rule already zeroes shields and
+  trade, so this is a softening as much as an addition -- halving is *kinder*
+  than what happens today, and the interesting half is the bonus at the top end.
+  Wants measuring: a doubling multiplier on a score dominated by population is
+  a large lever.
+- **Experience and promotion choices.** See section 7.
+
+### Later
+
+- **A promoted unit attacking more than once**, and **defenders striking back**
+  rather than the attacker simply taking damage. Both change the shape of every
+  fight in the game, so they want measuring rather than eyeballing -- the second
+  especially, since it makes attacking strictly worse and the AI attacks a lot.
+- **An animation for the Broken Catapult**, which currently has none.
+
+## 7. Experience and promotion — ideas to pick from
+
+What exists: `veteran` is a single boolean, earned at a flat 25% chance on
+winning, worth a flat 1.5x. There is no experience and nothing to choose.
+
+A menu, deliberately over-long so it can be cut down. The suggestion is
+experience from damage dealt and taken, two or three promotions per unit, and a
+choice of one perk each time.
+
+**Straightforward**
+- *Bloodied* — attacks harder.
+- *Dug In* — defends harder.
+- *Hardened* — more maximum health.
+- *Quick* — one more movement point.
+- *Far-Eyed* — one more tile of sight.
+
+**Interacting with what already exists**
+- *Quartermaster* — counts as supplied a tile or two further out than it is.
+- *Field Repairs* — heals even when out of supply, slowly.
+- *Butcher* — sacks harder, taking more of a city when it takes one.
+- *Reputation* — the townsfolk do not bother resisting; skips the militia stand.
+- *Spare Axe* — the axethrower keeps a second one, so its first throw costs it
+  nothing.
+- *Braced* — takes less from a sapper going up nearby.
+
+**The ones that change how a fight works** (also in "later" above)
+- *Twice* — attacks a second time in a turn.
+- *Riposte* — hits back while defending.
+- *Overrun* — moving into a city it captures does not end its turn.
+
+**Flavour, if the two sides should promote differently**
+The Horde's perks could be things that happen *to* it -- angrier, harder to
+kill, less careful -- while the Kingdom's are things it has *arranged*:
+paperwork, drill, supply. Same numbers, different names, and it costs nothing
+but the writing.
+
+**Open questions for you**
+- Experience from damage, from kills, or from surviving?
+- Do groups earn faster or slower than singles? A Ten Orcs winning a fight is
+  ten orcs getting better at once, which may be too much.
+- Should a promotion be visible on the map sprite, or only in the readout?
+- Does a captured unit keep its promotions? (Nothing is captured today.)
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
