@@ -407,3 +407,41 @@ art. `Peon`, `Footman`, `Grunt` and `Ogre` are ordinary English words and are us
 such. If a generator returns something that looks like it came out of a specific
 commercial game, throw it away and reroll — the placeholder is a perfectly good
 fallback and costs nothing.
+
+## Promotion marks
+
+Small badges stamped in the corner of a promoted unit's tile, so a veteran army
+reads as veteran at a glance without opening anything. Three ranks a side, drawn
+as **objects rather than lettering** — numbers and chevrons stop being legible at
+tile size, and a shape holds up where a glyph does not.
+
+Save as `art_src/promotions/<id>.<ext>`. Each wants a **single centred object on a
+flat magenta background**, no scene, no ground shadow, in the same chunky pixel
+style as the units — read at roughly 16 pixels across, so silhouette is everything
+and interior detail is nearly wasted.
+
+The two sides earn the same numbers and wear them differently. The Horde's marks
+are things that *happened* to it; the Kingdom's are things somebody *issued*.
+
+| id | rank | prompt |
+|---|---|---|
+| `orc_1` | Horde, first | A single yellowed tusk fragment bound to a scrap of leather cord, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+| `orc_2` | Horde, second | Two crossed yellowed tusks lashed together with red-stained twine, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+| `orc_3` | Horde, third | A small crude skull trophy with a bent iron nail driven through the crown, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+| `human_1` | Kingdom, first | A single polished brass stud on a blue enamel disc, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+| `human_2` | Kingdom, second | A brass and blue enamel medal with two short ribbon tails, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+| `human_3` | Kingdom, third | A wax seal on a folded commission, ribbon trailing, gold and deep blue, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon |
+
+Two notes on making these usable:
+
+- **Keep the object well inside the frame.** These are composited at about a
+  sixth of a tile, so anything touching the edge loses its outline and turns to
+  mush.
+- **Avoid green on the Horde marks and blue on the Kingdom's** — the badge sits
+  on top of a unit of roughly that colour, and a green tusk on a green orc
+  disappears. Bone-yellow and rust read against both.
+
+If a set of **per-perk** icons is wanted later rather than per-rank, the same
+rules apply and the list would follow whichever perks survive from section 7 of
+DESIGN_QUEUE.md — but rank marks are the cheaper thing to try first, since three
+a side covers every unit in the game.

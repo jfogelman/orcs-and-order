@@ -872,12 +872,21 @@ kill, less careful -- while the Kingdom's are things it has *arranged*:
 paperwork, drill, supply. Same numbers, different names, and it costs nothing
 but the writing.
 
-**Open questions for you**
-- Experience from damage, from kills, or from surviving?
-- Do groups earn faster or slower than singles? A Ten Orcs winning a fight is
-  ten orcs getting better at once, which may be too much.
-- Should a promotion be visible on the map sprite, or only in the readout?
-- Does a captured unit keep its promotions? (Nothing is captured today.)
+**Answered**
+
+- **Where experience comes from.** Most from killing something, less from
+  surviving a fight, and **none at all from damage a unit did not choose** --
+  a dragon's breath catching a bystander, or a sapper going up, teaches nobody
+  anything. That last rule matters mechanically as well as thematically: the
+  blast hits friend and enemy alike, so counting it would have a sapper
+  promoting its own side's survivors.
+- **Groups earn slower, divided by the count.** Ten Orcs winning a fight is ten
+  orcs each getting a tenth of the lesson. This also stops the counting ladder
+  from doubling as an experience ladder, where the biggest unit would both hit
+  hardest and improve fastest.
+- **Promotions show on the map sprite**, not only in the readout. Prompts are in
+  ART_PROMPTS.md; the current marker is a drawn asterisk and would be replaced.
+- **No captured units this iteration**, so promotions never change hands.
 
 ## 5. Also queued, from earlier
 
