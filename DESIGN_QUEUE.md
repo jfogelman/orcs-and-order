@@ -751,6 +751,46 @@ straight back, so no lead ever becomes a win. Candidates, none measured yet:
   for a few consecutive turns, say. Ends games that are effectively decided without
   requiring total elimination.
 
+## 4j. Razing and the supply chain, measured
+
+Four arms, eighteen seeds each. The razing arm also restores the citizen loss from
+sacking, since turning sacking off is how razing is disabled -- so it reads as
+"sacking and razing" against "neither".
+
+| arm | ended before the limit | changes of hands | cities razed | on the map | gap |
+|---|---|---|---|---|---|
+| neither | 2/18 | 42.4 | 0 | 21.2 | 210.2 |
+| supply only | 1/18 | 51.4 | 0 | 22.5 | 138.8 |
+| razing only | **4/18** | **28.3** | 0.8 | 18.2 | 201.3 |
+| both, as built | **4/18** | **27.4** | 0.9 | 16.4 | 164.8 |
+
+**The see-saw is a third smaller.** Changes of hands drop 42.4 to 27.4, the largest
+movement on that number anything has produced. Decisive games double, 2/18 to 4/18.
+
+**It is not enough.** Fourteen games in eighteen still reach turn 300.
+
+**Wins are 5-13 in every single arm.** Neither mechanic touches the balance, which is
+worth knowing: they are turn-limit work, not balance work, and they can be tuned
+without disturbing the other problem.
+
+### Why razing does not bite harder
+
+Only **0.9 cities are razed per game**. The churn reduction is therefore mostly the
+*sacking*, not the destruction: cities are ground smaller and become less worth
+retaking. Razing itself almost never fires, because a city sacked to size 2 regrows to
+8 long before anyone comes back for it.
+
+So the limiter is regrowth, and the obvious next lever is to stop a recently sacked
+city recovering as if nothing had happened -- a ruined place should stay ruined for a
+while. That would let repeated capture actually reach zero.
+
+### Supply lines increase churn
+
+51.4 against 42.4 with neither. Supply lets an army push, and pushing flips cities --
+the same effect noted in 4h. It reduces the score gap (210 to 139) while making the
+turn-limit problem slightly worse. The two mechanics pull in opposite directions on
+churn and roughly cancel, which is why "both" and "razing only" land together.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
