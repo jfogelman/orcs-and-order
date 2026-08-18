@@ -3,6 +3,7 @@ import type { BuildingId, City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
 import { MILITIA, militiaStrength } from '../src/sim/city';
 import { stormEmptyCity } from '../src/sim/combat';
+import { isRuined, processCity, RUIN } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { sackSeverity, tryStep } from '../src/sim/movement';
 
@@ -184,5 +185,64 @@ describe('a city sacked to nothing', () => {
     horde.moves = 2;
     tryStep(state, horde, 10, 10);
     expect(garrisonedElsewhere.homeCity, 'a unit kept a home that no longer exists').toBeNull();
+  });
+});
+
+describe('a sacked city stays a ruin', () => {
+  /**
+   * Age the world without playing it.
+   *
+   * The fixtures here leave one side with no cities, so the elimination check
+   * ends the game and `endPlayerTurn` stops advancing the calendar. These
+   * tests are about the ruin timer, not the turn pipeline, so they move the
+   * clock directly and run the city's own economy against it.
+   */
+  function age(state: GameState, city: City, turns: number): void {
+    for (let i = 0; i < turns; i++) {
+      state.turn += 1;
+      processCity(state, city);
+    }
+  }
+
+  it('marks a captured city as ruined for a while', () => {
+    const state = board();
+    const city = town(state, 8);
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    expect(isRuined(state, city)).toBe(true);
+    expect(city.ruinedUntil).toBe(state.turn + RUIN.turns);
+  });
+
+  it('does not grow while it is one', () => {
+    // The measured problem: a city sacked to size 2 was back to 8 long before
+    // anyone returned, so razing almost never fired.
+    const state = board();
+    const city = town(state, 8);
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    const sackedTo = city.size;
+    age(state, city, RUIN.turns - 2);
+    expect(city.size, 'a smoking ruin grew anyway').toBe(sackedTo);
+  });
+
+  it('grows again once the rubble is cleared', () => {
+    const state = board();
+    const city = town(state, 8);
+    const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
+    horde.moves = 2;
+    tryStep(state, horde, 10, 10);
+    const sackedTo = city.size;
+    age(state, city, RUIN.turns + 40);
+    expect(isRuined(state, city)).toBe(false);
+    expect(city.size, 'a recovered city never grew back').toBeGreaterThan(sackedTo);
+  });
+
+  it('leaves a city that has never been taken alone', () => {
+    const state = board();
+    const city = town(state, 4);
+    expect(city.ruinedUntil).toBeUndefined();
+    expect(isRuined(state, city)).toBe(false);
   });
 });

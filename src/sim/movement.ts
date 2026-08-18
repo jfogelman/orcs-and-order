@@ -4,6 +4,7 @@ import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
+import { RUIN } from './city';
 import type { CombatResult } from './combat';
 import {
   breatheThrough,
@@ -267,6 +268,9 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
   city.disorder = false;
   city.workedTiles = [];
   city.size = city.size - severity;
+  // Nothing grows here for a while. Without this the place is back to full
+  // size before anyone returns, and no amount of sacking ever adds up.
+  city.ruinedUntil = state.turn + RUIN.turns;
 
   // The walls, however, stay standing and change hands with the city.
   //

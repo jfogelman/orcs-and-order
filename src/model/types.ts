@@ -110,6 +110,14 @@ export interface City {
    * could attract ogres keeps the goblins it already had.
    */
   citizens?: string[];
+  /**
+   * Turn until which this place is still a ruin, after being sacked.
+   *
+   * A city taken by storm used to regrow to full size long before anybody came
+   * back for it, which is why repeated capture never ground one down to
+   * nothing. Absent on a city that has never changed hands.
+   */
+  ruinedUntil?: number;
 }
 
 // ------------------------------------------------------------------ game meta

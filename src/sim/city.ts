@@ -366,6 +366,21 @@ export function syncCitizens(state: GameState, city: City): string[] {
   return city.citizens;
 }
 
+/**
+ * How long a sacked city stays a ruin, in turns.
+ *
+ * Measured: without this, a city sacked to size 2 regrew to 8 long before the
+ * next army arrived, so razing almost never fired -- only 0.9 cities a game
+ * were ground out of existence. A ruin that stays ruined is what lets repeated
+ * capture actually finish the job.
+ */
+export const RUIN = { turns: 15 };
+
+/** Is this place still clearing the rubble? */
+export function isRuined(state: GameState, city: City): boolean {
+  return city.ruinedUntil !== undefined && state.turn < city.ruinedUntil;
+}
+
 /** Units a city supports for free before shields start going to rations. */
 export function freeSupport(city: City): number {
   return Math.max(2, city.size);
@@ -516,8 +531,12 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
   // sprawl of large permanently-rioting cities that contribute nothing but
   // population -- which then dominates the score. It can still starve, since
   // disorder should not conjure food either.
+  // A place still smoking does not put on population. It can still starve --
+  // being sacked does not conjure food either -- but nothing accumulates
+  // toward the next citizen while people are still clearing the rubble.
+  const ruined = isRuined(state, city);
   const raw = yields.food - city.size * FOOD_PER_CITIZEN;
-  const surplus = city.disorder ? Math.min(0, raw) : raw;
+  const surplus = city.disorder || ruined ? Math.min(0, raw) : raw;
   city.food += surplus;
   if (city.food < 0) {
     city.food = 0;

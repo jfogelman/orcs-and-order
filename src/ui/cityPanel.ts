@@ -16,7 +16,8 @@ import {
   rushBuy,
   rushCost,
   productionCostIn,
-  syncCitizens
+  syncCitizens,
+  isRuined
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
@@ -134,6 +135,11 @@ export function openCityPanel(
           <div class="stat-row"><span class="label">Content up to</span><span class="value">${limit}</span></div>
           <div class="citizen-row">${citizenFaces(state, city, limit)}</div>
           <div class="stat-row"><span class="label">Food</span><span class="value">${yields.food} (${surplus >= 0 ? '+' : ''}${surplus})</span></div>
+          ${
+            isRuined(state, city)
+              ? `<div class="stat-row"><span class="label k-bad">Sacked</span><span class="value k-bad">still clearing the rubble &middot; nothing grows here for ${(city.ruinedUntil ?? 0) - state.turn} more turns</span></div>`
+              : ''
+          }
           ${bar(city.food, foodToGrow(city.size))}
           <div class="stat-row"><span class="label">Shields</span><span class="value">${netShields}/turn${upkeep > 0 ? ` <span class="muted">(${yields.shields} − ${upkeep} rations)</span>` : ''}</span></div>
           <div class="stat-row"><span class="label">Supports free</span><span class="value">${freeSupport(city)} units</span></div>
