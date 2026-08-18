@@ -700,6 +700,57 @@ session's false positives, and the rule that follows is:
 Range 4, penalty 0.6 stays on those grounds — a sensible middle, not a measured
 optimum, and it should not be tuned further without far more seeds.
 
+## 4i. Why games never finish: it is a stalemate, measured
+
+Eighteen seeds, instrumented to tell a stalemate from a clock problem, because the two
+want opposite fixes.
+
+**Nobody ever comes close to losing.** The fewest cities the Horde ever held across a
+whole game averages 3.4; the Kingdom 4.1. Only **1 game in 18** saw either side fall
+below two cities — and that one game is the only one that ended before the limit, at
+turn 250. Elimination is not nearly happening.
+
+**The score gap does not diverge, it oscillates.**
+
+| turn | 50 | 100 | 150 | 200 | 250 | 300 |
+|---|---|---|---|---|---|---|
+| mean gap | -4.3 | 45.0 | 55.3 | 139.3 | 146.4 | **93.2** |
+
+It peaks around 250 and falls back. Nobody is pulling away, so more turns would not
+produce a winner — this is not a game that needs lengthening or shortening.
+
+**The war gets busier, not more decisive.** Captures up to turn 150: 16.4. After turn
+150: **31.3**. Both sides keep taking cities off each other right to the end and it
+settles nothing.
+
+### The bit that matters beyond this problem
+
+Individual games swing enormously late on. Seed 63353 runs +172 at turn 200 and −168
+at turn 300; seed 15839 goes +188 to −56; seed 31677 +276 to +18. Three-hundred-point
+reversals in the last third are routine, because a handful of cities changing hands at
+the end moves the score more than a hundred turns of development.
+
+**That is the noise floor from 4h, explained.** Who wins on points is substantially
+decided by which cities happen to be held on turn 300, so eighteen seeds could never
+separate two settings whose true difference was small — the outcome is close to a coin
+flip regardless of the mechanic being tested. Any future balance work should either
+use far more seeds or, better, fix this first: a game whose result is largely
+end-state churn cannot be tuned.
+
+### Where to attack it
+
+The war is reciprocal and nothing compounds. A side that loses cities takes them
+straight back, so no lead ever becomes a win. Candidates, none measured yet:
+
+- **A captured city cannot change hands again for N turns.** Attacks the see-saw
+  directly and is a flat rule rather than a per-city bonus, which is the category that
+  has failed repeatedly.
+- **Make losing compound.** Losing a city should weaken the loser's ability to retake
+  it; at present it does not, because the retaking army is already next to it.
+- **A victory condition that can actually be met** — holding some share of all cities
+  for a few consecutive turns, say. Ends games that are effectively decided without
+  requiring total elimination.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit
