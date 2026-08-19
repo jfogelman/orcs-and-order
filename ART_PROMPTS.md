@@ -138,13 +138,38 @@ should be too.
 | `mage` | A human wizard in deep blue robes with gold trim, long white beard, wide-brimmed pointed hat, holding a staff topped with a pale glowing stone |
 | `paladin` | A holy warrior in ornate golden plate armour with a white surcoat, mounted on an armoured white horse, broadsword raised, faint warm glow |
 
-## Still to draw
+## What exists, and what is left
 
-**Every static asset is done**: 17 unit sprites, 6 city sprites, 8 terrain sets, 42
-advance icons, 10 building icons, 33 sound effects and 3 music tracks.
+Everything below is drawn, processed and wired unless this section says otherwise.
 
-The only outstanding art is the **effect animations** further down, and those are
-optional too — nothing breaks without them.
+| set | count | state |
+|---|---|---|
+| Unit sprites | 17 | done |
+| City sprites | 6 | done |
+| Terrain sets | 8 | done |
+| Advance icons | 42 | done |
+| Building icons | 10 | done |
+| Sound and music | 33 + 3 | done |
+| Effect animations | 10 | done and wired |
+| Attack animations | 19 | done and wired, including the axethrower's three states |
+| Unit states | 19 | done and wired: hurt and nearly dead per creature, plus troll regeneration |
+| Citizen portraits | 13 | done and wired, four moods each |
+| Promotion marks | 6 | done and wired |
+| Cities coming apart | 6 | done and wired |
+
+**Two pieces of art exist but are not wired to anything yet**, both waiting on a
+decision rather than on drawing:
+
+- `art_src/buildings/broken catapult attack.jpg` — the Broken Catapult has no
+  animation, and what should trigger it has not been settled.
+- The **celebration**, **unrest** and **damaged** city overlays, which are held
+  pending the extra logic wanted around them.
+
+The only prompts still unanswered are the **city overlays** at the bottom of this
+file, which are new rather than left over.
+
+The prompt sections below are kept as a record of what was asked for, and as the
+recipe to follow when any of it is re-rolled.
 
 ### Not needed, deliberately
 
@@ -277,12 +302,11 @@ should be conspicuously one stall selling one thing.
 
 ---
 
-## Effect animations — the next batch
+## Effect animations — all 10 done
 
 Short bursts played over the map when something happens: a sapper going up, an arrow
-landing, a wounded unit being finished off. **None of these are wired up yet** — the
-playback layer is a small piece of work still to do — but the format below is what it
-will read, so anything generated now will drop straight in.
+landing, a wounded unit being finished off. **All of these are drawn and playing.**
+The format below is what the pipeline reads, so a re-roll drops straight in.
 
 ### Format
 
@@ -307,7 +331,7 @@ the background. For anything that wants to be purple, say **solid green backgrou
 (#00FF00)** instead; the pipeline picks the key colour up off the border either way.
 The Death Knight's effect below is exactly that case.
 
-### For abilities that already exist
+### The impacts
 
 | id | Effect |
 |---|---|
@@ -316,7 +340,10 @@ The Death Knight's effect below is exactly that case.
 | `clash` | two crossed white sparks at the point of impact, flaring and fading, with three short motion streaks |
 | `death-touch` | **green background** — a violet skull-shaped wisp closing over its target and collapsing inward to nothing |
 
-### For the abilities still queued
+### The projectiles and the rest
+
+Every ability these were drawn for now exists: ranged attack, healing, the
+axethrower's throw and the dragon's breath all play their own.
 
 | id | Effect |
 |---|---|
