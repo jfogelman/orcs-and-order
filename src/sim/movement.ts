@@ -212,13 +212,34 @@ export function routeTo(
  * there is visibly less of it afterwards. Capped, because a city reduced to
  * nothing is not worth taking and the war would stop meaning anything.
  */
-export const SACKING = { cap: 3, perAttack: 8 };
+export const SACKING = {
+  /** Most citizens a flat sacking can take, before the proportional part. */
+  cap: 3,
+  /** Attack strength per citizen taken. */
+  perAttack: 8,
+  /**
+   * Share of the city taken as well, on top of the flat part.
+   *
+   * The flat part alone could not finish anything. A sacking took at most
+   * three citizens, so a city of twelve needed four captures in a row to
+   * reach nothing -- and captures at a given city land about ninety turns
+   * apart, so it regrew and the count reset. Taking a *share* means a large
+   * city costs the same number of visits to erase as a small one, which is
+   * what makes repeated capture add up to something.
+   */
+  fraction: 0.6,
+};
 
-export function sackSeverity(attacker: Unit): number {
-  return Math.min(
+/**
+ * How many citizens a capture costs, given who turned up and how big the
+ * place is.
+ */
+export function sackSeverity(attacker: Unit, size = 0): number {
+  const flat = Math.min(
     SACKING.cap,
     Math.max(1, Math.round(unitType(attacker.type).attack / SACKING.perAttack)),
   );
+  return Math.max(flat, Math.ceil(size * SACKING.fraction));
 }
 
 /**
@@ -253,7 +274,7 @@ function razeCity(state: GameState, city: City, taker: Player, loser: Player): v
 function captureCity(state: GameState, unit: Unit, city: City): boolean {
   const from = state.players[city.owner];
   const to = state.players[unit.owner];
-  const severity = sackSeverity(unit);
+  const severity = sackSeverity(unit, city.size);
 
   // Citizens do not survive a sacking, in proportion to how large it was. A
   // city taken with nobody left in it is razed rather than handed over.

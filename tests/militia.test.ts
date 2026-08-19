@@ -114,11 +114,12 @@ describe('sacking a captured city', () => {
     const city = town(state, 10, ['granary', 'barracks', 'totem']);
     const horde = spawnUnit(state, 0, 'orc_x10', 11, 10);
     horde.moves = 2;
-    const severity = sackSeverity(horde);
+    const severity = sackSeverity(horde, city.size);
     tryStep(state, horde, 10, 10);
     expect(city.owner).toBe(0);
     expect(city.size).toBe(10 - severity);
-    expect(city.buildings.length).toBe(3 - severity);
+    // There may be fewer structures standing than the sacking would take.
+    expect(city.buildings.length).toBe(Math.max(0, 3 - severity));
   });
 
   it('never empties a city entirely', () => {
@@ -159,7 +160,7 @@ describe('a city sacked to nothing', () => {
     tryStep(state, horde, 10, 10);
     expect(state.cities).toHaveLength(1);
     expect(city.owner).toBe(0);
-    expect(city.size).toBe(8 - sackSeverity(horde));
+    expect(city.size).toBe(8 - sackSeverity(horde, 8));
   });
 
   it('takes a small city two sackings to erase, not one', () => {
@@ -244,5 +245,38 @@ describe('a sacked city stays a ruin', () => {
     const city = town(state, 4);
     expect(city.ruinedUntil).toBeUndefined();
     expect(isRuined(state, city)).toBe(false);
+  });
+});
+
+describe('sacking takes a share, not a fixed toll', () => {
+  it('costs a large city more citizens than a small one', () => {
+    const state = board();
+    const raider = spawnUnit(state, 0, 'goblin', 1, 1);
+    expect(sackSeverity(raider, 20)).toBeGreaterThan(sackSeverity(raider, 4));
+  });
+
+  it('erases a city in the same few visits whatever its size', () => {
+    // The point of the proportional part: a flat toll of three meant a city
+    // of twenty needed seven captures and one of four needed two, so large
+    // cities were effectively immortal.
+    const visitsToErase = (start: number): number => {
+      let size = start;
+      let visits = 0;
+      const raider = spawnUnit(board(), 0, 'orc', 1, 1);
+      while (size >= 1 && visits < 50) {
+        visits++;
+        size -= sackSeverity(raider, size);
+      }
+      return visits;
+    };
+    const small = visitsToErase(4);
+    const large = visitsToErase(20);
+    expect(large).toBeLessThanOrEqual(small + 3);
+  });
+
+  it('still takes at least one citizen from the smallest place', () => {
+    const state = board();
+    const raider = spawnUnit(state, 0, 'goblin', 1, 1);
+    expect(sackSeverity(raider, 1)).toBeGreaterThanOrEqual(1);
   });
 });

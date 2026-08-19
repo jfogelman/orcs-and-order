@@ -888,6 +888,50 @@ but the writing.
   ART_PROMPTS.md; the current marker is a drawn asterisk and would be replaced.
 - **No captured units this iteration**, so promotions never change hands.
 
+## 4k. Sacking depth: the see-saw finally slows
+
+Sacking now takes a share of the city as well as a flat toll, because a flat
+toll of three could never finish a city of twelve and captures at a given city
+land about ninety turns apart.
+
+| fraction | ended early | changes of hands | cities razed | gap |
+|---|---|---|---|---|
+| 0 (flat only) | 2/18 | 33.2 | 0.9 | 191 |
+| 0.25 | 4/18 | 28.9 | 0.8 | 103 |
+| 0.4 | 3/18 | 25.6 | 1.2 | 159 |
+| **0.6** | 5/18 | **14.4** | **2.4** | 130 |
+
+A **clean dose-response** -- churn falls at every step, razing rises with it.
+That is the shape of a real mechanism, as against the isolated spike with flat
+neighbours that turned out to be fitted to the sample in 4h.
+
+**Confirmed on a fresh seed set**, which is the rule written down after that
+overfit: changes of hands 21.4 to 12.2 and razing 0.9 to 1.6. Same direction,
+similar size, different maps. Set to 0.6.
+
+### What it does not fix
+
+Decisive games move by +3 on the original seeds and +1 on the fresh ones, so the
+turn limit is barely touched. **Slowing the see-saw and ending the game turn out
+to be separable**: the churn is now half what it was and most games still reach
+turn 300, because neither side can eliminate the other. Wins stay in the 5-13 to
+7-11 noise band throughout, so none of this is balance work.
+
+### Two defects it exposed
+
+- **The AI often never researched Bridge Building**, which is what unlocks the
+  outpost. So in a good share of games it simply could not answer the supply
+  penalty -- exactly the failure the linked-outpost rule was meant to prevent,
+  hiding one level further up. Now high on both priority lists, and the earlier
+  supply measurements were partly measuring an AI that had no answer.
+- **The outpost rule crowded out every economy building** once the advance was
+  actually researched. It now fires only where there are troops nearby genuinely
+  short of supply, so a depot earns its place rather than taking it.
+
+Two tests had to stop assuming a single seed produces a long game -- games now
+end by conquest often enough that a five-hundred-turn loop can exit at turn
+ninety with nothing built.
+
 ## 5. Also queued, from earlier
 
 - **Unit-driven buildings.** A building that only functions while a matching unit

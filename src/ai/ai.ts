@@ -9,7 +9,8 @@ import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
   capitalOf,
   suppliesArmy,
   SUPPLY,
-  supplyChain
+  supplyChain,
+  supplyQuality
 } from '../sim/city';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
@@ -60,6 +61,10 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
      */
     techPriority: [
       'mapmaking',
+      // Unlocks the outpost, which is the only answer to fighting out of
+      // supply. Left off this list it was rarely researched at all, so half
+      // the games had an AI that could not respond to the penalty.
+      'bridge-building',
       'goblin-smarts',
       'orc-meaning',
       'orc-together',
@@ -110,6 +115,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     garrisonPerCity: 1,
     techPriority: [
       'mapmaking',
+      // The Forward Depot, for the same reason as the Horde's outpost.
+      'bridge-building',
       'brotherhood',
       'archery',
       'not-you-again',
@@ -300,12 +307,12 @@ function chooseProduction(
     if (siege && !haveSiege) return { kind: 'unit', id: siege.id };
   }
 
-  // 3c. A forward city that feeds nobody is where the army is trying to
-  // operate from, and every unit around it is fighting at a penalty and not
-  // healing. That is worth more than any amount of economy, so it comes first.
+  // 3c. A forward city with hungry troops around it wants a depot.
   //
-  // Only when an outpost would actually add coverage: a city already inside
-  // the capital's range does not need one.
+  // Conditional on there actually being somebody out there in need of one.
+  // An unconditional rule crowded out every economy building the moment the
+  // advance was researched -- a city builds one depot and compounds forever
+  // off a treasury, so the depot has to earn its place rather than take it.
   const seat = capitalOf(state, city.owner);
   const covered = seat !== null && distance(seat.x, seat.y, city.x, city.y) <= SUPPLY.range;
   if (!covered && !suppliesArmy(state, city)) {
@@ -315,10 +322,14 @@ function chooseProduction(
     // a stranded one the most expensive way in the game to achieve nothing.
     const chain = supplyChain(state, city.owner);
     const linked = state.cities.some(
-      (c) =>
-        chain.has(c.id) && distance(c.x, c.y, city.x, city.y) <= SUPPLY.linkRange,
+      (c) => chain.has(c.id) && distance(c.x, c.y, city.x, city.y) <= SUPPLY.linkRange,
     );
-    const supplyHouse = linked ? options.buildings.find((b) => b.suppliesArmy) : undefined;
+    const hungry = playerUnits(state, city.owner).some(
+      (u) =>
+        distance(u.x, u.y, city.x, city.y) <= SUPPLY.range && supplyQuality(state, u) < 1,
+    );
+    const supplyHouse =
+      linked && hungry ? options.buildings.find((b) => b.suppliesArmy) : undefined;
     if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
   }
 

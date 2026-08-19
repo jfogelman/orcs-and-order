@@ -118,23 +118,32 @@ describe('economy buildings', () => {
     expect(incomeOver(withRock.state).beakers).toBeGreaterThan(incomeOver(plain.state).beakers);
   });
 
-  it('is actually built by the AI over a long game', () => {
-    const state = createGame({ seed: 4242 });
-    state.players[0].controller = 'ai';
-    beginPlayerTurn(state, 0);
-    for (let i = 0; i < 500 && state.winner === null; i++) {
-      runAiTurn(state, state.activePlayer);
-      endPlayerTurn(state);
-    }
+  it('is actually built by the AI, given a game that lasts', () => {
+    // Spread over several maps rather than one. This used to run a single
+    // seed for five hundred turns, which stopped working once games started
+    // ending by conquest -- the loop exits at the win and the economy never
+    // gets built, which says nothing about whether the AI would have built it.
     const economic = new Set(
       Object.values(BUILDINGS)
         .filter((b) => b.goldBonus || b.scienceBonus)
         .map((b) => b.id),
     );
-    const built = state.players.flatMap((p) =>
-      playerCities(state, p.id).flatMap((c) => c.buildings.filter((b) => economic.has(b))),
-    );
-    expect(built.length, 'no economy building was ever put up').toBeGreaterThan(0);
+    const built = [4242, 1, 7919, 31337].map((seed) => {
+      const state = createGame({ seed });
+      state.players[0].controller = 'ai';
+      beginPlayerTurn(state, 0);
+      for (let i = 0; i < 500 && state.winner === null; i++) {
+        runAiTurn(state, state.activePlayer);
+        endPlayerTurn(state);
+      }
+      return state.players.flatMap((p) =>
+        playerCities(state, p.id).flatMap((c) => c.buildings.filter((b) => economic.has(b))),
+      ).length;
+    });
+    expect(
+      built.some((n) => n > 0),
+      'no AI on any map ever put up an economy building',
+    ).toBe(true);
   });
 });
 
