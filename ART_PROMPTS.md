@@ -445,3 +445,41 @@ If a set of **per-perk** icons is wanted later rather than per-rank, the same
 rules apply and the list would follow whichever perks survive from section 7 of
 DESIGN_QUEUE.md — but rank marks are the cheaper thing to try first, since three
 a side covers every unit in the game.
+
+## City overlays
+
+Small motifs stamped over a city on the map, so its state reads without opening
+the panel. You already have **celebration**, **unrest** and **damaged**; these
+are the states that currently cannot be seen at all from the map, several of
+which the player has to react to.
+
+Save as `art_src/cities/city <state> overlay.<ext>`, matching the three that
+exist. Same recipe as those: **one motif on flat magenta**, no scene, no ground,
+no city underneath — it is composited on top of a settlement that is already
+there, so anything resembling buildings will fight with it.
+
+| state | why it matters | prompt |
+|---|---|---|
+| `ruined` | A sacked city grows nothing for fifteen turns and the map gives no hint | Wooden scaffolding poles lashed together over a small heap of rubble, a bucket hanging from one, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `starving` | Population is falling and nothing on the map says so | An upturned empty cooking pot with a bare gnawed bone beside it and two flies, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `besieged` | Enemies are adjacent and the city may fall next turn | Three crude spears planted in a ring point-up with a tattered dark banner between them, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `supplied` | The supply chain is invisible on the map, and it decides how the army fights | A stack of roped crates and a full sack with a small flag on top, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `capital` | Currently a shape drawn in code; art would read better | A tall standard on a pole with a heavy square banner and a gold finial, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `idle` | Pairs with auto-build: a city sitting on Coin with nothing chosen | A small hourglass on its side beside a rolled unopened scroll, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+
+Three things learned from the sheets already processed:
+
+- **Keep the motif clear of the frame edges.** These are composited at about a
+  third of a tile; anything touching the edge loses its outline.
+- **Avoid brown and grey.** The city sprites underneath are mostly wood, thatch
+  and stone, and a brown motif on a brown settlement vanishes. The three that
+  exist work because they lean on saturated colour — gold sparks, orange fire —
+  or on a hard black silhouette.
+- **One idea per overlay.** At the size these are drawn, a scene reads as a
+  smudge. The unrest overlay works because it is a shape with one angry mark on
+  it, not a picture of a riot.
+
+If several apply at once — a besieged, starving, ruined city is entirely
+possible — only one can sensibly be drawn. Worth deciding an order of
+precedence when these are wired; the obvious one is whatever the player most
+needs to act on, which is roughly besieged, then starving, then ruined.
