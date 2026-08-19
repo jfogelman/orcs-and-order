@@ -20,6 +20,13 @@ export interface ModalOptions {
   width?: string;
   /** Wired up after the modal is in the document. */
   onMount?: (root: HTMLElement, close: () => void) => void;
+  /**
+   * No close button, no escape, no clicking the backdrop away.
+   *
+   * For the title screen, which has nothing behind it worth dismissing to --
+   * closing it would leave the player looking at a map they never asked for.
+   */
+  sticky?: boolean;
 }
 
 let closeCurrent: (() => void) | null = null;
@@ -42,7 +49,7 @@ export function openModal(options: ModalOptions): void {
       <div class="modal-head">
         <h2>${escapeHtml(options.title)}</h2>
         <div style="flex:1"></div>
-        <button class="modal-close">Close</button>
+        ${options.sticky ? '' : '<button class="modal-close">Close</button>'}
       </div>
       <div class="modal-content">${options.body}</div>
     </div>`;
@@ -62,10 +69,12 @@ export function openModal(options: ModalOptions): void {
   closeCurrent = close;
 
   backdrop.querySelector('.modal-close')?.addEventListener('click', close);
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) close();
-  });
-  window.addEventListener('keydown', onKey);
+  if (!options.sticky) {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
+    window.addEventListener('keydown', onKey);
+  }
   options.onMount?.(backdrop, close);
 }
 

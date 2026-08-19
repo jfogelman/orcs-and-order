@@ -33,7 +33,7 @@ import { openCityPanel } from './ui/cityPanel';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
-import { openAudioMenu, openNewGameMenu, openSaveMenu } from './ui/menus';
+import { openAudioMenu, openNewGameMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
 
@@ -90,7 +90,10 @@ class App {
     this.bindEvents();
     this.selectNextIdle();
     this.refreshHud();
-    this.promptResearchIfIdle();
+    // The map behind this is a real game, generated so there is something to
+    // look at rather than a blank canvas -- but it is nobody's game until a
+    // choice is made here, and New Game replaces it wholesale.
+    this.openTitle();
     requestAnimationFrame(this.frame);
   }
 
@@ -603,6 +606,14 @@ class App {
 
   private refreshMuteButton(): void {
     el('btn-mute').textContent = audio.muted ? 'Sound: off' : 'Sound: on';
+  }
+
+  /** The first screen: start something, or pick up something saved. */
+  private openTitle(): void {
+    openTitleMenu(
+      () => this.openNewGame(),
+      () => this.openSaves(),
+    );
   }
 
   private openNewGame(): void {

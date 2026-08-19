@@ -264,3 +264,51 @@ export function openSaveMenu(
     },
   });
 }
+
+/**
+ * The screen the game opens on.
+ *
+ * Loading straight into a playable map meant the first thing anybody saw was
+ * somebody else's game already in progress, with the Advances panel over it
+ * asking what to research -- a question about a civilisation the player had
+ * not chosen and could not see. This asks the two questions that actually come
+ * first instead.
+ *
+ * Sticky: there is nothing behind it worth dismissing to.
+ */
+export function openTitleMenu(onNew: () => void, onLoad: () => void): void {
+  const saves = listSlots();
+  openModal({
+    title: 'Orcs & Order',
+    width: 'min(560px, 94vw)',
+    sticky: true,
+    body: `
+      <div class="panel-body">
+        <p class="flavor">
+          Two civilisations, neither of them ready. One has to be told what an
+          orc is for; the other files a form about it.
+        </p>
+        <div class="button-row">
+          <button class="small" data-act="new">New Game</button>
+          <button class="small" data-act="load"${saves.length === 0 ? ' disabled' : ''}>
+            Load Game${saves.length > 0 ? ` (${saves.length})` : ''}
+          </button>
+        </div>
+        ${
+          saves.length === 0
+            ? '<p class="flavor">No saved games yet.</p>'
+            : ''
+        }
+      </div>`,
+    onMount: (root, close) => {
+      root.querySelector<HTMLButtonElement>('[data-act="new"]')?.addEventListener('click', () => {
+        close();
+        onNew();
+      });
+      root.querySelector<HTMLButtonElement>('[data-act="load"]')?.addEventListener('click', () => {
+        close();
+        onLoad();
+      });
+    },
+  });
+}
