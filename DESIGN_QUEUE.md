@@ -936,6 +936,65 @@ Two tests had to stop assuming a single seed produces a long game -- games now
 end by conquest often enough that a five-hundred-turn loop can exit at turn
 ninety with nothing built.
 
+## 8. City size limited by the land — ideas to pick from
+
+**What exists already.** A city has a `contentLimit` -- base plus buildings plus the
+Happiness advance -- and going over it causes disorder rather than stopping growth.
+Separately, poor land already caps a city *silently*: citizens eat, tiles feed, and a
+city ringed by mountains starves back down without ever being told it cannot grow.
+Eight named specials exist per terrain (Suspiciously Good Grass, A Very Deep Hole,
+Bones Worth Something) and currently do nothing but change a tile's yield.
+
+So the honest framing is not "add a limit" -- there are two -- but **make the land's
+limit legible and worth planning around**, and stop the second one being invisible.
+
+### The catch, before any of it
+
+Population is **82% of the score gap** (4d). Anything that caps population is one of
+the largest levers in the game, larger than most of what has been swept so far, and it
+will hit whichever side builds bigger cities. It also interacts with sacking, which
+already cuts cities down. Whatever is chosen wants measuring on two seed sets before
+it is believed, per 4h.
+
+### Options
+
+**A. Support from the land.** Each terrain in the fat cross contributes a support
+number -- grass 1, forest and hills 0.5, mountains and wastes 0 -- and the city's
+ceiling is the sum, rounded. Computable from data that already exists, legible as one
+number in the panel, and it makes *where* you settle the decision rather than *whether*
+you settle. Downside: it is another ceiling next to `contentLimit`, and two ceilings
+need visibly different names or the panel becomes confusing.
+
+**B. Fresh water.** A city cannot pass some size without water in its cross. One rule,
+trivially legible, immediately understandable, and it makes coasts and lakes worth
+fighting over -- which the map currently has no reason to care about. Downside: binary,
+so it is a gate rather than a gradient, and worldgen would need checking to be sure
+water is not so common the rule never bites.
+
+**C. Specials raise the ceiling.** The eight that exist stop being a yield tweak and
+become the reason a site is worth taking. Suspiciously Good Grass feeds more people; A
+Very Deep Hole does not. Pairs naturally with A -- specials add support -- and gives
+the existing content a job it does not have.
+
+**D. Make the silent limit loud.** Add no rule at all; show the ceiling the land
+already imposes. The panel would say "this land feeds 7" from the same arithmetic that
+currently just starves people quietly. Cheapest by a distance, changes no balance, and
+removes a genuine confusion where a city shrinks and nothing explains why.
+
+### Suggested shape
+
+**D first, then A and C together.** D is nearly free, cannot break the balance, and
+fixes a real legibility problem on its own; if the land's implicit ceiling turns out to
+be doing most of the work already, A may not be needed at all. A and C then make it a
+decision rather than a report, and C finally gives the eight specials a purpose.
+
+B is the most fun thematically -- an orc settlement with nowhere to get water is very
+much this game -- but it is the one most likely to be either irrelevant or brutal
+depending on how much water worldgen makes, so it wants that checked first.
+
+Art for the specials is prompted in ART_PROMPTS.md; they currently share one generic
+drawn diamond, which is the reason none of them read as anything in particular.
+
 ## 5. Also queued, from earlier
 
 - ~~**Unit-driven buildings.**~~ Built and measured in 4c: `needsGarrison` on the

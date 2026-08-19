@@ -510,3 +510,36 @@ If several apply at once — a besieged, starving, ruined city is entirely
 possible — only one can sensibly be drawn. Worth deciding an order of
 precedence when these are wired; the obvious one is whatever the player most
 needs to act on, which is roughly besieged, then starving, then ruined.
+
+## Land specials
+
+Eight resources already exist in the rules, one per terrain, each with a name and its
+own yields — and all eight currently share a single generic drawn diamond, which is
+why none of them reads as anything in particular. These give each one a face.
+
+Save as `art_src/specials/<terrain id>.<ext>`. They are stamped onto a **32px terrain
+tile**, so they end up smaller than anything else in the game: **one object, no
+scene, no ground**, on flat magenta. Silhouette is the whole job.
+
+| terrain | what it is called | prompt |
+|---|---|---|
+| `grass` | Suspiciously Good Grass | A single fat tuft of vivid green grass with three seed heads, faintly glowing, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `forest` | Big Angry Game | A pair of heavy curved antlers, chipped and scarred, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `hills` | Shiny Rocks | Three faceted blue-white gemstones in a small cluster, catching light, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `mountains` | A Very Deep Hole | A dark round pit mouth with two timber props at its lip and no bottom visible, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `swamp` | Smells Like Money | A cracked clay jar tipped over with dull coins and green ooze spilling out, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `desert` | Bones Worth Something | A bleached horned skull half-buried, with one gold ring around a horn, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `water` | Fish, Probably | Two silver-blue fish crossed tail over tail, one with an odd extra fin, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `deep` | Something Enormous | A single vast dark coil breaking a water surface, with two small bubbles, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+
+These are the smallest things in the game, and that changes what works:
+
+- **No interior detail.** At 32px on a tile these are read as a shape and a colour.
+  The gemstones work because three blobs of blue on brown hills is unmistakable; a
+  detailed mine cart would be four grey pixels.
+- **Contrast with the terrain each one sits on.** Blue gems on brown hills, gold on
+  pale desert, green tuft on green grass is the hard one — that is why the prompt asks
+  for it faintly glowing, so it separates from the field behind it.
+- **Two of them sit on water**, which is bright cyan. Silver-blue fish will struggle
+  there; if they vanish, a darker outline or a warmer colour is the fix rather than a
+  bigger fish.
