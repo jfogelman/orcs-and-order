@@ -7,7 +7,7 @@ import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
-import { inSupply } from '../sim/city';
+import { capitalOf, inSupply } from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
 
@@ -475,6 +475,10 @@ export class MapRenderer {
     c: City,
     cam: Camera,
   ): void {
+    // The capital wears a small crown. It is the one city whose loss moves
+    // the supply network, so it is worth being able to find at a glance.
+    const seat = capitalOf(state, c.owner);
+    const isCapital = seat?.id === c.id;
     const owner = state.players[c.owner];
     const faction = FACTIONS[owner.faction];
     const s = cam.tileToScreen(c.x, c.y);
@@ -496,6 +500,32 @@ export class MapRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(c.size), s.x + r + 2, s.y + r + 3);
+
+    // A crown on the capital, opposite the size badge.
+    if (isCapital) {
+      const cr = Math.max(5, size * 0.15);
+      const cx = s.x + size - cr - 3;
+      const cy = s.y + cr + 3;
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f0c64a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Three points and a base: legible at a dozen pixels where a glyph is not.
+      ctx.fillStyle = '#f0c64a';
+      ctx.beginPath();
+      ctx.moveTo(cx - cr * 0.55, cy + cr * 0.4);
+      ctx.lineTo(cx - cr * 0.55, cy - cr * 0.35);
+      ctx.lineTo(cx - cr * 0.2, cy + cr * 0.05);
+      ctx.lineTo(cx, cy - cr * 0.5);
+      ctx.lineTo(cx + cr * 0.2, cy + cr * 0.05);
+      ctx.lineTo(cx + cr * 0.55, cy - cr * 0.35);
+      ctx.lineTo(cx + cr * 0.55, cy + cr * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     if (size >= 40) {
       ctx.font = `${Math.round(size * 0.22)}px system-ui, sans-serif`;

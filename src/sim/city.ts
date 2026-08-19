@@ -474,9 +474,13 @@ export function buildOptions(
   const owner = state.players[city.owner];
   const units = unlockedUnits(owner);
   const already = new Set(city.buildings);
+  const seat = capitalOf(state, city.owner);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
-    .filter((b) => buildingsForFaction(owner.faction).some((f) => f.id === b.id));
+    .filter((b) => buildingsForFaction(owner.faction).some((f) => f.id === b.id))
+    // A capital already supplies an army; building a depot in the place the
+    // supplies come from is not a thing anybody would do.
+    .filter((b) => !b.suppliesArmy || seat?.id !== city.id);
   return { units, buildings };
 }
 

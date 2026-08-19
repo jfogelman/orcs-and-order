@@ -263,6 +263,11 @@ class App {
       }, ATTACK_HOLD_MS);
     }
 
+    // Drain here, not only at end of turn. Without this a city razed by the
+    // player's own move produced its animation on the *next* drain, which is
+    // the end of the turn -- so the settlement came apart minutes after it
+    // stopped existing.
+    this.playLogCues();
     this.refreshHud();
     this.refreshOverlays();
   }

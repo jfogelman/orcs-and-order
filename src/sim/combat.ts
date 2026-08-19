@@ -46,7 +46,15 @@ export const MAX_RANK = RANK_BONUS.length - 1;
  * double as an experience ladder, and the biggest unit would both hit hardest
  * and improve fastest.
  */
-export const XP = { kill: 50, survive: 15, thresholds: [0, 100, 300, 700] } as const;
+export const XP = {
+  kill: 50,
+  survive: 15,
+  /** Taking a city off somebody. */
+  city: 60,
+  /** Taking one off somebody so thoroughly that it stops being a city. */
+  raze: 120,
+  thresholds: [0, 100, 300, 700],
+} as const;
 
 export function rankBonus(unit: Unit): number {
   return RANK_BONUS[Math.min(unit.rank, MAX_RANK)] ?? 1;

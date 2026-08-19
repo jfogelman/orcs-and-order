@@ -290,6 +290,7 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
   // city taken with nobody left in it is razed rather than handed over.
   if (city.size - severity < 1) {
     razeCity(state, city, to, from);
+    awardXp(state, unit, XP.raze);
     recomputeVisibility(state, to.id);
     recomputeVisibility(state, from.id);
     return false;
@@ -321,6 +322,7 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
   city.shields = 0;
   log(state, `${city.name} falls to ${to.name}.`, 'combat', unit.owner, 'capture', [city.x, city.y]);
   log(state, `${city.name} has been taken by ${to.name}.`, 'bad', from.id, 'city-lost', [city.x, city.y]);
+  awardXp(state, unit, XP.city);
   return true;
 }
 

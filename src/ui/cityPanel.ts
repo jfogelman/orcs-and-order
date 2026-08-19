@@ -20,6 +20,7 @@ import {
   isRuined
 } from '../sim/city';
 import { bar, escapeHtml, openModal } from './dom';
+import { splitTrade } from '../sim/research';
 import { openPedia } from './pedia';
 import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
 
@@ -95,6 +96,13 @@ export function openCityPanel(
   const upkeep = unitUpkeep(state, city);
   const goldBonus = cityGoldBonus(state, city);
   const scienceBonus = cityScienceBonus(state, city);
+  // What this city actually contributes, worked out the same way runEconomy
+  // does it. Trade comes from worked tiles and every citizen works one, so
+  // this is where a city's size turns into research -- which was true before
+  // and simply never shown.
+  const split = splitTrade(state.players[city.owner], yields.trade);
+  const goldPerTurn = Math.round(split.gold * (1 + goldBonus));
+  const beakersPerTurn = Math.round(split.beakers * (1 + scienceBonus));
   // A building that has stopped paying because nobody is standing in the city
   // otherwise just shows as a bonus of zero, which reads as the building being
   // broken rather than as a rule the player can act on.
@@ -141,6 +149,7 @@ export function openCityPanel(
               : ''
           }
           ${bar(city.food, foodToGrow(city.size))}
+          <div class="stat-row"><span class="label">Trade</span><span class="value">${yields.trade}/turn <span class="muted">(${goldPerTurn}g, ${beakersPerTurn} beakers)</span></span></div>
           <div class="stat-row"><span class="label">Shields</span><span class="value">${netShields}/turn${upkeep > 0 ? ` <span class="muted">(${yields.shields} − ${upkeep} rations)</span>` : ''}</span></div>
           <div class="stat-row"><span class="label">Supports free</span><span class="value">${freeSupport(city)} units</span></div>
           <div class="stat-row"><span class="label">Trade</span><span class="value">${yields.trade}/turn</span></div>
