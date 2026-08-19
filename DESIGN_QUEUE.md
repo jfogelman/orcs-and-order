@@ -934,9 +934,11 @@ ninety with nothing built.
 
 ## 5. Also queued, from earlier
 
-- **Unit-driven buildings.** A building that only functions while a matching unit
-  garrisons it. Would give idle late-game units a job, and would make the Goblin
-  Treasury's blurb literal: a treasury that leaks gold to whoever sacks the city.
+- ~~**Unit-driven buildings.**~~ Built and measured in 4c: `needsGarrison` on the
+  Goblin Treasury and Simple Market. Balance-neutral, kept for the flavour.
+- **Two pieces of art sitting unwired**: `broken catapult attack.jpg`, and the
+  celebration, unrest and damaged city overlays, which are waiting on the extra
+  logic you wanted with them.
 - **Manual city tile assignment.** Citizens are auto-assigned greedily.
 - **Unit movement animation.** Units teleport between tiles.
 - **End-of-turn summary.** What happened while you were not looking.
