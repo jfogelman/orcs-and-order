@@ -1,5 +1,7 @@
 import { audio } from '../audio/audio';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
+import { perkName } from '../model/perks';
+import type { PerkDef } from '../model/perks';
 import type { FactionId, GameState } from '../model/types';
 import type { NewGameOptions } from '../sim/gamestate';
 import {
@@ -308,6 +310,45 @@ export function openTitleMenu(onNew: () => void, onLoad: () => void): void {
       root.querySelector<HTMLButtonElement>('[data-act="load"]')?.addEventListener('click', () => {
         close();
         onLoad();
+      });
+    },
+  });
+}
+
+/**
+ * Ask what a newly promoted unit has learned.
+ *
+ * Sticky, because a promotion the player did not answer would sit owed
+ * forever and the unit would quietly never get its perk. There is no wrong
+ * choice here, so there is nothing to escape from.
+ */
+export function openPerkMenu(
+  unitName: string,
+  faction: FactionId,
+  options: PerkDef[],
+  onPick: (perkId: string) => void,
+): void {
+  const cards = options
+    .map(
+      (p) => `
+      <button class="choice-card" data-perk="${escapeHtml(p.id)}">
+        <span class="choice-name">${escapeHtml(perkName(p, faction))}</span>
+        <span class="choice-blurb">${escapeHtml(p.blurb)}</span>
+      </button>`,
+    )
+    .join('');
+
+  openModal({
+    title: `${unitName} has learned something`,
+    width: 'min(720px, 94vw)',
+    sticky: true,
+    body: `<div class="panel-body"><div class="choice-row">${cards}</div></div>`,
+    onMount: (root, close) => {
+      root.querySelectorAll<HTMLButtonElement>('[data-perk]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          close();
+          onPick(btn.dataset.perk ?? '');
+        });
       });
     },
   });

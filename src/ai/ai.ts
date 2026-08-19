@@ -2,6 +2,7 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
+import { owedPerks, perkChoices } from '../model/perks';
 import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
   rushBlocked,
   rushBuy,
@@ -560,12 +561,39 @@ function spendGold(state: GameState, player: Player): void {
   }
 }
 
+/**
+ * Take the promotions owed to this player's units.
+ *
+ * Ordered by taste rather than measured: the Horde reaches for the thing that
+ * hits harder, the Kingdom for the thing that keeps an army standing. Neither
+ * list has been swept, and both are one array away from being changed once
+ * somebody has an opinion backed by numbers.
+ */
+const PERK_TASTE: Record<string, string[]> = {
+  orc: ['bloodied', 'butcher', 'reputation', 'dug-in', 'field-repairs', 'quartermaster'],
+  human: ['dug-in', 'quartermaster', 'field-repairs', 'bloodied', 'reputation', 'butcher'],
+};
+
+function takePromotions(state: GameState, player: Player): void {
+  const taste = PERK_TASTE[player.faction] ?? PERK_TASTE.orc;
+  for (const unit of playerUnits(state, player.id)) {
+    while (owedPerks(unit) > 0) {
+      const options = perkChoices(unit);
+      if (options.length === 0) break;
+      // First thing on the list that is still going.
+      const pick = taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
+      unit.perks = [...(unit.perks ?? []), pick.id];
+    }
+  }
+}
+
 export function runAiTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
   const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
 
   chooseResearch(state, player, personality);
+  takePromotions(state, player);
 
   for (const city of playerCities(state, playerId)) {
     city.producing = chooseProduction(state, city, personality);

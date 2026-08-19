@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { unitType } from '../src/model/units';
 import type { GameState } from '../src/model/types';
-import { awardXp, MAX_RANK, rankBonus, RANK_BONUS, VETERAN_BONUS, XP } from '../src/sim/combat';
+import {
+  attackStrength,
+  awardXp,
+  defenseStrength,
+  MAX_RANK,
+  PERK_BONUS,
+  rankBonus,
+  RANK_BONUS,
+  stormEmptyCity,
+  VETERAN_BONUS,
+  XP,
+} from '../src/sim/combat';
+import { owedPerks, perkChoices, perkName, PERKS } from '../src/model/perks';
+import { sackSeverity } from '../src/sim/movement';
+import { supplyQuality, SUPPLY } from '../src/sim/city';
+import { beginPlayerTurn } from '../src/sim/turn';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { tryStep } from '../src/sim/movement';
 
@@ -105,5 +120,109 @@ describe('where experience comes from', () => {
     if (!state.units.includes(victim)) {
       expect(orc.xp, 'the winner learned nothing').toBeGreaterThan(0);
     }
+  });
+});
+
+describe('what a promotion buys', () => {
+  it('owes exactly one choice per rank, and forgets nothing', () => {
+    const state = board();
+    const orc = spawnUnit(state, 0, 'orc', 5, 5);
+    expect(owedPerks(orc)).toBe(0);
+    orc.rank = 2;
+    expect(owedPerks(orc)).toBe(2);
+    orc.perks = ['bloodied'];
+    expect(owedPerks(orc)).toBe(1);
+    orc.perks = ['bloodied', 'dug-in'];
+    expect(owedPerks(orc)).toBe(0);
+  });
+
+  it('never offers the same thing twice', () => {
+    const state = board();
+    const orc = spawnUnit(state, 0, 'orc', 5, 5);
+    orc.perks = ['bloodied'];
+    expect(perkChoices(orc).map((p) => p.id)).not.toContain('bloodied');
+  });
+
+  it('names the same perk differently for each side', () => {
+    // Same numbers, different story: the Horde's are things that happened to
+    // it, the Kingdom's are things somebody arranged.
+    for (const perk of PERKS) {
+      expect(perkName(perk, 'orc')).not.toBe(perkName(perk, 'human'));
+    }
+  });
+
+  it('makes a bloodied unit hit harder and a dug-in one harder to shift', () => {
+    const state = board();
+    const plain = spawnUnit(state, 0, 'orc', 5, 5);
+    const keen = spawnUnit(state, 0, 'orc', 6, 5);
+    const target = spawnUnit(state, 1, 'footman', 9, 9);
+    keen.perks = ['bloodied'];
+    expect(attackStrength(state, keen, target).total).toBeCloseTo(
+      attackStrength(state, plain, target).total * PERK_BONUS,
+    );
+
+    const soft = spawnUnit(state, 1, 'footman', 12, 12);
+    const stubborn = spawnUnit(state, 1, 'footman', 13, 12);
+    stubborn.perks = ['dug-in'];
+    expect(defenseStrength(state, stubborn).total).toBeCloseTo(
+      defenseStrength(state, soft).total * PERK_BONUS,
+    );
+  });
+
+  it('lets a butcher take more of a city', () => {
+    const state = board();
+    const plain = spawnUnit(state, 0, 'orc', 5, 5);
+    const thorough = spawnUnit(state, 0, 'orc', 6, 5);
+    thorough.perks = ['butcher'];
+    expect(sackSeverity(thorough, 6)).toBeGreaterThan(sackSeverity(plain, 6));
+  });
+
+  it('lets a reputation walk past the townsfolk', () => {
+    const state = board();
+    const city = {
+      id: 1, owner: 1, name: 'Nervous', x: 10, y: 10, size: 10, food: 0, shields: 0,
+      buildings: [], producing: { kind: 'coin' as const }, workedTiles: [],
+      disorder: false, foundedTurn: 1,
+    };
+    state.cities.push(city);
+    const feared = spawnUnit(state, 0, 'goblin', 11, 10);
+    feared.perks = ['reputation'];
+    feared.hp = 1;
+    for (let i = 0; i < 20; i++) {
+      const stand = stormEmptyCity(state, feared, city);
+      expect(stand.damage, 'somebody threw something at a legend').toBe(0);
+      expect(stand.taken).toBe(true);
+    }
+  });
+
+  it('keeps a field surgeon healing beyond the supply line', () => {
+    const state = board();
+    state.cities.push({
+      id: 2, owner: 0, name: 'Home', x: 2, y: 2, size: 3, food: 0, shields: 0,
+      buildings: [], producing: { kind: 'coin' as const }, workedTiles: [],
+      disorder: false, foundedTurn: 1,
+    });
+    const stranded = spawnUnit(state, 0, 'orc', 25, 15);
+    const patched = spawnUnit(state, 0, 'orc', 26, 15);
+    patched.perks = ['field-repairs'];
+    stranded.hp = 3;
+    patched.hp = 3;
+    beginPlayerTurn(state, 0);
+    expect(stranded.hp, 'an ordinary stranded unit healed').toBe(3);
+    expect(patched.hp, 'a field surgeon did not').toBeGreaterThan(3);
+  });
+
+  it('extends supply for a quartermaster', () => {
+    const state = board();
+    state.cities.push({
+      id: 3, owner: 0, name: 'Depot', x: 10, y: 10, size: 3, food: 0, shields: 0,
+      buildings: [], producing: { kind: 'coin' as const }, workedTiles: [],
+      disorder: false, foundedTurn: 1,
+    });
+    const ordinary = spawnUnit(state, 0, 'orc', 10 + SUPPLY.range + 1, 10);
+    const resourceful = spawnUnit(state, 0, 'orc', 10 + SUPPLY.range + 2, 10);
+    resourceful.perks = ['quartermaster'];
+    expect(supplyQuality(state, ordinary)).toBeLessThan(1);
+    expect(supplyQuality(state, resourceful), 'the quartermaster went short').toBe(1);
   });
 });

@@ -1,5 +1,6 @@
 import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
+import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
 import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
@@ -211,6 +212,8 @@ export const MILITIA = { perCitizen: 0.3 };
 export const SUPPLY = {
   /** Tiles from a supplying city. Anything at or beyond 99 turns it off. */
   range: 4,
+  /** Extra tiles of reach for a unit that has learned where things are. */
+  perkReach: 2,
   /** Attack multiplier when supply has run out entirely. */
   attackPenalty: 0.6,
   /**
@@ -310,6 +313,8 @@ export function supplyChain(state: GameState, playerId: number): Map<number, num
  */
 export function supplyQuality(state: GameState, unit: Unit): number {
   if (SUPPLY.range >= 99) return 1;
+  // Somebody in this lot knows where to find things.
+  const reach = SUPPLY.range + (hasPerk(unit, 'quartermaster') ? SUPPLY.perkReach : 0);
   const chain = supplyChain(state, unit.owner);
   if (chain.size === 0) return 0;
 
@@ -317,10 +322,10 @@ export function supplyQuality(state: GameState, unit: Unit): number {
   for (const c of state.cities) {
     if (c.owner !== unit.owner || !chain.has(c.id)) continue;
     const d = distance(c.x, c.y, unit.x, unit.y);
-    if (d <= SUPPLY.range) return 1;
+    if (d <= reach) return 1;
     // Beyond the ring, thinning out over the same distance again before it
     // runs out entirely.
-    const fade = 1 - (d - SUPPLY.range) / SUPPLY.range;
+    const fade = 1 - (d - reach) / SUPPLY.range;
     best = Math.max(best, fade);
   }
   return Math.max(0, best);

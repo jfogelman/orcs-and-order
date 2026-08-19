@@ -9,6 +9,7 @@ import { TERRAIN } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
 import type { City, GameState, Unit } from './model/types';
+import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
 import { EffectLayer } from './render/effects';
 import type { EffectId } from './render/effects';
@@ -33,7 +34,7 @@ import { openCityPanel } from './ui/cityPanel';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
-import { openAudioMenu, openNewGameMenu, openSaveMenu, openTitleMenu } from './ui/menus';
+import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
 
@@ -258,6 +259,7 @@ class App {
       // why attacks looked like they simply were not animated.
       window.setTimeout(() => {
         if (this.state.units.includes(unit) && unit.moves <= 0) this.selectNextIdle();
+        this.promptPerkIfOwed();
       }, ATTACK_HOLD_MS);
     }
 
@@ -381,6 +383,9 @@ class App {
       return;
     }
     audio.play('turn', 0);
+    // Promotions first: they are about something that already happened, and
+    // research is about what to do next.
+    this.promptPerkIfOwed();
     this.promptResearchIfIdle();
   }
 
@@ -391,6 +396,28 @@ class App {
    * progress -- but the direction of an empire's research is exactly the sort
    * of decision that should not happen behind the player's back.
    */
+  /**
+   * Ask about any promotion the player has not answered yet.
+   *
+   * Driven off what a unit is owed rather than a queue of events, so
+   * promotions earned during an AI turn, or several at once, all get asked
+   * about eventually and none can be lost. One at a time, and only when
+   * nothing else is open.
+   */
+  private promptPerkIfOwed(): void {
+    if (isModalOpen() || this.state.winner !== null) return;
+    const unit = playerUnits(this.state, this.viewerId).find((u) => owedPerks(u) > 0);
+    if (!unit) return;
+    const options = perkChoices(unit);
+    if (options.length === 0) return;
+    openPerkMenu(unitType(unit.type).name, this.state.players[this.viewerId].faction, options, (id) => {
+      unit.perks = [...(unit.perks ?? []), id];
+      this.refreshSidebar();
+      // There may be more than one waiting.
+      this.promptPerkIfOwed();
+    });
+  }
+
   private promptResearchIfIdle(): void {
     const player = this.state.players[this.viewerId];
     if (player.researching || isModalOpen() || this.state.winner !== null) return;
@@ -733,6 +760,7 @@ class App {
     this.refreshOverlays();
     this.refreshSidebar();
     this.refreshHud();
+    this.promptPerkIfOwed();
     return true;
   }
 
@@ -908,6 +936,19 @@ class App {
           ${
             t.crowded
               ? `<div class="stat-row"><span class="label">Crowd</span><span class="value k-bad">${t.count} of them, nobody agreeing</span></div>`
+              : ''
+          }
+          ${
+            (unit.perks?.length ?? 0) > 0
+              ? `<div class="stat-row"><span class="label">Learned</span><span class="value">${unit
+                  .perks!.map((id) =>
+                    escapeHtml(
+                      PERK_BY_ID[id]
+                        ? perkName(PERK_BY_ID[id], this.state.players[unit.owner].faction)
+                        : id,
+                    ),
+                  )
+                  .join(', ')}</span></div>`
               : ''
           }
           ${

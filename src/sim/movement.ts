@@ -2,6 +2,7 @@ import { distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
+import { hasPerk } from '../model/perks';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { RUIN } from './city';
@@ -237,11 +238,13 @@ export const SACKING = {
  * place is.
  */
 export function sackSeverity(attacker: Unit, size = 0): number {
+  // Somebody who has done this before, and is thorough about it.
+  const extra = hasPerk(attacker, 'butcher') ? 1 : 0;
   const flat = Math.min(
     SACKING.cap,
     Math.max(1, Math.round(unitType(attacker.type).attack / SACKING.perAttack)),
   );
-  return Math.max(flat, Math.ceil(size * SACKING.fraction));
+  return extra + Math.max(flat, Math.ceil(size * SACKING.fraction));
 }
 
 /**

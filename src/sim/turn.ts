@@ -1,4 +1,5 @@
 import { unitType } from '../model/units';
+import { hasPerk } from '../model/perks';
 import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
@@ -57,7 +58,11 @@ function regenRateFor(state: GameState, unit: Unit): number {
       : unit.order === 'sentry'
         ? REGEN.sentry
         : REGEN.afield;
-  return posture * supplyQuality(state, unit);
+  // Somebody who can patch themselves up out there does so, slowly, whatever
+  // the supply situation.
+  const supplied = supplyQuality(state, unit);
+  if (hasPerk(unit, 'field-repairs')) return posture * Math.max(supplied, 0.5);
+  return posture * supplied;
 }
 
 function healUnits(state: GameState, playerId: number): void {

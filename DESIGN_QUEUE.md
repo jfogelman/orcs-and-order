@@ -826,7 +826,11 @@ exists so nothing gets built twice.
   than what happens today, and the interesting half is the bonus at the top end.
   Wants measuring: a doubling multiplier on a score dominated by population is
   a large lever.
-- **Experience and promotion choices.** See section 7.
+- ~~**Experience and promotion choices.**~~ Built: six perks, one chosen per
+  rank, each hooking into a rule that already exists rather than adding a
+  subsystem. The two sides take the same perks under different names.
+  Deliberately excludes the three from section 7 that change how a fight works
+  -- Twice, Riposte and Overrun -- which stay in "later" where you put them.
 
 ### Later
 

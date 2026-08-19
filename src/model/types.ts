@@ -74,6 +74,13 @@ export interface Unit {
   rank: number;
   /** Experience toward the next rank. */
   xp: number;
+  /**
+   * Perks chosen on promotion, one per rank.
+   *
+   * Optional so old saves and test fixtures need not declare it; a unit owes a
+   * choice whenever it has fewer of these than it has ranks.
+   */
+  perks?: string[];
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;

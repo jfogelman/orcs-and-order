@@ -1,5 +1,6 @@
 import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
+import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
@@ -16,6 +17,9 @@ import { hasFlag } from './rules';
  */
 
 export const VETERAN_BONUS = 1.5;
+
+/** What a chosen perk is worth where it simply multiplies something. */
+export const PERK_BONUS = 1.25;
 
 /**
  * What each rank multiplies strength by.
@@ -167,6 +171,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   const supplied = supplyQuality(state, attacker);
   if (supplied < 1) total *= SUPPLY.attackPenalty + (1 - SUPPLY.attackPenalty) * supplied;
   total *= rankBonus(attacker);
+  if (hasPerk(attacker, 'bloodied')) total *= PERK_BONUS;
   total *= siegeMult;
   total *= sallyMult;
   if (berserk) total *= 1.25;
@@ -219,6 +224,7 @@ export function defenseStrength(
 
   let total = type.defense;
   total *= rankBonus(defender);
+  if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   total *= terrain.defense;
   if (fortified) total *= FORTIFY_BONUS;
   total *= wallsMult;
@@ -361,6 +367,9 @@ export interface MilitiaResult {
  * eight people for free.
  */
 export function stormEmptyCity(state: GameState, attacker: Unit, city: City): MilitiaResult {
+  // Some reputations arrive before the army does, and the townsfolk decide
+  // this is somebody else's problem.
+  if (hasPerk(attacker, 'reputation')) return { taken: true, damage: 0 };
   const atk = attackStrength(state, attacker, attacker).total;
   const def = militiaStrength(city);
   if (def <= 0) return { taken: true, damage: 0 };
