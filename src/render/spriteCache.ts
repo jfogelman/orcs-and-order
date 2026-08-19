@@ -66,6 +66,8 @@ export class SpriteCache {
     this.attackFrames(typeId);
     // Wanted the instant the unit takes a hit, so fetched before it does.
     this.hurtFrames(typeId);
+    // Only trolls have one, so this is a single 404 for everyone else, once.
+    if (unitType(typeId).regenMultiplier > 1) this.regenFrames(typeId);
     // A thrower has two more sheets -- swinging with nothing, and getting the
     // weapon back. Warmed here for the same reason as the attack itself: asked
     // for at the moment they are needed, the answer is always "not yet" and the
@@ -129,6 +131,11 @@ export class SpriteCache {
     // sheet still animates rather than freezing.
     if (disarmed) return this.variantFrames(typeId, '-disarmed') ?? this.variantFrames(typeId, '');
     return this.variantFrames(typeId, '');
+  }
+
+  /** A creature knitting itself back together, for the ones that visibly do. */
+  regenFrames(typeId: UnitTypeId): CanvasImageSource[] | null {
+    return this.variantFrames(typeId, '', 'regen');
   }
 
   /** The single pose for getting a thrown weapon back, if there is one. */

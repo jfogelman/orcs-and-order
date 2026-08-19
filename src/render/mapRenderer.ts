@@ -81,6 +81,8 @@ export class MapRenderer {
   readonly animator = new UnitAnimator();
   /** Last seen disarmed state per unit, to spot the moment it changes back. */
   private wasDisarmed = new Map<number, boolean>();
+  /** Last seen health per unit, to spot the moment it goes up. */
+  private wasHp = new Map<number, number>();
   private rebuildTimer: number | null = null;
 
   constructor(
@@ -381,8 +383,10 @@ export class MapRenderer {
       const frames =
         playing.kind === 'rearm'
           ? this.sprites.rearmFrames(u.type)
-          : // A thrower that has thrown swings with nothing in its hand.
-            this.sprites.attackFrames(u.type, u.disarmed);
+          : playing.kind === 'regen'
+            ? this.sprites.regenFrames(u.type)
+            : // A thrower that has thrown swings with nothing in its hand.
+              this.sprites.attackFrames(u.type, u.disarmed);
       if (frames && frames[playing.frame]) return frames[playing.frame];
     }
     // Standing still, health decides how it looks. Checked before the
@@ -411,6 +415,25 @@ export class MapRenderer {
    * enemy's units too, which the player can see happen. First sighting of a
    * unit never counts as a change, or every unit would salute on appearing.
    */
+  /**
+   * Catch a creature healing and show it happening.
+   *
+   * Watched rather than triggered from the rules, the same as the rearm pose,
+   * so it fires for the enemy's units too and `sim/` learns nothing new. Only
+   * creatures with the art animate, which today is trolls alone -- so this
+   * needs no rule about who regenerates visibly.
+   *
+   * First sighting never counts: a unit walking out of the fog at full health
+   * has not just healed, it has merely been seen.
+   */
+  private noticeRegen(u: Unit): void {
+    const was = this.wasHp.get(u.id);
+    this.wasHp.set(u.id, u.hp);
+    if (was === undefined || u.hp <= was) return;
+    const frames = this.sprites.regenFrames(u.type);
+    if (frames) this.animator.regen(u.id, frames.length);
+  }
+
   private noticeRearm(u: Unit): void {
     const was = this.wasDisarmed.get(u.id);
     this.wasDisarmed.set(u.id, u.disarmed);
@@ -497,6 +520,7 @@ export class MapRenderer {
     const type = unitType(u.type);
     const owner = state.players[u.owner];
     this.noticeRearm(u);
+    this.noticeRegen(u);
     const s = cam.tileToScreen(u.x, u.y);
     const size = cam.tileSize;
     const onCity = state.cities.some((c) => c.x === u.x && c.y === u.y);

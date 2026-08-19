@@ -13,8 +13,11 @@ const FRAME_SECONDS = 0.09;
 /** How long the "got it back" pose is held, in total. */
 const REARM_SECONDS = 0.55;
 
+/** How long a creature is shown knitting itself back together. */
+const REGEN_SECONDS = 0.6;
+
 /** What a unit is in the middle of doing. */
-export type AnimationKind = 'attack' | 'rearm';
+export type AnimationKind = 'attack' | 'rearm' | 'regen';
 
 interface Playing {
   kind: AnimationKind;
@@ -60,6 +63,25 @@ export class UnitAnimator {
       elapsed: 0,
       frames,
       secondsPerFrame: REARM_SECONDS / frames,
+    });
+  }
+
+  /**
+   * A creature visibly putting itself back together.
+   *
+   * Slower than a swing, because it is a state rather than an action -- the
+   * point is to notice it happened, not to read four separate poses.
+   */
+  regen(unitId: number, frames: number): void {
+    if (frames < 1) return;
+    // Never over an attack. A troll that healed and then swung this turn is
+    // more usefully shown swinging.
+    if (this.playing.get(unitId)?.kind === 'attack') return;
+    this.playing.set(unitId, {
+      kind: 'regen',
+      elapsed: 0,
+      frames,
+      secondsPerFrame: REGEN_SECONDS / frames,
     });
   }
 

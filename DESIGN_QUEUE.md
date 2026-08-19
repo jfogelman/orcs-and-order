@@ -811,12 +811,12 @@ exists so nothing gets built twice.
   Supply walks outward from the capital, an outpost only counts if it links back,
   and its price scales with distance from the capital.
 
-### Half done
+### Already done, continued
 
-- **The troll regeneration animation.** `public/units/troll_regen.png` is
-  processed and sitting there; nothing references it. Needs a trigger -- the
-  obvious one is the moment `healUnits` puts a meaningful amount back on a troll,
-  watched by the renderer the way the rearm pose is.
+- ~~**The troll regeneration animation.**~~ Plays when a creature's health goes
+  up, watched by the renderer rather than triggered from the rules. Only
+  creatures with the art animate, which is trolls alone, so it needed no rule
+  about who regenerates visibly.
 
 ### Pending
 
