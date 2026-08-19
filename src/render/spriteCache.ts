@@ -37,6 +37,7 @@ export class SpriteCache {
   /** Keyed by unit type plus variant; null means "looked, and there are none". */
   private attacks = new Map<string, CanvasImageSource[] | null>();
   private attackAttempted = new Set<string>();
+  private marks = new Map<string, CanvasImageSource | null>();
   private attempted = new Set<string>();
   private readonly base: string;
 
@@ -145,6 +146,24 @@ export class SpriteCache {
       return this.variantFrames(typeId, '-disarmed', 'hurt') ?? this.variantFrames(typeId, '', 'hurt');
     }
     return this.variantFrames(typeId, '', 'hurt');
+  }
+
+  /**
+   * The badge for a rank, or null until it has loaded.
+   *
+   * Drawn as an object rather than a number: these land at roughly a sixth of
+   * a tile, where a glyph stops being legible and a silhouette does not.
+   */
+  promotionMark(faction: FactionId, rank: number): CanvasImageSource | null {
+    const key = `mark:${faction}:${rank}`;
+    const ready = this.marks.get(key);
+    if (ready !== undefined) return ready;
+    if (this.attackAttempted.has(key)) return null;
+    this.attackAttempted.add(key);
+    loadImage(`${this.base}promotions/${faction}-${rank}.png`)
+      .then((img) => this.marks.set(key, img))
+      .catch(() => this.marks.set(key, null));
+    return null;
   }
 
   private variantFrames(

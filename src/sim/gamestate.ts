@@ -19,7 +19,8 @@ import { citySight, effectiveMove, effectiveSight } from './rules';
 
 // 2: units carry `disarmed`, for the axethrower that has thrown its axe.
 // 3: cities carry `citizens`, naming who lives in them.
-export const SAVE_VERSION = 3;
+// 4: units carry `rank` and `xp` instead of a `veteran` flag.
+export const SAVE_VERSION = 4;
 
 export interface NewGameOptions {
   seed?: number;
@@ -85,8 +86,9 @@ export function log(
   cue?: string,
   at?: readonly [number, number],
   actor?: number,
+  subject?: string,
 ): void {
-  state.log.push({ turn: state.turn, player: forPlayer, text, kind, cue, at, actor });
+  state.log.push({ turn: state.turn, player: forPlayer, text, kind, cue, at, actor, subject });
   // The log is a UI convenience, not a historical record; keep it bounded.
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
 }
@@ -146,7 +148,9 @@ export function spawnUnit(
     y,
     hp: unitType(type).hp,
     moves: effectiveMove(state.players[owner], type),
-    veteran,
+    // Barracks-built units start already promoted once.
+    rank: veteran ? 1 : 0,
+    xp: 0,
     order: 'none',
     goto: null,
     homeCity: null,

@@ -888,7 +888,7 @@ class App {
       panel.innerHTML = `
         <div class="panel-title">
           <a href="#" class="pedia-link" data-pedia="${escapeHtml(t.id)}"
-             title="Look it up in the Orcpedia">${escapeHtml(t.name)}</a>${unit.veteran ? ' <span class="muted">· veteran</span>' : ''}
+             title="Look it up in the Orcpedia">${escapeHtml(t.name)}</a>${unit.rank > 0 ? ` <span class="muted">· ${RANK_NAMES[unit.rank] ?? 'veteran'}</span>` : ''}
         </div>
         <div class="panel-body">
           <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${t.attack} / ${t.defense}</span></div>
@@ -1099,6 +1099,9 @@ const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined
  */
 const ATTACK_HOLD_MS = 420;
 
+/** What each rank is called in the readout. Index 0 is never shown. */
+const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;
+
 /** Most animations played for one drain of the log. */
 const EFFECT_BURST = 8;
 /** Seconds between them, so a busy turn reads as a sequence, not a flash. */
@@ -1110,7 +1113,10 @@ const EFFECT_STAGGER = 0.11;
  * Keyed off the cue the simulation already emits wherever there is one, so the
  * two presentation layers stay in step and `sim/` gains nothing new to know.
  */
-function effectFor(entry: { kind: string; cue?: string }): EffectId | null {
+function effectFor(entry: { kind: string; cue?: string; subject?: string }): EffectId | null {
+  // A subject names its own picture, which is how a razed city shows the
+  // settlement that was actually standing there rather than a generic puff.
+  if (entry.subject?.startsWith('razed-')) return entry.subject as EffectId;
   switch (entry.cue) {
     case 'explosion':
       return 'explosion';

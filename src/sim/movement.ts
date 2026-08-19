@@ -13,6 +13,8 @@ import {
   rearm,
   resolveCombat,
   stormEmptyCity,
+  awardXp,
+  XP
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
@@ -259,6 +261,9 @@ function razeCity(state: GameState, city: City, taker: Player, loser: Player): v
   for (const u of state.units) {
     if (u.homeCity === city.id) u.homeCity = null;
   }
+  // The tier matches the city sprite sizes, so the settlement that collapses
+  // is the one that was standing there.
+  const tier = city.size >= 8 ? 8 : city.size >= 4 ? 4 : 1;
   log(
     state,
     `${city.name} is sacked down to nothing and ceases to be a place.`,
@@ -266,6 +271,8 @@ function razeCity(state: GameState, city: City, taker: Player, loser: Player): v
     taker.id,
     'capture',
     [city.x, city.y],
+    undefined,
+    `razed-${loser.faction}-${tier}`,
   );
   log(state, `${city.name} is gone.`, 'bad', loser.id, 'city-lost', [city.x, city.y]);
 }
@@ -393,6 +400,9 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // so the attacker standing next to it is very much included.
       const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
       destroyUnit(state, occupant, 'is wiped out');
+      // Killing teaches most. Nothing is awarded for the blast above, which
+      // the sapper's victims did not choose to be part of.
+      awardXp(state, unit, XP.kill);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
       if (blastVictims.some((v) => v.id === unit.id)) {
@@ -412,6 +422,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         unit.id,
       );
       destroyUnit(state, unit, 'is destroyed attacking');
+      awardXp(state, occupant, XP.kill);
     }
     if (result.promoted) {
       const winner = result.attackerWon ? type.name : defenderType.name;

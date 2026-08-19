@@ -7,6 +7,8 @@ import {
   damagePerRound,
   destroyUnit,
   rearm,
+  awardXp,
+  XP
 } from './combat';
 import { log, recomputeVisibility, withRng } from './gamestate';
 
@@ -140,6 +142,9 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const amount = landed * dmg;
   target.hp -= amount;
   unit.moves = 0;
+  // Shooting at somebody and living is worth less than closing with them.
+  awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);
+  if (target.hp > 0) awardXp(state, target, XP.survive);
   if (type.throwsWeapon) unit.disarmed = true;
 
   const attackerName = unitType(unit.type).name;

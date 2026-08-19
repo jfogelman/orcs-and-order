@@ -12,6 +12,7 @@ import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
   supplyChain,
   supplyQuality
 } from '../sim/city';
+import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
@@ -171,10 +172,10 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
-  const atk = a.attack * (attacker.veteran ? 1.5 : 1) * (attacker.hp / a.hp);
+  const atk = a.attack * rankBonus(attacker) * (attacker.hp / a.hp);
   const def =
     d.defense *
-    (defender.veteran ? 1.5 : 1) *
+    rankBonus(defender) *
     terrain.defense *
     (defender.order === 'fortified' ? 1.5 : 1);
   return atk / Math.max(0.0001, atk + def);

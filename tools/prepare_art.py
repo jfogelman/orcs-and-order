@@ -869,6 +869,96 @@ CITIZEN_SIZE = 64
 CITIZEN_MOODS = 4
 
 
+PROMOTION_SIZE = 32
+
+
+def process_city_effects(force: bool) -> tuple[int, list[str]]:
+    """
+    A settlement coming apart, in the same three size tiers as the city
+    sprites: 1, 4 and 8, per faction.
+
+    Written into the effects folder rather than the cities one, because these
+    play through the same transient layer as an explosion -- they belong to the
+    moment a place stops existing, not to the picture of a place that does.
+    """
+    src = SRC / "city effects"
+    out = OUT / "effects"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    done = 0
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        match = re.match(r"(orc|human)_(\d+)\s+destroyed", base)
+        if not match:
+            problems.append(f"{path.name}: not a <faction>_<tier> destruction sheet")
+            continue
+        name = f"razed-{match.group(1)}-{match.group(2)}"
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        kw, kh = strip.size
+        frames = max(1, round(kw / kh))
+        clear_panel_borders(strip, frames)
+        sheet = Image.new("RGBA", (frames * EFFECT_SIZE, EFFECT_SIZE), (0, 0, 0, 0))
+        for i in range(frames):
+            left = round(i * kw / frames)
+            right = round((i + 1) * kw / frames)
+            frame = strip.crop((left, 0, right, kh)).resize(
+                (EFFECT_SIZE, EFFECT_SIZE), Image.LANCZOS
+            )
+            sheet.paste(frame, (i * EFFECT_SIZE, 0), frame)
+        sheet.save(target, optimize=True)
+        print(f"  effects/{name}.png ({frames} frames from {kw}x{kh})")
+        done += 1
+    return done, problems
+
+
+def process_promotions(force: bool) -> tuple[int, list[str]]:
+    """
+    Rank badges, stamped in the corner of a promoted unit's tile.
+
+    One square picture each, not a strip: these are objects rather than
+    animations. Trimmed to the object and squared, the same as a unit sprite,
+    because a badge that sits off-centre in its own frame lands off-centre on
+    the tile.
+    """
+    src = SRC / "promotions"
+    out = OUT / "promotions"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    done = 0
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        badge = trim_and_square(keyed, PROMOTION_SIZE)
+        badge.save(target, optimize=True)
+        print(f"  promotions/{name}.png")
+        done += 1
+    return done, problems
+
+
 def process_citizens(force: bool) -> tuple[int, list[str]]:
     """
     Portrait strips of the people who live in your cities.
@@ -1229,6 +1319,12 @@ def main() -> int:
     states, state_problems, state_unknown = process_unit_states(force)
     print("Citizens:")
     folk, folk_problems = process_citizens(force)
+    print("Cities coming apart:")
+    ruins, ruin_problems = process_city_effects(force)
+    print("Promotion marks:")
+    marks, mark_problems = process_promotions(force)
+    mark_problems.extend(ruin_problems)
+    folk_problems.extend(mark_problems)
     state_problems.extend(folk_problems)
     anim_problems.extend(state_problems)
     anim_unknown.extend(state_unknown)
@@ -1237,7 +1333,8 @@ def main() -> int:
     print(
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
-        f"{states} state sheets, {folk} citizen sheets, "
+        f"{states} state sheets, {folk} citizen sheets, {marks} promotion marks, "
+        f"{ruins} ruin animations, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )

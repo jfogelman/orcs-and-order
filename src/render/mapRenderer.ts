@@ -573,12 +573,15 @@ export class MapRenderer {
         ctx.textBaseline = 'middle';
         ctx.fillText(String(type.count), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
       }
-      if (u.veteran) {
-        ctx.fillStyle = '#f0c64a';
-        ctx.font = `bold ${Math.round(size * 0.26)}px system-ui, sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText('*', s.x + 2, s.y + size * 0.55);
+      // Rank badge, in place of the drawn asterisk this used to be. Sits at
+      // the bottom-left so it does not collide with the count badge on the
+      // right or the out-of-supply mark at the top.
+      if (u.rank > 0) {
+        const mark = this.sprites.promotionMark(owner.faction, u.rank);
+        if (mark) {
+          const m = size * 0.42;
+          ctx.drawImage(mark, Math.round(s.x + 1), Math.round(s.y + size - m - 1), m, m);
+        }
       }
       // A disarmed thrower fights at a quarter strength, which without a mark
       // on the map looks exactly like the unit being broken.

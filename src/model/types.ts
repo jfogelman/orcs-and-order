@@ -64,7 +64,16 @@ export interface Unit {
   hp: number;
   /** Movement points remaining this turn. */
   moves: number;
-  veteran: boolean;
+  /**
+   * How many times this unit has been promoted, 0 to 3.
+   *
+   * Replaces a single `veteran` flag. Rank 1 is worth exactly what veteran
+   * was, so nothing about an ordinary promoted unit has changed; the two
+   * ranks above it are new.
+   */
+  rank: number;
+  /** Experience toward the next rank. */
+  xp: number;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;
@@ -147,6 +156,12 @@ export interface LogEntry {
    * unit may well be dead.
    */
   actor?: number;
+  /**
+   * What this is about, when the interface needs to know which picture to
+   * use and the position alone will not say -- a razed city names its
+   * faction and size tier, so the right settlement can be shown collapsing.
+   */
+  subject?: string;
 }
 
 export interface GameSettings {

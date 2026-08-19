@@ -16,6 +16,54 @@ import { hasFlag } from './rules';
  */
 
 export const VETERAN_BONUS = 1.5;
+
+/**
+ * What each rank multiplies strength by.
+ *
+ * Rank 1 is the old veteran bonus exactly, so the common case is unchanged and
+ * the balance measured against it still holds. The two above are new and
+ * deliberately smaller steps -- a unit that has survived three wars should be
+ * frightening, not decisive on its own.
+ */
+export const RANK_BONUS = [1, VETERAN_BONUS, 1.75, 2] as const;
+export const MAX_RANK = RANK_BONUS.length - 1;
+
+/**
+ * Experience, and where it comes from.
+ *
+ * Killing teaches most, surviving a fight teaches something, and damage a unit
+ * did not choose teaches nothing at all -- a dragon's breath catching a
+ * bystander, or a sapper going up, is not a lesson. That rule is mechanical as
+ * much as thematic: a blast hits both sides, so counting it would have a
+ * sapper promoting the survivors it was aimed at.
+ *
+ * Divided by the size of the group, because Ten Orcs winning a fight is ten
+ * orcs each learning a tenth of it. Without that the counting ladder would
+ * double as an experience ladder, and the biggest unit would both hit hardest
+ * and improve fastest.
+ */
+export const XP = { kill: 50, survive: 15, thresholds: [0, 100, 300, 700] } as const;
+
+export function rankBonus(unit: Unit): number {
+  return RANK_BONUS[Math.min(unit.rank, MAX_RANK)] ?? 1;
+}
+
+/** Give a unit experience, and promote it if that is enough. */
+export function awardXp(state: GameState, unit: Unit, amount: number): boolean {
+  unit.xp += amount / Math.max(1, unitType(unit.type).count);
+  let promoted = false;
+  while (unit.rank < MAX_RANK && unit.xp >= XP.thresholds[unit.rank + 1]) {
+    unit.rank++;
+    promoted = true;
+  }
+  if (promoted) {
+    log(state, `${unitType(unit.type).name} is promoted.`, 'good', unit.owner, 'promote', [
+      unit.x,
+      unit.y,
+    ]);
+  }
+  return promoted;
+}
 export const FORTIFY_BONUS = 1.5;
 /** Chance a survivor is promoted after winning a fight. */
 export const PROMOTION_CHANCE = 0.25;
@@ -118,7 +166,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   // suddenly useless.
   const supplied = supplyQuality(state, attacker);
   if (supplied < 1) total *= SUPPLY.attackPenalty + (1 - SUPPLY.attackPenalty) * supplied;
-  if (attacker.veteran) total *= VETERAN_BONUS;
+  total *= rankBonus(attacker);
   total *= siegeMult;
   total *= sallyMult;
   if (berserk) total *= 1.25;
@@ -126,7 +174,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   return {
     total,
     base: type.attack,
-    veteran: attacker.veteran,
+    veteran: attacker.rank > 0,
     fortified: false,
     terrainMult: 1,
     wallsMult: 1,
@@ -170,7 +218,7 @@ export function defenseStrength(
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;
-  if (defender.veteran) total *= VETERAN_BONUS;
+  total *= rankBonus(defender);
   total *= terrain.defense;
   if (fortified) total *= FORTIFY_BONUS;
   total *= wallsMult;
@@ -179,7 +227,7 @@ export function defenseStrength(
   return {
     total,
     base: type.defense,
-    veteran: defender.veteran,
+    veteran: defender.rank > 0,
     fortified,
     terrainMult: terrain.defense,
     wallsMult,
@@ -267,8 +315,10 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     }
     const attackerWon = defender.hp <= 0;
     const winner = attackerWon ? attacker : defender;
-    const promoted = !winner.veteran && rng.chance(PROMOTION_CHANCE);
-    if (promoted) winner.veteran = true;
+    // Experience rather than a coin toss; awarded after the fight resolves,
+    // outside this RNG block, so the message lands in the right order.
+    const promoted = false;
+    void winner;
     return { attackerWon, promoted };
   });
 

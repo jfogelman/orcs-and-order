@@ -21,6 +21,13 @@ const IMPACT_SECONDS = 0.45;
 const TRAVEL_SECONDS = 0.12;
 
 export type EffectId =
+  // A settlement coming apart, by faction and size tier.
+  | 'razed-orc-1'
+  | 'razed-orc-4'
+  | 'razed-orc-8'
+  | 'razed-human-1'
+  | 'razed-human-4'
+  | 'razed-human-8'
   | 'arrow'
   | 'axe'
   | 'bolt'
