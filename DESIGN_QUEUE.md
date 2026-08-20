@@ -956,6 +956,27 @@ will hit whichever side builds bigger cities. It also interacts with sacking, wh
 already cuts cities down. Whatever is chosen wants measuring on two seed sets before
 it is believed, per 4h.
 
+### Also: how close two cities may be
+
+**What exists.** `MIN_CITY_SPACING` is 3, checked in `canFoundCity` as a Chebyshev
+distance, and a settler is simply refused with "Too close to Skullgrind." There is no
+middle ground: legal or not, nothing in between.
+
+**Wanted.** A hard block within two spaces, and beyond that allowed but *warned* --
+the cities will share tiles and the player should know before they commit rather than
+wonder later why two cities are both starving.
+
+Worth noting the arithmetic, because it decides whether the warning is rare or
+constant: the work radius is a fat cross, so two cities overlap whenever they are
+within four tiles of each other. A three-tile spacing therefore already guarantees
+overlap in every legal placement -- the warning would fire on almost everything and
+mean nothing. Either the block moves to two and the warning starts at five or six, or
+the warning needs to say *how much* is shared rather than merely that some is.
+
+The second reading is the more useful one: "this site shares 6 of its 20 tiles with
+Skullgrind" is information, where "shares tiles" is noise. It also needs no change to
+the spacing at all.
+
 ### Options
 
 **A. Support from the land.** Each terrain in the fat cross contributes a support
@@ -994,6 +1015,75 @@ depending on how much water worldgen makes, so it wants that checked first.
 
 Art for the specials is prompted in ART_PROMPTS.md; they currently share one generic
 drawn diamond, which is the reason none of them read as anything in particular.
+
+## 9. Situational advisors
+
+Text only -- no video, no voice -- in the manner of Civ2's advisors, using the
+animation the game already has rather than anything new. Twelve of them are drawn,
+six a side, and `art_src/advisors/advisor_bible.md` has the full brief: role,
+appearance, personality and a sample line for each.
+
+The pairs are mirrored by role, which is the useful part for implementation:
+
+| role | Kingdom | Horde |
+|---|---|---|
+| Military | Knight-Marshal | Blademaster |
+| Faith / Honour | Paladin | Death Knight |
+| Domestic | Stonewarden | Goblin Overseer |
+| Trade | Ledger-Thane | Ogre Quartermaster |
+| Diplomacy | Herald | Troll Headhunter |
+| Arcane | Court Archmage | Death Mage |
+
+So a situation picks a *role*, not an advisor, and the faction decides who says it.
+The bible's own design note is the thing to build against: the two sides fail
+differently -- the Kingdom through propriety and bureaucracy, the Horde through
+recklessness -- so the same event wants two lines, not one line in two voices.
+
+**Situations the game can already detect**, none of which currently say anything:
+
+- Domestic: a city in disorder, one starving, one still a ruin, one sitting on Coin.
+- Military: an enemy stack next to a city, a unit out of supply, an axethrower that
+  has thrown its axe and wandered off.
+- Trade: gold piling up with nothing to spend it on, a treasury nobody is guarding.
+- Arcane: research idle with beakers banking, or an advance finished.
+- Faith: a city sacked out of existence -- the Death Knight gets *more* pleased, per
+  the bible's crisis-state inversion.
+
+**The shape that fits what is here.** Advisors read the same log the effects and
+sounds already read, with a rule per situation and a cooldown so the same one cannot
+fire every turn. That keeps `sim/` unaware of them, exactly as the animation layer is.
+The risk is volume: six advisors with something to say every turn is a nuisance rather
+than a joke, so the interesting problem is picking *one* thing worth interrupting for,
+not detecting many.
+
+## 10. Alternative victories
+
+Both are absurd, both end the game, and they are the first victory route that is
+neither conquest nor outlasting the clock -- which matters more than the joke, because
+**13 of 18 games currently reach turn 300** and are decided on points. A tech-based
+finish is a way for a game to end on purpose.
+
+**The Horde: the Demonic Portal.** Demonic figures overrun the world and the Horde
+celebrates its victory, despite having also been enslaved.
+
+**The Kingdom: the Mysterious Object.** It has a button. Pressing it grants everyone
+empathy. Wars end permanently, and humans and orcs begin a long-running trivia game
+instead.
+
+Points worth settling before building:
+
+- **What they cost.** A wonder-like build, an advance at the end of a branch, or both.
+  A build gives the opponent something to see coming and a chance to take the city; an
+  advance is invisible until it lands.
+- **Whether the other side can see it happening.** The Portal should probably be
+  visible -- a race is more interesting than a surprise -- and the Object probably
+  should not, since nobody knowing what the button does is the joke.
+- **Whether they are symmetric.** They need not be. One side racing to finish
+  something while the other tries to reach them first is a better endgame than both
+  building the same thing.
+- **Measuring.** If either lands too easily, every game ends the same way and the
+  turn-limit problem is replaced by a turn-90 problem. Wants the same treatment as
+  everything else: two seed sets, watching how often each finishes and by which route.
 
 ## 5. Also queued, from earlier
 
