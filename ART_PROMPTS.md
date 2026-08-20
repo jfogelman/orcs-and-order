@@ -671,3 +671,79 @@ The same non-event, from the other end.
 > window, no text, no lettering, no writing on the boards, wide 16:9 composition.
 
 The window is doing the work. Inside, the matter is closed; outside, it is not.
+
+## Status overlays, and adjustments for the enhancements in queue 11
+
+The enhancements queued in section 11 of DESIGN_QUEUE.md need three conditions to
+be **visible on the map**: burning, frozen, confused. This matters more than it
+sounds. A unit quietly losing health for three turns with nothing drawn on it does
+not read as on fire, it reads as a bug -- and a player watching their own confused
+knight swing at their own line will report it as one.
+
+### The tile has no corners left
+
+Worth knowing before commissioning anything. Every corner of a unit tile is
+already spoken for: **bottom-right** is the count badge, **bottom-left** the rank
+mark, **top-right** the disarmed dot, and the **top edge** carries the
+out-of-supply mark. Only the top-left is free, and one free corner cannot hold
+three conditions that can all apply at once.
+
+So statuses should **not** be badges. Two workable routes, and the second is much
+cheaper:
+
+- Per-unit state sheets, the way `_hurt` works. Honest and best-looking, and it is
+  **sixteen units times three conditions**. Not worth it for a first pass.
+- **One tile-sized overlay per condition, composited over whatever unit is
+  standing there.** Three pictures instead of forty-eight, and they work for units
+  that do not exist yet.
+
+Take the second. Save as `art_src/status/<id>.<ext>`.
+
+| id | prompt |
+|---|---|
+| `burning` | A ring of orange and yellow flame licking upward, hollow in the middle, the fire only around the lower edge and sides, pixel art, thick black outline, flat magenta background, no ground, no creature, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+| `frozen` | A shell of pale blue translucent ice with jagged facets and a few frost spikes at the base, hollow through the centre, pixel art, thick black outline, flat magenta background, no ground, no creature, single frame, 90s fantasy strategy game effect |
+| `confused` | Three small crooked yellow stars and a spiral circling in a ring, arranged along the top of the frame, pixel art, thick black outline, flat magenta background, no ground, no creature, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+
+Three rules that make these usable, all learned from the overlays already
+processed:
+
+- **Hollow in the middle.** These sit on top of a creature. Anything solid across
+  the centre hides the unit it is telling you about, and a burning orc that cannot
+  be identified as an orc is worse than no overlay.
+- **Draw no creature.** Not even a hint of one. The unit is already there.
+- **Burning and confused want to be strips**; the pipeline already derives frame
+  count from sheet proportions, so a 4-wide strip needs no table entry. Frozen
+  should be still -- that is the point of it.
+
+### The ogre clubs are a weapon swap, not a badge
+
+The three club variants read far better as **variant unit sheets** than as an
+icon in a corner there is no room for. The pipeline already has the precedent in
+`axethrower-disarmed`: name them `ogre-fiery`, `ogre-exploding`, `ogre-quake`,
+each with an idle and an `_attack` sheet, and the count ladder composes itself at
+runtime as usual. Six sheets, and a player can tell across the map which ogre is
+which -- which is the whole reason to have three.
+
+Prompts follow the existing ogre exactly, changing only what is in its hands: a
+club wrapped in burning rag and pitch; a club with iron drums and fuses lashed to
+the head; a club with a great cracked stone head veined with light.
+
+### Adjustments to the prompts already written
+
+**Unit tiles.** Add to the house style that the silhouette should stay **clear of
+all four corners**, not just centred. Four badges now overlap the frame, and the
+existing sheets were drawn before three of them existed.
+
+**Watch the dark units under a tint.** The frozen overlay is pale and the burning
+one is bright, and both sit over the sprite. The deathknight, the dragon and the
+mage are drawn very dark, so a frost shell over them reads as a smudge. Any
+re-roll of those three should keep the **outline hard and the interior lighter
+than it currently is** -- which is worth doing anyway, since the same fault makes
+them muddy at night on a forest tile.
+
+**Promotion marks: keep them per-rank.** The existing note leaves the door open to
+a per-perk badge set. This list closes it. Nine more enhancements would mean
+fifteen badges, and there is nowhere on the tile to put a second one. Rank stays
+in the corner; what a unit *is* -- burning, frozen, carrying a quake club -- shows
+on the sprite. That split is worth holding to as more perks arrive.
