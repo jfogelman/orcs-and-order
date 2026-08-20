@@ -71,24 +71,20 @@ original download, so the pairing is identity, not resemblance.
 
 ## Music
 
-Also Pixabay, under the same licence summary linked above. Two of the three are
-pinned to the exact upload; each was confirmed by checking the length on the
-Pixabay page against the length of the file in this repository, so the pairing
-is not just an assertion.
+Also Pixabay, under the same licence summary linked above. All three are pinned
+to the exact upload, and each was confirmed by checking the length stated on the
+Pixabay page against the length of the file in this repository, so every pairing
+below is a verified match rather than an attribution.
 
 | file | track | by | Pixabay id | length |
 |---|---|---|---|---|
 | `world.mp3` | Adventure Game Loop - Fun and Uplifting Background Music | Cyberwave-Orchestra | 247664 | 1:45, file measures 104.78s |
 | `battle.mp3` | RPG Battle \| Chiptune Video Game Music | NickPanek | 346666 | 1:57, file measures 116.64s |
-| `victory.mp3` | **not identified** -- see below | | | file measures 2.12s |
+| `victory.mp3` | 11L-Victory_sound_with_t-1749487402950 | PeekabooLabCreative | 357606 | 0:02, file measures 2.12s |
 
-**`victory.mp3` is still not pinned to a specific upload.** What is known is that
-it came from a Pixabay sound-effects search for "battle game victory", which
-narrows the licence to the same Pixabay Content License but does not name the
-file or its uploader. At 2.12 seconds it is a sting rather than a track, which is
-consistent with it being a sound effect rather than music. Worth pinning to a
-single upload page when the download can be traced, so this table can be
-finished.
+`victory.mp3` is listed here with the music because that is how the game uses it,
+but it is filed under sound effects on Pixabay rather than music -- at two
+seconds it is a sting, not a track.
 
 **One thing to know about `world.mp3`:** its Pixabay page states the track is
 registered with Content ID. That does not affect the right to use it, but it can
@@ -103,7 +99,8 @@ machine still has sound; a fresh clone will not, and neither will the deployed
 site until they are restored.
 
 Provenance is no longer the reason. Every sound effect is traced to a named
-Pixabay download and two of the three music tracks are pinned to their upload.
+Pixabay download and all three music files are pinned to their upload, each
+confirmed by length.
 What remains is a separate question: bundling licensed audio inside a game is an
 ordinary permitted use, whereas publishing the `.mp3` files themselves in a public
 repository is closer to redistributing the sounds as files.
