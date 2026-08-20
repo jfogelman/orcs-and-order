@@ -293,7 +293,9 @@ def checkerboard_survived(px, transparent: bytearray, w: int, h: int) -> bool:
         return False
     return neutral / opaque > 0.55
 
-def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
+def remove_background(
+    img: Image.Image, max_removed: float = MAX_REMOVED
+) -> tuple[Image.Image, bool]:
     """
     Flood fill inward from every border pixel that matches a background colour.
 
@@ -304,6 +306,12 @@ def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
     Returns the image and whether the cut-out succeeded. A fill that consumes
     nearly everything has escaped into the subject, and the caller is told so it
     can keep the original and flag the file for a re-roll.
+
+    `max_removed` is that judgement, and it is not universal. The default is
+    calibrated on sprites, which fill most of their frame. A status overlay is
+    drawn hollow on purpose -- a ring of small stars around an empty middle is
+    legitimately 96% background -- so that caller raises the ceiling rather than
+    have every correct file rejected as a runaway fill.
     """
     img = crop_letterbox(img).convert("RGBA")
     w, h = img.size
@@ -366,7 +374,7 @@ def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
         transparent[y * w + x] = 1
 
     removed = sum(transparent)
-    if removed > w * h * MAX_REMOVED:
+    if removed > w * h * max_removed:
         # The fill ate the subject. Better a visible background than nothing.
         return img, False
 
@@ -726,6 +734,30 @@ def clear_panel_borders(strip: Image.Image, frames: int) -> None:
                 px[x, y] = (0, 0, 0, 0)
 
 
+def slice_strip(strip: Image.Image, frames: int, size: int) -> Image.Image:
+    """
+    Cut a keyed horizontal strip into a sheet of evenly spaced square frames.
+
+    Slices from the keyed strip's own width rather than the source file's:
+    crop_letterbox may have taken a bar off, and the frames divide whatever is
+    actually left.
+
+    Frames are never trimmed or re-centred, which the unit pipeline does and
+    this must not: trimming each frame to its own content would re-centre an
+    expanding fireball on itself every frame, and the explosion would sit still
+    while merely getting bigger.
+    """
+    kw, kh = strip.size
+    clear_panel_borders(strip, frames)
+    sheet = Image.new("RGBA", (frames * size, size), (0, 0, 0, 0))
+    for i in range(frames):
+        left = round(i * kw / frames)
+        right = round((i + 1) * kw / frames)
+        frame = strip.crop((left, 0, right, kh)).resize((size, size), Image.LANCZOS)
+        sheet.paste(frame, (i * size, 0), frame)
+    return sheet
+
+
 def process_effects(force: bool) -> tuple[int, list[str]]:
     """
     Effect art arrives as a horizontal strip of animation frames on magenta.
@@ -780,18 +812,7 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
             failed.append(name)
             continue
 
-        # Slice from the keyed strip's own width: crop_letterbox may have taken
-        # a bar off, and the frames divide whatever is actually left.
-        kw, kh = strip.size
-        clear_panel_borders(strip, frames)
-        sheet = Image.new("RGBA", (frames * EFFECT_SIZE, EFFECT_SIZE), (0, 0, 0, 0))
-        for i in range(frames):
-            left = round(i * kw / frames)
-            right = round((i + 1) * kw / frames)
-            frame = strip.crop((left, 0, right, kh)).resize(
-                (EFFECT_SIZE, EFFECT_SIZE), Image.LANCZOS
-            )
-            sheet.paste(frame, (i * EFFECT_SIZE, 0), frame)
+        sheet = slice_strip(strip, frames, EFFECT_SIZE)
         sheet.save(target, optimize=True)
         print(f"  effects/{name}.png ({frames} frames from {w}x{h})")
         done += 1
@@ -1203,6 +1224,154 @@ def encode_audio(path: Path, target: Path, quality: str, mono: bool) -> bool:
         return False
 
 
+# The one status drawn as a corner badge rather than as a ring around the unit.
+# This cannot be derived from the file: `frozen` is a single frame as well, and
+# what separates them is what the picture is for, which no proportion reveals.
+STATUS_BADGES = {"spent"}
+
+# Hollow by design, so far more background than a sprite ever is: a sparse ring
+# of stars around an empty middle measures ~96% removed and is correct. Still
+# short of 1.0, which would mean the fill took everything and there is no
+# picture left.
+STATUS_MAX_REMOVED = 0.98
+
+
+def process_status(force: bool) -> tuple[int, list[str]]:
+    """
+    Overlays for a condition a unit is *in*, as opposed to a thing that happened
+    to it.
+
+    Same file format as an effect -- magenta, square frames, the count read off
+    the strip's own proportions -- and a different life. An effect plays once and
+    is gone; a status is redrawn for as long as the condition holds, which is why
+    these live in their own folder rather than being effects that never end.
+
+    Drawn hollow, so the creature underneath stays identifiable. Nothing here can
+    enforce that: a solid overlay processes perfectly well and then hides the
+    unit it is describing, so it is a rule for the prompts, not for the code.
+
+    A trailing `-fading` needs no special handling. It slugifies into the name
+    and comes out as its own overlay, which is what the renderer wants when a
+    condition has a turn or two left to run.
+    """
+    src = SRC / "status"
+    out = OUT / "status"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    # Two files can slugify onto one name -- deliberate alternatives of the same
+    # overlay usually do. Take the newest and say so, rather than letting
+    # whichever sorted last win in silence.
+    best: dict[str, Path] = {}
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        # "unit spent" and "spent" name the same thing; the folder already says
+        # these are units, so a leading "unit" carries nothing.
+        words = [w for w in base.split() if w != "unit"]
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words)).strip("-")
+        if not name:
+            continue
+        rival = best.get(name)
+        if rival is not None:
+            keep, drop = sorted((path, rival), key=lambda q: q.stat().st_mtime)[::-1]
+            problems.append(f"{name}: {path.name} and {rival.name} are both '{name}'; using {keep.name}")
+            best[name] = keep
+        else:
+            best[name] = path
+
+    done = 0
+    for name, path in sorted(best.items()):
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        keyed, cut_out = remove_background(Image.open(path), STATUS_MAX_REMOVED)
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+
+        if name in STATUS_BADGES:
+            # Trimmed and squared like a rank mark, because it lands in a tile
+            # corner and a badge off-centre in its own frame lands off-centre.
+            trim_and_square(keyed, PROMOTION_SIZE).save(target, optimize=True)
+            print(f"  status/{name}.png (badge)")
+        else:
+            w, h = keyed.size
+            frames = max(1, round(w / h))
+            slice_strip(keyed, frames, EFFECT_SIZE).save(target, optimize=True)
+            print(f"  status/{name}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, problems
+
+
+VICTORY_SCREENS = (
+    "conquest-orc",
+    "conquest-human",
+    "points-orc",
+    "points-human",
+    "portal",
+    "object",
+)
+
+# Wide enough to stay sharp on a high-density screen: the modal these fill is at
+# most 600 CSS pixels across.
+VICTORY_WIDTH = 1024
+
+
+def process_victory(force: bool) -> tuple[int, list[str]]:
+    """
+    Full-scene illustrations shown when a game ends.
+
+    The one pass here that **must not key its background**. Everything else in
+    this file exists to cut a background away; these are scenes that own theirs,
+    and putting a dusk sky through remove_background would punch holes in it
+    wherever the orange ran far enough toward magenta.
+
+    Saved as JPEG, the only place in the pipeline that does. There is no
+    transparency to keep and no pixel grid to protect, since these are never
+    composited onto anything, and a lossless copy of a full-colour illustration
+    runs to megabytes for a picture seen once at the end of a game.
+
+    Only ever downscaled. An undersized source is left alone rather than blown
+    up, which would add nothing but bytes.
+    """
+    src = SRC / "victory"
+    out = OUT / "victory"
+    if not src.is_dir():
+        return 0, list(VICTORY_SCREENS)
+    out.mkdir(parents=True, exist_ok=True)
+
+    best: dict[str, Path] = {}
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        rival = best.get(name)
+        if rival is None or path.stat().st_mtime > rival.stat().st_mtime:
+            best[name] = path
+
+    done = 0
+    for name, path in sorted(best.items()):
+        target = out / f"{name}.jpg"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        scene = Image.open(path).convert("RGB")
+        if scene.width > VICTORY_WIDTH:
+            height = round(scene.height * VICTORY_WIDTH / scene.width)
+            scene = scene.resize((VICTORY_WIDTH, height), Image.LANCZOS)
+        scene.save(target, quality=82, optimize=True, progressive=True)
+        print(f"  victory/{name}.jpg ({scene.width}x{scene.height})")
+        done += 1
+
+    return done, [w for w in VICTORY_SCREENS if w not in best]
+
+
 def process_audio() -> tuple[int, int, int]:
     """
     Compress audio on the way into `public/`.
@@ -1323,6 +1492,11 @@ def main() -> int:
     ruins, ruin_problems = process_city_effects(force)
     print("Promotion marks:")
     marks, mark_problems = process_promotions(force)
+    print("Status overlays:")
+    status, status_problems = process_status(force)
+    mark_problems.extend(status_problems)
+    print("Victory screens:")
+    wins, missing_wins = process_victory(force)
     mark_problems.extend(ruin_problems)
     folk_problems.extend(mark_problems)
     state_problems.extend(folk_problems)
@@ -1334,6 +1508,7 @@ def main() -> int:
         f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
         f"{states} state sheets, {folk} citizen sheets, {marks} promotion marks, "
+        f"{status} status overlays, {wins} victory screens, "
         f"{ruins} ruin animations, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
@@ -1343,13 +1518,14 @@ def main() -> int:
         ("cities", missing_cities),
         ("advance icons", missing_icons),
         ("terrain", missing_terrain),
+        ("victory screens", missing_wins),
     ):
         if missing:
             # Plain ASCII: the Windows console default codepage cannot print dashes.
             print(f"Still needed ({label}): {', '.join(missing)} - placeholders in use")
     for label, items in (("unusable", anim_problems), ("unrecognised", anim_unknown)):
         if items:
-            print(f"Attack animations {label}:")
+            print(f"Art {label}:")
             for item in items:
                 print(f"  {item}")
     print("\nGroup sprites (Two Orcs, Ten Footmen...) are composed at runtime")

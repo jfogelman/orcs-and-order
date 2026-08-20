@@ -37,7 +37,9 @@ export type EffectId =
   | 'dragonfire'
   | 'explosion'
   | 'heal'
-  | 'magic';
+  | 'magic'
+  // A troll spending nine tenths of itself to make another one.
+  | 'troll-split';
 
 export interface EffectOptions {
   /**
