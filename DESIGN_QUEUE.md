@@ -1193,10 +1193,16 @@ regeneration for a few turns to make another troll.
 Treat this one with the suspicion earned in 4c and 4e. A unit that makes units is
 a per-unit multiplier, and every per-unit and per-city multiplier measured so far
 has **amplified whoever was already ahead** rather than closing a gap. The
-counting ladder makes it worse: Ten Trolls spending 90% of a very large health
-pool to produce another Ten Trolls is an exponent. Strong suggestion that it
-produces **one** troll regardless of the parent's count, which also makes it a
-reason to build the small unit -- something nothing else in the game currently is.
+counting ladder makes it worse: Three Trolls spending 90% of a very large health
+pool to produce another Three Trolls is an exponent.
+
+**Decided: only a singleton Troll may do it.** Two Trolls and Three Trolls do not
+get the option at all, rather than getting a reduced version of it. That kills the
+exponent outright instead of trying to price it, and it hands the game something
+it has never had -- **a reason to build the small unit**. Every other mechanic in
+the game rewards stacking upward, because N creatures on one tile spend one
+movement point and that is strictly efficient. This is the first thing that points
+the other way, and it is worth more for that than for the troll it makes.
 
 ### Measuring
 
