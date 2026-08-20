@@ -543,3 +543,62 @@ These are the smallest things in the game, and that changes what works:
 - **Two of them sit on water**, which is bright cyan. Silver-blue fish will struggle
   there; if they vanish, a darker outline or a warmer colour is the fix rather than a
   bigger fish.
+
+## Alternative victory screens
+
+Two of these, one a side, for the endings in DESIGN_QUEUE section 10. Neither has a
+path to it in the game yet; the art can exist first.
+
+**These break every rule above, on purpose.** Everything else in this file is a small
+object on flat magenta, keyed out and stamped onto a tile. These are **full scenes with
+their own background**, shown once, filling the top of a 600px-wide modal above the
+score breakdown. So: **no magenta, no keying, no transparency** — draw the whole
+picture, edge to edge.
+
+Save as `art_src/victory/<id>.<ext>`. Ask for a **wide banner, roughly 16:9** (1024×576
+is ideal), since the modal is much wider than it is tall and a square would have to be
+cropped to nothing.
+
+**No text anywhere in the image.** The caption is written in the game and the
+generators mangle lettering.
+
+### `portal` — the Horde wins
+
+The joke is that they have not noticed.
+
+> A vast torn rift of green and black fire filling the sky, demonic silhouettes with
+> long horns streaming out of it across a ruined landscape. In the foreground a crowd
+> of orcs, tusks bared, arms raised in triumphant celebration, banners held high — and
+> every one of them wearing an iron collar, with chains running back toward a single
+> enormous demon standing calmly at the edge of the crowd holding the ends. The orcs
+> are delighted. The demon is bored. Mid-1990s fantasy strategy game illustration,
+> pixel art, saturated greens and oranges against a dark sky, dramatic, no text,
+> no lettering, no banners with writing, wide 16:9 composition.
+
+The chains are the whole picture — if the orcs read as merely victorious, it has not
+worked. They should be celebrating *and* obviously enslaved, and the demon holding the
+chains should look like he is waiting for something more interesting to happen.
+
+### `object` — the Kingdom wins
+
+The joke is how thoroughly ordinary the aftermath is.
+
+> A plain grey featureless object the size of a barrel on a simple stone pedestal, one
+> large round button on top, freshly pressed and still glowing faintly. Around it, in a
+> sunlit hall, humans and orcs sit together at long trestle tables with mugs and paper,
+> a dwarf keeping score on a slate, one orc with a hand raised to answer, a knight and
+> an ogre sharing a bench and getting along. A great heap of swords, axes and shields
+> lies discarded and forgotten in one corner, already gathering dust. Mid-1990s fantasy
+> strategy game illustration, pixel art, warm daylight, calm and companionable, no
+> text, no lettering, no writing on the slate, wide 16:9 composition.
+
+The comedy is in the mundanity: this is a pub quiz, and the object that ended a
+thousand years of war is sitting in the corner being ignored. Resist anything
+triumphant — no rays of light, no kneeling, no awe. The heap of abandoned weapons is
+the only hint that anything happened at all.
+
+### If a losing screen is wanted later
+
+The same two scenes from the other side would work — the Kingdom watching the rift open
+from a distance, the Horde arriving at the trivia night and finding they quite enjoy it
+— but there is no need for them until the endings themselves exist.
