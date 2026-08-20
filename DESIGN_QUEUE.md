@@ -1110,3 +1110,99 @@ Points worth settling before building:
 - **Unit movement animation.** Units teleport between tiles.
 - **End-of-turn summary.** What happened while you were not looking.
 - **Naval units**, which would make the map's islands mean something.
+
+## 11. Enhancements that come with advances — the tech-based ending
+
+The point of these is that the tree currently **dead-ends**. Eleven advances are
+leaves that nothing depends on -- `full-of-fire`, `insanity`, `my-little-friend`,
+`stupidity-for-all`, `tower-building`, `hammers-of-glory`, `underground-smarts`,
+`ten-heads`, `arrows-glory`, `run-you-through`, `lordship` -- and each one unlocks
+a single unit and then stops. Research past that point buys nothing, which is
+exactly why a game that has not been won by turn 200 has nothing left to do but
+walk units at each other. Hanging enhancements off those leaves gives the back
+half of the tree somewhere to go, and is the cheapest route to an ending that is
+won by teching rather than by attrition.
+
+The design so far is that a perk is **chosen** on promotion. These are different:
+they are **unlocked** by an advance and then available to be chosen, so a unit
+type's menu grows as the tree does. Worth keeping that distinction, because it is
+what makes a late advance feel like it landed.
+
+### Two things missing underneath, before any of it
+
+**A lasting status on a unit.** `Unit` has no field for a condition with a
+duration -- only `disarmed`, which is a bare boolean. Burning, frozen, confused
+and the troll's halted regeneration are all *the same missing feature*, so they
+should be built once rather than four times. Three constraints on it: it has to
+serialise into a save, it has to tick deterministically for replays, and it has to
+be **visible on the map**. A unit quietly losing health for three turns with
+nothing drawn on it does not read as on fire; it reads as a bug.
+
+**Damage with a type.** There is no `resist` anywhere in `src/`, and combat has
+attack and defence and nothing subtractive. Resistance *to magic specifically*
+means damage has to carry a kind, which nothing does today. It is a small change
+and much cheaper made at the same time as statuses than after them.
+
+### The list
+
+**Magical resistance** -- deathknights, mages and dragons take less from magic,
+improving with rank. Note that this is the first mechanic that is **good for the
+AI's best units and no one else's**, and the Horde has two of the three. Wants
+measuring on both sides before it stays.
+
+**Pyromancer** -- sets the target alight; it takes damage for a few turns.
+**Cryomancer** -- freezes the target for a few turns.
+
+Both are advances off the magic line rather than new unit types. Freezing is the
+sharper of the two: a unit that cannot act is a unit removed from the game for
+three turns, which is strictly better than damage and historically the thing that
+breaks a strategy game's balance. Suggest it costs movement rather than the whole
+turn, at least to begin with.
+
+**Deathknight -- confuse.** The target stops differentiating for a few turns and
+will attack anything next to it, including its own side. The most interesting item
+on the list and the most dangerous to build:
+
+- The XP rule already answers what it teaches: *nothing*, since damage a unit did
+  not choose earns nobody anything. A confused unit's kills are exactly that.
+- The AI has to not fall over when one of its own units is a legal target of
+  another. Worth checking `abilityTargets` and the AI's target selection together.
+- It **must** be visible on the target, or a player watching their own unit hit
+  their own line will file it as a bug rather than a spell.
+
+**Ogre clubs** -- three variants off the ogre line. *Fiery club* burns. *Exploding
+club* damages everything around it including the ogre, but the ogre takes less.
+*Quake club* hits the surrounding tiles. All three share machinery with the
+sapper's existing `detonate`, which already handles a blast that catches both
+sides and deliberately does not chain.
+
+**Sapper -- "Mostly Volatile."** Survives one killing blow, not two. Sappers
+currently detonate when killed (`explodes: 0.4`), so this needs deciding: does the
+saved sapper detonate on the blow it survived, or does the blast wait for the
+second? Surviving *and* going off is a lot of value from one perk.
+
+**Knight -- "Better Part of Valour."** Retreats one tile when it fails to kill
+what it attacked. This is the first thing in the game that moves a unit during
+somebody else's turn, and it needs a rule for having nowhere to go -- surrounded,
+or backed onto water. Also worth checking it cannot retreat *into* a city and
+thereby garrison it for free.
+
+**Troll -- "Swampy Friend."** On a swamp tile, spends 90% of its health and its
+regeneration for a few turns to make another troll.
+
+Treat this one with the suspicion earned in 4c and 4e. A unit that makes units is
+a per-unit multiplier, and every per-unit and per-city multiplier measured so far
+has **amplified whoever was already ahead** rather than closing a gap. The
+counting ladder makes it worse: Ten Trolls spending 90% of a very large health
+pool to produce another Ten Trolls is an exponent. Strong suggestion that it
+produces **one** troll regardless of the parent's count, which also makes it a
+reason to build the small unit -- something nothing else in the game currently is.
+
+### Measuring
+
+These are unit-level rather than empire-level, so the 18-seed harness will
+struggle to separate them individually -- the same limit found in 4c through 4k.
+The honest approach is to measure them **as a block**: does a game where the back
+half of the tree is worth reaching end sooner than one where it is not? That is
+the question the section is actually for, and it is a big enough effect that
+eighteen seeds can see it.
