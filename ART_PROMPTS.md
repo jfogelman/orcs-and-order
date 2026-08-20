@@ -602,3 +602,72 @@ the only hint that anything happened at all.
 The same two scenes from the other side would work — the Kingdom watching the rift open
 from a distance, the Horde arriving at the trivia night and finding they quite enjoy it
 — but there is no need for them until the endings themselves exist.
+
+## Ordinary victory screens
+
+The two endings that already exist. **Conquest**, where the other side has no cities
+left, and **points**, where turn 300 passes and the game says so itself: *"declared
+ahead on points, which nobody finds satisfying."* The screens should agree with that
+sentence.
+
+Same format as the alternative victories above: **full scene, wide 16:9, no magenta,
+no keying, no text**. Save as `art_src/victory/<id>.<ext>`.
+
+Four of them — two routes, two factions. **A losing screen can reuse the winner's
+picture** with a different caption; being shown the other side celebrating is a
+perfectly good way to lose, and it halves the work.
+
+### `conquest-orc` — the Horde conquers everything
+
+The joke is that winning has left them with nothing to do.
+
+> A hilltop over a conquered landscape at dusk, broken siege engines and empty enemy
+> banners below. In the foreground a dozen orcs stand about with weapons lowered,
+> victorious and visibly at a loose end. One sharpens his axe while looking sideways at
+> the orc next to him. Another has already turned to face his own side. Nobody is
+> cheering. Mid-1990s fantasy strategy game illustration, pixel art, long orange dusk
+> light, dark silhouettes, no text, no lettering, wide 16:9 composition.
+
+The sideways glance is the picture. They have run out of enemies and are working
+through the implications.
+
+### `conquest-human` — the Kingdom conquers everything
+
+The joke is that the moment has been scheduled.
+
+> A parade ground with rows of footmen standing rigidly to attention under bright
+> banners, and in front of them a small clerk at a lectern reading from a scroll that
+> unrolls down the steps and across the ground. The knights are motionless. Two in the
+> back row have visibly stopped listening. A dwarf near the front is asleep standing
+> up. Mid-1990s fantasy strategy game illustration, pixel art, crisp daylight, blue and
+> gold, no text, no lettering, no writing on the scroll, wide 16:9 composition.
+
+Nothing in it should look like a celebration. It is an administrative event that
+happens to follow a war.
+
+### `points-orc` — the Horde wins on points
+
+The joke is that nothing was settled and somebody has decided anyway.
+
+> An enormous armoured orc warchief holding a very small certificate at arm's length,
+> staring at it with total incomprehension. A nervous goblin clerk with an abacus
+> stands beside him having just handed it over. Across the valley behind them an
+> unbroken enemy army is still visibly encamped, banners flying, entirely unbothered.
+> Mid-1990s fantasy strategy game illustration, pixel art, flat grey overcast light,
+> no text, no lettering, no writing on the certificate, wide 16:9 composition.
+
+Two things have to read: the certificate is far too small, and **the enemy is still
+there**. Nobody won anything.
+
+### `points-human` — the Kingdom wins on points
+
+The same non-event, from the other end.
+
+> A long committee table indoors, humans and dwarves seated with tally boards, an
+> abacus and cups of tea, applauding politely and without enthusiasm. One elf is
+> examining the ceiling. Through a tall window behind them, an orc encampment sits on
+> the hills outside, campfires lit, plainly still there. Mid-1990s fantasy strategy
+> game illustration, pixel art, warm indoor lamplight against cold daylight from the
+> window, no text, no lettering, no writing on the boards, wide 16:9 composition.
+
+The window is doing the work. Inside, the matter is closed; outside, it is not.
