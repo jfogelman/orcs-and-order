@@ -69,29 +69,49 @@ original download, so the pairing is identity, not resemblance.
 | `turn.mp3` | `freesound_community-086196_oil-drum-soft-impactwav-39587.mp3` |
 | `xplosion.mp3` | `soundreality-explosion-fx-343683.mp3` |
 
-## Music — provenance unconfirmed
+## Music
 
-`battle.mp3`, `world.mp3` and `victory.mp3`.
+Also Pixabay, under the same licence summary linked above. Two of the three are
+pinned to the exact upload; each was confirmed by checking the length on the
+Pixabay page against the length of the file in this repository, so the pairing
+is not just an assertion.
 
-**These three cannot currently be credited.** They carry no ID3 metadata at all --
-only a LAME encoder string -- and unlike every sound effect above, none of them
-matches any named download in the original folder, by content or by size and
-length. Nothing on disk says where they came from.
+| file | track | by | Pixabay id | length |
+|---|---|---|---|---|
+| `world.mp3` | Adventure Game Loop - Fun and Uplifting Background Music | Cyberwave-Orchestra | 247664 | 1:45, file measures 104.78s |
+| `battle.mp3` | RPG Battle \| Chiptune Video Game Music | NickPanek | 346666 | 1:57, file measures 116.64s |
+| `victory.mp3` | **not identified** -- see below | | | file measures 2.12s |
 
-The likely sources are Pixabay, as above, or Royalty Free Music Library:
-<https://royaltyfreemusiclibrary.com/license>
+**`victory.mp3` is still not pinned to a specific upload.** What is known is that
+it came from a Pixabay sound-effects search for "battle game victory", which
+narrows the licence to the same Pixabay Content License but does not name the
+file or its uploader. At 2.12 seconds it is a sting rather than a track, which is
+consistent with it being a sound effect rather than music. Worth pinning to a
+single upload page when the download can be traced, so this table can be
+finished.
 
-Until that is settled they are **not in the repository**. See below.
+**One thing to know about `world.mp3`:** its Pixabay page states the track is
+registered with Content ID. That does not affect the right to use it, but it can
+cause automated copyright claims on video of the game -- which matters for a game
+meant to be streamed or recorded. The uploader offers claim removal on request.
 
 ## Audio is not currently tracked here
 
-All sound effects and music are untracked and gitignored while the licensing
-above is confirmed, so this repository redistributes none of it. The files stay
-in place locally, so a checkout on this machine still has sound; a fresh clone
-will not, and neither will the deployed site until they are restored.
+All sound effects and music are untracked and gitignored, so this repository
+redistributes none of it. The files stay in place locally, so a checkout on this
+machine still has sound; a fresh clone will not, and neither will the deployed
+site until they are restored.
 
-The distinction that motivates this: bundling licensed audio inside a game is an
+Provenance is no longer the reason. Every sound effect is traced to a named
+Pixabay download and two of the three music tracks are pinned to their upload.
+What remains is a separate question: bundling licensed audio inside a game is an
 ordinary permitted use, whereas publishing the `.mp3` files themselves in a public
-repository is closer to redistributing the sounds as files, which these licences
-treat differently. Restoring them is a matter of deleting the audio lines from
-`.gitignore` once each file's terms are confirmed.
+repository is closer to redistributing the sounds as files.
+
+That distinction suggests a split rather than an all-or-nothing choice. `public/`
+holds the processed audio the game actually loads, which is the bundled-in-a-game
+case; `art_src/` holds the untouched original downloads, which is the one worth
+being careful about. Restoring only `public/sfx/` and `public/music/` would give
+the deployed game its sound back while still not publishing the originals.
+
+Either way it is a matter of deleting the relevant lines from `.gitignore`.
