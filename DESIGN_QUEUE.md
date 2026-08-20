@@ -1050,11 +1050,25 @@ recklessness -- so the same event wants two lines, not one line in two voices.
   the bible's crisis-state inversion.
 
 **The shape that fits what is here.** Advisors read the same log the effects and
-sounds already read, with a rule per situation and a cooldown so the same one cannot
-fire every turn. That keeps `sim/` unaware of them, exactly as the animation layer is.
-The risk is volume: six advisors with something to say every turn is a nuisance rather
-than a joke, so the interesting problem is picking *one* thing worth interrupting for,
-not detecting many.
+sounds already read, with a rule per situation. That keeps `sim/` unaware of them,
+exactly as the animation layer is.
+
+**Two ways in, which between them settle the volume problem.** Six advisors with
+something to say every turn is a nuisance rather than a joke, and the answer is that
+most of the time they do not speak unless spoken to:
+
+- **Asked.** The player can consult any advisor on any turn and gets their current
+  read. They are allowed to repeat themselves -- an advisor who says the same thing
+  three turns running because nothing has changed is *in character*, especially the
+  Knight-Marshal, and it costs nothing to let them.
+- **Triggered.** They interrupt only for something major: a city lost, a city sacked
+  out of existence, an advance finished, a war going badly enough to notice. This is
+  the path that needs the cooldown and the discipline, since an interruption has to
+  earn itself.
+
+Which reframes the design work. Asked-for lines are cheap and can be many, because
+nobody is forced to read them. Triggered lines are the expensive ones, and the list of
+what counts as major should start far shorter than it ends up.
 
 ## 10. Alternative victories
 
