@@ -851,48 +851,40 @@ swap reads as the same effect dying rather than as a different picture.
 
 ### The victory screens
 
-Two problems across the set, neither fatal.
+One real problem, and one prop worth a decision. **An earlier draft of this
+section claimed the two conquest screens were drawn in a different, smoother
+style than the points pair, and that the dark slab in the foreground of
+`conquest-orc` was a stray blank plaque. Both were wrong**, and checking at
+native resolution rather than off a 330px contact sheet settles it: all four are
+chunky pixel art with heavy outlines, and the slab is a wooden-framed slate with
+a stick of chalk lying beside it. No restyle is needed and the pair should not be
+re-rolled for it.
 
-**The style split.** `points-orc` and `points-human` came back as chunky pixel
-art; the two conquest screens came back as smooth vector cartoon. They are one
-feature and should look like it. **The points pair is the one to match** -- it
-sits closer to the rest of the game.
+**The chalkboard.** It is drawn on purpose and appears in both conquest screens --
+on the rock among the orcs, and on the steps by the clerk. The only question is
+whether a slate belongs on an orc hilltop at all. It is defensible: the joke in
+`conquest-orc` is that these are creatures with nothing left to do, and a
+tally-board somebody has abandoned mid-count fits that better than it has any
+right to. Leave it unless it grates. If it should go, ask for **a rolled hide and
+a charcoal stick** in its place rather than forbidding props, since a blanket ban
+on rectangular objects would also cost the scroll and the crates.
 
-**Blank signage.** Every generator wants to put text somewhere, and with lettering
-suppressed it leaves a blank slab instead. `conquest-orc` has one in the
-foreground that reads unmistakably as a tablet computer lying on the rock,
-`conquest-human` has one on the steps, `points-human` a blank banner across the
-top. Worth an explicit clause, since asking for no text is what causes it.
-
-Add to all victory prompts: *no signs, no plaques, no banners, no boards, no
-blank panels, no rectangular objects of any kind, no text, no lettering.*
-
-**`conquest-orc`** — re-roll for style and the slab, keeping everything else; the
-composition is right, and the peaceful countryside behind them is better than a
-ruin would have been.
-
-> A hilltop over a peaceful conquered countryside at dusk, intact villages and
-> fields below. In the foreground a dozen orcs sit and stand about with weapons
-> down, sharpening axes at a dead campfire, thoroughly at a loose end. One looks
-> sideways at the orc beside him. Chunky pixel art, 90s fantasy strategy game
-> illustration, heavy outlines, long orange dusk light, no signs, no plaques, no
-> banners, no boards, no blank panels, no rectangular objects, no text, no
-> lettering, wide 16:9 composition.
-
-**`conquest-human`** — needs more than a restyle. The victory modal is 600px wide
-at most, and a parade ground of forty tiny figures turns to mush at that width.
-**Fewer and much larger figures**, and the bored ones have to be big enough to
-see, since they are the joke.
+**`conquest-human` is the one genuine re-roll**, and for composition rather than
+style. The victory modal is 600px wide at most, and a parade ground of forty tiny
+figures turns to mush at that width -- the two who have stopped listening are the
+joke, and at that size nobody can see them. **Fewer and much larger figures.**
 
 > A clerk at a lectern on stone steps reading from a long scroll that unrolls down
 > the steps, seen close, with only six or seven armoured footmen standing to
 > attention around him drawn large in the foreground. Two of them have visibly
 > stopped listening and one dwarf is asleep standing up. A castle wall behind, kept
 > simple. Chunky pixel art, 90s fantasy strategy game illustration, heavy outlines,
-> crisp daylight, blue and gold, no signs, no plaques, no banners, no boards, no
-> blank panels, no rectangular objects, no text, no lettering, wide 16:9
-> composition.
+> crisp daylight, blue and gold, no text, no lettering, wide 16:9 composition.
 
-**`points-orc` and `points-human`** — keep. The only fault is the blank banner
-across the top of `points-human`, which is a crop away from gone if a re-roll is
-not wanted.
+Note that the existing scroll handles lettering exactly right -- an illegible
+squiggle-script that reads as writing without spelling anything. Worth keeping,
+and worth asking for by name elsewhere.
+
+**`conquest-orc`, `points-orc` and `points-human` — keep.** The only blemish in
+the three is the blank banner across the top of `points-human`, which is a crop
+away from gone.
