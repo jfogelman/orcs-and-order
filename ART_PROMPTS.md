@@ -747,3 +747,41 @@ a per-perk badge set. This list closes it. Nine more enhancements would mean
 fifteen badges, and there is nowhere on the tile to put a second one. Rank stays
 in the corner; what a unit *is* -- burning, frozen, carrying a quake club -- shows
 on the sprite. That split is worth holding to as more perks arrive.
+
+### Two gaps in the above, found by checking it against the queue
+
+**The fourth condition has no picture.** Section 11 names four things that share
+the missing status field -- burning, frozen, confused, and the troll's **halted
+regeneration** -- and only three got overlays. The positive state is already drawn
+(`troll_regen.png`); the suppressed one is not.
+
+It should not be a hollow overlay like the other three, and the reason is worth
+recording: burning, frozen and confused can land on **any** unit, which is what
+forces them to be tile-sized things drawn over an unknown creature. Halted
+regeneration applies to exactly one unit type in one situation. That makes it the
+right and only candidate for the **top-left corner**, the one part of the tile
+nothing has claimed.
+
+Save as `art_src/status/spent.<ext>`, drawn to the same recipe as the promotion
+marks -- a small centred object on flat magenta, read at roughly 16 pixels:
+
+> A crude dark stitch of thick twine closing a wound, two crossed sutures with the
+> ends hanging loose, pixel art, thick black outline, flat magenta background, no
+> shadow, centred, 90s fantasy strategy game icon
+
+Avoid green here for the same reason the Horde's rank marks avoid it. It sits on a
+troll.
+
+**The split itself wants an effect.** A troll spending nine tenths of itself to
+make another one is the most dramatic thing in the list and currently has no
+moment. Standard effect format -- 4 frames, square, flat magenta:
+
+> A rope of thick green sinew and ichor stretching and tearing apart in the middle,
+> splitting into two masses that pull away from each other, drips falling, pixel
+> art, thick black outline, flat magenta background, 4-frame horizontal animation
+> strip, 90s fantasy strategy game effect
+
+**The ogre clubs need no new effects.** `explosion.png` covers the exploding club,
+`demolish.png` the quake club, and the fiery club is `dragonfire.png` on the swing
+plus the new `burning` overlay on whatever it hit. Only the six variant unit sheets
+above are actually missing.
