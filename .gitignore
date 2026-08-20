@@ -28,3 +28,17 @@ Thumbs.db
 # Python bytecode from the art tooling.
 __pycache__/
 *.pyc
+
+# Audio is held out of the repository while its licensing is confirmed.
+#
+# The sound effects come from Pixabay and the three music tracks have no
+# identifying metadata at all -- see CREDITS.md. Bundling licensed audio in a
+# game is an ordinary permitted use; publishing the .mp3 files themselves in a
+# public repository is a different act, and not one to take on an assumption.
+#
+# The files stay on disk, so a local checkout still has sound. Delete these
+# four lines to restore them once the terms are confirmed.
+art_src/sfx/
+art_src/music/
+public/sfx/
+public/music/

@@ -126,6 +126,26 @@ still missing.
 All art and prompts describe original characters in a general 90s-fantasy-RTS style.
 No Warcraft assets, names, characters, or logos appear anywhere in this repo.
 
+The art itself was generated with **Google Gemini** from those prompts. The sound
+effects came from Pixabay, found with the search terms in
+[SOUND_NEEDED.md](SOUND_NEEDED.md).
+
+**Audio is not in the repository at the moment.** It is untracked and gitignored
+while its licensing is confirmed -- putting the `.mp3` files in a public repo is a
+different act from bundling them in a game, and not one worth taking on an
+assumption. A fresh clone therefore has no sound. [CREDITS.md](CREDITS.md) records
+what came from where, including the original download name of every sound effect
+that was renamed.
+
+---
+
+## Licence
+
+Code, tooling and documentation are MIT -- see [LICENSE](LICENSE). The artwork and
+audio are **not** covered by it and are not the project's to relicense; anyone
+reusing the code should assume they need to bring their own. [CREDITS.md](CREDITS.md)
+has the details.
+
 ---
 
 ## Status
