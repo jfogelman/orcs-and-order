@@ -785,3 +785,114 @@ moment. Standard effect format -- 4 frames, square, flat magenta:
 `demolish.png` the quake club, and the fiery club is `dragonfire.png` on the swing
 plus the new `burning` overlay on whatever it hit. Only the six variant unit sheets
 above are actually missing.
+
+## Re-rolls, after reviewing the first drop
+
+What came back was mostly right. The three status rings are hollow and key
+cleanly, the ogre variants are the best sheets in the project, and the four
+victory screens land their jokes. These are the specific fixes.
+
+### The decision the drop forced
+
+Two treatments arrived for the same three conditions: **hollow rings** in
+`art_src/status/`, and **solid fire and ice masses** in `art_src/unit states/`
+that came in two intensity stages -- a full one and a `(mostly recovered)` one.
+
+**Keep the rings, take the two-stage idea into them.** The stages are the more
+valuable half of that drop, because how many turns a condition has left is
+otherwise completely invisible and the rings cannot show it -- their four frames
+are a loop, not a countdown. The solid masses measure 63--76% opaque through the
+centre and would sit over the creature they are describing, which is the one
+failure these overlays exist to avoid.
+
+So each condition wants **two** pictures: the full one, already drawn, and a
+guttering one for the last turn or two. Save the second as
+`art_src/status/<id>-fading.<ext>`, matching the hyphen-variant convention the
+pipeline already uses for `axethrower-disarmed`.
+
+The five files in `art_src/unit states/` should move out of that folder whichever
+way this goes. That processor parses creature-then-state against a list of two
+known states, so `unit on fire` is rejected outright -- it is not a per-creature
+sheet and does not belong there.
+
+### `spent` — re-roll, the only outright reject
+
+The first one is drawn on an opaque tan patch, so at the ~16 pixels this is
+composited at, the silhouette is a beige square and the stitches carry no
+information at all. The twine has to *be* the object.
+
+> Two crossed sutures of thick dark twine tied in a knot, loose frayed ends
+> hanging down, nothing behind them, pixel art, thick black outline, flat magenta
+> background, no patch, no backing, no square, no panel, no border, no skin, no
+> shadow, centred, 90s fantasy strategy game icon
+
+### `confused` — re-roll to a ring
+
+The stars currently run along the top edge of the frame, which is where the
+out-of-supply mark sits, with the disarmed dot at top-right. Moving them into a
+ring fixes the collision and makes all three conditions one family: a ring of
+fire, a ring of ice, a ring of stars.
+
+> A ring of small crooked yellow stars and pale spirals orbiting in a circle,
+> hollow and empty through the middle, evenly spaced around the ring, pixel art,
+> thick black outline, flat magenta background, no ground, no creature, nothing in
+> the centre, 4-frame horizontal animation strip, 90s fantasy strategy game effect
+
+### The three fading stages
+
+All three keep the ring shape and the frame size of their full versions, so the
+swap reads as the same effect dying rather than as a different picture.
+
+| id | prompt |
+|---|---|
+| `burning-fading` | A broken ring of low guttering flame with dark gaps in it, more grey smoke than fire, a few dull orange embers, hollow and empty through the middle, pixel art, thick black outline, flat magenta background, no ground, no creature, nothing in the centre, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+| `frozen-fading` | A cracked and half-melted ring of pale blue ice, chunks missing, meltwater dripping from the lower edge, thinner and lower than a whole ring, hollow and empty through the middle, pixel art, thick black outline, flat magenta background, no ground, no creature, nothing in the centre, single frame, 90s fantasy strategy game effect |
+| `confused-fading` | A ring of two faint yellow stars and a slow washed-out spiral, most of the ring empty, dimmer and sparser than a full ring, hollow through the middle, pixel art, thick black outline, flat magenta background, no ground, no creature, nothing in the centre, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+
+### The victory screens
+
+Two problems across the set, neither fatal.
+
+**The style split.** `points-orc` and `points-human` came back as chunky pixel
+art; the two conquest screens came back as smooth vector cartoon. They are one
+feature and should look like it. **The points pair is the one to match** -- it
+sits closer to the rest of the game.
+
+**Blank signage.** Every generator wants to put text somewhere, and with lettering
+suppressed it leaves a blank slab instead. `conquest-orc` has one in the
+foreground that reads unmistakably as a tablet computer lying on the rock,
+`conquest-human` has one on the steps, `points-human` a blank banner across the
+top. Worth an explicit clause, since asking for no text is what causes it.
+
+Add to all victory prompts: *no signs, no plaques, no banners, no boards, no
+blank panels, no rectangular objects of any kind, no text, no lettering.*
+
+**`conquest-orc`** — re-roll for style and the slab, keeping everything else; the
+composition is right, and the peaceful countryside behind them is better than a
+ruin would have been.
+
+> A hilltop over a peaceful conquered countryside at dusk, intact villages and
+> fields below. In the foreground a dozen orcs sit and stand about with weapons
+> down, sharpening axes at a dead campfire, thoroughly at a loose end. One looks
+> sideways at the orc beside him. Chunky pixel art, 90s fantasy strategy game
+> illustration, heavy outlines, long orange dusk light, no signs, no plaques, no
+> banners, no boards, no blank panels, no rectangular objects, no text, no
+> lettering, wide 16:9 composition.
+
+**`conquest-human`** — needs more than a restyle. The victory modal is 600px wide
+at most, and a parade ground of forty tiny figures turns to mush at that width.
+**Fewer and much larger figures**, and the bored ones have to be big enough to
+see, since they are the joke.
+
+> A clerk at a lectern on stone steps reading from a long scroll that unrolls down
+> the steps, seen close, with only six or seven armoured footmen standing to
+> attention around him drawn large in the foreground. Two of them have visibly
+> stopped listening and one dwarf is asleep standing up. A castle wall behind, kept
+> simple. Chunky pixel art, 90s fantasy strategy game illustration, heavy outlines,
+> crisp daylight, blue and gold, no signs, no plaques, no banners, no boards, no
+> blank panels, no rectangular objects, no text, no lettering, wide 16:9
+> composition.
+
+**`points-orc` and `points-human`** — keep. The only fault is the blank banner
+across the top of `points-human`, which is a crop away from gone if a re-roll is
+not wanted.
