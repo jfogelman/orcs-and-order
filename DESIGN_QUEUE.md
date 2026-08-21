@@ -1262,21 +1262,36 @@ city sitting on Coin with nothing chosen.
 
 ### The Horde Report
 
-Asked for by name and never specified beyond it. It appears nowhere -- not in the
-code, not in this queue, not in the prompts.
+Asked for by name, and now specified: **an easy way to see your full current
+empire at a glance.** Your own only -- no intelligence on anybody else, since
+there are no spying mechanics at this stage and inventing one to feed a screen
+would be the tail wagging the dog.
 
-The likeliest reading is that it is the **end-of-turn summary** already sitting in
-section 5 ("what happened while you were not looking") wearing a faction name. If
-so, the Kingdom needs its own, and the joke writes itself: the Horde gets a report
-and the Kingdom gets a briefing, same contents, different register.
+Worth correcting an earlier guess in this file: this is **not** the end-of-turn
+summary queued in section 5. That one answers *what happened while you were not
+looking*, and is a log of events. This one answers *where do I stand*, and is a
+snapshot of state. They are complementary and neither replaces the other.
 
-Two things to settle first:
+What it wants to show, all of it derivable from state that already exists:
 
-- **Whether it opens or arrives.** A screen you choose to look at is ignorable; one
-  that appears every turn is a click to dismiss forty times a game. The advisors
-  note in section 9 already landed on ask-or-be-interrupted for major reasons,
-  and the same answer probably fits here.
-- **Whether it reports your empire or everything you can see.** The sound rule
-  answers this by analogy -- you hear about your own empire, but you can watch any
-  fight you can see -- so a report covering what you *saw* as well as what you
-  *did* would be consistent with a decision already taken.
+- **Cities** -- size, what each is building and how many turns are left, food and
+  whether any are starving or in disorder, and which is the capital. This is the
+  bulk of it and the reason to have it: the information exists today only by
+  opening each city in turn.
+- **The army** -- unit counts by type, how many are promoted, and which are out
+  of supply. `supplyQuality` already computes the last one per unit.
+- **The economy** -- gold in hand and per turn, beakers per turn, and what is
+  being researched with turns remaining.
+
+Two notes on building it:
+
+- **Read-only, and derived.** Everything above can be computed from `GameState`
+  on open. It should store nothing and change nothing, which keeps it out of
+  saves entirely and makes it impossible to break a game with.
+- **Opened, not pushed.** A screen you choose to look at is ignorable; one that
+  appears every turn is a click to dismiss forty times a game. The advisors in
+  section 9 are the thing that interrupts, and only for major reasons -- this is
+  the one you go and read.
+
+The Kingdom needs its own name for it. Same screen, drier register: the Horde
+gets a Report and the Kingdom gets something like a Survey or a Return.
