@@ -289,6 +289,24 @@ export function productionCostIn(state: GameState, city: City, item: ProductionI
  * a civilisation living entirely in captured cities still has to run its
  * supply from somewhere.
  */
+/**
+ * Units resting inside a city: fortified or on sentry, on the city's own tile.
+ *
+ * Shared by the renderer, the click handler and the city panel so all three
+ * agree on what "in the garrison" means. Skipping units that are merely passing
+ * through matters: a unit with orders left is one the player is still thinking
+ * about, and hiding it inside the city is how it gets forgotten.
+ */
+export function garrisonOf(state: GameState, city: City): Unit[] {
+  return state.units.filter(
+    (u) =>
+      u.owner === city.owner &&
+      u.x === city.x &&
+      u.y === city.y &&
+      (u.order === 'fortified' || u.order === 'sentry'),
+  );
+}
+
 export function capitalOf(state: GameState, playerId: number): City | null {
   const older = (a: City, b: City) =>
     a.foundedTurn < b.foundedTurn || (a.foundedTurn === b.foundedTurn && a.id < b.id);

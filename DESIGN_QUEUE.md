@@ -1368,7 +1368,14 @@ Points to settle before building:
 Both of these want the disband machinery first: the sacrifice is a disband with
 a beneficiary attached, and building it twice would be the usual mistake.
 
-## 14. Two things the map should say for itself
+## 14. Two things the map should say for itself — built
+
+**Both are in.** Worked tiles carry a one-pixel border in the owner colour,
+your own only. A unit fortified or on sentry inside its own city is drawn as a
+count on the city rather than on the tile, clicking the tile opens the city, and
+the panel lists the garrison with a click to wake each one -- which is the half
+that matters, since the drawing change without it would hide units where nobody
+could reach them.
 
 ### Thin outlines on worked tiles
 

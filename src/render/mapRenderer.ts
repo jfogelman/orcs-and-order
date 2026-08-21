@@ -7,7 +7,7 @@ import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
-import { capitalOf, inSupply } from '../sim/city';
+import { garrisonOf, capitalOf, inSupply } from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
 
@@ -276,6 +276,33 @@ export class MapRenderer {
       }
     }
 
+    // --- worked ground ---------------------------------------------------
+    // A thin border on the tiles your cities are actually working, so the map
+    // says which land is already spoken for. Choosing where the next city goes
+    // otherwise means guessing, and the spacing rule makes that guess matter.
+    //
+    // Your own only, and for the same reason the fog exists: an enemy city's
+    // worked tiles would give away how big it is and which ground it has
+    // assigned, which is a good deal more than seeing the city tells you.
+    ctx.save();
+    ctx.strokeStyle = state.players[viewerId].color;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    for (const c of state.cities) {
+      if (c.owner !== viewerId) continue;
+      for (const i of c.workedTiles) {
+        const tx = i % state.width;
+        const ty = Math.floor(i / state.width);
+        if (tx < x0 || tx > x1 || ty < y0 || ty > y1) continue;
+        if (!viewer.explored[i]) continue;
+        const s = cam.tileToScreen(tx, ty);
+        // Half-pixel offset so a one-pixel line lands on a pixel rather than
+        // straddling two and coming out grey.
+        ctx.strokeRect(s.x + 0.5, s.y + 0.5, size - 1, size - 1);
+      }
+    }
+    ctx.restore();
+
     // --- cities ----------------------------------------------------------
     for (const c of state.cities) {
       const i = idx(c.x, c.y, state.width);
@@ -289,6 +316,11 @@ export class MapRenderer {
       const i = idx(u.x, u.y, state.width);
       if (!viewer.visible[i]) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
+      // A unit resting inside its own city is drawn as a mark on the city
+      // rather than on top of it -- what the player is thinking about at that
+      // tile is the city. The selected one still draws itself, so choosing a
+      // garrison member from the panel shows you which one you picked.
+      if (overlay.selectedUnitId !== u.id && this.restingInCity(state, u)) continue;
       this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id, viewerId);
     }
 
@@ -467,6 +499,13 @@ export class MapRenderer {
     ctx.setLineDash([]);
   }
 
+  /** True for a unit tucked up inside a city of its own. */
+  private restingInCity(state: GameState, u: Unit): boolean {
+    if (u.order !== 'fortified' && u.order !== 'sentry') return false;
+    const here = state.cities.find((c) => c.x === u.x && c.y === u.y);
+    return !!here && here.owner === u.owner;
+  }
+
   // ------------------------------------------------------------- pieces
 
   private drawCity(
@@ -500,6 +539,28 @@ export class MapRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(c.size), s.x + r + 2, s.y + r + 3);
+
+    // How many are tucked up inside. A garrison you cannot see at all is how a
+    // player loses a city they were sure was defended, so hiding the units
+    // only works if the city says how many it is holding.
+    const garrison = garrisonOf(state, c).length;
+    if (garrison > 0 && size >= 24) {
+      const gr = Math.max(5, size * 0.15);
+      const gx = s.x + size - gr - 2;
+      const gy = s.y + size - gr - 2;
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#c8b48a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#f2e6c8';
+      ctx.font = `bold ${Math.round(gr * 1.2)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(garrison), gx, gy + 1);
+    }
 
     // A crown on the capital, opposite the size badge.
     if (isCapital) {
