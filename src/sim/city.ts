@@ -6,8 +6,9 @@ import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
-import type { City, GameState, ProductionItem, Unit, AutoBuild } from '../model/types';
+import type { City, GameState, ProductionItem, Unit, AutoBuild, Player } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
+import { splitTrade } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 
 /**
@@ -106,6 +107,30 @@ export function contentLimit(state: GameState, city: City): number {
 
 export function foodSurplus(state: GameState, city: City): number {
   return cityYield(state, city).food - city.size * FOOD_PER_CITIZEN;
+}
+
+/**
+ * What one city hands its owner in a turn, after the buildings that multiply it.
+ *
+ * Extracted so the turn and the empire report cannot drift apart. They were
+ * written twice and briefly disagreed by construction: two copies of a formula
+ * that includes two separate percentage bonuses is a defect waiting for
+ * somebody to change one of them.
+ *
+ * Pure, and reads the city as it stands. The turn calls it at a particular
+ * moment -- after the city has grown and re-assigned its workers -- and that
+ * timing stays the turn's business, not this function's.
+ */
+export function cityIncome(
+  state: GameState,
+  city: City,
+  player: Player,
+): { gold: number; beakers: number } {
+  const split = splitTrade(player, cityYield(state, city).trade);
+  return {
+    gold: Math.round(split.gold * (1 + cityGoldBonus(state, city))),
+    beakers: Math.round(split.beakers * (1 + cityScienceBonus(state, city))),
+  };
 }
 
 export function buildingUpkeep(city: City): number {
