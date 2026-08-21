@@ -1367,3 +1367,68 @@ Points to settle before building:
 
 Both of these want the disband machinery first: the sacrifice is a disband with
 a beneficiary attached, and building it twice would be the usual mistake.
+
+## 14. Two things the map should say for itself
+
+### Thin outlines on worked tiles
+
+Every city works a fat cross of tiles and nothing on the map says which. The
+consequence is not cosmetic: choosing where to put the next city means guessing
+which ground is already spoken for, and the spacing rule in section 8 makes that
+guess matter.
+
+A one-pixel border in the owner's colour around each worked tile is enough --
+worked tiles are already tracked per city as `workedTiles`, so this is drawing
+rather than bookkeeping. Two things to decide:
+
+- **Whose.** Your own only is the safe answer, and consistent with the fog rules:
+  drawing an enemy city's worked tiles would say how big it is and which tiles it
+  has assigned, which is more than seeing the city tells you.
+- **Always, or while founding.** Always is simpler and probably right, but it is
+  a lot of lines on a busy map. Worth trying always first and only reaching for
+  a toggle if it turns out to be noise.
+
+### A fortified unit should hide inside its city
+
+Right now a unit fortified in a city sits on top of it, so the city is hard to
+click and the unit has to be woken by finding it rather than by opening the
+place it is standing in. Both halves are the same wrong idea: the unit is the
+thing on the tile, when what the player is thinking about is the city.
+
+The shape: a garrisoned unit that is fortified or sentried draws as a small mark
+on the city rather than as itself, clicking the tile opens the city, and the
+city panel lists what is inside it with a way to wake each one. That last part
+is the actual feature -- the drawing change without it just hides the unit
+somewhere you cannot reach.
+
+Worth keeping: a garrison you cannot see at all is how a player loses a city
+they thought was defended, so the mark has to say *how many* are in there.
+
+## 15. Later
+
+Bigger than the queue above, and none of them blocking.
+
+**A post-game summary that replays the game.** Territory changing hands turn by
+turn, cities founded and lost, the score pulling apart. It needs the game to
+retain a per-turn record it currently throws away -- city ownership and unit
+counts per player would carry most of it, and both are small enough to keep for
+three hundred turns. Worth deciding early whether that record is part of the
+save, because retrofitting it means old saves can never be replayed.
+
+**A palace.** The capital is currently derived rather than built, which is why
+it could be taken by conquering somebody older (fixed, but it shows the shape of
+the problem). A palace would make the seat of government a thing you own and can
+move at a cost, rather than an accident of founding order.
+
+**More than two factions.** The counting joke is the spine of both current
+sides, so a third should not simply be a third set of numbers. Spitballing:
+a faction that cannot count past one and compensates with size; a faction whose
+advances are all administrative and whose units are all committees; undead who
+gain citizens from other people's losses. Each wants its own reason to exist
+rather than its own colour.
+
+**Auto-scout**, for the Outrider and for a new Goblin Scout to be added
+alongside it. Walks toward unexplored ground on its own and **halts the moment
+it sees an enemy or a city**, which is the part that makes it useful rather than
+a way to lose a unit unattended. Reuses the standing-order machinery that `goto`
+already has, and wants the same Halt action the march does.

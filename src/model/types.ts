@@ -175,6 +175,12 @@ export interface City {
   disorder: boolean;
   foundedTurn: number;
   /**
+   * Who founded it, which is not always who holds it.
+   *
+   * Optional for old saves, where it is unknown and the holder is assumed.
+   */
+  foundedBy?: number;
+  /**
    * Who actually lives here, one entry per point of size.
    *
    * Purely descriptive -- nothing in the rules reads it. Rolled once when a

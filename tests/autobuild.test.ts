@@ -61,9 +61,35 @@ describe('auto-build', () => {
     passATurn(state);
 
     expect(city.lastUnit).toBe('goblin');
-    // Finishing a unit does not clear production, so it is already making
-    // another -- which is why the remembering has to happen there rather than
-    // being read off `producing` when a standing order is finally consulted.
+    // Remembering is what lets "repeat" work at all, because a city set to ask
+    // stops here and no longer has the unit on `producing` to read back.
+    expect(city.producing.kind).toBe('coin');
+  });
+
+  it('stops after finishing a unit, not only after a building', () => {
+    const { state, city } = humanCity();
+    const goblin = { kind: 'unit', id: 'goblin' } as const;
+    city.producing = goblin;
+    city.shields = productionCostIn(state, city, goblin);
+
+    passATurn(state);
+
+    // The bug this fixes: finishing a unit leaves `producing` alone, so a city
+    // set to ask quietly began another one and was never idle enough to raise
+    // the prompt. Asking has to mean asking for units as well as buildings.
+    expect(autoBuildOf(city)).toBe('ask');
+    expect(city.producing.kind).toBe('coin');
+  });
+
+  it('keeps going on "repeat" rather than stopping', () => {
+    const { state, city } = humanCity();
+    const goblin = { kind: 'unit', id: 'goblin' } as const;
+    city.autoBuild = 'repeat';
+    city.producing = goblin;
+    city.shields = productionCostIn(state, city, goblin);
+
+    passATurn(state);
+
     expect(city.producing).toEqual(goblin);
   });
 

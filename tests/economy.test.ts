@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AI_TUNING, runAiTurn } from '../src/ai/ai';
 import { BUILDINGS } from '../src/model/buildings';
+import type { BuildingDef } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
 import type { BuildingId, City, GameState } from '../src/model/types';
 import {
@@ -55,8 +56,26 @@ describe('economy buildings', () => {
   it('are defined for both factions, in matching pairs', () => {
     const gold = Object.values(BUILDINGS).filter((b) => b.goldBonus);
     const science = Object.values(BUILDINGS).filter((b) => b.scienceBonus);
-    expect(gold.map((b) => b.faction).sort()).toEqual(['human', 'orc']);
-    expect(science.map((b) => b.faction).sort()).toEqual(['human', 'orc']);
+    // Matching pairs rather than exactly one each: there are two tiers now,
+    // and what has to hold is that neither side has a tier the other lacks.
+    const byFaction = (list: BuildingDef[]) => ({
+      orc: list.filter((b) => b.faction === 'orc').length,
+      human: list.filter((b) => b.faction === 'human').length,
+    });
+    expect(byFaction(gold).orc).toBe(byFaction(gold).human);
+    expect(byFaction(science).orc).toBe(byFaction(science).human);
+    expect(byFaction(gold).orc).toBeGreaterThan(0);
+    expect(byFaction(science).orc).toBeGreaterThan(0);
+  });
+
+  it('gate every second tier behind its first', () => {
+    for (const b of Object.values(BUILDINGS)) {
+      if (!b.needs) continue;
+      const first = BUILDINGS[b.needs];
+      expect(first, `${b.id} needs ${b.needs}, which does not exist`).toBeDefined();
+      // Otherwise a city could hold a Cathedral it never built a Chapel for.
+      expect(first.faction === b.faction || first.faction === 'both').toBe(true);
+    }
   });
 
   it('are each unlocked by an advance', () => {

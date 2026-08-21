@@ -25,8 +25,19 @@ import { splitTrade } from '../sim/research';
 import { openPedia } from './pedia';
 import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
 
-/** Edge of one citizen portrait, matching tools/prepare_art.py. */
-const CITIZEN_FACE = 64;
+/**
+ * Edge of one citizen portrait **as rendered**, which is what the offset below
+ * has to be counted in.
+ *
+ * Not the 64px the sheet is cut at: `.citizen` sets `background-size: auto
+ * 32px`, so the four faces occupy 128px on screen rather than 256. Stepping by
+ * the source size walked straight off the end of the sheet -- a city of size 4
+ * asked for -128px on a 128px-wide image and drew nothing at all. Size 1
+ * looked fine only because its offset is zero either way.
+ *
+ * If the CSS height changes, this changes with it.
+ */
+const CITIZEN_FACE = 32;
 
 /** Where a building's icon lives. Missing icons are removed on error. */
 function buildingIconPath(id: string): string {
