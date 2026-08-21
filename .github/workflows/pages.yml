@@ -10,9 +10,12 @@ name: Pages
 
 on:
   push:
-    # main is the intended home; the working branch is listed while main is
-    # still empty, so there is something to look at before the merge.
-    branches: [main, polish/terrain-edges]
+    # main only. A working branch was listed here while main was still empty,
+    # which is no longer true -- and since Pages was enabled, the github-pages
+    # environment only accepts deployments from the default branch anyway, so
+    # any other branch here would build, fail at the deploy step, and tell
+    # somebody their push was broken when it was not.
+    branches: [main]
   workflow_dispatch:
 
 # Least privilege: read the repo, and mint the token Pages needs.
