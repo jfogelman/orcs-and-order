@@ -31,6 +31,7 @@ import {
 import { researchableTechs, techCost } from './sim/research';
 import { beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
+import { resupply, resupplyBlocked } from './sim/combat';
 import { openHordeReport } from './ui/hordeReport';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
@@ -78,6 +79,8 @@ class App {
   /** Turn on which the battle theme may give way to the world theme again. */
   private calmAgainOnTurn = -1;
   /** How much of the log has already been turned into noise. */
+  /** True once End Turn has been pressed with units still waiting. */
+  private endTurnArmed = false;
   private soundedLogEntries = 0;
 
   constructor() {
@@ -207,6 +210,47 @@ class App {
   }
 
   /** Jump to the next unit that still has something to do. */
+  /**
+   * Say why the turn did not end, on the button that did not end it.
+   *
+   * The count matters more than the wording: "3 still waiting" tells you
+   * whether one more press is reasonable, where a bare warning does not.
+   */
+  private flashEndTurn(waiting: number): void {
+    const btn = el<HTMLButtonElement>('btn-endturn');
+    btn.classList.add('armed');
+    btn.textContent = `${waiting} waiting — End anyway`;
+    audio.play('blocked', 0);
+  }
+
+  /** Put the button back once the turn has moved on. */
+  private resetEndTurn(): void {
+    this.endTurnArmed = false;
+    const btn = el<HTMLButtonElement>('btn-endturn');
+    btn.classList.remove('armed');
+    btn.textContent = 'End Turn';
+  }
+
+  /**
+   * Draw a fresh axe from a neighbouring city.
+   *
+   * Says why when it cannot, rather than doing nothing: a button that has
+   * quietly declined is indistinguishable from one that is broken.
+   */
+  private orderResupply(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const blocked = resupplyBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    resupply(this.state, unit);
+    audio.play('built', 0);
+    this.refreshSidebar();
+    this.playLogCues();
+  }
+
   private selectNextIdle(): void {
     const idle = idleUnits(this.state, this.viewerId);
     if (idle.length === 0) {
@@ -364,8 +408,28 @@ class App {
     }
   }
 
+  /**
+   * End the turn, unless somebody is still standing about with moves left.
+   *
+   * The first press selects the next unit that has not been dealt with rather
+   * than ending anything, which is what you almost always meant. The second
+   * press ends the turn regardless, so nobody is trapped by a unit they have
+   * deliberately left alone.
+   *
+   * Deliberately a jump rather than a modal. A dialog on every end of turn is
+   * forty dismissals a game, and the thing the player actually wants is to be
+   * looking at the unit.
+   */
   private endTurn(): void {
     if (this.state.winner !== null) return;
+    const waiting = idleUnits(this.state, this.viewerId);
+    if (waiting.length > 0 && !this.endTurnArmed) {
+      this.endTurnArmed = true;
+      this.selectNextIdle();
+      this.flashEndTurn(waiting.length);
+      return;
+    }
+    this.endTurnArmed = false;
     closeModal();
     endPlayerTurn(this.state);
 
@@ -381,6 +445,7 @@ class App {
     }
 
     this.select(null);
+    this.resetEndTurn();
     this.selectNextIdle();
     this.refreshHud();
     this.playLogCues();
@@ -893,6 +958,9 @@ class App {
       case 'i':
         openHordeReport(this.state, this.viewerId);
         break;
+      case 'u':
+        this.orderResupply();
+        break;
       case 'r':
         this.arm('ranged');
         break;
@@ -1025,6 +1093,11 @@ class App {
               return `<button class="small${on}" data-act="ability" data-ability="${a}">${spec.label} (${spec.key.toUpperCase()})</button>`;
             })
             .join('')}
+          ${
+            resupplyBlocked(this.state, unit) === null
+              ? '<button class="small" data-act="resupply">Resupply (U)</button>'
+              : ''
+          }
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
@@ -1044,6 +1117,9 @@ class App {
               break;
             case 'found':
               this.orderFound();
+              break;
+            case 'resupply':
+              this.orderResupply();
               break;
             case 'fortify':
               this.orderFortify();

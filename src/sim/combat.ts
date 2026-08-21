@@ -153,6 +153,38 @@ export const BREATH_CARRY = 0.6;
  * wait: walk into a friendly city, or kill somebody and pick their axe up off
  * the floor.
  */
+/**
+ * Why this unit cannot pick up a fresh axe, or null if it can.
+ *
+ * Reaching a city is enough; it does not have to get inside one. A thrower that
+ * had to stand on the tile would be turned away by its own garrison, which is
+ * an absurd way to lose a unit's usefulness for the rest of a war.
+ */
+export function resupplyBlocked(state: GameState, unit: Unit): string | null {
+  if (!unitType(unit.type).throwsWeapon) return 'This unit has nothing to restock.';
+  if (!unit.disarmed) return 'It already has its axe.';
+  if (unit.moves <= 0) return 'No movement left this turn.';
+  const near = state.cities.some(
+    (c) => c.owner === unit.owner && distance(c.x, c.y, unit.x, unit.y) <= 1,
+  );
+  if (!near) return 'No city of yours within reach.';
+  return null;
+}
+
+/**
+ * Draw a fresh axe from a neighbouring city.
+ *
+ * Costs the rest of the turn, which is what stops it being free: a thrower can
+ * loose its axe or restock it, not both, so the reach it gets in exchange for
+ * being weak afterwards still has a price.
+ */
+export function resupply(state: GameState, unit: Unit): boolean {
+  if (resupplyBlocked(state, unit) !== null) return false;
+  rearm(state, unit, 'draws a fresh axe from the stores');
+  unit.moves = 0;
+  return true;
+}
+
 export function rearm(state: GameState, unit: Unit, how: string): void {
   if (!unit.disarmed) return;
   unit.disarmed = false;

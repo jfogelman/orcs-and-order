@@ -358,6 +358,39 @@ function chooseProduction(
 
 // ------------------------------------------------------------------ turn
 
+/**
+ * Enemy attackers this player can *see* near a tile.
+ *
+ * Reads `visible` rather than the true board, the same rule the interface
+ * follows: an AI that dodged a stack it had not found yet would be cheating,
+ * and would also be impossible to play against convincingly.
+ */
+function threatNear(state: GameState, playerId: number, x: number, y: number, radius = 3): number {
+  const seen = state.players[playerId].visible;
+  const w = state.width;
+  let count = 0;
+  for (const u of state.units) {
+    if (u.owner === playerId) continue;
+    if (unitType(u.type).attack <= 0) continue;
+    if (!seen[u.y * w + u.x]) continue;
+    if (distance(u.x, u.y, x, y) <= radius) count++;
+  }
+  return count;
+}
+
+/** Something of ours next door that can fight for the new city. */
+function guardedAt(state: GameState, playerId: number, x: number, y: number): boolean {
+  return state.units.some(
+    (u) =>
+      u.owner === playerId &&
+      unitType(u.type).attack > 0 &&
+      distance(u.x, u.y, x, y) <= 1,
+  );
+}
+
+/** What a visible attacker nearby takes off a site's score. */
+const THREAT_PENALTY = 45;
+
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
   const cities = playerCities(state, unit.owner).length;
   if (cities >= personality.targetCities + 2) {
@@ -366,9 +399,16 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     return;
   }
 
+  // Founding on top of an enemy stack with nothing to defend the place is a
+  // gift: the city is taken next turn and the settler is spent doing it. So a
+  // site with attackers in sight is only acceptable if something of ours is
+  // stood next to it.
   const here = canFoundCity(state, unit, unit.x, unit.y);
-  const hereScore = here.ok ? siteScore(state, unit.x, unit.y) : -1;
-  if (hereScore >= 90 || (cities === 0 && here.ok)) {
+  const exposed =
+    threatNear(state, unit.owner, unit.x, unit.y) > 0 &&
+    !guardedAt(state, unit.owner, unit.x, unit.y);
+  const hereScore = here.ok && !exposed ? siteScore(state, unit.x, unit.y) : -1;
+  if (hereScore >= 90 || (cities === 0 && here.ok && !exposed)) {
     foundCity(state, unit);
     return;
   }
@@ -382,14 +422,17 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
       const y = unit.y + dy;
       if (x < 1 || y < 1 || x >= state.width - 1 || y >= state.height - 1) continue;
       if (!canFoundCity(state, unit, x, y).ok) continue;
-      const score = siteScore(state, x, y) - distance(unit.x, unit.y, x, y) * 4;
+      const score =
+        siteScore(state, x, y) -
+        distance(unit.x, unit.y, x, y) * 4 -
+        threatNear(state, unit.owner, x, y) * THREAT_PENALTY;
       if (score > 0 && (!best || score > best.score)) best = { x, y, score };
     }
   }
 
   if (best && best.score > hereScore) {
     if (!routeTo(state, unit, best.x, best.y)) {
-      if (here.ok) foundCity(state, unit);
+      if (here.ok && !exposed) foundCity(state, unit);
       return;
     }
     moveToward(state, unit, best.x, best.y);
@@ -399,7 +442,14 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     }
     return;
   }
-  if (here.ok) foundCity(state, unit);
+  if (here.ok && !exposed) {
+    foundCity(state, unit);
+    return;
+  }
+  // Nowhere safe and nowhere better. A player with no cities at all founds
+  // anyway, because having none is worse than having one that may be taken;
+  // anybody else walks away and tries again next turn.
+  if (here.ok && cities === 0) foundCity(state, unit);
 }
 
 function actSoldier(
