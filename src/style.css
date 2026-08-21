@@ -981,3 +981,11 @@ button.small.rush[disabled] {
   image-rendering: pixelated;
   border-radius: 3px;
 }
+
+/* The per-city standing order sits under the production bar. */
+.auto-build {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}

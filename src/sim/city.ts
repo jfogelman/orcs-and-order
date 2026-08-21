@@ -6,7 +6,7 @@ import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
-import type { City, GameState, ProductionItem, Unit } from '../model/types';
+import type { City, GameState, ProductionItem, Unit, AutoBuild } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { unlockedBuildings, unlockedUnits } from './research';
 
@@ -585,6 +585,8 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], veteran);
           unit.homeCity = city.id;
           city.shields -= cost;
+          // Remembered so a standing order can put it back on afterwards.
+          city.lastUnit = item.id;
           events.completed = unitType(item.id).name;
           recomputeVisibility(state, city.owner);
         }
@@ -658,6 +660,42 @@ export function foundCity(state: GameState, unit: Unit): City | null {
 }
 
 /** Default production for a newly captured or confused city. */
+/** A city's setting, defaulting to `ask` for anything that never set one. */
+export function autoBuildOf(city: City): AutoBuild {
+  return city.autoBuild ?? 'ask';
+}
+
+/**
+ * What a city on `repeat` goes back to once it has run out of orders.
+ *
+ * The unit it was last making, if it can still be made. A city churning out
+ * Three Orcs that stops to put up a Barracks returns to Three Orcs afterwards
+ * rather than idling or being handed something it never asked for, which is the
+ * whole point of the setting.
+ *
+ * The remembering is necessary rather than fussy: finishing a unit does not
+ * clear `producing`, so a city making units already makes more without being
+ * told, and a standing order is only ever consulted after a *building*
+ * completed -- by which time what it was making has been gone for turns.
+ *
+ * Falls back to the cheapest unit it can build if the old one is no longer
+ * available, and only then to Coin. Note it never reaches for a structure:
+ * picking buildings on the player's behalf is what "auto" should not do, and
+ * `ask` is there for when the answer is genuinely open.
+ *
+ * Deliberately separate from `defaultProduction`, which is the AI's fallback
+ * and reaches for the cheapest *attacker*. Sharing one function would have
+ * meant changing what the AI builds in order to change what a player's cities
+ * do, and those are not the same question.
+ */
+export function nextProduction(state: GameState, city: City): ProductionItem {
+  const units = buildOptions(state, city).units;
+  const again = city.lastUnit && units.find((u) => u.id === city.lastUnit);
+  if (again) return { kind: 'unit', id: again.id };
+  const cheapest = [...units].sort((a, b) => a.cost - b.cost)[0];
+  return cheapest ? { kind: 'unit', id: cheapest.id } : { kind: 'coin' };
+}
+
 export function defaultProduction(state: GameState, city: City): ProductionItem {
   const options = buildOptions(state, city);
   const cheapest = options.units

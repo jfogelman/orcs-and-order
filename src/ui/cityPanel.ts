@@ -1,6 +1,7 @@
 import { BUILDINGS } from '../model/buildings';
-import type { City, GameState, ProductionItem } from '../model/types';
+import type { AutoBuild, City, GameState, ProductionItem } from '../model/types';
 import {
+  autoBuildOf,
   buildOptions,
   cityYield,
   contentLimit,
@@ -112,6 +113,13 @@ export function openCityPanel(
   const netShields = yields.shields - upkeep;
   const eta = turnsLeft(city, netShields);
 
+  // What this city does when it runs out of orders. Marked with the same
+  // `armed` style the ability buttons use, so a set city reads at a glance.
+  const auto = autoBuildOf(city);
+  const autoBtn = (mode: AutoBuild, label: string, title: string) =>
+    `<button class="small${auto === mode ? ' armed' : ''}" data-auto="${mode}"
+             title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
+
   const optionRow = (item: ProductionItem, name: string, cost: number, blurb: string) => {
     const active =
       (city.producing.kind === item.kind &&
@@ -204,6 +212,12 @@ export function openCityPanel(
               : ''
           }
         </div>
+        <div class="panel-body auto-build">
+          <span class="muted">When it finishes:</span>
+          ${autoBtn('ask', 'Ask me', 'Stop and wait to be told what to build next')}
+          ${autoBtn('repeat', 'Auto same unit', 'Go back to making the unit it was making')}
+          ${autoBtn('coin', 'Auto coin', 'Bank the shields as gold and stop asking')}
+        </div>
         <div class="panel-title">Units</div>
         <div class="build-list">
           ${options.units.map((u) => optionRow({ kind: 'unit', id: u.id }, u.name, u.cost, u.blurb)).join('')}
@@ -251,6 +265,13 @@ export function openCityPanel(
         if (!rushBuy(state, city)) return;
         onChange();
         openCityPanel(state, city, onChange);
+      });
+      root.querySelectorAll<HTMLButtonElement>('[data-auto]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          city.autoBuild = btn.dataset.auto as AutoBuild;
+          onChange();
+          openCityPanel(state, city, onChange);
+        });
       });
       root.querySelectorAll<HTMLButtonElement>('.build-option').forEach((btn) => {
         btn.addEventListener('click', () => {

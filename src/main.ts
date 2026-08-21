@@ -16,7 +16,7 @@ import type { EffectId } from './render/effects';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
 import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
-import { canFoundCity, foundCity, inSupply, productionName } from './sim/city';
+import { autoBuildOf, canFoundCity, foundCity, inSupply, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
 import { cityAt, createGame, playerCities, playerUnits, unitAt } from './sim/gamestate';
 import {
@@ -389,9 +389,10 @@ class App {
     }
     audio.play('turn', 0);
     // Promotions first: they are about something that already happened, and
-    // research is about what to do next.
+    // the other two are about what to do next.
     this.promptPerkIfOwed();
     this.promptResearchIfIdle();
+    this.promptBuildIfIdle();
   }
 
   /**
@@ -421,6 +422,28 @@ class App {
       // There may be more than one waiting.
       this.promptPerkIfOwed();
     });
+  }
+
+  /**
+   * Raise a city that has finished what it was making and has no new orders.
+   *
+   * Only cities set to `ask`, which is the default. A city told to pick the
+   * next thing itself, or to bank the shields, has already answered this and is
+   * never raised again.
+   *
+   * One a turn, deliberately. Walking the player through every idle city in one
+   * go would mean re-opening the panel from inside its own change handler,
+   * which re-renders itself -- and the two would fight. The per-city setting is
+   * the real answer to not wanting to be asked, and it is two clicks away in
+   * the panel this opens.
+   */
+  private promptBuildIfIdle(): void {
+    if (isModalOpen() || this.state.winner !== null) return;
+    const city = playerCities(this.state, this.viewerId).find(
+      (c) => c.size > 0 && c.producing.kind === 'coin' && autoBuildOf(c) === 'ask',
+    );
+    if (!city) return;
+    openCityPanel(this.state, city, () => this.refreshHud());
   }
 
   private promptResearchIfIdle(): void {
