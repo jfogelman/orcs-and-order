@@ -4,6 +4,8 @@ import type { GameState, Unit } from '../model/types';
 import {
   attackStrength,
   defenseStrength,
+  applyDamage,
+  damageKindOf,
   damagePerRound,
   destroyUnit,
   rearm,
@@ -139,8 +141,9 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
     return hits;
   });
 
-  const amount = landed * dmg;
-  target.hp -= amount;
+  // An arrow and a fireball are not the same thing to something that resists
+  // one of them, so a thrown blow carries its thrower's kind.
+  const amount = applyDamage(target, landed * dmg, damageKindOf(unit));
   unit.moves = 0;
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);

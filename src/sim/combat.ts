@@ -3,7 +3,7 @@ import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
-import type { City, GameState, Unit } from '../model/types';
+import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, SUPPLY } from './city';
 import { hasFlag } from './rules';
@@ -102,6 +102,47 @@ export interface StrengthBreakdown {
  */
 export const DISARMED_ATTACK = 0.25;
 
+/** Extra magical resistance per rank, on top of a creature's own. */
+export const RESIST_PER_RANK = 0.08;
+
+/** Nothing is ever immune. A cap keeps a notorious dragon killable. */
+export const MAX_RESIST = 0.75;
+
+/**
+ * How much of a blow of this kind the unit shrugs off, 0..1.
+ *
+ * Currently zero for everything, because no creature declares `magicResist`
+ * yet -- see the note on that field. The mechanism is here so the advances in
+ * DESIGN_QUEUE section 11 have something to switch on, and so the numbers can
+ * be measured when they are chosen rather than arriving with them.
+ */
+export function resistance(unit: Unit, kind: DamageKind): number {
+  if (kind !== 'magic') return 0;
+  const base = unitType(unit.type).magicResist ?? 0;
+  if (base <= 0) return 0;
+  return Math.min(MAX_RESIST, base + unit.rank * RESIST_PER_RANK);
+}
+
+/**
+ * The one place health comes off a unit, so resistance cannot be forgotten at
+ * one of the half-dozen sites that deal damage.
+ *
+ * Returns what was actually dealt, which is not always what was asked for --
+ * the caller usually wants that figure for the log rather than the number it
+ * passed in.
+ */
+export function applyDamage(unit: Unit, amount: number, kind: DamageKind): number {
+  if (amount <= 0) return 0;
+  const dealt = Math.round(amount * (1 - resistance(unit, kind)));
+  unit.hp -= dealt;
+  return dealt;
+}
+
+/** What this creature's blows are made of. */
+export function damageKindOf(unit: Unit): DamageKind {
+  return unitType(unit.type).damageKind ?? 'physical';
+}
+
 /** What a dragon's breath does to whatever is standing behind its target. */
 export const BREATH_CARRY = 0.6;
 
@@ -140,7 +181,7 @@ export function breatheThrough(
   if (!behind) return null;
 
   const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
-  behind.hp -= carried;
+  applyDamage(behind, carried, damageKindOf(attacker));
   log(
     state,
     `The breath carries on into ${unitType(behind.type).name} for ${carried}.`,
@@ -322,8 +363,8 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const result = withRng(state, (rng) => {
     while (attacker.hp > 0 && defender.hp > 0) {
       rounds++;
-      if (rng.float() < pAttack) defender.hp -= dmg;
-      else attacker.hp -= dmg;
+      if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
+      else applyDamage(attacker, dmg, damageKindOf(defender));
       // Runaway guard: an unwinnable matchup should not spin forever.
       if (rounds > 500) break;
     }
@@ -390,7 +431,7 @@ export function stormEmptyCity(state: GameState, attacker: Unit, city: City): Mi
     for (let i = 0; i < MILITIA_ROUNDS; i++) if (rng.float() >= pAttack) taken += dmg;
     return taken;
   });
-  attacker.hp -= damage;
+  applyDamage(attacker, damage, 'physical');
   return { taken: attacker.hp > 0, damage };
 }
 
@@ -412,7 +453,8 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
   );
   const killed: Unit[] = [];
   for (const victim of caught) {
-    victim.hp -= Math.max(1, Math.round(unitType(victim.type).hp * power));
+    // A blast is a blast: nothing magical resists being stood next to one.
+    applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * power)), 'physical');
     if (victim.hp <= 0) killed.push(victim);
   }
   log(

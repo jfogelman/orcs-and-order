@@ -91,6 +91,13 @@ export interface Unit {
    * creatures that throw the thing they fight with.
    */
   disarmed: boolean;
+  /**
+   * Conditions this unit is under, with the turns left on each.
+   *
+   * Optional so old saves and test fixtures need not declare it; absent and
+   * empty mean the same thing.
+   */
+  statuses?: Status[];
 }
 
 // --------------------------------------------------------------------- cities
@@ -106,6 +113,28 @@ export interface Unit {
  * was wanted or not.
  */
 export type AutoBuild = 'ask' | 'repeat' | 'coin';
+
+/**
+ * A condition a unit is under for a few turns.
+ *
+ * Deliberately separate from `disarmed`, which is a bare boolean with no
+ * duration and ends by killing something rather than by waiting.
+ */
+export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent';
+
+export interface Status {
+  kind: StatusKind;
+  /** Turns left, counted down at the start of the owner's turn. */
+  turns: number;
+}
+
+/**
+ * What a blow is made of.
+ *
+ * Only exists so that resistance can be to *something* rather than to damage in
+ * general. A creature that shrugs off spells should still feel an axe.
+ */
+export type DamageKind = 'physical' | 'magic';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }

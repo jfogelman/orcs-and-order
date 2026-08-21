@@ -173,6 +173,27 @@ export class SpriteCache {
     return null;
   }
 
+  private overlays = new Map<string, HTMLImageElement | null>();
+
+  /**
+   * The overlay for a condition, or its guttering version for the last turn.
+   *
+   * Loaded the same way a rank mark is, and remembering failure as well as
+   * success so a missing file is not re-requested on every frame of every turn.
+   */
+  statusOverlay(kind: string, fading: boolean): HTMLImageElement | null {
+    const name = fading ? `${kind}-fading` : kind;
+    const key = `status:${name}`;
+    const ready = this.overlays.get(key);
+    if (ready !== undefined) return ready;
+    if (this.attackAttempted.has(key)) return null;
+    this.attackAttempted.add(key);
+    loadImage(`${this.base}status/${name}.png`)
+      .then((img) => this.overlays.set(key, img))
+      .catch(() => this.overlays.set(key, null));
+    return null;
+  }
+
   private variantFrames(
     typeId: UnitTypeId,
     variant: string,
