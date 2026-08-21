@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { unitType } from '../src/model/units';
 import type { City, GameState } from '../src/model/types';
 import { resupply, resupplyBlocked } from '../src/sim/combat';
-import { capitalOf } from '../src/sim/city';
+import { buildOptions, capitalOf, foundCity, productionCostIn } from '../src/sim/city';
 import { createGame, playerCities, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
-import { beginPlayerTurn } from '../src/sim/turn';
+import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
 function arena(): GameState {
   const state = createGame({ seed: 20260821, width: 30, height: 24 });
@@ -193,5 +193,58 @@ describe('the capital', () => {
     delete old.foundedBy;
 
     expect(capitalOf(state, 0)?.id).toBe(old.id);
+  });
+});
+
+/**
+ * A settler is people, not equipment: the ones who walk out are the ones who
+ * were living there. Without this a city of one could pump settlers forever
+ * without ever shrinking, which made expansion very nearly free.
+ */
+describe('settlers cost a citizen', () => {
+  function cityBuilding(size: number, id: string) {
+    const state = createGame({ seed: 20260821, width: 40, height: 30 });
+    const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
+    const c = foundCity(state, settler)!;
+    c.size = size;
+    c.producing = { kind: 'unit', id } as never;
+    c.shields = productionCostIn(state, c, c.producing);
+    return { state, city: c };
+  }
+
+  it('takes one off the city when a settler is finished', () => {
+    const { state, city } = cityBuilding(3, 'peon');
+    beginPlayerTurn(state, 0);
+    endPlayerTurn(state);
+    expect(city.size).toBe(2);
+  });
+
+  it('leaves the city alone for anything that is not a settler', () => {
+    const { state, city } = cityBuilding(3, 'goblin');
+    beginPlayerTurn(state, 0);
+    endPlayerTurn(state);
+    expect(city.size).toBe(3);
+  });
+
+  it('will not let a city of one send its last citizen away', () => {
+    const { state, city } = cityBuilding(1, 'peon');
+    const shields = city.shields;
+    beginPlayerTurn(state, 0);
+    endPlayerTurn(state);
+
+    // Holds the shields rather than destroying the city, the same way it holds
+    // them when there is nowhere to put what it built.
+    expect(city.size).toBe(1);
+    expect(city.shields).toBeGreaterThanOrEqual(shields);
+    expect(state.cities).toContain(city);
+  });
+
+  it('does not offer a settler to a city that cannot afford one', () => {
+    const { state, city } = cityBuilding(1, 'goblin');
+    const offered = buildOptions(state, city).units.filter((u) => u.settler);
+    expect(offered).toHaveLength(0);
+
+    city.size = 2;
+    expect(buildOptions(state, city).units.some((u) => u.settler)).toBe(true);
   });
 });

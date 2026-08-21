@@ -98,6 +98,9 @@ describe('auto-build', () => {
     city.autoBuild = 'repeat';
     // Deliberately not the cheapest thing available -- a Goblin costs less --
     // so this fails if the rule quietly reaches for cheapest instead of same.
+    // Size 2 because a settler costs a citizen, and a city of one is not
+    // offered one at all.
+    city.size = 2;
     city.lastUnit = 'peon';
 
     passATurn(state);

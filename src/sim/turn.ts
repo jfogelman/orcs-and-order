@@ -158,7 +158,14 @@ function runEconomy(state: GameState, player: Player): void {
       log(state, `${city.name} completes ${events.completed}.`, 'good', player.id, 'built');
     }
     if (events.blocked) {
-      log(state, `${city.name} has nowhere to put what it just built.`, 'bad', player.id);
+      log(
+        state,
+        events.tooSmall
+          ? `${city.name} has nobody it can spare, and holds off sending anyone out.`
+          : `${city.name} has nowhere to put what it just built.`,
+        'bad',
+        player.id,
+      );
     }
   }
 

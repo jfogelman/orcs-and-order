@@ -534,9 +534,13 @@ export function buildOptions(
   city: City,
 ): { units: UnitTypeDef[]; buildings: BuildingDef[] } {
   const owner = state.players[city.owner];
-  const units = unlockedUnits(owner);
+  const allUnits = unlockedUnits(owner);
   const already = new Set(city.buildings);
   const seat = capitalOf(state, city.owner);
+  // A city of one cannot send anybody away without ceasing to exist, so it is
+  // not offered the choice rather than being allowed to queue something it can
+  // never finish.
+  const units = city.size > 1 ? allUnits : allUnits.filter((u) => !u.settler);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
     // A second tier needs its first standing here. Without this the cheap one
@@ -580,6 +584,8 @@ export interface CityTurnEvents {
   starved: boolean;
   completed: string | null;
   blocked: boolean;
+  /** Blocked specifically because the city is too small to spare anybody. */
+  tooSmall: boolean;
   enteredDisorder: boolean;
 }
 
@@ -589,6 +595,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     starved: false,
     completed: null,
     blocked: false,
+    tooSmall: false,
     enteredDisorder: false,
   };
   const owner = state.players[city.owner];
@@ -643,7 +650,15 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     if (city.shields >= cost) {
       if (item.kind === 'unit') {
         const spot = placementFor(state, city);
-        if (!spot) {
+        // A settler is people, not equipment: the ones who walk out are the
+        // ones who were living here. A city of one has nobody to send without
+        // ceasing to be a city, so it holds the shields until it has grown --
+        // the same way it holds them when there is nowhere to stand.
+        const takesCitizen = unitType(item.id).settler;
+        if (takesCitizen && city.size <= 1) {
+          events.blocked = true;
+          events.tooSmall = true;
+        } else if (!spot) {
           // Nowhere to put it; hold the shields until a tile frees up.
           events.blocked = true;
         } else {
@@ -658,6 +673,10 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           unit.rank = Math.max(unit.rank, rank);
           unit.homeCity = city.id;
           city.shields -= cost;
+          if (takesCitizen) {
+            city.size -= 1;
+            syncCitizens(state, city);
+          }
           // Remembered so a standing order can put it back on afterwards.
           city.lastUnit = item.id;
           events.completed = unitType(item.id).name;
