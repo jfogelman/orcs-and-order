@@ -11,6 +11,8 @@ import {
   nextProduction,
   processCity,
 } from './city';
+import { destroyUnit } from './combat';
+import { hasStatus, tickStatuses } from './status';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { resumeGotoOrders } from './movement';
 import { addBeakers } from './research';
@@ -68,6 +70,9 @@ function regenRateFor(state: GameState, unit: Unit): number {
 function healUnits(state: GameState, playerId: number): void {
   for (const unit of state.units) {
     if (unit.owner !== playerId) continue;
+    // A troll that has just torn itself in half is in no state to knit back
+    // together, and neither is anything else that has been left spent.
+    if (hasStatus(unit, 'spent')) continue;
     const type = unitType(unit.type);
     const max = type.hp;
     if (unit.hp >= max) continue;
@@ -83,8 +88,26 @@ function healUnits(state: GameState, playerId: number): void {
 function refreshUnits(state: GameState, player: Player): void {
   for (const unit of state.units) {
     if (unit.owner !== player.id) continue;
-    unit.moves = effectiveMove(player, unit.type);
+    // Frozen solid is the one condition that takes the turn away outright.
+    unit.moves = hasStatus(unit, 'frozen') ? 0 : effectiveMove(player, unit.type);
     if (unit.order === 'skip') unit.order = 'none';
+  }
+}
+
+/**
+ * Count down every condition on this player's units, and bury whatever the
+ * counting killed.
+ *
+ * Runs before movement is handed out rather than after, so a unit that burns to
+ * death does not get a turn first, and before healing, so a unit put out this
+ * turn can still recover from it.
+ *
+ * Iterated over a copy: a unit that dies here is removed from `state.units`.
+ */
+function tickUnitStatuses(state: GameState, playerId: number): void {
+  for (const unit of [...state.units]) {
+    if (unit.owner !== playerId) continue;
+    if (tickStatuses(state, unit)) destroyUnit(state, unit, 'is consumed');
   }
 }
 
@@ -251,6 +274,7 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
 
+  tickUnitStatuses(state, playerId);
   refreshUnits(state, player);
   healUnits(state, playerId);
   runEconomy(state, player);

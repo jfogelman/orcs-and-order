@@ -612,6 +612,25 @@ export class MapRenderer {
       ctx.fillRect(bx, by, w * frac, h);
     }
 
+    // Conditions the unit is under, drawn over the sprite. The overlays are
+    // hollow through the middle on purpose, so the creature underneath stays
+    // identifiable -- a burning orc you cannot recognise as an orc is worse
+    // than no overlay at all.
+    //
+    // The last turn shows a guttering version, which is the only way the map
+    // can say how much longer a condition has left to run.
+    for (const st of u.statuses ?? []) {
+      if (st.kind === 'spent') continue;
+      const sheet = this.sprites.statusOverlay(st.kind, st.turns <= 1);
+      if (!sheet || sheet.height === 0) continue;
+      const frames = Math.max(1, Math.round(sheet.width / sheet.height));
+      // Wall-clock, because this is decoration: it must never reach the
+      // simulation, and a replay that drew a different frame is the same game.
+      const frame = frames === 1 ? 0 : Math.floor(performance.now() / 130) % frames;
+      const f = sheet.height;
+      ctx.drawImage(sheet, frame * f, 0, f, f, s.x, s.y, size, size);
+    }
+
     if (size >= 28) {
       // Count badge: the sprite already shows the crowd, this confirms it.
       if (type.count > 1) {
@@ -635,6 +654,16 @@ export class MapRenderer {
         if (mark) {
           const m = size * 0.42;
           ctx.drawImage(mark, Math.round(s.x + 1), Math.round(s.y + size - m - 1), m, m);
+        }
+      }
+      // Spent is a corner badge rather than an overlay, because unlike the
+      // other three it only ever lands on one kind of creature -- which makes
+      // it the one thing worth spending the last free corner on.
+      if ((u.statuses ?? []).some((st) => st.kind === 'spent')) {
+        const mark = this.sprites.statusOverlay('spent', false);
+        if (mark) {
+          const m = size * 0.34;
+          ctx.drawImage(mark, Math.round(s.x + 1), Math.round(s.y + 1), m, m);
         }
       }
       // A disarmed thrower fights at a quarter strength, which without a mark

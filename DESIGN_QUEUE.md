@@ -1128,7 +1128,7 @@ they are **unlocked** by an advance and then available to be chosen, so a unit
 type's menu grows as the tree does. Worth keeping that distinction, because it is
 what makes a late advance feel like it landed.
 
-### Two things missing underneath, before any of it
+### Two things missing underneath — built
 
 **A lasting status on a unit.** `Unit` has no field for a condition with a
 duration -- only `disarmed`, which is a bare boolean. Burning, frozen, confused
@@ -1142,6 +1142,28 @@ nothing drawn on it does not read as on fire; it reads as a bug.
 attack and defence and nothing subtractive. Resistance *to magic specifically*
 means damage has to carry a kind, which nothing does today. It is a small change
 and much cheaper made at the same time as statuses than after them.
+
+**Both are now in.** `Unit.statuses` holds a list of conditions with turns
+remaining, optional so old saves load unchanged; `tickStatuses` counts them down
+at the start of the owner's turn without touching the RNG, so replays are
+identical. Frozen takes a unit's movement, spent stops it regenerating, and
+burning costs a share of maximum health -- a share rather than a flat figure, so
+fire frightens a Goblin and Ten Trolls equally. The renderer draws the overlay
+for each, swapping to the guttering version on the last turn, which is how the
+map says how much longer a condition has to run.
+
+Damage now carries a kind. Every site that takes health off a unit goes through
+one `applyDamage`, so a resistance cannot be forgotten at one of the six places
+that deal damage, and the mage, death knight and dragon are declared as striking
+with magic rather than steel.
+
+**Deliberately not switched on: no creature has `magicResist` yet.** That is the
+half that moves the balance -- it favours the best units on each side and the
+Horde has two of the three candidates -- so it belongs with the advances that
+make it matter, measured alongside them, rather than arriving quietly underneath
+them. A game played today contains no statuses and no resistances, so none of
+the measurements in this file need redoing. A test asserts that, and should be
+changed rather than deleted when the first resistance is set.
 
 ### The list
 

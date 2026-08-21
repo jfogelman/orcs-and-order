@@ -1,4 +1,4 @@
-import type { FactionId, UnitTypeId } from './types';
+import type { DamageKind, FactionId, UnitTypeId } from './types';
 
 /**
  * Units are singleton, Civ2 style: one tile, one unit, one health bar.
@@ -49,6 +49,23 @@ export interface CreatureDef {
   settler?: boolean;
   /** Ignores terrain movement costs. */
   flies?: boolean;
+  /**
+   * What this creature's blows are made of. Physical unless stated.
+   *
+   * Only matters against something that resists a kind. Setting it changes
+   * nothing on its own, which is why it can be declared honestly now and the
+   * resistances that read it can wait to be measured.
+   */
+  damageKind?: DamageKind;
+  /**
+   * Share of magical damage this creature shrugs off, before rank.
+   *
+   * Left unset on every creature for the moment. It is the half of this that
+   * moves the balance -- it favours the best units on each side and the Horde
+   * has two of the three candidates -- so it wants measuring alongside the
+   * advances that make it matter, not switching on quietly underneath them.
+   */
+  magicResist?: number;
   /** Multiplier when attacking a city. */
   siegeBonus?: number;
   /** Multiplies this creature's natural healing. Trolls are famously hard to keep down. */
@@ -250,6 +267,8 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'deathknight',
+    // A death knight's touch is not a weapon blow.
+    damageKind: 'magic',
     name: 'Death Knight',
     plural: 'Death Knights',
     faction: 'orc',
@@ -270,6 +289,8 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'dragon',
+    // Breath, not bite.
+    damageKind: 'magic',
     lineBreath: true,
     name: 'Dragon',
     plural: 'Dragons',
@@ -411,6 +432,8 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'mage',
+    // The whole point of a mage.
+    damageKind: 'magic',
     range: 2,
     name: 'Mage',
     plural: 'Mages',
@@ -496,6 +519,10 @@ export interface UnitTypeDef {
   regenMultiplier: number;
   /** Fraction of a neighbour's health lost when this dies defending; 0 for most. */
   explodes: number;
+  /** What its blows are made of. */
+  damageKind: DamageKind;
+  /** Share of magical damage it shrugs off before rank; 0 for everything today. */
+  magicResist: number;
   demolishes: boolean;
   executeChance: number;
   /** Tiles this unit can strike across. 1 means adjacent only. */
@@ -548,6 +575,8 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     crowded: count >= CROWD_THRESHOLD,
     regenMultiplier: c.regenMultiplier ?? 1,
     explodes: c.explodes ?? 0,
+    damageKind: c.damageKind ?? 'physical',
+    magicResist: c.magicResist ?? 0,
     demolishes: c.demolishes === true,
     executeChance: c.executeChance ?? 0,
     range: c.range ?? 1,
