@@ -1317,3 +1317,53 @@ Two notes on building it:
 
 The Kingdom needs its own name for it. Same screen, drier register: the Horde
 gets a Report and the Kingdom gets something like a Survey or a Return.
+
+## 13. Disbanding, and a death knight who spends his own side
+
+Two asked for together, and they are the same idea seen from two ends: a unit
+you no longer want is worth something if you are willing to be unpleasant about
+it.
+
+### Disbanding
+
+There is currently no way to get rid of a unit. A Peon that has founded every
+city worth founding, or a Goblin left over from an advance three tiers ago,
+costs upkeep forever and can only be disposed of by walking it into something.
+
+The obvious shape: disband where it stands, and disband **in a city** for a
+partial refund of its shields, the way most of the genre does it. The second is
+the more interesting of the two, because it turns obsolete units into a way of
+finishing a building -- and it wants a rate low enough that nobody builds units
+in order to melt them. A half refund is the usual answer and is probably right;
+anything higher makes a unit a better shield store than a shield is.
+
+Worth settling: whether a disbanding unit gives its **home city** the refund or
+whichever city it is standing in, since the second lets an army walk its value
+to wherever it is wanted. The first is duller and harder to abuse.
+
+### The death knight's sacrifice
+
+A promotion that heals the death knight by killing one of your own units next to
+it. Thematically exact for the faction, and mechanically it is the first thing
+in the game that treats your own army as a resource.
+
+Points to settle before building:
+
+- **What it is worth.** Scaling with the sacrificed unit's *remaining* health is
+  the honest reading -- a nearly-dead Goblin should not be worth as much as a
+  fresh one -- and it also stops the obvious exploit of breeding cheap units as
+  batteries. Scaling with the counting ladder needs care for the same reason:
+  Ten Orcs are ten orcs, and should heal accordingly rather than count as one.
+- **What it teaches.** Nothing. The experience rule already says damage a unit
+  did not choose earns nobody anything, and a unit killed by its own side is
+  the purest case of that.
+- **Whether the AI may use it.** If it can, it needs to not spend a Dragon to
+  patch a scratch; if it cannot, the perk is a player-only advantage and the
+  balance runs will not see it at all. The second is probably the honest
+  starting point, stated rather than left to happen.
+- **It needs to be visible.** A unit vanishing from your own line with no
+  explanation reads as a bug. The `death-touch` effect already exists and is
+  the obvious thing to play on the tile.
+
+Both of these want the disband machinery first: the sacrifice is a disband with
+a beneficiary attached, and building it twice would be the usual mistake.
