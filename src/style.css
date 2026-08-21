@@ -392,7 +392,9 @@ button.small {
 
 .build-option {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* Same reason as .choice-card: this one carries a blurb too. */
+  white-space: normal;
   gap: 2px 10px;
   text-align: left;
   padding: 6px 9px;
@@ -573,8 +575,12 @@ button.small {
 }
 
 .choice-card {
-  flex: 1;
-  min-width: 170px;
+  flex: 1 1 200px;
+  /* Buttons are nowrap by default, and these hold a sentence rather than a
+     label -- without this the blurb runs straight out of the card, across its
+     neighbour, and pushes a horizontal scrollbar onto the whole modal. */
+  white-space: normal;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -611,6 +617,7 @@ button.small {
 
 .choice-blurb {
   font-size: 11.5px;
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-style: italic;
   line-height: 1.4;
