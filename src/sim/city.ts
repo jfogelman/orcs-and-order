@@ -6,7 +6,7 @@ import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
-import type { City, GameState, ProductionItem, Unit } from '../model/types';
+import type { City, GameState, ProductionItem, Unit, AutoBuild } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { unlockedBuildings, unlockedUnits } from './research';
 
@@ -658,6 +658,40 @@ export function foundCity(state: GameState, unit: Unit): City | null {
 }
 
 /** Default production for a newly captured or confused city. */
+/** A city's setting, defaulting to `ask` for anything that never set one. */
+export function autoBuildOf(city: City): AutoBuild {
+  return city.autoBuild ?? 'ask';
+}
+
+/**
+ * What a city on `next` starts once it has run out of orders.
+ *
+ * Cheapest missing structure first, then the cheapest unit, then Coin.
+ *
+ * Structures lead because a city that was making units never gets here on its
+ * own -- finishing a unit leaves `producing` untouched, so it simply makes
+ * another -- which means this is usually being asked right after a building
+ * completed, and another building is what was meant.
+ *
+ * The fall-through to units is not a nicety. Buildings are gated behind
+ * advances, and at the start of a game none are unlocked at all, so a
+ * structures-only rule would leave `next` doing nothing whatsoever for the
+ * opening stretch -- which is not what anybody asking for "auto next" wants.
+ * It also gives a built-out frontier city something to do forever.
+ *
+ * Deliberately separate from `defaultProduction`, which is the AI's fallback
+ * and reaches for the cheapest *attacker*. Sharing one function would have
+ * meant changing what the AI builds in order to change what a player's cities
+ * do, and those are not the same question.
+ */
+export function nextProduction(state: GameState, city: City): ProductionItem {
+  const options = buildOptions(state, city);
+  const structure = [...options.buildings].sort((a, b) => a.cost - b.cost)[0];
+  if (structure) return { kind: 'building', id: structure.id };
+  const unit = [...options.units].sort((a, b) => a.cost - b.cost)[0];
+  return unit ? { kind: 'unit', id: unit.id } : { kind: 'coin' };
+}
+
 export function defaultProduction(state: GameState, city: City): ProductionItem {
   const options = buildOptions(state, city);
   const cheapest = options.units

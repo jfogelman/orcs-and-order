@@ -8,7 +8,9 @@ import {
   cityGoldBonus,
   cityScienceBonus,
   cityYield,
+  autoBuildOf,
   defaultProduction,
+  nextProduction,
   processCity,
 } from './city';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
@@ -101,9 +103,22 @@ function runEconomy(state: GameState, player: Player): void {
 
   for (const city of playerCities(state, player.id)) {
     if (city.producing.kind === 'coin' && city.size > 0) {
-      // A city left on Coin picks something up as soon as it can.
-      const suggestion = defaultProduction(state, city);
-      if (suggestion.kind !== 'coin') city.producing = suggestion;
+      // A city left on Coin picks something up as soon as it can -- unless its
+      // owner has said otherwise.
+      //
+      // The AI is exempt from the setting and always picks up, because it has
+      // no interface to be asked through and `chooseProduction` can legitimately
+      // return Coin. Leaving it out of this keeps its behaviour exactly what it
+      // was before the setting existed, which is what the balance runs measured.
+      const auto = autoBuildOf(city);
+      const managed = state.players[city.owner].controller !== 'human';
+      if (managed) {
+        const suggestion = defaultProduction(state, city);
+        if (suggestion.kind !== 'coin') city.producing = suggestion;
+      } else if (auto === 'next') {
+        const suggestion = nextProduction(state, city);
+        if (suggestion.kind !== 'coin') city.producing = suggestion;
+      }
     }
     const events = processCity(state, city);
     const split = splitTrade(player, cityYield(state, city).trade);
