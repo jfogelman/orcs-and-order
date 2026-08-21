@@ -91,24 +91,17 @@ registered with Content ID. That does not affect the right to use it, but it can
 cause automated copyright claims on video of the game -- which matters for a game
 meant to be streamed or recorded. The uploader offers claim removal on request.
 
-## Audio is not currently tracked here
+## What is in the repository, and what is not
 
-All sound effects and music are untracked and gitignored, so this repository
-redistributes none of it. The files stay in place locally, so a checkout on this
-machine still has sound; a fresh clone will not, and neither will the deployed
-site until they are restored.
+`public/sfx/` and `public/music/` are tracked. They hold the processed audio the
+game loads, so the deployed game has sound and a fresh clone runs complete. Audio
+bundled inside a game is the ordinary use these licences are written for.
 
-Provenance is no longer the reason. Every sound effect is traced to a named
-Pixabay download and all three music files are pinned to their upload, each
-confirmed by length.
-What remains is a separate question: bundling licensed audio inside a game is an
-ordinary permitted use, whereas publishing the `.mp3` files themselves in a public
-repository is closer to redistributing the sounds as files.
+`art_src/sfx/` and `art_src/music/` are not tracked. They hold the untouched
+original downloads, which is closer to redistributing the sounds as sounds, and
+the game needs none of them -- `tools/prepare_art.py` has already done its work.
+Everything in them is credited above by uploader and Pixabay id, so leaving them
+out costs no part of the trail.
 
-That distinction suggests a split rather than an all-or-nothing choice. `public/`
-holds the processed audio the game actually loads, which is the bundled-in-a-game
-case; `art_src/` holds the untouched original downloads, which is the one worth
-being careful about. Restoring only `public/sfx/` and `public/music/` would give
-the deployed game its sound back while still not publishing the originals.
-
-Either way it is a matter of deleting the relevant lines from `.gitignore`.
+If those originals are ever wanted again, every one of them can be downloaded
+afresh from the id recorded here.

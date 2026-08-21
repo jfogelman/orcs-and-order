@@ -130,12 +130,14 @@ The art itself was generated with **Google Gemini** from those prompts. The soun
 effects came from Pixabay, found with the search terms in
 [SOUND_NEEDED.md](SOUND_NEEDED.md).
 
-**Audio is not in the repository at the moment.** It is untracked and gitignored
-while its licensing is confirmed -- putting the `.mp3` files in a public repo is a
-different act from bundling them in a game, and not one worth taking on an
-assumption. A fresh clone therefore has no sound. [CREDITS.md](CREDITS.md) records
-what came from where, including the original download name of every sound effect
-that was renamed.
+Every audio file traces to a named Pixabay download, listed in
+[CREDITS.md](CREDITS.md) with its uploader and id -- including the original
+download name of each sound effect that was renamed to the event it plays on,
+recovered by matching byte for byte against the originals.
+
+The processed audio in `public/` is tracked, since it is what the game loads. The
+untouched original downloads in `art_src/sfx` and `art_src/music` are not: the
+game does not need them, and they are credited in full either way.
 
 ---
 
