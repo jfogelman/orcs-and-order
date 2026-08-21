@@ -4,10 +4,8 @@ import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
+  cityIncome,
   supplyQuality,
-  cityGoldBonus,
-  cityScienceBonus,
-  cityYield,
   autoBuildOf,
   defaultProduction,
   nextProduction,
@@ -15,7 +13,7 @@ import {
 } from './city';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { resumeGotoOrders } from './movement';
-import { addBeakers, splitTrade } from './research';
+import { addBeakers } from './research';
 import { effectiveMove } from './rules';
 
 /**
@@ -121,9 +119,9 @@ function runEconomy(state: GameState, player: Player): void {
       }
     }
     const events = processCity(state, city);
-    const split = splitTrade(player, cityYield(state, city).trade);
-    goldIncome += Math.round(split.gold * (1 + cityGoldBonus(state, city)));
-    beakerIncome += Math.round(split.beakers * (1 + cityScienceBonus(state, city)));
+    const income = cityIncome(state, city, player);
+    goldIncome += income.gold;
+    beakerIncome += income.beakers;
     upkeep += buildingUpkeep(city);
 
     if (events.grew) {

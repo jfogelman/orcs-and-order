@@ -31,6 +31,7 @@ import {
 import { researchableTechs, techCost } from './sim/research';
 import { beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
+import { openHordeReport } from './ui/hordeReport';
 import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
@@ -614,6 +615,9 @@ class App {
 
     el<HTMLButtonElement>('btn-new').addEventListener('click', () => this.openNewGame());
     el<HTMLButtonElement>('btn-save').addEventListener('click', () => this.openSaves());
+    el<HTMLButtonElement>('btn-report').addEventListener('click', () =>
+      openHordeReport(this.state, this.viewerId),
+    );
     el<HTMLButtonElement>('btn-pedia').addEventListener('click', () =>
       openPedia(this.state.players[this.viewerId], this.selected?.type),
     );
@@ -885,6 +889,9 @@ class App {
         break;
       case 'p':
         openPedia(this.state.players[this.viewerId], this.selected?.type);
+        break;
+      case 'i':
+        openHordeReport(this.state, this.viewerId);
         break;
       case 'r':
         this.arm('ranged');
