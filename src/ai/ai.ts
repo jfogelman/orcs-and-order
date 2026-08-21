@@ -2,7 +2,18 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
-import { buildOptions, canFoundCity, foundCity, tileYield } from '../sim/city';
+import { owedPerks, perkChoices } from '../model/perks';
+import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
+  rushBlocked,
+  rushBuy,
+  rushCost,
+  capitalOf,
+  suppliesArmy,
+  SUPPLY,
+  supplyChain,
+  supplyQuality
+} from '../sim/city';
+import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
@@ -25,55 +36,121 @@ export interface AiPersonality {
   techPriority: string[];
   /** How readily it attacks at poor odds. 1 = only good odds, 0 = always. */
   caution: number;
+  /** Units it wants gathered around a city before storming it. */
+  stormingParty: number;
 }
 
-const PERSONALITIES: Record<string, AiPersonality> = {
+/**
+ * Exported so a measurement can vary one trait and hold the rest still.
+ * Tuning these by reasoning about them has produced four wrong answers; the
+ * only thing that has ever worked is swapping a number and counting.
+ */
+export const PERSONALITIES: Record<string, AiPersonality> = {
   orc: {
     // The Horde is supposed to be the numerous one. Expanding to only four
     // cities left it permanently behind on trade, and therefore permanently
     // stuck at the bottom of its own counting ladder.
     targetCities: 6,
+    // See the note on the Kingdom's copy of this field: one defender per city
+    // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
-    // The Horde's research programme is the counting ladder, with a couple of
-    // detours for things to hit people with. Straying too far from the ladder
-    // meant the late-game units were never fielded at all.
+    /*
+     * Roughly cost-ordered, and deliberately not all military. An earlier
+     * version listed only weapons; once the list was actually being consulted
+     * that left the Horde with no economy at all and it fell behind on every
+     * measure. Cheap enablers first, then the counting ladder interleaved with
+     * the things that pay for it.
+     */
     techPriority: [
+      'mapmaking',
+      // Unlocks the outpost, which is the only answer to fighting out of
+      // supply. Left off this list it was rarely researched at all, so half
+      // the games had an AI that could not respond to the penalty.
+      'bridge-building',
+      'goblin-smarts',
       'orc-meaning',
       'orc-together',
-      'idiots-stick-together',
+      'not-you-again',
       'to-be-an-orc',
+      'suicidal-goblins',
       'axes',
-      'next-level-stupid',
+      'tree-hugging',
+      'idiots-stick-together',
+      'joy-making',
+      'hammers-of-glory',
       'throwing-buddies',
-      'beyond-stupid',
-      'not-just-stupid',
-      'stupidity-for-all',
+      'wall-building',
+      'next-level-stupid',
+      'happiness',
       'axes-crazy',
+      'beyond-stupid',
       'my-little-friend',
+      'not-just-stupid',
       'dead-messed-up',
+      'stupidity-for-all',
       'full-of-fire',
     ],
     caution: 0.25,
+    stormingParty: 3,
   },
   human: {
     targetCities: 6,
-    garrisonPerCity: 2,
+    /*
+     * Was 2, and that turned out to be the single biggest lever on faction
+     * balance -- in the opposite direction to the obvious guess. Measured over
+     * 12 seeds, as orc/human garrison:
+     *
+     *   1 / 2   orc c7.9  hum c12.0   wins 5-7
+     *   2 / 2   orc c5.6  hum c11.3   wins 2-10
+     *   1 / 1   orc c9.9  hum c 8.5   wins 7-5
+     *
+     * Garrisoning helps the Kingdom and cripples the Horde, because it
+     * interacts with `caution`. A cautious AI was not going to attack with
+     * those units anyway, so posting them on a wall is free defence. An
+     * aggressive one is spending its whole army on the offensive, and every
+     * unit told to stand still is one not taking a city.
+     *
+     * At 1/1 over 18 seeds the game comes out 9-9, with each faction leading
+     * the columns it should: the Kingdom on cities and population, the Horde
+     * on advances.
+     */
+    garrisonPerCity: 1,
     techPriority: [
+      'mapmaking',
+      // The Forward Depot, for the same reason as the Horde's outpost.
+      'bridge-building',
       'brotherhood',
       'archery',
+      'not-you-again',
       'join-army',
-      'mapmaking',
-      'horses-sneeze',
-      'bunches-footmen',
       'tree-hugging',
-      'ten-heads',
+      'horses-sneeze',
+      'joy-making',
+      'hammers-of-glory',
+      'bunches-footmen',
       'wall-building',
+      'happiness',
       'pointed-ears',
+      'ten-heads',
       'let-us-ride',
-      'run-you-through',
       'arrows-glory',
+      'run-you-through',
+      'rumbling-voice',
+      'lordship',
     ],
-    caution: 0.6,
+    // The single most sensitive number in the file, and the only one that
+    // moved faction balance at all. Measured over 18 seeds:
+    //
+    //   0.60   orc 14-4   at this setting the Kingdom declined fights it
+    //                     would have won and was picked apart a unit at a time
+    //   0.52   orc 12-6
+    //   0.48   orc 10-8   populations 51.9 / 53.8 -- level
+    //   0.45   orc  7-11  overcorrected
+    //
+    // Garrison size, by contrast, changed the win split not at all: 1 and 2
+    // both gave 7-11 at caution 0.45.
+    caution: 0.48,
+    stormingParty: 3,
   },
 };
 
@@ -96,10 +173,10 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
-  const atk = a.attack * (attacker.veteran ? 1.5 : 1) * (attacker.hp / a.hp);
+  const atk = a.attack * rankBonus(attacker) * (attacker.hp / a.hp);
   const def =
     d.defense *
-    (defender.veteran ? 1.5 : 1) *
+    rankBonus(defender) *
     terrain.defense *
     (defender.order === 'fortified' ? 1.5 : 1);
   return atk / Math.max(0.0001, atk + def);
@@ -211,12 +288,62 @@ function chooseProduction(
     if (settler) return { kind: 'unit', id: settler.id };
   }
 
-  // 3. Useful buildings, when they can be afforded comfortably.
-  const wantedBuilding = options.buildings.find(
-    (b) => (b.id === 'barracks' || b.id === 'walls') && b.cost <= 80,
+  // 3. Keep the lid on first. A city at its content limit stops growing and
+  // produces nothing at all, so a happiness building is worth more than any
+  // amount of economy sitting on top of a riot.
+  if (city.size >= contentLimit(state, city) - 1) {
+    const calming = options.buildings.find((b) => b.contentBonus);
+    if (calming) return { kind: 'building', id: calming.id };
+  }
+
+  // 3b. If the enemy is turtling behind walls, build something that ignores
+  // them. Without this the AI keeps making melee units that cannot get in.
+  const enemyHasWalls = state.cities.some(
+    (c) => c.owner !== city.owner && c.buildings.includes('walls'),
   );
-  if (wantedBuilding && city.size >= 3 && withRng(state, (r) => r.chance(0.35))) {
-    return { kind: 'building', id: wantedBuilding.id };
+  if (enemyHasWalls) {
+    const siege = options.units.find((u) => u.siegeBonus > 1);
+    const haveSiege = playerUnits(state, city.owner).some(
+      (u) => unitType(u.type).siegeBonus > 1,
+    );
+    if (siege && !haveSiege) return { kind: 'unit', id: siege.id };
+  }
+
+  // 3c. A forward city with hungry troops around it wants a depot.
+  //
+  // Conditional on there actually being somebody out there in need of one.
+  // An unconditional rule crowded out every economy building the moment the
+  // advance was researched -- a city builds one depot and compounds forever
+  // off a treasury, so the depot has to earn its place rather than take it.
+  const seat = capitalOf(state, city.owner);
+  const covered = seat !== null && distance(seat.x, seat.y, city.x, city.y) <= SUPPLY.range;
+  if (!covered && !suppliesArmy(state, city)) {
+    // Only where it would actually join the chain. Supply is carried hand to
+    // hand from the capital, so a depot beyond the last link supplies nothing
+    // at all -- and the further out it is the more it costs, which would make
+    // a stranded one the most expensive way in the game to achieve nothing.
+    const chain = supplyChain(state, city.owner);
+    const linked = state.cities.some(
+      (c) => chain.has(c.id) && distance(c.x, c.y, city.x, city.y) <= SUPPLY.linkRange,
+    );
+    const hungry = playerUnits(state, city.owner).some(
+      (u) =>
+        distance(u.x, u.y, city.x, city.y) <= SUPPLY.range && supplyQuality(state, u) < 1,
+    );
+    const supplyHouse =
+      linked && hungry ? options.buildings.find((b) => b.suppliesArmy) : undefined;
+    if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
+  }
+
+  // 4. Then infrastructure. Economy buildings come before a second barracks:
+  // a city that pays for its own research compounds, and a barracks does not.
+  const wanted =
+    options.buildings.find((b) => b.scienceBonus || b.goldBonus) ??
+    options.buildings.find(
+      (b) => b.id === 'barracks' || b.defenseMult !== undefined || b.sallyBonus !== undefined,
+    );
+  if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
+    return { kind: 'building', id: wanted.id };
   }
 
   // 4. Otherwise: the biggest stick currently affordable in reasonable time.
@@ -296,6 +423,26 @@ function actSoldier(
     return;
   }
 
+  // Besieging: a city is worth far more than a field unit and is defended by
+  // stacked multipliers, so single units thrown at it die one at a time and
+  // the war never resolves. Gather next to it first, then everyone goes in.
+  const targetCity = state.cities.find(
+    (c) => c.owner !== unit.owner && distance(unit.x, unit.y, c.x, c.y) === 1,
+  );
+  if (targetCity) {
+    const besiegers = state.units.filter(
+      (u) => u.owner === unit.owner && distance(u.x, u.y, targetCity.x, targetCity.y) === 1,
+    ).length;
+    const defender = state.units.find((u) => u.x === targetCity.x && u.y === targetCity.y);
+    const odds = defender ? attackOdds(state, unit, defender) : 1;
+    if (besiegers >= personality.stormingParty || odds >= personality.caution) {
+      if (tryStep(state, unit, targetCity.x, targetCity.y).kind !== 'blocked') return;
+    }
+    // Not enough of us yet. Dig in where we stand and wait for the rest.
+    unit.order = 'fortified';
+    return;
+  }
+
   // Hold undefended home cities.
   const ownCities = playerCities(state, unit.owner);
   const bare = ownCities.find(
@@ -358,16 +505,100 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
   setResearch(state, player, cheapest.id);
 }
 
+/**
+ * Gold kept back rather than spent, to cover upkeep and the bankruptcy path.
+ *
+ * Without a floor the AI would spend down to nothing every turn and then start
+ * selling its own buildings off the moment upkeep exceeded income.
+ */
+export const AI_TUNING = {
+  /**
+   * Whether the AI spends gold on production at all. **Off, and measured.**
+   *
+   * Rush-buying scales with the number of cities you have to spend it in, so
+   * it amplifies a city-count lead instead of closing one. Over eighteen seeds
+   * the better the AI got at spending, the worse the Horde did: 6-12 not
+   * spending, 5-13 with a thin reserve, 2-16 with a fat one, and 1-17 when
+   * taught to prefer buildings. The Kingdom simply had twice as many queues to
+   * accelerate.
+   *
+   * The mechanic stays -- a human player can still buy things, which is the
+   * whole reason gold exists now -- but the AI does not use it. Flip this back
+   * on to re-measure if the city gap ever closes.
+   */
+  rushBuying: false,
+  goldReserve: 60,
+  /**
+   * Buy the thing that lasts, rather than the thing that is cheapest.
+   *
+   * Cheapest-first turned out to mean "a cheap unit, every single turn": with
+   * a thin reserve the AI bought about thirty times a game and finished with
+   * *fewer* standing buildings than when it could not spend at all.
+   */
+  preferBuildings: false,
+};
+
+/**
+ * Turn banked gold into things that exist.
+ *
+ * Cheapest completion first, so a given pile of gold buys as many finished
+ * items as it can rather than one expensive one. Measured before it was
+ * believed: the Horde was ending games sitting on ~476 gold, which scored
+ * exactly nothing, because there was previously no way to spend it at all.
+ */
+function spendGold(state: GameState, player: Player): void {
+  // Bounded: each purchase is meant to be cheap, and an unbounded loop here
+  // would be one rounding error away from hanging a turn.
+  for (let bought = 0; bought < 12; bought++) {
+    const rank = (c: City) =>
+      AI_TUNING.preferBuildings && c.producing.kind === 'building' ? 0 : 1;
+    const affordable = playerCities(state, player.id)
+      .filter((c) => rushBlocked(state, c) === null)
+      .sort((a, b) => rank(a) - rank(b) || rushCost(state, a) - rushCost(state, b))[0];
+    if (!affordable) break;
+    if (player.gold - rushCost(state, affordable) < AI_TUNING.goldReserve) break;
+    if (!rushBuy(state, affordable)) break;
+  }
+}
+
+/**
+ * Take the promotions owed to this player's units.
+ *
+ * Ordered by taste rather than measured: the Horde reaches for the thing that
+ * hits harder, the Kingdom for the thing that keeps an army standing. Neither
+ * list has been swept, and both are one array away from being changed once
+ * somebody has an opinion backed by numbers.
+ */
+const PERK_TASTE: Record<string, string[]> = {
+  orc: ['bloodied', 'butcher', 'reputation', 'dug-in', 'field-repairs', 'quartermaster'],
+  human: ['dug-in', 'quartermaster', 'field-repairs', 'bloodied', 'reputation', 'butcher'],
+};
+
+function takePromotions(state: GameState, player: Player): void {
+  const taste = PERK_TASTE[player.faction] ?? PERK_TASTE.orc;
+  for (const unit of playerUnits(state, player.id)) {
+    while (owedPerks(unit) > 0) {
+      const options = perkChoices(unit);
+      if (options.length === 0) break;
+      // First thing on the list that is still going.
+      const pick = taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
+      unit.perks = [...(unit.perks ?? []), pick.id];
+    }
+  }
+}
+
 export function runAiTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
   const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
 
   chooseResearch(state, player, personality);
+  takePromotions(state, player);
 
   for (const city of playerCities(state, playerId)) {
     city.producing = chooseProduction(state, city, personality);
   }
+  if (AI_TUNING.rushBuying) spendGold(state, player);
 
   const frontier = frontierTiles(state, player);
 

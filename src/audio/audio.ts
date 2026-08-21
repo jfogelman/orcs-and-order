@@ -32,9 +32,45 @@ export type SfxId =
   | 'death-monster'
   | 'death-goblin'
   | 'cry'
-  | 'grunt-beast';
+  | 'grunt-beast'
+  // Interface and event cues, as opposed to combat.
+  | 'discovery'
+  | 'city-founded'
+  | 'city-lost'
+  | 'capture'
+  | 'built'
+  | 'growth'
+  | 'blocked'
+  | 'turn'
+  | 'select'
+  | 'move'
+  | 'promote'
+  | 'coin'
+  | 'explosion';
 
-const SFX_FILES: Record<SfxId, string> = {
+/**
+ * Exported so tests can check that every cue the simulation emits names a
+ * sound that exists. A cue that does not is silently ignored at runtime, so
+ * nothing ever fails -- it just goes quiet, which is hard to notice.
+ */
+/** How long the fade at the end of a capped sound takes, in milliseconds. */
+const FADE_MS = 140;
+
+/**
+ * Sounds allowed to ring out a little: the ones that mark an occasion rather
+ * than an action. Everything else is an event in a turn and should be over
+ * before the next one happens.
+ */
+const LINGERING: ReadonlySet<SfxId> = new Set<SfxId>([
+  'discovery',
+  'promote',
+  'city-founded',
+  'city-lost',
+  'capture',
+  'turn',
+]);
+
+export const SFX_FILES: Record<SfxId, string> = {
   melee: 'daviddumaisaudio-monster-05-grunt-and-growl-195715.mp3',
   sword: 'dragon-studio-sword-clashhit-393837.mp3',
   arrow: 'djartmusic-arrow-swish_03-306040.mp3',
@@ -55,6 +91,22 @@ const SFX_FILES: Record<SfxId, string> = {
   'death-goblin': 'freesound_community-goblin-death-6729.mp3',
   cry: 'freesound_community-gryffin-cry-6995.mp3',
   'grunt-beast': 'dragon-studio-deer-grunt-472371.mp3',
+
+  discovery: 'discovery.mp3',
+  'city-founded': 'city-founded.mp3',
+  'city-lost': 'city-lost.mp3',
+  capture: 'capture.mp3',
+  built: 'built.mp3',
+  growth: 'growth.mp3',
+  blocked: 'blocked.mp3',
+  turn: 'turn.mp3',
+  select: 'select.mp3',
+  move: 'move.mp3',
+  promote: 'promote.mp3',
+  coin: 'coin.mp3',
+  // Named without its leading vowel on disk; kept as supplied so the credit
+  // trail still matches the download.
+  explosion: 'xplosion.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */
@@ -75,7 +127,7 @@ const CREATURE_VOICE: Record<string, { attack: SfxId; death: SfxId }> = {
   knight: { attack: 'grunt-knight', death: 'grunt-human' },
   ballista: { attack: 'siege', death: 'sword' },
   mage: { attack: 'magic', death: 'grunt-human' },
-  paladin: { attack: 'holy', death: 'grunt-knight' },
+  paladin: { attack: 'sword', death: 'grunt-knight' },
 };
 
 export type MusicTrack = 'world' | 'battle' | 'victory';
@@ -185,6 +237,39 @@ export class AudioManager {
 
   // ----------------------------------------------------------------- sfx
 
+  /**
+   * Cut a sound off after this long, with a short fade so it does not click.
+   *
+   * The source clips are as recorded, and several of them are far longer than
+   * a game event: the troll roar runs eleven seconds, which is still going
+   * long after the troll has finished whatever it was doing, and overlaps the
+   * next three things that happen. Capping on playback rather than trimming
+   * the files keeps the originals intact and the licence trail with them.
+   */
+  private capFor(id: SfxId): number {
+    if (LINGERING.has(id)) return 2.6;
+    return 1.1;
+  }
+
+  private fadeOutAndStop(el: HTMLAudioElement, after: number): void {
+    window.setTimeout(() => {
+      if (el.paused) return;
+      const from = el.volume;
+      const steps = 6;
+      let step = 0;
+      const tick = window.setInterval(() => {
+        step++;
+        el.volume = Math.max(0, from * (1 - step / steps));
+        if (step >= steps) {
+          window.clearInterval(tick);
+          el.pause();
+          el.currentTime = 0;
+          el.volume = from;
+        }
+      }, FADE_MS / steps);
+    }, after * 1000);
+  }
+
   play(id: SfxId, throttleMs = 90): void {
     if (this.prefs.muted || !this.unlocked) return;
     const now = performance.now();
@@ -206,6 +291,7 @@ export class AudioManager {
     free.currentTime = 0;
     free.volume = this.prefs.sfxVolume;
     void free.play().catch(() => {});
+    this.fadeOutAndStop(free, this.capFor(id));
   }
 
   /** The right noise for a specific unit doing a specific thing. */

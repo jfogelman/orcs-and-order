@@ -40,7 +40,7 @@ describe('strength modifiers', () => {
     const state = arena();
     const plain = place(state, 0, 'orc', 1, 1);
     const vet = place(state, 0, 'orc', 3, 3);
-    vet.veteran = true;
+    vet.rank = 1;
     const target = place(state, 1, 'footman', 5, 5);
     expect(attackStrength(state, vet, target).total).toBeCloseTo(
       attackStrength(state, plain, target).total * VETERAN_BONUS,

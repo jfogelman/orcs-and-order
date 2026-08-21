@@ -4,15 +4,14 @@ node_modules/
 # Build output
 dist/
 
-# Generated game assets.
-# Everything in public/ is produced from art_src/ by `npm run art`, so it is
-# build output rather than source. The one exception is anything hand-placed
-# that has no raw original -- if that ever happens, commit it explicitly.
-public/units/
-public/cities/
-public/terrain/
-public/sfx/
-public/music/
+# public/ is generated from art_src/ by `npm run art`, but it is committed
+# anyway, because it is what gets deployed.
+#
+# Building it in CI instead would mean installing Python, Pillow and ffmpeg
+# there, and a keying bug would take the site down rather than merely looking
+# wrong on somebody's machine. Committing the output costs some binary churn
+# whenever art is re-rolled and means the thing deployed is exactly the thing
+# that was played.
 
 # Editor and OS noise
 .vscode/
@@ -25,3 +24,23 @@ Thumbs.db
 *.local
 .env
 .env.*
+
+# Python bytecode from the art tooling.
+__pycache__/
+*.pyc
+
+# art_src/ is raw material, not game assets, and is kept out of the repository.
+#
+# It holds untouched generator output -- 1024px JPEGs, several megabytes each --
+# and the original audio downloads exactly as they came off Pixabay. public/ holds
+# what the game actually loads, and that is tracked.
+#
+# Two reasons. It is heavy: every re-roll of a sprite adds another 7MB to the
+# history for good, and none of it is what anybody clones the repository to get.
+# And the audio in it is the untouched downloads, which is nearer to
+# redistributing the sounds as sounds than shipping a game that plays them.
+#
+# Nothing is lost. Every sound is credited by uploader and Pixabay id in
+# CREDITS.md and can be fetched again; every picture has its prompt in
+# ART_PROMPTS.md. The files stay on disk, so `npm run art` still works here.
+art_src/

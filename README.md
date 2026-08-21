@@ -1,6 +1,6 @@
 # Orcs & Order
 
-A small, extremely tongue-in-cheek Civ2-style 4X in which orcs slowly discover that
+A small, extremely tongue-in-cheek turn-based 4X in which orcs slowly discover that
 two orcs can stand in the same place.
 
 The tech tree is the joke. The Horde advances through `First Orc` → `Let's Orc
@@ -10,7 +10,7 @@ conclusion via `Brotherhood`, `Join the Army`, `Bunches of Footmen`, and
 `10 Heads are Better than One`. Every advance name comes from the original design
 doc.
 
-Units stay singleton, Civ2 style — one tile, one unit. **"Two Orcs" is not a stack**;
+Units stay singleton — one tile, one unit. **"Two Orcs" is not a stack**;
 it is a unit type with two orcs drawn on it and double the numbers. Ten of them cost
 ten orcs' worth of shields, occupy one tile, spend one movement point, and die all at
 once.
@@ -42,13 +42,28 @@ npm test
 | Input | Does |
 |---|---|
 | Left-click | Select your unit, or open your city |
-| Left-click empty ground | Move there, if it is in range |
-| Right-click | Move or attack, at any distance (the unit walks over several turns) |
+| Left-click again | On a unit standing in a city, opens the city underneath it |
+| Left-click open ground | Move there, if it is in range |
+| Right-click | Move or attack at any distance — including into your own cities |
+| Move into fog | Allowed. The unit marches on and **halts the moment it sights an enemy** |
 | Left-drag | Pan · **Wheel** zoom · **Arrows** pan |
 | `B` | Found a city (Peons and Peasants only) |
+| `P` | Orcpedia — also on the toolbar. Every unit and structure named in the Advances screen links into it, as do a city's standing structures and the `?` beside each build option |
 | `F` fortify · `S` sentry · `Space` skip · `N` next idle unit · `C` centre | |
 | `T` advances · `Ctrl+S` saves · `G` grid · `Enter` end turn · `Esc` deselect | |
 | `M` | Mute. The **Sound** button opens music and effects volume sliders |
+
+**Reading the map.** A blue wash marks everywhere the selected unit can reach *this
+turn*; red marks what it can attack. Hovering anywhere shows the route, drawn in two
+tones: **solid for the part walked this turn, faded for everything beyond it**, with a
+ring at the destination and the number of turns the march will take.
+
+Clicking a destination out of reach this turn is fine — the unit sets off and keeps
+going each turn until it arrives, halting early if it sights an enemy.
+
+**Research is never chosen for you.** Beakers bank up until you pick a target, so you
+are asked rather than assigned; the tech tree opens by itself whenever nothing is
+being researched.
 
 The soundtrack follows the situation: the battle theme cross-fades in whenever an enemy
 unit is in sight and holds for two turns after the last one is lost from view.
@@ -111,6 +126,28 @@ still missing.
 All art and prompts describe original characters in a general 90s-fantasy-RTS style.
 No Warcraft assets, names, characters, or logos appear anywhere in this repo.
 
+The art itself was generated with **Google Gemini** from those prompts. The sound
+effects came from Pixabay, found with the search terms in
+[SOUND_NEEDED.md](SOUND_NEEDED.md).
+
+Every audio file traces to a named Pixabay download, listed in
+[CREDITS.md](CREDITS.md) with its uploader and id -- including the original
+download name of each sound effect that was renamed to the event it plays on,
+recovered by matching byte for byte against the originals.
+
+The processed audio in `public/` is tracked, since it is what the game loads. The
+untouched original downloads in `art_src/sfx` and `art_src/music` are not: the
+game does not need them, and they are credited in full either way.
+
+---
+
+## Licence
+
+Code, tooling and documentation are MIT -- see [LICENSE](LICENSE). The artwork and
+audio are **not** covered by it and are not the project's to relicense; anyone
+reusing the code should assume they need to bring their own. [CREDITS.md](CREDITS.md)
+has the details.
+
 ---
 
 ## Status
@@ -119,17 +156,33 @@ Everything below is built, tested, and playable end to end. 62 tests pass
 (`npm test`), including full 300-turn AI-vs-AI games, save round-trips, and a
 determinism check.
 
-Balance, measured over six seeds of AI-vs-AI to the turn limit: 3 wins each,
-identical average advance counts (19.8 orc / 18.5 human), ~90 battles per game, all
-six games decisive. Orcs reach Six Orcs in half of them.
+Balance is measured over eighteen seeds of AI-vs-AI played to a verdict:
+
+```bash
+BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
+```
+
+The two sides come out level over eighteen seeds: **wins 9–9**, with each faction
+ahead on the columns it should be — the Kingdom on cities (10.6 v 8.9) and population
+(64.1 v 49.5), the Horde on advances (25.2 v 21.7). The scoring formula nets those
+against one another, which is what it is for.
+
+Getting there took three changes and only one of them was the cause; the diagnosis is
+written up in [DESIGN_QUEUE.md](DESIGN_QUEUE.md). Briefly: the scoring formula was
+genuinely flawed but fixing it changed nothing, rioting cities were growing forever
+which made everything worse, and the actual culprit was a single AI timidity constant.
+
+Around 83% of games reach the turn limit — but not for want of fighting. Cities change
+hands roughly **50 times per game**; the war is close to reciprocal, each side taking
+cities at nearly the rate it loses them, so little compounds into a collapse. That,
+rather than conquest being too hard, is the outstanding problem.
 
 ### Art status
 
-All 17 unit sprites, all 8 terrain sets, sound effects and music are in. Cities are
-the last gap: `human_1` and `human_8` are done, the other four need re-rolling with a
-plain magenta background (see [ART_PROMPTS.md](ART_PROMPTS.md)) — their originals
-arrived with baked-in transparency checkerboards that cannot be cut out reliably, and
-sit in `art_src/cities/_needs_reroll/` until replaced.
+All 17 unit sprites, all 6 city sprites, all 8 terrain sets, sound effects and music
+are in. The only art still outstanding is the **advance icons**, which are entirely
+optional — a missing icon is simply removed and the tech card reads fine without it.
+Prompts for all 43 are in [ART_PROMPTS.md](ART_PROMPTS.md).
 
 `dist/` is **3.7 MB**, of which 3.0 MB is the two music tracks. `npm run art`
 re-encodes audio on the way in: the source files arrive at 256 kbps stereo, which is a
@@ -139,9 +192,9 @@ with no audible difference in play.
 
 ### Known gaps and next steps
 
-1. **The deep ladder is rarely reached.** `Eight Orcs` and `Ten Orcs` exist, are
-   balanced, and are tested — but an AI game to turn 300 typically tops out at Six.
-   A focused human player should get there; worth confirming by actually playing.
+1. **`Ten Orcs` is still rarely reached.** Eight now shows up on some seeds since
+   research buildings arrived; ten remains a stretch for the AI inside 300 turns.
+   A focused human player should manage it.
 2. **No naval anything.** Worldgen therefore guarantees both civs start on the same
    continent. Islands on the map are decorative and unreachable.
 3. **Citizens are auto-assigned to tiles.** There is no manual tile-assignment UI.

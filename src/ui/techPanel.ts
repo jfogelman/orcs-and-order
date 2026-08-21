@@ -5,6 +5,7 @@ import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
 import { knowsTech, researchableTechs, setResearch, techCost } from '../sim/research';
 import { bar, escapeHtml, openModal } from './dom';
+import { openPedia } from './pedia';
 
 /**
  * The tech tree, laid out in dependency tiers.
@@ -24,17 +25,40 @@ function depthOf(t: TechDef, cache = new Map<string, number>()): number {
   return d;
 }
 
+/**
+ * Where an advance's icon lives. Missing files are expected: the icon is
+ * hidden on error, and the card reads perfectly well without one.
+ */
+function techIconPath(id: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}tech/${id}.png`;
+}
+
+/**
+ * What an advance unlocks, with units linked into the Orcpedia.
+ *
+ * "Unlocks: Two Orcs" is only useful if you can find out what Two Orcs *is*
+ * without closing the screen and hunting for one on the map.
+ */
 function unlockSummary(t: TechDef, player: Player): string {
   const bits: string[] = [];
   for (const u of t.units) {
     const def = UNIT_TYPES[u];
-    if (def && def.faction === player.faction) bits.push(def.name);
+    if (def && def.faction === player.faction) {
+      bits.push(
+        `<a href="#" class="pedia-link" data-pedia="${escapeHtml(def.id)}">${escapeHtml(def.name)}</a>`,
+      );
+    }
   }
   for (const b of t.buildings) {
     const def = BUILDINGS[b];
-    if (def && (def.faction === 'both' || def.faction === player.faction)) bits.push(def.name);
+    if (def && (def.faction === 'both' || def.faction === player.faction)) {
+      bits.push(
+        `<a href="#" class="pedia-link" data-pedia="${escapeHtml(def.id)}">${escapeHtml(def.name)}</a>`,
+      );
+    }
   }
-  for (const f of t.flags) bits.push(FLAG_LABELS[f] ?? f);
+  for (const f of t.flags) bits.push(escapeHtml(FLAG_LABELS[f] ?? f));
   return bits.join(', ');
 }
 
@@ -69,9 +93,12 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
           .map((p) => TECHS_BY_ID[p]?.name ?? p);
         return `
           <div class="tech-card ${cls}" data-id="${escapeHtml(t.id)}" ${canResearch ? '' : 'data-locked="1"'}>
-            <div class="tech-name">${escapeHtml(t.name)}</div>
+            <div class="tech-head">
+              <img class="tech-icon" src="${techIconPath(t.id)}" alt="" />
+              <div class="tech-name">${escapeHtml(t.name)}</div>
+            </div>
             <div class="tech-cost">${known ? 'known' : `${techCost(player, t)} beakers`}</div>
-            ${unlocks ? `<div class="tech-unlocks">${escapeHtml(unlocks)}</div>` : ''}
+            ${unlocks ? `<div class="tech-unlocks">${unlocks}</div>` : ''}
             ${missing.length > 0 && !known ? `<div class="tech-needs">needs ${escapeHtml(missing.join(', '))}</div>` : ''}
             <div class="tech-flavor">${escapeHtml(t.flavor)}</div>
           </div>`;
@@ -98,6 +125,18 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
     body,
     width: 'min(1400px, 97vw)',
     onMount: (root, close) => {
+      // No icon yet for this advance is the normal case, not an error.
+      root.querySelectorAll<HTMLImageElement>('.tech-icon').forEach((img) => {
+        img.addEventListener('error', () => img.remove());
+      });
+      // Unit links open the Orcpedia rather than picking the advance.
+      root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openPedia(player, link.dataset.pedia);
+        });
+      });
       root.querySelectorAll<HTMLElement>('.tech-card').forEach((card) => {
         if (card.dataset.locked) return;
         card.addEventListener('click', () => {

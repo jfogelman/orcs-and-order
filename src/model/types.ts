@@ -64,12 +64,33 @@ export interface Unit {
   hp: number;
   /** Movement points remaining this turn. */
   moves: number;
-  veteran: boolean;
+  /**
+   * How many times this unit has been promoted, 0 to 3.
+   *
+   * Replaces a single `veteran` flag. Rank 1 is worth exactly what veteran
+   * was, so nothing about an ordinary promoted unit has changed; the two
+   * ranks above it are new.
+   */
+  rank: number;
+  /** Experience toward the next rank. */
+  xp: number;
+  /**
+   * Perks chosen on promotion, one per rank.
+   *
+   * Optional so old saves and test fixtures need not declare it; a unit owes a
+   * choice whenever it has fewer of these than it has ranks.
+   */
+  perks?: string[];
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;
   /** City that supports this unit, or null for free units. */
   homeCity: number | null;
+  /**
+   * Has thrown its one weapon and not yet got it back. Only ever true for
+   * creatures that throw the thing they fight with.
+   */
+  disarmed: boolean;
 }
 
 // --------------------------------------------------------------------- cities
@@ -97,6 +118,22 @@ export interface City {
   /** True while the city is rioting; it produces nothing. */
   disorder: boolean;
   foundedTurn: number;
+  /**
+   * Who actually lives here, one entry per point of size.
+   *
+   * Purely descriptive -- nothing in the rules reads it. Rolled once when a
+   * citizen is born and kept thereafter, so a city that filled up before you
+   * could attract ogres keeps the goblins it already had.
+   */
+  citizens?: string[];
+  /**
+   * Turn until which this place is still a ruin, after being sacked.
+   *
+   * A city taken by storm used to regrow to full size long before anybody came
+   * back for it, which is why repeated capture never ground one down to
+   * nothing. Absent on a city that has never changed hands.
+   */
+  ruinedUntil?: number;
 }
 
 // ------------------------------------------------------------------ game meta
@@ -107,6 +144,31 @@ export interface LogEntry {
   player: number | null;
   text: string;
   kind: 'info' | 'combat' | 'growth' | 'research' | 'bad' | 'good';
+  /**
+   * Optional name of a sound this event should make. The simulation says what
+   * happened; the interface decides what that sounds like, so `sim/` still
+   * knows nothing about audio.
+   */
+  cue?: string;
+  /**
+   * Where on the map this happened, for anything that wants to draw it there.
+   * Sound does not need it, animation does; keeping it beside `cue` means the
+   * simulation still says only what happened and where, never how to show it.
+   */
+  at?: readonly [number, number];
+  /**
+   * The unit that did it, for anything that wants to animate the doer rather
+   * than the place. Kept as an id and not a reference so the log stays
+   * serialisable, and looked up defensively -- by the time this is read the
+   * unit may well be dead.
+   */
+  actor?: number;
+  /**
+   * What this is about, when the interface needs to know which picture to
+   * use and the position alone will not say -- a razed city names its
+   * faction and size tier, so the right settlement can be shown collapsing.
+   */
+  subject?: string;
 }
 
 export interface GameSettings {

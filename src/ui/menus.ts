@@ -1,5 +1,7 @@
 import { audio } from '../audio/audio';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
+import { perkName } from '../model/perks';
+import type { PerkDef } from '../model/perks';
 import type { FactionId, GameState } from '../model/types';
 import type { NewGameOptions } from '../sim/gamestate';
 import {
@@ -182,7 +184,8 @@ const SLOTS = ['1', '2', '3'];
 export function openSaveMenu(
   state: GameState,
   onLoad: (loaded: GameState) => void,
-  onNotice: (message: string) => void,
+  /** `ok` distinguishes 'saved' from 'that would not load'. */
+  onNotice: (message: string, ok: boolean) => void,
 ): void {
   const existing = new Map(listSlots().map((s) => [s.slot, s]));
   const rows = SLOTS.map((slot) => {
@@ -220,7 +223,7 @@ export function openSaveMenu(
       root.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) =>
         b.addEventListener('click', () => {
           saveToSlot(state, b.dataset.save!);
-          onNotice(`Game saved to slot ${b.dataset.save}.`);
+          onNotice(`Game saved to slot ${b.dataset.save}.`, true);
           close();
         }),
       );
@@ -233,7 +236,7 @@ export function openSaveMenu(
               onLoad(loaded);
             }
           } catch (err) {
-            onNotice(err instanceof SaveError ? err.message : 'That save would not load.');
+            onNotice(err instanceof SaveError ? err.message : 'That save would not load.', false);
           }
         }),
       );
@@ -247,7 +250,7 @@ export function openSaveMenu(
 
       root.querySelector('#btn-download')?.addEventListener('click', () => {
         downloadSave(state);
-        onNotice('Save file downloaded.');
+        onNotice('Save file downloaded.', true);
         close();
       });
       root.querySelector('#btn-upload')?.addEventListener('click', () => {
@@ -257,8 +260,95 @@ export function openSaveMenu(
             onLoad(loaded);
           })
           .catch((err: unknown) => {
-            onNotice(err instanceof SaveError ? err.message : 'That file would not load.');
+            onNotice(err instanceof SaveError ? err.message : 'That file would not load.', false);
           });
+      });
+    },
+  });
+}
+
+/**
+ * The screen the game opens on.
+ *
+ * Loading straight into a playable map meant the first thing anybody saw was
+ * somebody else's game already in progress, with the Advances panel over it
+ * asking what to research -- a question about a civilisation the player had
+ * not chosen and could not see. This asks the two questions that actually come
+ * first instead.
+ *
+ * Sticky: there is nothing behind it worth dismissing to.
+ */
+export function openTitleMenu(onNew: () => void, onLoad: () => void): void {
+  const saves = listSlots();
+  openModal({
+    title: 'Orcs & Order',
+    width: 'min(560px, 94vw)',
+    sticky: true,
+    body: `
+      <div class="panel-body">
+        <p class="flavor">
+          Two civilisations, neither of them ready. One has to be told what an
+          orc is for; the other files a form about it.
+        </p>
+        <div class="button-row">
+          <button class="small" data-act="new">New Game</button>
+          <button class="small" data-act="load"${saves.length === 0 ? ' disabled' : ''}>
+            Load Game${saves.length > 0 ? ` (${saves.length})` : ''}
+          </button>
+        </div>
+        ${
+          saves.length === 0
+            ? '<p class="flavor">No saved games yet.</p>'
+            : ''
+        }
+      </div>`,
+    onMount: (root, close) => {
+      root.querySelector<HTMLButtonElement>('[data-act="new"]')?.addEventListener('click', () => {
+        close();
+        onNew();
+      });
+      root.querySelector<HTMLButtonElement>('[data-act="load"]')?.addEventListener('click', () => {
+        close();
+        onLoad();
+      });
+    },
+  });
+}
+
+/**
+ * Ask what a newly promoted unit has learned.
+ *
+ * Sticky, because a promotion the player did not answer would sit owed
+ * forever and the unit would quietly never get its perk. There is no wrong
+ * choice here, so there is nothing to escape from.
+ */
+export function openPerkMenu(
+  unitName: string,
+  faction: FactionId,
+  options: PerkDef[],
+  onPick: (perkId: string) => void,
+): void {
+  const cards = options
+    .map(
+      (p) => `
+      <button class="choice-card" data-perk="${escapeHtml(p.id)}">
+        <span class="choice-name">${escapeHtml(perkName(p, faction))}</span>
+        <span class="choice-blurb">${escapeHtml(p.blurb)}</span>
+      </button>`,
+    )
+    .join('');
+
+  openModal({
+    title: `${unitName} has learned something`,
+    width: 'min(720px, 94vw)',
+    sticky: true,
+    body: `<div class="panel-body"><div class="choice-row">${cards}</div></div>`,
+    onMount: (root, close) => {
+      root.querySelectorAll<HTMLButtonElement>('[data-perk]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          close();
+          onPick(btn.dataset.perk ?? '');
+        });
       });
     },
   });

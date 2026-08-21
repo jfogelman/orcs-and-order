@@ -67,7 +67,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: [],
+    buildings: ['outpost', 'depot'],
     flags: ['bridges'],
     flavor: 'Walking around the swamp was, in hindsight, a choice.',
   },
@@ -78,9 +78,11 @@ export const TECHS: TechDef[] = [
     cost: 75,
     prereqs: ['bridge-building'],
     units: [],
-    buildings: ['walls'],
+    buildings: ['walls', 'catapult'],
     flags: [],
-    flavor: 'A bridge, but standing up and unwelcoming.',
+    flavor:
+      'A bridge, but standing up and unwelcoming. The Horde attends the same ' +
+      'lecture and comes away with a catapult.',
   },
   {
     id: 'tower-building',
@@ -92,6 +94,32 @@ export const TECHS: TechDef[] = [
     buildings: [],
     flags: ['watchtower'],
     flavor: 'A wall, but taller and lonelier.',
+  },
+  {
+    id: 'not-you-again',
+    name: 'Not You Again!',
+    faction: 'both',
+    cost: 45,
+    prereqs: ['mapmaking'],
+    units: [],
+    buildings: ['treasury', 'market'],
+    flags: [],
+    flavor:
+      'The same coin keeps turning up. Eventually somebody scratches a number ' +
+      'on it and the whole economy follows.',
+  },
+  {
+    id: 'hammers-of-glory',
+    name: 'Hammers of Glory',
+    faction: 'both',
+    cost: 85,
+    prereqs: ['not-you-again'],
+    units: [],
+    buildings: ['thinkingRock', 'scriptorium'],
+    flags: [],
+    flavor:
+      'It emerges you can build a place specifically for thinking in. The ' +
+      'hammers were, in the end, the easy part.',
   },
   {
     id: 'joy-making',

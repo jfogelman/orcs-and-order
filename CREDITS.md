@@ -1,0 +1,107 @@
+# Credits
+
+Everything the game is built from that did not come out of this repository, and
+where it came from. The code's own terms are in [LICENSE](LICENSE); this file
+covers the assets, which are not the same thing and are not MIT.
+
+## Art
+
+Every sprite, icon, terrain tile, portrait and victory screen was generated with
+**Google Gemini** from the prompts in [ART_PROMPTS.md](ART_PROMPTS.md), then cut
+out, trimmed and scaled by `tools/prepare_art.py`. The raw generator output is in
+`art_src/`; `public/` holds the processed results.
+
+The prompts describe original characters in a general 90s-fantasy-RTS style. No
+assets, names, characters or logos from any existing game appear anywhere here.
+
+## Sound effects
+
+Sourced from **Pixabay**. Licence summary:
+<https://pixabay.com/service/license-summary/>
+
+Found using the search terms listed in [SOUND_NEEDED.md](SOUND_NEEDED.md).
+
+### Files that document themselves
+
+A Pixabay download arrives named `<uploader>-<title>-<id>.mp3`, and these kept
+that name, so the credit and licence trail is readable straight off the file.
+
+- `666herohero-monster-death-grunt-131480.mp3`
+- `adhimahadi-ballista-slow-mo-8280.mp3`
+- `coghezzi-holy-healing-spell-533279.mp3`
+- `daviddumaisaudio-monster-05-grunt-and-growl-195715.mp3`
+- `daviddumaisaudio-small-monster-attack-195712.mp3`
+- `dennish18-arrow-body-impact-146419.mp3`
+- `djartmusic-arrow-swish_03-306040.mp3`
+- `djartmusic-magical-sparkle-whoosh-298750.mp3`
+- `dragon-studio-deer-grunt-472371.mp3`
+- `dragon-studio-dragon-breathing-fire-364475.mp3`
+- `dragon-studio-sword-clashhit-393837.mp3`
+- `freesound_community-goblin-death-6729.mp3`
+- `freesound_community-gryffin-cry-6995.mp3`
+- `freesound_community-troll-roars-100312.mp3`
+- `magiaz-ogre-387362.mp3`
+- `phatphrogstudio-male-fighter-voice-heavy-attack-grunt-544355.mp3`
+- `phatphrogstudio-rpg-female-attack-grunt-no-ai-481720.mp3`
+- `phatphrogstudio-rpg-m-knight-voice-attack-grunt-490291.mp3`
+- `soundreality-whoosh-axe-throw-389751.mp3`
+- `yodguard-casting-magic-4-382380.mp3`
+
+### Files renamed to the event they play on
+
+These were renamed for the sake of the code that loads them, which cost the
+trail. It is restored here: each was matched **byte for byte** against the
+original download, so the pairing is identity, not resemblance.
+
+| in the repo | original Pixabay download |
+|---|---|
+| `blocked.mp3` | `soundshelfstudio-ui-error-pop-515668.mp3` |
+| `built.mp3` | `freesound_community-bing1-91919.mp3` |
+| `capture.mp3` | `freesound_community-075747_inception-horn-victory-82997.mp3` |
+| `city-founded.mp3` | `freesound_community-wooden-thud-mono-6244.mp3` |
+| `city-lost.mp3` | `u_903n3qx7rq-dramatic-sting-118943.mp3` |
+| `coin.mp3` | `pwlpl-falling-coins-and-treasure-clatter-481169.mp3` |
+| `discovery.mp3` | `universfield-game-bonus-144751.mp3` |
+| `growth.mp3` | `47313572-ui-sounds-pack-2-sound-5-358890.mp3` |
+| `move.mp3` | `joentnt-walk-on-dirt-3-291983.mp3` |
+| `promote.mp3` | `universfield-level-up-08-402152.mp3` |
+| `select.mp3` | `vadim_makes_sound-soft-app-button-tap-sound-2-547872.mp3` |
+| `turn.mp3` | `freesound_community-086196_oil-drum-soft-impactwav-39587.mp3` |
+| `xplosion.mp3` | `soundreality-explosion-fx-343683.mp3` |
+
+## Music
+
+Also Pixabay, under the same licence summary linked above. All three are pinned
+to the exact upload, and each was confirmed by checking the length stated on the
+Pixabay page against the length of the file in this repository, so every pairing
+below is a verified match rather than an attribution.
+
+| file | track | by | Pixabay id | length |
+|---|---|---|---|---|
+| `world.mp3` | Adventure Game Loop - Fun and Uplifting Background Music | Cyberwave-Orchestra | 247664 | 1:45, file measures 104.78s |
+| `battle.mp3` | RPG Battle \| Chiptune Video Game Music | NickPanek | 346666 | 1:57, file measures 116.64s |
+| `victory.mp3` | 11L-Victory_sound_with_t-1749487402950 | PeekabooLabCreative | 357606 | 0:02, file measures 2.12s |
+
+`victory.mp3` is listed here with the music because that is how the game uses it,
+but it is filed under sound effects on Pixabay rather than music -- at two
+seconds it is a sting, not a track.
+
+**One thing to know about `world.mp3`:** its Pixabay page states the track is
+registered with Content ID. That does not affect the right to use it, but it can
+cause automated copyright claims on video of the game -- which matters for a game
+meant to be streamed or recorded. The uploader offers claim removal on request.
+
+## What is in the repository, and what is not
+
+`public/sfx/` and `public/music/` are tracked. They hold the processed audio the
+game loads, so the deployed game has sound and a fresh clone runs complete. Audio
+bundled inside a game is the ordinary use these licences are written for.
+
+`art_src/sfx/` and `art_src/music/` are not tracked. They hold the untouched
+original downloads, which is closer to redistributing the sounds as sounds, and
+the game needs none of them -- `tools/prepare_art.py` has already done its work.
+Everything in them is credited above by uploader and Pixabay id, so leaving them
+out costs no part of the trail.
+
+If those originals are ever wanted again, every one of them can be downloaded
+afresh from the id recorded here.

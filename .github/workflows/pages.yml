@@ -1,0 +1,56 @@
+# Build the game and publish it to GitHub Pages.
+#
+# The site is plain static files with no runtime dependencies, and vite is
+# configured with `base: './'`, so it works from a project subpath without
+# knowing the repository name.
+#
+# The art in public/ is committed rather than regenerated here on purpose --
+# see .gitignore for why.
+name: Pages
+
+on:
+  push:
+    # main is the intended home; the working branch is listed while main is
+    # still empty, so there is something to look at before the merge.
+    branches: [main, polish/terrain-edges]
+  workflow_dispatch:
+
+# Least privilege: read the repo, and mint the token Pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. Queued rather than cancelled, so a push that lands
+# mid-deploy still ends up published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # `npm run build` typechecks before it bundles, so a type error stops
+      # the deploy rather than shipping.
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

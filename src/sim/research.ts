@@ -88,8 +88,19 @@ export interface ResearchEvent {
 }
 
 export function addBeakers(state: GameState, player: Player, amount: number): ResearchEvent {
-  autoPickResearch(state, player);
-  if (!player.researching) return { completed: null };
+  // Nobody's next project is chosen here.
+  //
+  // This used to call autoPickResearch for AI players, which picks the
+  // cheapest available advance. Because the economy runs at the start of a
+  // player's turn and the AI chooses its research later in that same turn,
+  // the cheapest pick always got there first and the AI's techPriority list
+  // was never consulted once -- both factions researched cheapest-first for
+  // the whole of the game's life. The AI now decides in `chooseResearch`, and
+  // a human is asked; beakers bank up either way, so the delay costs nothing.
+  if (!player.researching) {
+    player.beakers += amount;
+    return { completed: null };
+  }
 
   player.beakers += amount;
   const def = TECHS_BY_ID[player.researching];
@@ -99,7 +110,7 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
   player.beakers -= cost;
   player.techs.push(def.id);
   player.researching = null;
-  log(state, `${def.name} discovered.`, 'research', player.id);
+  log(state, `${def.name} discovered.`, 'research', player.id, 'discovery');
   log(state, def.flavor, 'info', player.id);
 
   const newUnits = def.units.filter((u) => UNIT_TYPES[u] !== undefined).map((u) => unitType(u).name);
@@ -115,7 +126,6 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
     log(state, `Now buildable: ${newBuildings.join(', ')}.`, 'good', player.id);
   }
 
-  autoPickResearch(state, player);
   return { completed: def };
 }
 

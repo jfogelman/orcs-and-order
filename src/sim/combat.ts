@@ -1,9 +1,11 @@
-import { idx } from '../engine/grid';
+import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
+import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
-import type { GameState, Unit } from '../model/types';
+import type { City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
+import { militiaStrength, supplyQuality, SUPPLY } from './city';
 import { hasFlag } from './rules';
 
 /**
@@ -15,6 +17,65 @@ import { hasFlag } from './rules';
  */
 
 export const VETERAN_BONUS = 1.5;
+
+/** What a chosen perk is worth where it simply multiplies something. */
+export const PERK_BONUS = 1.25;
+
+/**
+ * What each rank multiplies strength by.
+ *
+ * Rank 1 is the old veteran bonus exactly, so the common case is unchanged and
+ * the balance measured against it still holds. The two above are new and
+ * deliberately smaller steps -- a unit that has survived three wars should be
+ * frightening, not decisive on its own.
+ */
+export const RANK_BONUS = [1, VETERAN_BONUS, 1.75, 2] as const;
+export const MAX_RANK = RANK_BONUS.length - 1;
+
+/**
+ * Experience, and where it comes from.
+ *
+ * Killing teaches most, surviving a fight teaches something, and damage a unit
+ * did not choose teaches nothing at all -- a dragon's breath catching a
+ * bystander, or a sapper going up, is not a lesson. That rule is mechanical as
+ * much as thematic: a blast hits both sides, so counting it would have a
+ * sapper promoting the survivors it was aimed at.
+ *
+ * Divided by the size of the group, because Ten Orcs winning a fight is ten
+ * orcs each learning a tenth of it. Without that the counting ladder would
+ * double as an experience ladder, and the biggest unit would both hit hardest
+ * and improve fastest.
+ */
+export const XP = {
+  kill: 50,
+  survive: 15,
+  /** Taking a city off somebody. */
+  city: 60,
+  /** Taking one off somebody so thoroughly that it stops being a city. */
+  raze: 120,
+  thresholds: [0, 100, 300, 700],
+} as const;
+
+export function rankBonus(unit: Unit): number {
+  return RANK_BONUS[Math.min(unit.rank, MAX_RANK)] ?? 1;
+}
+
+/** Give a unit experience, and promote it if that is enough. */
+export function awardXp(state: GameState, unit: Unit, amount: number): boolean {
+  unit.xp += amount / Math.max(1, unitType(unit.type).count);
+  let promoted = false;
+  while (unit.rank < MAX_RANK && unit.xp >= XP.thresholds[unit.rank + 1]) {
+    unit.rank++;
+    promoted = true;
+  }
+  if (promoted) {
+    log(state, `${unitType(unit.type).name} is promoted.`, 'good', unit.owner, 'promote', [
+      unit.x,
+      unit.y,
+    ]);
+  }
+  return promoted;
+}
 export const FORTIFY_BONUS = 1.5;
 /** Chance a survivor is promoted after winning a fight. */
 export const PROMOTION_CHANCE = 0.25;
@@ -27,7 +88,69 @@ export interface StrengthBreakdown {
   terrainMult: number;
   wallsMult: number;
   siegeMult: number;
+  /** Attack multiplier from sallying out of a city that has the means. */
+  sallyMult: number;
   berserk: boolean;
+}
+
+/**
+ * What a thrower is worth once it has thrown the thing it fights with.
+ *
+ * Deliberately brutal. The throw itself hits hard and from two tiles away with
+ * no reply, so the price of using it has to be steep enough that an axethrower
+ * is a decision rather than a free opening move every turn.
+ */
+export const DISARMED_ATTACK = 0.25;
+
+/** What a dragon's breath does to whatever is standing behind its target. */
+export const BREATH_CARRY = 0.6;
+
+/**
+ * Give a thrower its weapon back.
+ *
+ * Two ways to earn it, both requiring the unit to do something rather than
+ * wait: walk into a friendly city, or kill somebody and pick their axe up off
+ * the floor.
+ */
+export function rearm(state: GameState, unit: Unit, how: string): void {
+  if (!unit.disarmed) return;
+  unit.disarmed = false;
+  log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
+}
+
+/**
+ * A dragon's breath carries past whatever it hit, into the tile directly
+ * behind, along the line it was already travelling.
+ *
+ * It does not check whose side that unit is on. Positioning is the whole
+ * mechanic: a dragon lined up behind your own front rank will cook it.
+ *
+ * Returns whatever it caught, or null.
+ */
+export function breatheThrough(
+  state: GameState,
+  attacker: Unit,
+  target: Unit,
+  damageDealt: number,
+): Unit | null {
+  if (!unitType(attacker.type).lineBreath || damageDealt <= 0) return null;
+  const bx = target.x + (target.x - attacker.x);
+  const by = target.y + (target.y - attacker.y);
+  const behind = state.units.find((u) => u.x === bx && u.y === by);
+  if (!behind) return null;
+
+  const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
+  behind.hp -= carried;
+  log(
+    state,
+    `The breath carries on into ${unitType(behind.type).name} for ${carried}.`,
+    behind.owner === attacker.owner ? 'bad' : 'combat',
+    attacker.owner,
+    undefined,
+    [behind.x, behind.y],
+  );
+  if (behind.hp <= 0) destroyUnit(state, behind, 'is burned away behind the line');
+  return behind;
 }
 
 export function attackStrength(state: GameState, attacker: Unit, defender: Unit): StrengthBreakdown {
@@ -37,36 +160,79 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   const berserk = hasFlag(owner, 'berserk');
 
   const siegeMult = defenderCity ? type.siegeBonus : 1;
+
+  // Charging out of your own city with something encouraging behind you. The
+  // Horde's answer to walls: no help at all if you sit still, considerable
+  // help if you come out and meet them.
+  const homeCity = cityAt(state, attacker.x, attacker.y);
+  const sallyMult =
+    homeCity && homeCity.owner === attacker.owner
+      ? 1 + homeCity.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.sallyBonus ?? 0), 0)
+      : 1;
+
   let total = type.attack;
-  if (attacker.veteran) total *= VETERAN_BONUS;
+  // Nothing left to fight with but hands and regret.
+  if (attacker.disarmed) total *= DISARMED_ATTACK;
+  // Hungry, lost, and a long way from anyone who knows the way home. Graded
+  // rather than a cliff edge: a step past the line is slightly worse off, not
+  // suddenly useless.
+  const supplied = supplyQuality(state, attacker);
+  if (supplied < 1) total *= SUPPLY.attackPenalty + (1 - SUPPLY.attackPenalty) * supplied;
+  total *= rankBonus(attacker);
+  if (hasPerk(attacker, 'bloodied')) total *= PERK_BONUS;
   total *= siegeMult;
+  total *= sallyMult;
   if (berserk) total *= 1.25;
 
   return {
     total,
     base: type.attack,
-    veteran: attacker.veteran,
+    veteran: attacker.rank > 0,
     fortified: false,
     terrainMult: 1,
     wallsMult: 1,
     siegeMult,
+    sallyMult,
     berserk,
   };
 }
 
-export function defenseStrength(state: GameState, defender: Unit): StrengthBreakdown {
+/**
+ * Defensive strength, optionally against a specific attacker.
+ *
+ * The attacker matters because siege engines are built to ignore walls. A
+ * defender otherwise stacks terrain (up to x3), the free fortify bonus for
+ * standing in a city (x1.5), walls (x2) and veterancy (x1.5) — up to x13.5,
+ * which put a walled hill city beyond anything the AI would willingly attack
+ * and left almost every game to be decided on points.
+ */
+export function defenseStrength(
+  state: GameState,
+  defender: Unit,
+  attacker?: Unit,
+): StrengthBreakdown {
   const type = unitType(defender.type);
   const owner = state.players[defender.owner];
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
   const city = cityAt(state, defender.x, defender.y);
   const berserk = hasFlag(owner, 'berserk');
 
-  const wallsMult =
-    city && city.buildings.includes('walls') ? (BUILDINGS.walls.defenseMult ?? 1) : 1;
+  // Siege units bring the walls down; that is what they are for. Anything a
+  // siege engine cannot simply knock over still counts.
+  const siegeAttacker = attacker !== undefined && unitType(attacker.type).siegeBonus > 1;
+  const wallsMult = city
+    ? city.buildings.reduce((mult, id) => {
+        const def = BUILDINGS[id];
+        if (!def?.defenseMult) return mult;
+        if (siegeAttacker && def.negatedBySiege) return mult;
+        return mult * def.defenseMult;
+      }, 1)
+    : 1;
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;
-  if (defender.veteran) total *= VETERAN_BONUS;
+  total *= rankBonus(defender);
+  if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   total *= terrain.defense;
   if (fortified) total *= FORTIFY_BONUS;
   total *= wallsMult;
@@ -75,11 +241,12 @@ export function defenseStrength(state: GameState, defender: Unit): StrengthBreak
   return {
     total,
     base: type.defense,
-    veteran: defender.veteran,
+    veteran: defender.rank > 0,
     fortified,
     terrainMult: terrain.defense,
     wallsMult,
     siegeMult: 1,
+    sallyMult: 1,
     berserk,
   };
 }
@@ -104,11 +271,47 @@ export interface CombatResult {
   defenseStrength: number;
   /** Set when the winner earned a promotion out of it. */
   promoted: boolean;
+  /** The defender was finished off outright rather than fought. */
+  executed: boolean;
+}
+
+/**
+ * Can this attacker simply finish off a wounded defender?
+ *
+ * Deliberately restricted to a defender no larger than the attacker. Without
+ * that guard a single Death Knight could delete Ten Orcs by catching them
+ * wounded, which would make it far and away the strongest thing in the game.
+ */
+export function canExecute(attacker: Unit, defender: Unit): boolean {
+  const a = unitType(attacker.type);
+  const d = unitType(defender.type);
+  if (a.executeChance <= 0) return false;
+  if (d.hp > a.hp) return false;
+  return defender.hp < d.hp * 0.5;
 }
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
+  if (canExecute(attacker, defender)) {
+    const executed = withRng(state, (rng) => rng.chance(unitType(attacker.type).executeChance));
+    if (executed) {
+      defender.hp = 0;
+      return {
+        attackerId: attacker.id,
+        defenderId: defender.id,
+        attackerWon: true,
+        rounds: 0,
+        attackerHp: attacker.hp,
+        defenderHp: 0,
+        attackStrength: 0,
+        defenseStrength: 0,
+        promoted: false,
+        executed: true,
+      };
+    }
+  }
+
   const atk = attackStrength(state, attacker, defender);
-  const def = defenseStrength(state, defender);
+  const def = defenseStrength(state, defender, attacker);
   const atkMax = unitType(attacker.type).hp;
   const defMax = unitType(defender.type).hp;
   const dmg = damagePerRound(atkMax, defMax);
@@ -126,8 +329,10 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     }
     const attackerWon = defender.hp <= 0;
     const winner = attackerWon ? attacker : defender;
-    const promoted = !winner.veteran && rng.chance(PROMOTION_CHANCE);
-    if (promoted) winner.veteran = true;
+    // Experience rather than a coin toss; awarded after the fight resolves,
+    // outside this RNG block, so the message lands in the right order.
+    const promoted = false;
+    void winner;
     return { attackerWon, promoted };
   });
 
@@ -144,7 +349,86 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     attackStrength: atk.total,
     defenseStrength: def.total,
     promoted: result.promoted,
+    executed: false,
   };
+}
+
+/** Rounds the townsfolk will stand there throwing things before giving up. */
+export const MILITIA_ROUNDS = 3;
+
+export interface MilitiaResult {
+  /** True if the attacker got in. */
+  taken: boolean;
+  /** Damage the attacker took doing it. */
+  damage: number;
+}
+
+/**
+ * An attempt to walk into a city nobody is guarding.
+ *
+ * The citizens are not a unit -- they have no health, cannot be killed, and
+ * never appear on the board. They simply make the attacker pay something on
+ * the way in, and occasionally kill a weak enough attacker outright.
+ *
+ * A strong attacker still walks in; that is intended. The point is not to make
+ * cities safe, it is to stop a single wandering goblin annexing a town of
+ * eight people for free.
+ */
+export function stormEmptyCity(state: GameState, attacker: Unit, city: City): MilitiaResult {
+  // Some reputations arrive before the army does, and the townsfolk decide
+  // this is somebody else's problem.
+  if (hasPerk(attacker, 'reputation')) return { taken: true, damage: 0 };
+  const atk = attackStrength(state, attacker, attacker).total;
+  const def = militiaStrength(city);
+  if (def <= 0) return { taken: true, damage: 0 };
+
+  const dmg = Math.max(1, Math.round(unitType(attacker.type).hp / 12));
+  const pAttack = atk / Math.max(0.0001, atk + def);
+
+  const damage = withRng(state, (rng) => {
+    let taken = 0;
+    for (let i = 0; i < MILITIA_ROUNDS; i++) if (rng.float() >= pAttack) taken += dmg;
+    return taken;
+  });
+  attacker.hp -= damage;
+  return { taken: attacker.hp > 0, damage };
+}
+
+/**
+ * A sapper killed while defending takes the neighbourhood with it.
+ *
+ * Deliberately does not chain: a unit killed *by* a blast never detonates in
+ * turn, or one sapper in a line clears a continent. And it only fires on
+ * defence, because the whole joke is that you cannot aim it.
+ *
+ * Returns the units it killed, already removed from the board.
+ */
+export function detonate(state: GameState, sapper: Unit): Unit[] {
+  const power = unitType(sapper.type).explodes;
+  if (power <= 0) return [];
+
+  const caught = state.units.filter(
+    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) === 1,
+  );
+  const killed: Unit[] = [];
+  for (const victim of caught) {
+    victim.hp -= Math.max(1, Math.round(unitType(victim.type).hp * power));
+    if (victim.hp <= 0) killed.push(victim);
+  }
+  log(
+    state,
+    `${unitType(sapper.type).name} goes up, taking ${caught.length} unit(s) with it.`,
+    'combat',
+    sapper.owner,
+    'explosion',
+    [sapper.x, sapper.y],
+  );
+  for (const victim of killed) {
+    const i = state.units.indexOf(victim);
+    if (i >= 0) state.units.splice(i, 1);
+    log(state, `${unitType(victim.type).name} is caught in the blast.`, 'bad', victim.owner);
+  }
+  return killed;
 }
 
 /** Remove a dead unit and narrate it to both sides. */

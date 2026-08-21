@@ -27,12 +27,13 @@ Usage:  python tools/prepare_art.py [--force]
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from collections import Counter, deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageStat
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "art_src"
@@ -71,6 +72,60 @@ TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water",
 
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
+
+# Advance icons, keyed by tech id from src/model/techs.ts. Optional: the tech
+# tree hides the icon and reads fine without it.
+TECH_ICONS = [
+    "mapmaking", "tree-hugging", "bridge-building", "wall-building",
+    "tower-building", "not-you-again", "hammers-of-glory", "joy-making",
+    "happiness", "insanity",
+    "first-orc", "goblin-smarts", "suicidal-goblins", "underground-smarts",
+    "orc-meaning", "to-be-an-orc",
+    "axes", "axes-crazy", "throwing-buddies", "my-little-friend",
+    "dead-messed-up", "full-of-fire",
+    "first-human",
+    "see-the-world", "archery", "pointed-ears", "arrows-glory",
+    "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
+    "lordship",
+]
+
+# Building icons, keyed by id from src/model/buildings.ts. Optional, like
+# advance icons: a missing one is simply left out.
+BUILDING_ICONS = [
+    "barracks", "granary", "walls", "catapult", "totem", "chapel",
+    "treasury", "market", "thinkingRock", "scriptorium",
+]
+
+# Icons are read at a glance in a crowded tree, so they stay small.
+ICON_SIZE = 48
+
+# One animation frame. The renderer draws these over a 32px tile at 2x, so 64
+# is native size -- large enough that a fireball is not a smudge, small enough
+# that an eleven-effect set stays a few hundred KB.
+EFFECT_SIZE = 64
+# Composition happens at this size and is downscaled, so stamped copies keep
+# their edges instead of turning to mush.
+ICON_WORK_SIZE = 192
+
+# Counting-ladder icons, built by stamping a single head N times rather than
+# drawn. An image generator asked for "three orc heads" returns two or four --
+# the same failure that made the group unit sprites unusable. One good head
+# stamped three times is exactly three, every time, and it re-derives itself
+# if that head is ever redrawn.
+#
+# These always win over a drawn file of the same name.
+COMPOSED_ICONS = {
+    "orc-together": ("first-orc", 2),
+    "idiots-stick-together": ("first-orc", 3),
+    "next-level-stupid": ("first-orc", 4),
+    "beyond-stupid": ("first-orc", 6),
+    "not-just-stupid": ("first-orc", 8),
+    "stupidity-for-all": ("first-orc", 10),
+    "brotherhood": ("first-human", 2),
+    "join-army": ("first-human", 3),
+    "bunches-footmen": ("first-human", 5),
+    "ten-heads": ("first-human", 10),
+}
 
 
 def close_enough(a: tuple[int, int, int], b: tuple[int, int, int], tol: int) -> bool:
@@ -238,7 +293,9 @@ def checkerboard_survived(px, transparent: bytearray, w: int, h: int) -> bool:
         return False
     return neutral / opaque > 0.55
 
-def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
+def remove_background(
+    img: Image.Image, max_removed: float = MAX_REMOVED
+) -> tuple[Image.Image, bool]:
     """
     Flood fill inward from every border pixel that matches a background colour.
 
@@ -249,6 +306,12 @@ def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
     Returns the image and whether the cut-out succeeded. A fill that consumes
     nearly everything has escaped into the subject, and the caller is told so it
     can keep the original and flag the file for a re-roll.
+
+    `max_removed` is that judgement, and it is not universal. The default is
+    calibrated on sprites, which fill most of their frame. A status overlay is
+    drawn hollow on purpose -- a ring of small stars around an empty middle is
+    legitimately 96% background -- so that caller raises the ceiling rather than
+    have every correct file rejected as a runaway fill.
     """
     img = crop_letterbox(img).convert("RGBA")
     w, h = img.size
@@ -311,7 +374,7 @@ def remove_background(img: Image.Image) -> tuple[Image.Image, bool]:
         transparent[y * w + x] = 1
 
     removed = sum(transparent)
-    if removed > w * h * MAX_REMOVED:
+    if removed > w * h * max_removed:
         # The fill ate the subject. Better a visible background than nothing.
         return img, False
 
@@ -345,16 +408,67 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
     return canvas
 
 
+# Words that mark a re-roll of the same picture rather than a different one.
+# A re-rolled file is usually left beside the original -- "troll magenta.jpg"
+# next to "troll.jpg" -- so these are stripped from the name and the newest
+# file wins. Kept deliberately short: anything here is a word no creature can
+# be called.
+# "2x2" describes how the frames are laid out, which is worked out from the
+# picture, not from the name.
+REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new", "2x2")
+
+
+def normalise_stem(stem: str) -> tuple[str, str]:
+    """
+    Split a filename into the thing it depicts and which variant of it.
+
+    Two different kinds of annotation end up in these names. A re-roll tag
+    means "the same picture, generated again" and must collapse onto the base
+    name. A variant tag names a genuinely different picture of the same
+    creature -- an axethrower with no axe left, or the moment it gets one back
+    -- and must not collide with it.
+    """
+    note = " ".join(re.findall(r"\(([^)]*)\)", stem)).lower()
+    base = re.sub(r"\s*\([^)]*\)", " ", stem).lower()
+    # Split on whitespace and drop whole re-roll words. Deliberately not a
+    # regex: a word-boundary escape here was silently mangled once already,
+    # and matched nothing at all without failing.
+    base = " ".join(w for w in base.split() if w not in REROLL_WORDS)
+    base = re.sub(r"\s+", " ", base).strip()
+
+    variant = ""
+    for needle, suffix in VARIANTS.items():
+        if needle in note:
+            variant = suffix
+            break
+    return base, variant
+
+
 def find_source(folder: Path, name: str) -> Path | None:
-    for suffix in IMAGE_SUFFIXES:
-        candidate = folder / f"{name}{suffix}"
-        if candidate.exists():
-            return candidate
-    return None
+    """
+    The newest file depicting `name`, ignoring any re-roll tag on it.
+
+    Used to match by exact filename, which meant a re-rolled "troll magenta"
+    sitting beside "troll" was simply never found and the old cut-out stayed.
+    """
+    best: Path | None = None
+    for path in folder.iterdir():
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        if variant or base != name.lower():
+            continue
+        if best is None or path.stat().st_mtime > best.stat().st_mtime:
+            best = path
+    return best
 
 
 def process_cutouts(
-    folder: str, names: list[str], force: bool
+    folder: str,
+    names: list[str],
+    force: bool,
+    size: int = UNIT_SIZE,
+    quiet_missing: bool = False,
 ) -> tuple[int, list[str], list[str]]:
     """Anything that sits on top of the map: units and settlements alike."""
     src = SRC / folder
@@ -367,14 +481,15 @@ def process_cutouts(
     for name in names:
         path = find_source(src, name)
         if path is None:
-            missing.append(name)
+            if not quiet_missing:
+                missing.append(name)
             continue
         target = out / f"{name}.png"
         if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
             continue
         img = Image.open(path)
         img, cut_out = remove_background(img)
-        img = trim_and_square(img, UNIT_SIZE)
+        img = trim_and_square(img, size)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
         print(f"  {folder}/{name}.png  {target.stat().st_size // 1024}KB{flag}")
@@ -382,6 +497,78 @@ def process_cutouts(
             failed.append(name)
         done += 1
     return done, missing, failed
+
+
+def cluster_layout(n: int) -> list[tuple[float, float]]:
+    """
+    Where each stamp sits, as a fraction of the icon, mirroring the layout the
+    renderer uses for group unit sprites so the two read as the same idea.
+    Rows come back to front, so drawing in order overlaps correctly.
+    """
+    if n <= 1:
+        return [(0.0, 0.0)]
+    per_row = 2 if n <= 4 else 3 if n <= 9 else 4
+    rows: list[int] = []
+    left = n
+    while left > 0:
+        take = min(per_row, left)
+        rows.append(take)
+        left -= take
+
+    cell_w = 0.84 / per_row
+    cell_h = 0.47 / len(rows) if len(rows) > 1 else 0.0
+    out: list[tuple[float, float]] = []
+    for r, count in enumerate(rows):
+        y = (r - (len(rows) - 1) / 2) * cell_h
+        for i in range(count):
+            out.append(((i - (count - 1) / 2) * cell_w, y))
+    return out
+
+
+def compose_icons(force: bool) -> tuple[int, list[str]]:
+    """Build the counting-ladder icons by stamping a single head N times."""
+    src = SRC / "tech"
+    out = OUT / "tech"
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+
+    for target, (source_name, count) in COMPOSED_ICONS.items():
+        path = find_source(src, source_name)
+        if path is None:
+            missing.append(f"{target} (needs {source_name})")
+            continue
+        dest = out / f"{target}.png"
+        if dest.exists() and not force and dest.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        head, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            missing.append(f"{target} (could not cut out {source_name})")
+            continue
+        bbox = head.getbbox()
+        if bbox:
+            head = head.crop(bbox)
+
+        scale = max(0.42, 1.05 / (count ** 0.38))
+        stamp_w = max(1, int(ICON_WORK_SIZE * scale))
+        stamp = head.resize(
+            (stamp_w, max(1, round(head.height * stamp_w / head.width))), Image.LANCZOS
+        )
+        flipped = stamp.transpose(Image.FLIP_LEFT_RIGHT)
+
+        canvas = Image.new("RGBA", (ICON_WORK_SIZE, ICON_WORK_SIZE), (0, 0, 0, 0))
+        for i, (nx, ny) in enumerate(cluster_layout(count)):
+            piece = flipped if i % 2 else stamp
+            x = round(ICON_WORK_SIZE / 2 + nx * ICON_WORK_SIZE - piece.width / 2)
+            y = round(ICON_WORK_SIZE / 2 + ny * ICON_WORK_SIZE - piece.height / 2)
+            canvas.alpha_composite(piece, (x, y))
+
+        trimmed = canvas.crop(canvas.getbbox() or (0, 0, ICON_WORK_SIZE, ICON_WORK_SIZE))
+        trim_and_square(trimmed, ICON_SIZE).save(dest, optimize=True)
+        print(f"  tech/{target}.png  composed from {source_name} x{count}")
+        done += 1
+    return done, missing
 
 
 def process_terrain(force: bool) -> tuple[int, list[str]]:
@@ -399,7 +586,8 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
     for name in TERRAINS:
         path = find_source(src, name)
         if path is None:
-            missing.append(name)
+            if not quiet_missing:
+                missing.append(name)
             continue
         first = out / f"{name}_0.png"
         if first.exists() and not force and first.stat().st_mtime > path.stat().st_mtime:
@@ -411,13 +599,597 @@ def process_terrain(force: bool) -> tuple[int, list[str]]:
         # repeats of the motif, so downscaling averages into a usable tile.
         cw, ch = w // 2, h // 2
         offsets = [(0, 0), (cw, 0), (0, ch), (cw, ch)][:TERRAIN_VARIANTS]
-        for i, (ox, oy) in enumerate(offsets):
-            tile = sheet.crop((ox, oy, ox + cw, oy + ch))
-            tile = tile.resize((TERRAIN_SIZE, TERRAIN_SIZE), Image.LANCZOS)
-            tile.save(out / f"{name}_{i}.png", optimize=True)
+        variants = [
+            sheet.crop((ox, oy, ox + cw, oy + ch)).resize(
+                (TERRAIN_SIZE, TERRAIN_SIZE), Image.LANCZOS
+            )
+            for ox, oy in offsets
+        ]
+
+        # Match the variants' average colour to each other. Different parts of
+        # a sheet are lit slightly differently, and once those crops are tiled
+        # across a map at random the difference reads as pale and dark patches
+        # in a chequered pattern - the exact "stamped" look the variants exist
+        # to avoid.
+        means = [ImageStat.Stat(v).mean[:3] for v in variants]
+        target = [sum(m[c] for m in means) / len(means) for c in range(3)]
+        for i, (tile, mean) in enumerate(zip(variants, means)):
+            channels = list(tile.split())[:3]
+            for c in range(3):
+                gain = target[c] / max(1e-6, mean[c])
+                channels[c] = channels[c].point(
+                    lambda value, gain=gain: min(255, int(value * gain))
+                )
+            Image.merge("RGB", channels).save(out / f"{name}_{i}.png", optimize=True)
         print(f"  terrain/{name}_[0-{TERRAIN_VARIANTS - 1}].png")
         done += 1
     return done, missing
+
+
+# Parenthetical notes that name a different picture rather than a re-roll of
+# the same one. Matched as substrings, so "(without axe)" and "(no axe)" both
+# land on the same variant.
+VARIANTS = {
+    "without": "disarmed",
+    "no axe": "disarmed",
+    "got back": "rearm",
+    "back axe": "rearm",
+}
+
+
+def seams_are_empty(img: Image.Image) -> bool:
+    """
+    Do the middle column and middle row of a keyed image contain nothing?
+
+    This is what separates a 2x2 sheet of four frames from one square picture.
+    Both are square, so the shape cannot tell them apart -- but a grid has a
+    gutter through the middle in both directions, and a single figure drawn to
+    fill the frame lies straight across it.
+    """
+    w, h = img.size
+    px = img.load()
+    band = max(2, round(min(w, h) * 0.02))
+
+    def opaque_fraction(xs: range, ys: range) -> float:
+        hits = 0
+        total = 0
+        for y in ys:
+            for x in xs:
+                total += 1
+                if px[x, y][3] > 40:
+                    hits += 1
+        return hits / max(1, total)
+
+    mid_x = range(w // 2 - band, w // 2 + band)
+    mid_y = range(h // 2 - band, h // 2 + band)
+    # Sampled rather than exhaustive: this runs on every sheet and the answer
+    # does not need every pixel to be certain.
+    vertical = opaque_fraction(mid_x, range(0, h, 4))
+    horizontal = opaque_fraction(range(0, w, 4), mid_y)
+    # Measured on the two square sheets to hand: the 2x2 archer reads 0.016 and
+    # 0.065, and a single figure filling the frame reads 0.738 and 0.532. A
+    # quarter sits comfortably between them with room on both sides -- a grid
+    # whose art nudges into the gutter still passes, and no single figure comes
+    # close to failing.
+    return vertical < 0.25 and horizontal < 0.25
+
+
+def grid_of(w: int, h: int, keyed: Image.Image | None = None) -> tuple[int, int]:
+    """
+    How many columns and rows of frames a sheet holds.
+
+    Generators return these several ways round and never say which. A sheet
+    well wider than it is tall is a single row of frames. A roughly square one
+    is ambiguous -- it could be four frames in a 2x2, or one picture -- so when
+    the keyed image is available the gutters decide it, and without one the
+    safer assumption is a single frame.
+    """
+    ratio = w / h
+    if ratio >= 1.6:
+        return max(2, round(ratio)), 1
+    if ratio <= 0.62:
+        return 1, max(2, round(h / w))
+    if keyed is not None and seams_are_empty(keyed):
+        return 2, 2
+    return 1, 1
+
+
+def clear_panel_borders(strip: Image.Image, frames: int) -> None:
+    """
+    Rub out the white rules some strips draw between their frames.
+
+    A generator asked for a row of frames often returns them as separate panels
+    with a hairline border, and that border is not the background colour, so
+    keying leaves it behind -- every animation then plays inside a visible box.
+
+    Only lines sitting on a panel edge are considered, and only if they run
+    almost the full span. That is what separates a divider from artwork: an
+    effect can easily be a solid vertical bar somewhere, but not one that
+    happens to be exactly on a frame boundary and reaches both ends of it.
+    """
+    w, h = strip.size
+    px = strip.load()
+    span = w / frames
+    edge = max(2, round(span * 0.02))
+
+    def solid_column(x: int) -> bool:
+        opaque = sum(1 for y in range(h) if px[x, y][3] > 200)
+        return opaque > h * 0.85
+
+    def solid_row(y: int) -> bool:
+        opaque = sum(1 for x in range(w) if px[x, y][3] > 200)
+        return opaque > w * 0.85
+
+    for i in range(frames + 1):
+        centre = round(i * span)
+        for x in range(max(0, centre - edge), min(w, centre + edge + 1)):
+            if solid_column(x):
+                for y in range(h):
+                    px[x, y] = (0, 0, 0, 0)
+
+    band = max(2, round(h * 0.02))
+    for y in list(range(0, band)) + list(range(h - band, h)):
+        if solid_row(y):
+            for x in range(w):
+                px[x, y] = (0, 0, 0, 0)
+
+
+def slice_strip(strip: Image.Image, frames: int, size: int) -> Image.Image:
+    """
+    Cut a keyed horizontal strip into a sheet of evenly spaced square frames.
+
+    Slices from the keyed strip's own width rather than the source file's:
+    crop_letterbox may have taken a bar off, and the frames divide whatever is
+    actually left.
+
+    Frames are never trimmed or re-centred, which the unit pipeline does and
+    this must not: trimming each frame to its own content would re-centre an
+    expanding fireball on itself every frame, and the explosion would sit still
+    while merely getting bigger.
+    """
+    kw, kh = strip.size
+    clear_panel_borders(strip, frames)
+    sheet = Image.new("RGBA", (frames * size, size), (0, 0, 0, 0))
+    for i in range(frames):
+        left = round(i * kw / frames)
+        right = round((i + 1) * kw / frames)
+        frame = strip.crop((left, 0, right, kh)).resize((size, size), Image.LANCZOS)
+        sheet.paste(frame, (i * size, 0), frame)
+    return sheet
+
+
+def process_effects(force: bool) -> tuple[int, list[str]]:
+    """
+    Effect art arrives as a horizontal strip of animation frames on magenta.
+
+    Nothing declares how many frames a strip holds, and asking would mean
+    maintaining a table that has to be edited every time a file is re-rolled.
+    The frames are square, so the strip's own proportions say it: a 2064x512
+    sheet is four frames across, a 2544x416 one is six. Round the ratio and
+    that is the count.
+
+    The whole strip is keyed in one pass rather than frame by frame, so every
+    frame ends up with the same background decision -- a frame that happens to
+    be nearly all fire would otherwise be read as having a different background
+    from its neighbours and come out cut differently.
+
+    Frames are never trimmed or re-centred, which the unit pipeline does and
+    this one must not: trimming each frame to its own content would re-centre
+    an expanding fireball on itself every frame, and the explosion would sit
+    still while merely getting bigger.
+    """
+    src = SRC / "effects"
+    out = OUT / "effects"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    # A generator asked for "6 frames" names the file that way, so the count
+    # lives in the filename as often as not. It is not needed -- the ratio
+    # already says it -- so drop it, and let the better version of a duplicate
+    # win rather than whichever happened to sort last.
+    best: dict[str, tuple[int, Path, int, int]] = {}
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
+        name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
+        with Image.open(path) as probe:
+            w, h = probe.size
+        frames = max(1, round(w / h))
+        if name not in best or frames > best[name][0]:
+            best[name] = (frames, path, w, h)
+
+    done = 0
+    failed: list[str] = []
+    for name, (frames, path, w, h) in sorted(best.items()):
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            failed.append(name)
+            continue
+
+        sheet = slice_strip(strip, frames, EFFECT_SIZE)
+        sheet.save(target, optimize=True)
+        print(f"  effects/{name}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, failed
+
+
+# Trailing words in art_src/unit states that name which sheet this is.
+STATE_KINDS = {"weakened": "hurt", "regenerating": "regen"}
+
+
+def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Sheets for the states a unit can be *in*, as opposed to things it does.
+
+    A "weakened" sheet holds two poses -- bloodied but upright, and down on one
+    knee -- which stand in for the idle sprite as health falls. A
+    "regenerating" sheet is an ordinary animation.
+
+    Same naming rules as the attack sheets: a re-roll tag collapses onto the
+    base name and a variant tag does not, so an axethrower who is both hurt and
+    out of axes has its own picture.
+    """
+    src = SRC / "unit states"
+    out = OUT / "units"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+
+    known = {c for c in CREATURES}
+    best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
+    unknown: list[str] = []
+    problems: list[str] = []
+
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        words = base.split()
+        kind = STATE_KINDS.get(words[-1]) if words else None
+        if kind is None:
+            unknown.append(f"{path.name}: no idea which state '{base}' is")
+            continue
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
+        if name not in known:
+            unknown.append(f"{path.name} -> '{name}'")
+            continue
+
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        w, h = keyed.size
+        key = f"{name}-{variant}_{kind}" if variant else f"{name}_{kind}"
+        frames = grid_of(w, h, keyed)[0] * grid_of(w, h, keyed)[1]
+        prev = best.get(key)
+        if prev is None or (frames, path.stat().st_mtime) > (prev[0], prev[1].stat().st_mtime):
+            best[key] = (frames, path, w, h, keyed)
+
+    done = 0
+    for key, (frames, path, w, h, keyed) in sorted(best.items()):
+        target = out / f"{key}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        sheet, why = build_frame_strip(keyed, w, h)
+        if sheet is None:
+            problems.append(f"{key}: {why}")
+            continue
+        sheet.save(target, optimize=True)
+        print(f"  units/{key}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, problems, unknown
+
+
+CITIZEN_SIZE = 64
+CITIZEN_MOODS = 4
+
+
+PROMOTION_SIZE = 32
+
+
+def process_city_effects(force: bool) -> tuple[int, list[str]]:
+    """
+    A settlement coming apart, in the same three size tiers as the city
+    sprites: 1, 4 and 8, per faction.
+
+    Written into the effects folder rather than the cities one, because these
+    play through the same transient layer as an explosion -- they belong to the
+    moment a place stops existing, not to the picture of a place that does.
+    """
+    src = SRC / "city effects"
+    out = OUT / "effects"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    done = 0
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        match = re.match(r"(orc|human)_(\d+)\s+destroyed", base)
+        if not match:
+            problems.append(f"{path.name}: not a <faction>_<tier> destruction sheet")
+            continue
+        name = f"razed-{match.group(1)}-{match.group(2)}"
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        kw, kh = strip.size
+        frames = max(1, round(kw / kh))
+        clear_panel_borders(strip, frames)
+        sheet = Image.new("RGBA", (frames * EFFECT_SIZE, EFFECT_SIZE), (0, 0, 0, 0))
+        for i in range(frames):
+            left = round(i * kw / frames)
+            right = round((i + 1) * kw / frames)
+            frame = strip.crop((left, 0, right, kh)).resize(
+                (EFFECT_SIZE, EFFECT_SIZE), Image.LANCZOS
+            )
+            sheet.paste(frame, (i * EFFECT_SIZE, 0), frame)
+        sheet.save(target, optimize=True)
+        print(f"  effects/{name}.png ({frames} frames from {kw}x{kh})")
+        done += 1
+    return done, problems
+
+
+def process_promotions(force: bool) -> tuple[int, list[str]]:
+    """
+    Rank badges, stamped in the corner of a promoted unit's tile.
+
+    One square picture each, not a strip: these are objects rather than
+    animations. Trimmed to the object and squared, the same as a unit sprite,
+    because a badge that sits off-centre in its own frame lands off-centre on
+    the tile.
+    """
+    src = SRC / "promotions"
+    out = OUT / "promotions"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    done = 0
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+        badge = trim_and_square(keyed, PROMOTION_SIZE)
+        badge.save(target, optimize=True)
+        print(f"  promotions/{name}.png")
+        done += 1
+    return done, problems
+
+
+def process_citizens(force: bool) -> tuple[int, list[str]]:
+    """
+    Portrait strips of the people who live in your cities.
+
+    Always four frames -- delighted, pleased, flat, furious -- so the count is
+    a fact about the game rather than something to read off the sheet. That
+    matters here: these frames are not square (one sheet is 1408x768, four
+    portraits of 352x768), so the proportions would give the wrong answer.
+
+    Sheets are named "<race> citizens", optionally "female <race> citizens",
+    and any parenthetical is a note rather than part of the name.
+    """
+    src = SRC / "cities"
+    out = OUT / "citizens"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    best: dict[str, tuple[Path, Image.Image]] = {}
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        words = base.split()
+        if "citizens" not in words:
+            continue
+        words = [w for w in words if w != "citizens"]
+        female = "female" in words
+        words = [w for w in words if w != "female"]
+        if not words:
+            problems.append(f"{path.name}: no idea whose citizens these are")
+            continue
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words)).strip("-")
+        key = f"{name}-female" if female else name
+
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{key}: background would not key")
+            continue
+        prev = best.get(key)
+        if prev is None or path.stat().st_mtime > prev[0].stat().st_mtime:
+            best[key] = (path, keyed)
+
+    done = 0
+    for key, (path, keyed) in sorted(best.items()):
+        target = out / f"{key}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        w, h = keyed.size
+        # Four moods, laid out across or in a 2x2 when the sheet is square.
+        cols, rows = (2, 2) if 0.6 < w / h < 1.6 else (CITIZEN_MOODS, 1)
+        # These sheets carry panel rules between the frames just as the unit
+        # ones do -- the goblins came out in a navy box without this.
+        clear_panel_borders(keyed, cols)
+        cell_w, cell_h = w / cols, h / rows
+        sheet = Image.new(
+            "RGBA", (CITIZEN_MOODS * CITIZEN_SIZE, CITIZEN_SIZE), (0, 0, 0, 0)
+        )
+        for i in range(CITIZEN_MOODS):
+            box = (
+                round((i % cols) * cell_w),
+                round((i // cols) * cell_h),
+                round((i % cols + 1) * cell_w),
+                round((i // cols + 1) * cell_h),
+            )
+            face = keyed.crop(box)
+            # Trim to the face and square it up: these are portraits, so each
+            # one is centred on its own rather than sharing a camera.
+            bbox = face.getbbox()
+            if bbox:
+                face = face.crop(bbox)
+            side = max(face.width, face.height)
+            padded = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            padded.paste(face, ((side - face.width) // 2, (side - face.height) // 2), face)
+            sheet.paste(
+                padded.resize((CITIZEN_SIZE, CITIZEN_SIZE), Image.LANCZOS),
+                (i * CITIZEN_SIZE, 0),
+            )
+        sheet.save(target, optimize=True)
+        print(f"  citizens/{key}.png (4 moods from {w}x{h})")
+        done += 1
+    return done, problems
+
+
+def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image | None, str]:
+    """
+    Cut a sheet of frames into one horizontal strip at unit size.
+
+    Shared by every kind of unit sheet -- attacking, hurt, regenerating --
+    because the awkward parts are the same for all of them: the frames may be a
+    row or a grid, the vertical window has to be measured once and held still,
+    and the result has to end up the same size on screen as the idle sprite.
+
+    Returns the strip, or None and a reason.
+    """
+    cols, rows = grid_of(w, h, keyed)
+    frames = cols * rows
+    clear_panel_borders(keyed, cols)
+
+    kw, kh = keyed.size
+    cell_w = kw / cols
+    cell_h = kh / rows
+
+    # Measure the creature in its first frame and derive one fixed camera from
+    # it, then hold that camera still for every other frame. This is what keeps
+    # a unit the same size whatever state it is in: the idle sprites are
+    # trimmed and scaled to fill 90% of the tile, and scaling each frame to
+    # fill its own frame instead made a creature suddenly a head taller.
+    first = keyed.crop((0, 0, round(cell_w), round(cell_h))).getbbox()
+    if first is None:
+        return None, "first frame is empty after keying"
+    fx0, fy0, fx1, fy1 = first
+    figure_h = fy1 - fy0
+    if figure_h <= 0:
+        return None, "nothing measurable in the first frame"
+
+    scale = (UNIT_SIZE * 0.90) / figure_h
+    window = UNIT_SIZE / scale
+    # A common floor line, so feet stay planted while the body moves.
+    floor = fy1 + window * 0.06
+    rel_centre = (fx0 + fx1) / 2
+
+    sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
+    for i in range(frames):
+        # Reading order: left to right, then top to bottom.
+        ox = (i % cols) * cell_w
+        oy = (i // cols) * cell_h
+        cx = ox + rel_centre
+        box = (
+            round(cx - window / 2),
+            round(oy + floor - window),
+            round(cx + window / 2),
+            round(oy + floor),
+        )
+        frame = keyed.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
+        sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
+    return sheet, ""
+
+
+def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Per-creature attack animations, sliced the same way the effect strips are.
+
+    Output is one strip per creature at `units/<id>_attack.png`, so the renderer
+    can find it from a unit's base creature and recover the frame count by
+    dividing the strip's width by its height -- the same contract the effects
+    use, and no table to keep in step.
+
+    The vertical crop is taken once across the whole strip rather than per
+    frame. Trimming each frame to its own content would re-centre a creature on
+    itself every frame, so a lunging orc would appear to stand still while
+    changing shape. Horizontal extent is left exactly as drawn, which is what
+    carries the lunge.
+    """
+    src = SRC / "unit effects"
+    if not src.is_dir():
+        src = SRC / "unit_effects"
+    out = OUT / "units"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+
+    known = {c for c in CREATURES}
+    # A re-roll usually keeps the old file beside it, tagged in parentheses
+    # ("(green bg)"). Prefer whichever holds more frames, and on a tie the one
+    # generated most recently -- a second attempt supersedes the first.
+    best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
+    unknown: list[str] = []
+    problems_early: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        base = re.sub(r"\s*attack$", "", base).strip()
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        if name not in known:
+            unknown.append(f"{path.name} -> '{name}'")
+            continue
+        if variant:
+            name = f"{name}-{variant}"
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems_early.append(f"{name}: background would not key")
+            continue
+        w, h = keyed.size
+        cols, rows = grid_of(w, h, keyed)
+        frames = cols * rows
+        prev = best.get(name)
+        if prev is None or (frames, path.stat().st_mtime) > (prev[0], prev[1].stat().st_mtime):
+            best[name] = (frames, path, w, h, keyed)
+
+    done = 0
+    problems: list[str] = list(problems_early)
+    for name, (frames, path, w, h, keyed) in sorted(best.items()):
+        target = out / f"{name}_attack.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        strip = keyed
+        sheet, why = build_frame_strip(strip, w, h)
+        if sheet is None:
+            problems.append(f"{name}: {why}")
+            continue
+        sheet.save(target, optimize=True)
+        print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
+        done += 1
+
+    missing = sorted(known - {n for n in best if "-" not in n})
+    return done, problems + [f"no animation for {m}" for m in missing], unknown
 
 
 def have_ffmpeg() -> bool:
@@ -450,6 +1222,154 @@ def encode_audio(path: Path, target: Path, quality: str, mono: bool) -> bool:
         return True
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+# The one status drawn as a corner badge rather than as a ring around the unit.
+# This cannot be derived from the file: `frozen` is a single frame as well, and
+# what separates them is what the picture is for, which no proportion reveals.
+STATUS_BADGES = {"spent"}
+
+# Hollow by design, so far more background than a sprite ever is: a sparse ring
+# of stars around an empty middle measures ~96% removed and is correct. Still
+# short of 1.0, which would mean the fill took everything and there is no
+# picture left.
+STATUS_MAX_REMOVED = 0.98
+
+
+def process_status(force: bool) -> tuple[int, list[str]]:
+    """
+    Overlays for a condition a unit is *in*, as opposed to a thing that happened
+    to it.
+
+    Same file format as an effect -- magenta, square frames, the count read off
+    the strip's own proportions -- and a different life. An effect plays once and
+    is gone; a status is redrawn for as long as the condition holds, which is why
+    these live in their own folder rather than being effects that never end.
+
+    Drawn hollow, so the creature underneath stays identifiable. Nothing here can
+    enforce that: a solid overlay processes perfectly well and then hides the
+    unit it is describing, so it is a rule for the prompts, not for the code.
+
+    A trailing `-fading` needs no special handling. It slugifies into the name
+    and comes out as its own overlay, which is what the renderer wants when a
+    condition has a turn or two left to run.
+    """
+    src = SRC / "status"
+    out = OUT / "status"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+
+    # Two files can slugify onto one name -- deliberate alternatives of the same
+    # overlay usually do. Take the newest and say so, rather than letting
+    # whichever sorted last win in silence.
+    best: dict[str, Path] = {}
+    problems: list[str] = []
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        # "unit spent" and "spent" name the same thing; the folder already says
+        # these are units, so a leading "unit" carries nothing.
+        words = [w for w in base.split() if w != "unit"]
+        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words)).strip("-")
+        if not name:
+            continue
+        rival = best.get(name)
+        if rival is not None:
+            keep, drop = sorted((path, rival), key=lambda q: q.stat().st_mtime)[::-1]
+            problems.append(f"{name}: {path.name} and {rival.name} are both '{name}'; using {keep.name}")
+            best[name] = keep
+        else:
+            best[name] = path
+
+    done = 0
+    for name, path in sorted(best.items()):
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        keyed, cut_out = remove_background(Image.open(path), STATUS_MAX_REMOVED)
+        if not cut_out:
+            problems.append(f"{name}: background would not key")
+            continue
+
+        if name in STATUS_BADGES:
+            # Trimmed and squared like a rank mark, because it lands in a tile
+            # corner and a badge off-centre in its own frame lands off-centre.
+            trim_and_square(keyed, PROMOTION_SIZE).save(target, optimize=True)
+            print(f"  status/{name}.png (badge)")
+        else:
+            w, h = keyed.size
+            frames = max(1, round(w / h))
+            slice_strip(keyed, frames, EFFECT_SIZE).save(target, optimize=True)
+            print(f"  status/{name}.png ({frames} frames from {w}x{h})")
+        done += 1
+    return done, problems
+
+
+VICTORY_SCREENS = (
+    "conquest-orc",
+    "conquest-human",
+    "points-orc",
+    "points-human",
+    "portal",
+    "object",
+)
+
+# Wide enough to stay sharp on a high-density screen: the modal these fill is at
+# most 600 CSS pixels across.
+VICTORY_WIDTH = 1024
+
+
+def process_victory(force: bool) -> tuple[int, list[str]]:
+    """
+    Full-scene illustrations shown when a game ends.
+
+    The one pass here that **must not key its background**. Everything else in
+    this file exists to cut a background away; these are scenes that own theirs,
+    and putting a dusk sky through remove_background would punch holes in it
+    wherever the orange ran far enough toward magenta.
+
+    Saved as JPEG, the only place in the pipeline that does. There is no
+    transparency to keep and no pixel grid to protect, since these are never
+    composited onto anything, and a lossless copy of a full-colour illustration
+    runs to megabytes for a picture seen once at the end of a game.
+
+    Only ever downscaled. An undersized source is left alone rather than blown
+    up, which would add nothing but bytes.
+    """
+    src = SRC / "victory"
+    out = OUT / "victory"
+    if not src.is_dir():
+        return 0, list(VICTORY_SCREENS)
+    out.mkdir(parents=True, exist_ok=True)
+
+    best: dict[str, Path] = {}
+    for path in sorted(src.iterdir()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        rival = best.get(name)
+        if rival is None or path.stat().st_mtime > rival.stat().st_mtime:
+            best[name] = path
+
+    done = 0
+    for name, path in sorted(best.items()):
+        target = out / f"{name}.jpg"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+
+        scene = Image.open(path).convert("RGB")
+        if scene.width > VICTORY_WIDTH:
+            height = round(scene.height * VICTORY_WIDTH / scene.width)
+            scene = scene.resize((VICTORY_WIDTH, height), Image.LANCZOS)
+        scene.save(target, quality=82, optimize=True, progressive=True)
+        print(f"  victory/{name}.jpg ({scene.width}x{scene.height})")
+        done += 1
+
+    return done, [w for w in VICTORY_SCREENS if w not in best]
 
 
 def process_audio() -> tuple[int, int, int]:
@@ -505,10 +1425,19 @@ def adopt_raw_files() -> list[str]:
     adopted: list[str] = []
     if not OUT.exists():
         return adopted
+    # Audio counts too. `public/` is gitignored build output, so a sound file
+    # left there is one clean checkout away from being gone for good.
+    adoptable = {".jpg", ".jpeg", ".webp", ".bmp", ".mp3", ".ogg", ".wav", ".m4a"}
     for path in sorted(OUT.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".jpg", ".jpeg", ".webp", ".bmp"}:
+        if not path.is_file() or path.suffix.lower() not in adoptable:
             continue
         target = SRC / path.relative_to(OUT)
+        # Never adopt over an existing source. Audio keeps the same name and
+        # extension on both sides, so without this the compressed output would
+        # be copied back over its own original and re-encoded from a lossy copy
+        # on every subsequent run.
+        if target.exists():
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(path.read_bytes())
         path.unlink()
@@ -535,23 +1464,70 @@ def main() -> int:
     units, missing_units, failed_units = process_cutouts("units", CREATURES, force)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    print("Advance icons:")
+    icons, missing_icons, failed_icons = process_cutouts(
+        "tech", TECH_ICONS, force, size=ICON_SIZE, quiet_missing=True
+    )
+    print("Building icons:")
+    bicons, missing_bicons, failed_bicons = process_cutouts(
+        "buildings", BUILDING_ICONS, force, size=ICON_SIZE, quiet_missing=True
+    )
+    icons += bicons
+    missing_icons.extend(missing_bicons)
+    failed_icons.extend(failed_bicons)
+    composed, missing_composed = compose_icons(force)
+    icons += composed
+    missing_icons.extend(missing_composed)
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
+    print("Effects:")
+    effects, failed_effects = process_effects(force)
+    print("Unit attack animations:")
+    anims, anim_problems, anim_unknown = process_unit_effects(force)
+    print("Unit states:")
+    states, state_problems, state_unknown = process_unit_states(force)
+    print("Citizens:")
+    folk, folk_problems = process_citizens(force)
+    print("Cities coming apart:")
+    ruins, ruin_problems = process_city_effects(force)
+    print("Promotion marks:")
+    marks, mark_problems = process_promotions(force)
+    print("Status overlays:")
+    status, status_problems = process_status(force)
+    mark_problems.extend(status_problems)
+    print("Victory screens:")
+    wins, missing_wins = process_victory(force)
+    mark_problems.extend(ruin_problems)
+    folk_problems.extend(mark_problems)
+    state_problems.extend(folk_problems)
+    anim_problems.extend(state_problems)
+    anim_unknown.extend(state_unknown)
     audio, audio_before, audio_after = process_audio()
 
     print(
-        f"\n{units} unit sprites, {cities} city sprites, "
-        f"{terrain} terrain sets, {audio} audio files "
+        f"\n{units} unit sprites, {cities} city sprites, {icons} advance icons, "
+        f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
+        f"{states} state sheets, {folk} citizen sheets, {marks} promotion marks, "
+        f"{status} status overlays, {wins} victory screens, "
+        f"{ruins} ruin animations, "
+        f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
     for label, missing in (
         ("units", missing_units),
         ("cities", missing_cities),
+        ("advance icons", missing_icons),
         ("terrain", missing_terrain),
+        ("victory screens", missing_wins),
     ):
         if missing:
             # Plain ASCII: the Windows console default codepage cannot print dashes.
             print(f"Still needed ({label}): {', '.join(missing)} - placeholders in use")
+    for label, items in (("unusable", anim_problems), ("unrecognised", anim_unknown)):
+        if items:
+            print(f"Art {label}:")
+            for item in items:
+                print(f"  {item}")
     print("\nGroup sprites (Two Orcs, Ten Footmen...) are composed at runtime")
     print("from the single-unit art. They do not need their own files.")
     return 0

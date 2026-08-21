@@ -5,8 +5,24 @@ import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
-import { buildSpecialIcon, buildTerrainTiles, variantFor } from './tileArt';
+import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
+import { capitalOf, inSupply } from '../sim/city';
+import { TerrainLayer } from './terrainLayer';
+import { UnitAnimator } from './unitAnimator';
+
+/**
+ * A planned route, split at the point this turn's movement runs out. Drawn in
+ * two colours so "how far do I get now" is readable at a glance rather than
+ * something to be counted out tile by tile.
+ */
+export interface RoutePreview {
+  tiles: Array<[number, number]>;
+  /** Index one past the last tile reachable this turn. */
+  thisTurn: number;
+  /** Whole turns the whole march will take. */
+  turns: number;
+}
 
 export interface MapOverlay {
   selectedUnitId: number | null;
@@ -15,8 +31,17 @@ export interface MapOverlay {
   reachable: Set<number> | null;
   /** Tiles the selected unit could attack right now. */
   attacks: Set<number> | null;
+  /**
+   * Tiles holding a legal target for the ability the selected unit has armed.
+   * Distinct from `attacks`, which is what a normal move would pick a fight
+   * with — these are picked deliberately and nothing else on the map is
+   * clickable while they are showing.
+   */
+  targets: Set<number> | null;
   /** Preview of the route to the hovered tile. */
-  path: Array<[number, number]> | null;
+  path: RoutePreview | null;
+  /** The selected unit's standing march order, if it has one. */
+  gotoPath: RoutePreview | null;
   /** Tiles worked by the city currently open, drawn as a highlight ring. */
   workRing: Set<number> | null;
   showGrid: boolean;
@@ -27,12 +52,23 @@ export const EMPTY_OVERLAY: MapOverlay = {
   hover: null,
   reachable: null,
   attacks: null,
+  targets: null,
   path: null,
+  gotoPath: null,
   workRing: null,
   showGrid: true,
 };
 
 const VOID_COLOR = '#0a0806';
+
+/**
+ * Share of maximum health at which a unit starts to look it.
+ *
+ * Purely cosmetic -- nothing in the rules changes at these numbers. The health
+ * bar already carries the exact figure; this is so a battered army reads as
+ * battered at a glance, without counting bars.
+ */
+const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
 
 export class MapRenderer {
   private tiles: TerrainTileSet;
@@ -40,6 +76,14 @@ export class MapRenderer {
   readonly sprites: SpriteCache;
   /** Advances every frame; drives the selection pulse. */
   private clock = 0;
+  private layer: TerrainLayer | null = null;
+  /** Which units are mid-swing. Purely visual; never touches game state. */
+  readonly animator = new UnitAnimator();
+  /** Last seen disarmed state per unit, to spot the moment it changes back. */
+  private wasDisarmed = new Map<number, boolean>();
+  /** Last seen health per unit, to spot the moment it goes up. */
+  private wasHp = new Map<number, number>();
+  private rebuildTimer: number | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -48,8 +92,9 @@ export class MapRenderer {
     this.tiles = buildTerrainTiles();
     this.specialIcon = buildSpecialIcon();
     this.sprites = sprites ?? new SpriteCache();
-    // Procedural tiles render immediately; real ones replace them as they load.
-    this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS);
+    // Procedural tiles render immediately; real ones replace them as they load,
+    // at which point the pre-rendered map has to be built again.
+    this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS, () => this.invalidateLayerSoon());
   }
 
   private ctx(): CanvasRenderingContext2D {
@@ -58,8 +103,81 @@ export class MapRenderer {
     return ctx;
   }
 
+  /** Rebuild the pre-rendered terrain when the map underneath it changes. */
+  private ensureLayer(state: GameState): void {
+    const key = TerrainLayer.keyFor(state);
+    if (this.layer && this.layer.key === key) return;
+    this.layer = TerrainLayer.build(state, this.tiles, this.specialIcon);
+  }
+
+  /**
+   * Terrain art arrives asynchronously, so the layer has to be rebuilt once it
+   * lands. Debounced, because otherwise thirty-odd image loads would each
+   * trigger a full re-render of the map.
+   */
+  private invalidateLayerSoon(): void {
+    if (this.rebuildTimer !== null) window.clearTimeout(this.rebuildTimer);
+    this.rebuildTimer = window.setTimeout(() => {
+      this.rebuildTimer = null;
+      this.layer = null;
+    }, 250);
+  }
+
+  /**
+   * Copy the visible slice of the pre-rendered map onto the screen.
+   *
+   * The source rectangle is snapped to whole layer pixels and the remainder
+   * paid back as a fractional destination offset; sampling on half-pixels with
+   * smoothing disabled makes the whole map shimmer while panning.
+   */
+  private blitTerrain(ctx: CanvasRenderingContext2D, cam: Camera): void {
+    const layer = this.layer;
+    if (!layer) return;
+    const zoom = cam.zoom;
+
+    const originX = Math.floor(cam.x);
+    const originY = Math.floor(cam.y);
+    const fracX = cam.x - originX;
+    const fracY = cam.y - originY;
+
+    let srcX = originX;
+    let srcY = originY;
+    let srcW = Math.ceil(cam.viewportW / zoom + fracX);
+    let srcH = Math.ceil(cam.viewportH / zoom + fracY);
+    let dstX = -fracX * zoom;
+    let dstY = -fracY * zoom;
+
+    // A world smaller than the viewport leaves the camera outside the layer.
+    if (srcX < 0) {
+      dstX += -srcX * zoom;
+      srcW += srcX;
+      srcX = 0;
+    }
+    if (srcY < 0) {
+      dstY += -srcY * zoom;
+      srcH += srcY;
+      srcY = 0;
+    }
+    srcW = Math.min(srcW, layer.canvas.width - srcX);
+    srcH = Math.min(srcH, layer.canvas.height - srcY);
+    if (srcW <= 0 || srcH <= 0) return;
+
+    ctx.drawImage(
+      layer.canvas,
+      srcX,
+      srcY,
+      srcW,
+      srcH,
+      dstX,
+      dstY,
+      srcW * zoom,
+      srcH * zoom,
+    );
+  }
+
   draw(state: GameState, viewerId: number, cam: Camera, overlay: MapOverlay, dt: number): void {
     this.clock += dt;
+    this.animator.update(dt);
     const ctx = this.ctx();
     const viewer = state.players[viewerId];
     const { x0, y0, x1, y1 } = cam.visibleTileRange();
@@ -70,28 +188,16 @@ export class MapRenderer {
     ctx.fillRect(0, 0, cam.viewportW, cam.viewportH);
 
     // --- terrain ---------------------------------------------------------
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        const i = idx(x, y, state.width);
-        if (!viewer.explored[i]) continue;
-        const s = cam.tileToScreen(x, y);
-        const art = this.tiles[state.terrain[i]][variantFor(x, y)];
-        ctx.drawImage(art, Math.round(s.x), Math.round(s.y), Math.ceil(size), Math.ceil(size));
-        if (state.specials[i]) {
-          ctx.drawImage(
-            this.specialIcon,
-            Math.round(s.x),
-            Math.round(s.y),
-            Math.ceil(size),
-            Math.ceil(size),
-          );
-        }
-      }
-    }
+    // One blit of a pre-rendered, edge-blended map rather than a loop over
+    // every visible tile. Unexplored ground is painted back out under fog.
+    this.ensureLayer(state);
+    this.blitTerrain(ctx, cam);
 
     // --- grid ------------------------------------------------------------
     if (overlay.showGrid && size >= 24) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      // Light touch: now that terrain feathers across tile boundaries, a strong
+      // grid is the only hard edge left and undoes the effect.
+      ctx.strokeStyle = 'rgba(0,0,0,0.09)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) {
@@ -128,6 +234,37 @@ export class MapRenderer {
         ctx.fillRect(s.x, s.y, size, size);
       }
     }
+
+    // A pulsing reticle on everything the armed ability could be aimed at. It
+    // moves, because these appear over units that are already drawn and a
+    // static outline reads as part of the sprite.
+    if (overlay.targets && overlay.targets.size > 0) {
+      const pulse = 0.6 + 0.4 * Math.sin(this.clock * 6);
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,214,120,${pulse.toFixed(3)})`;
+      ctx.lineWidth = Math.max(2, size / 14);
+      const inset = size * 0.16;
+      const arm = size * 0.22;
+      for (const i of overlay.targets) {
+        const x = i % state.width;
+        const y = Math.floor(i / state.width);
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+        const s = cam.tileToScreen(x, y);
+        const l = s.x + inset;
+        const r = s.x + size - inset;
+        const t = s.y + inset;
+        const b = s.y + size - inset;
+        ctx.beginPath();
+        // Four corner brackets rather than a full box, so the unit underneath
+        // stays readable.
+        ctx.moveTo(l, t + arm); ctx.lineTo(l, t); ctx.lineTo(l + arm, t);
+        ctx.moveTo(r - arm, t); ctx.lineTo(r, t); ctx.lineTo(r, t + arm);
+        ctx.moveTo(r, b - arm); ctx.lineTo(r, b); ctx.lineTo(r - arm, b);
+        ctx.moveTo(l + arm, b); ctx.lineTo(l, b); ctx.lineTo(l, b - arm);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     if (overlay.workRing) {
       ctx.strokeStyle = 'rgba(255,215,120,0.7)';
       ctx.lineWidth = 2;
@@ -152,35 +289,29 @@ export class MapRenderer {
       const i = idx(u.x, u.y, state.width);
       if (!viewer.visible[i]) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
-      this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id);
+      this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id, viewerId);
     }
 
     // --- fog of war ------------------------------------------------------
-    ctx.fillStyle = 'rgba(4,6,10,0.5)';
+    // Unexplored ground is painted out solid; explored-but-unseen is dimmed.
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const i = idx(x, y, state.width);
-        if (!viewer.explored[i] || viewer.visible[i]) continue;
+        if (viewer.visible[i]) continue;
         const s = cam.tileToScreen(x, y);
-        ctx.fillRect(s.x, s.y, size, size);
+        ctx.fillStyle = viewer.explored[i] ? 'rgba(4,6,10,0.5)' : VOID_COLOR;
+        ctx.fillRect(s.x, s.y, Math.ceil(size), Math.ceil(size));
       }
     }
 
-    // --- path preview ----------------------------------------------------
-    if (overlay.path && overlay.path.length > 1) {
-      ctx.strokeStyle = 'rgba(255,240,180,0.9)';
-      ctx.lineWidth = Math.max(2, size / 14);
-      ctx.setLineDash([size / 5, size / 6]);
-      ctx.beginPath();
-      overlay.path.forEach(([px, py], n) => {
-        const s = cam.tileToScreen(px, py);
-        const cx = s.x + size / 2;
-        const cy = s.y + size / 2;
-        if (n === 0) ctx.moveTo(cx, cy);
-        else ctx.lineTo(cx, cy);
-      });
-      ctx.stroke();
-      ctx.setLineDash([]);
+    // --- march orders and path preview -----------------------------------
+    // The standing order is a solid line the unit will actually walk; the
+    // hover preview is dashed, because it is only a proposal.
+    if (overlay.gotoPath) {
+      this.drawPreview(ctx, cam, overlay.gotoPath, '140,215,255', false);
+    }
+    if (overlay.path) {
+      this.drawPreview(ctx, cam, overlay.path, '255,240,180', true);
     }
 
     // --- hover cursor ----------------------------------------------------
@@ -192,6 +323,150 @@ export class MapRenderer {
     }
   }
 
+  /**
+   * Draw a route in two tones: solid for the part walked this turn, faded for
+   * everything beyond it, with the number of turns marked at the destination.
+   */
+  private drawPreview(
+    ctx: CanvasRenderingContext2D,
+    cam: Camera,
+    preview: RoutePreview,
+    rgb: string,
+    dashed: boolean,
+  ): void {
+    const { tiles, thisTurn, turns } = preview;
+    if (tiles.length < 2) return;
+    const size = cam.tileSize;
+
+    if (thisTurn < tiles.length) {
+      // The later legs first, so this turn's segment draws over the join.
+      this.drawRoute(ctx, cam, tiles.slice(thisTurn - 1), `rgba(${rgb},0.32)`, dashed);
+    }
+    this.drawRoute(ctx, cam, tiles.slice(0, thisTurn), `rgba(${rgb},0.95)`, dashed);
+
+    const end = tiles[tiles.length - 1];
+    const s = cam.tileToScreen(end[0], end[1]);
+    ctx.strokeStyle = `rgba(${rgb},0.95)`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (turns > 1 && size >= 24) {
+      const label = `${turns}`;
+      ctx.font = `bold ${Math.round(size * 0.3)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.19, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(${rgb},1)`;
+      ctx.fillText(label, s.x + size / 2, s.y + size / 2 + 1);
+    }
+  }
+
+  /**
+   * Which picture this unit should be showing right now.
+   *
+   * Three states, in order of precedence: mid-swing, having thrown its weapon,
+   * or standing there. The disarmed pose is the last frame of the unit's own
+   * attack -- the moment after the axe has left -- so it can never disagree
+   * with the animation it came from.
+   *
+   * Every branch falls back to the idle sprite, so a creature with no
+   * animation art simply never animates rather than disappearing.
+   */
+  private spriteFor(u: Unit): CanvasImageSource {
+    const playing = this.animator.playingFor(u.id);
+    if (playing) {
+      const frames =
+        playing.kind === 'rearm'
+          ? this.sprites.rearmFrames(u.type)
+          : playing.kind === 'regen'
+            ? this.sprites.regenFrames(u.type)
+            : // A thrower that has thrown swings with nothing in its hand.
+              this.sprites.attackFrames(u.type, u.disarmed);
+      if (frames && frames[playing.frame]) return frames[playing.frame];
+    }
+    // Standing still, health decides how it looks. Checked before the
+    // disarmed pose, since a dying axethrower is more usefully drawn as dying
+    // than as short of an axe.
+    const share = u.hp / Math.max(1, unitType(u.type).hp);
+    if (share < HURT_LEVELS.hurt) {
+      const frames = this.sprites.hurtFrames(u.type, u.disarmed);
+      if (frames && frames.length > 0) {
+        const worst = frames.length - 1;
+        return share < HURT_LEVELS.dying ? frames[worst] : frames[0];
+      }
+    }
+    if (u.disarmed) {
+      const thrown = this.sprites.disarmedSprite(u.type);
+      if (thrown) return thrown;
+    }
+    return this.sprites.unit(u.type);
+  }
+
+  /**
+   * Catch the moment a thrower gets its weapon back and hold the pose.
+   *
+   * Watched here rather than triggered from the rules, because the rules would
+   * have to reach into the renderer to say so -- and this way it fires for the
+   * enemy's units too, which the player can see happen. First sighting of a
+   * unit never counts as a change, or every unit would salute on appearing.
+   */
+  /**
+   * Catch a creature healing and show it happening.
+   *
+   * Watched rather than triggered from the rules, the same as the rearm pose,
+   * so it fires for the enemy's units too and `sim/` learns nothing new. Only
+   * creatures with the art animate, which today is trolls alone -- so this
+   * needs no rule about who regenerates visibly.
+   *
+   * First sighting never counts: a unit walking out of the fog at full health
+   * has not just healed, it has merely been seen.
+   */
+  private noticeRegen(u: Unit): void {
+    const was = this.wasHp.get(u.id);
+    this.wasHp.set(u.id, u.hp);
+    if (was === undefined || u.hp <= was) return;
+    const frames = this.sprites.regenFrames(u.type);
+    if (frames) this.animator.regen(u.id, frames.length);
+  }
+
+  private noticeRearm(u: Unit): void {
+    const was = this.wasDisarmed.get(u.id);
+    this.wasDisarmed.set(u.id, u.disarmed);
+    if (was !== true || u.disarmed) return;
+    const frames = this.sprites.rearmFrames(u.type);
+    if (frames) this.animator.rearm(u.id, frames.length);
+  }
+
+  private drawRoute(
+    ctx: CanvasRenderingContext2D,
+    cam: Camera,
+    route: Array<[number, number]>,
+    color: string,
+    dashed: boolean,
+  ): void {
+    const size = cam.tileSize;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, size / 14);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    if (dashed) ctx.setLineDash([size / 5, size / 6]);
+    ctx.beginPath();
+    route.forEach(([px, py], n) => {
+      const s = cam.tileToScreen(px, py);
+      const cx = s.x + size / 2;
+      const cy = s.y + size / 2;
+      if (n === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   // ------------------------------------------------------------- pieces
 
   private drawCity(
@@ -200,6 +475,10 @@ export class MapRenderer {
     c: City,
     cam: Camera,
   ): void {
+    // The capital wears a small crown. It is the one city whose loss moves
+    // the supply network, so it is worth being able to find at a glance.
+    const seat = capitalOf(state, c.owner);
+    const isCapital = seat?.id === c.id;
     const owner = state.players[c.owner];
     const faction = FACTIONS[owner.faction];
     const s = cam.tileToScreen(c.x, c.y);
@@ -222,6 +501,32 @@ export class MapRenderer {
     ctx.textBaseline = 'middle';
     ctx.fillText(String(c.size), s.x + r + 2, s.y + r + 3);
 
+    // A crown on the capital, opposite the size badge.
+    if (isCapital) {
+      const cr = Math.max(5, size * 0.15);
+      const cx = s.x + size - cr - 3;
+      const cy = s.y + cr + 3;
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f0c64a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Three points and a base: legible at a dozen pixels where a glyph is not.
+      ctx.fillStyle = '#f0c64a';
+      ctx.beginPath();
+      ctx.moveTo(cx - cr * 0.55, cy + cr * 0.4);
+      ctx.lineTo(cx - cr * 0.55, cy - cr * 0.35);
+      ctx.lineTo(cx - cr * 0.2, cy + cr * 0.05);
+      ctx.lineTo(cx, cy - cr * 0.5);
+      ctx.lineTo(cx + cr * 0.2, cy + cr * 0.05);
+      ctx.lineTo(cx + cr * 0.55, cy - cr * 0.35);
+      ctx.lineTo(cx + cr * 0.55, cy + cr * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+
     if (size >= 40) {
       ctx.font = `${Math.round(size * 0.22)}px system-ui, sans-serif`;
       ctx.textBaseline = 'top';
@@ -240,9 +545,12 @@ export class MapRenderer {
     u: Unit,
     cam: Camera,
     selected: boolean,
+    viewerId: number,
   ): void {
     const type = unitType(u.type);
     const owner = state.players[u.owner];
+    this.noticeRearm(u);
+    this.noticeRegen(u);
     const s = cam.tileToScreen(u.x, u.y);
     const size = cam.tileSize;
     const onCity = state.cities.some((c) => c.x === u.x && c.y === u.y);
@@ -284,7 +592,7 @@ export class MapRenderer {
     // however tall it is drawn.
     const drawSize = size * art;
     ctx.drawImage(
-      this.sprites.unit(u.type),
+      this.spriteFor(u),
       Math.round(s.x + (size - drawSize) / 2),
       Math.round(s.y + (size - drawSize) + yOff),
       Math.ceil(drawSize),
@@ -319,12 +627,50 @@ export class MapRenderer {
         ctx.textBaseline = 'middle';
         ctx.fillText(String(type.count), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
       }
-      if (u.veteran) {
-        ctx.fillStyle = '#f0c64a';
-        ctx.font = `bold ${Math.round(size * 0.26)}px system-ui, sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText('*', s.x + 2, s.y + size * 0.55);
+      // Rank badge, in place of the drawn asterisk this used to be. Sits at
+      // the bottom-left so it does not collide with the count badge on the
+      // right or the out-of-supply mark at the top.
+      if (u.rank > 0) {
+        const mark = this.sprites.promotionMark(owner.faction, u.rank);
+        if (mark) {
+          const m = size * 0.42;
+          ctx.drawImage(mark, Math.round(s.x + 1), Math.round(s.y + size - m - 1), m, m);
+        }
+      }
+      // A disarmed thrower fights at a quarter strength, which without a mark
+      // on the map looks exactly like the unit being broken.
+      if (u.disarmed) {
+        const r = size * 0.15;
+        const cx = s.x + size - r - 2;
+        const cy = s.y + r + 2;
+        ctx.fillStyle = 'rgba(20,16,12,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#e0603c';
+        ctx.lineWidth = Math.max(1.5, size / 22);
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.5, cy - r * 0.5);
+        ctx.lineTo(cx + r * 0.5, cy + r * 0.5);
+        ctx.moveTo(cx + r * 0.5, cy - r * 0.5);
+        ctx.lineTo(cx - r * 0.5, cy + r * 0.5);
+        ctx.stroke();
+      }
+      // Out of supply. Marked because a unit quietly fighting at 60% and
+      // never healing is indistinguishable from one that is simply losing.
+      if (u.owner === viewerId && !inSupply(state, u)) {
+        const r = size * 0.15;
+        const cx = s.x + r + 2;
+        const cy = s.y + r + 2;
+        ctx.fillStyle = 'rgba(20,16,12,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e8b23c';
+        ctx.font = `bold ${Math.round(r * 1.5)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', cx, cy + 1);
       }
       if (u.order === 'fortified') {
         ctx.strokeStyle = 'rgba(240,230,200,0.8)';

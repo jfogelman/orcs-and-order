@@ -11,12 +11,50 @@ export interface BuildingDef {
   blurb: string;
   /** Multiplies the defence of units inside the city. */
   defenseMult?: number;
+  /**
+   * Whether a siege unit's attack ignores this building's defence.
+   *
+   * True of Walls, which is what a siege engine is built to bring down. Not
+   * true of a Broken Catapult, which is not a wall and has nothing to knock
+   * over -- so the Horde keeps its modest bonus even against a ballista.
+   */
+  negatedBySiege?: boolean;
   /** Extra content citizens, offsetting disorder. */
   contentBonus?: number;
   /** Fraction of the food box kept when the city grows. */
   foodKept?: number;
   /** New land units are built as veterans. */
   veteranUnits?: boolean;
+  /** Extra share of this city's gold income, as a fraction. 0.5 = +50%. */
+  goldBonus?: number;
+  /** Extra share of this city's research output, as a fraction. */
+  scienceBonus?: number;
+  /**
+   * Extra attack, as a fraction, for a unit attacking *out of* this city.
+   * The opposite of Walls: it does nothing at all for a defender sitting
+   * still, and everything for one that comes out swinging.
+   */
+  sallyBonus?: number;
+  /**
+   * Only works while somebody is standing in the city.
+   *
+   * The economic buildings that carry this pay roughly double what an
+   * unconditional one would, so it is a trade rather than a tax: leave a unit
+   * at home and the place earns its keep, march everybody out and it is a
+   * warehouse full of things nobody is watching.
+   *
+   * Only ever gates economic output. A defensive bonus needs no such rule --
+   * it is already worth nothing unless there is a defender to apply it to.
+   */
+  needsGarrison?: boolean;
+  /**
+   * Extends supply to this city, so units near it fight and heal normally.
+   *
+   * Without one, only the capital supplies anything -- which is what stops a
+   * conquest from feeding itself. Taking a city gives you the ground; making
+   * it useful to the army standing on it costs you the shields.
+   */
+  suppliesArmy?: boolean;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -41,11 +79,29 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   walls: {
     id: 'walls',
     name: 'Walls',
-    faction: 'both',
+    // Human-only. The Horde attempts the same advance and arrives somewhere
+    // else entirely -- see the Broken Catapult.
+    faction: 'human',
     cost: 60,
     upkeep: 1,
     defenseMult: 2,
+    negatedBySiege: true,
     blurb: 'Doubles the defence of everyone inside. Astonishingly effective for a pile of rocks.',
+  },
+  catapult: {
+    id: 'catapult',
+    name: 'Broken Catapult',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    sallyBonus: 1,
+    // Deliberately far short of the x2 a wall gives. It is a large broken
+    // object in the way, not a fortification.
+    defenseMult: 1.35,
+    blurb:
+      "This would have been a marvellous ranged weapon if anybody here " +
+      'understood wheels. As it stands, everyone gets very worked up and ' +
+      'runs out to fight instead, which turns out to work.',
   },
   totem: {
     id: 'totem',
@@ -64,6 +120,78 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     contentBonus: 2,
     blurb: 'Two citizens are reassured that things are, on balance, going fine.',
+  },
+
+  // ------------------------------------------------------------- treasuries
+  outpost: {
+    id: 'outpost',
+    name: 'Attempted Outpost',
+    faction: 'orc',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'It has a roof, mostly, and a pile of food near it. Supplies now reach ' +
+      'this part of the map, or at any rate they reach somewhere close to it.',
+  },
+  depot: {
+    id: 'depot',
+    name: 'Forward Depot',
+    faction: 'human',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'Requisitions may be submitted here in triplicate. Two of the copies ' +
+      'are for the depot. Nobody has established what the third is for.',
+  },
+  treasury: {
+    id: 'treasury',
+    name: 'Goblin Treasury',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 1,
+    needsGarrison: true,
+    blurb:
+      'The goblins love gold. It has not yet occurred to any of them that ' +
+      'somebody else might also love gold, so somebody had better stand on it.',
+  },
+  market: {
+    id: 'market',
+    name: 'Simple Market',
+    faction: 'human',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 1,
+    needsGarrison: true,
+    blurb:
+      'Buy and sell, but only one thing at a time, and only while a soldier ' +
+      'is present to make sure the queue is observed.',
+  },
+
+  // --------------------------------------------------------- places to think
+  thinkingRock: {
+    id: 'thinkingRock',
+    name: 'The Thinking Rock',
+    faction: 'orc',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb:
+      'One orc sits on it at a time. Every so often something occurs to them, ' +
+      'and they are helped down and asked to describe it.',
+  },
+  scriptorium: {
+    id: 'scriptorium',
+    name: 'Hall of Careful Notes',
+    faction: 'human',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb:
+      'Everything worth knowing, written down twice in case the first copy ' +
+      'turns out to have been written down wrong.',
   },
 };
 
