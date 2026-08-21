@@ -216,17 +216,32 @@ class App {
    * The count matters more than the wording: "3 still waiting" tells you
    * whether one more press is reasonable, where a bare warning does not.
    */
-  private flashEndTurn(waiting: number): void {
-    const btn = el<HTMLButtonElement>('btn-endturn');
-    btn.classList.add('armed');
-    btn.textContent = `${waiting} waiting — End anyway`;
+  private flashEndTurn(): void {
+    this.endTurnArmed = true;
+    this.refreshEndTurn();
     audio.play('blocked', 0);
   }
 
-  /** Put the button back once the turn has moved on. */
-  private resetEndTurn(): void {
-    this.endTurnArmed = false;
+  /**
+   * Put the count on the button, or take it off again.
+   *
+   * Derived on every refresh rather than latched when the press happened. The
+   * first version wrote the label once and only cleared it when the turn ended,
+   * so it went on insisting two units were waiting long after both had been
+   * dealt with -- and a count that does not count is worse than no count.
+   *
+   * Dropping to zero also disarms it, so the next turn starts from a plain
+   * button rather than one that is already primed to skip the check.
+   */
+  private refreshEndTurn(): void {
     const btn = el<HTMLButtonElement>('btn-endturn');
+    const waiting = idleUnits(this.state, this.viewerId).length;
+    if (this.endTurnArmed && waiting > 0) {
+      btn.classList.add('armed');
+      btn.textContent = `${waiting} waiting — End anyway`;
+      return;
+    }
+    this.endTurnArmed = false;
     btn.classList.remove('armed');
     btn.textContent = 'End Turn';
   }
@@ -443,9 +458,8 @@ class App {
     if (this.state.winner !== null) return;
     const waiting = idleUnits(this.state, this.viewerId);
     if (waiting.length > 0 && !this.endTurnArmed) {
-      this.endTurnArmed = true;
       this.selectNextIdle();
-      this.flashEndTurn(waiting.length);
+      this.flashEndTurn();
       return;
     }
     this.endTurnArmed = false;
@@ -464,7 +478,7 @@ class App {
     }
 
     this.select(null);
-    this.resetEndTurn();
+    this.endTurnArmed = false;
     this.selectNextIdle();
     this.refreshHud();
     this.playLogCues();
@@ -1011,6 +1025,7 @@ class App {
   // ------------------------------------------------------------------- HUD
 
   private refreshHud(): void {
+    this.refreshEndTurn();
     const p = this.state.players[this.viewerId];
     const faction = FACTIONS[p.faction];
     el('stat-civ').textContent = faction.civName;
@@ -1042,6 +1057,9 @@ class App {
   }
 
   private refreshSidebar(): void {
+    // Most unit actions land here rather than in refreshHud, and dealing with a
+    // unit is exactly what changes how many are still waiting.
+    this.refreshEndTurn();
     const panel = el('selection');
     const unit = this.selected;
 
