@@ -1,4 +1,4 @@
-import { idx } from '../engine/grid';
+import { fatCrossIndices, idx } from '../engine/grid';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { unitType } from '../model/units';
@@ -276,32 +276,60 @@ export class MapRenderer {
       }
     }
 
-    // --- worked ground ---------------------------------------------------
-    // A thin border on the tiles your cities are actually working, so the map
-    // says which land is already spoken for. Choosing where the next city goes
-    // otherwise means guessing, and the spacing rule makes that guess matter.
+    // --- our borders -----------------------------------------------------
+    // The outline around everything our cities claim, drawn as one perimeter
+    // rather than a box per tile. Per-tile borders were the first attempt and
+    // were the wrong idea twice over: at a hairline they vanished into the
+    // terrain, and even visible they drew the *grid* rather than the shape,
+    // which is the thing you actually need in order to see where a new city
+    // would overlap an old one.
     //
-    // Your own only, and for the same reason the fog exists: an enemy city's
-    // worked tiles would give away how big it is and which ground it has
-    // assigned, which is a good deal more than seeing the city tells you.
-    ctx.save();
-    ctx.strokeStyle = state.players[viewerId].color;
-    ctx.globalAlpha = 0.35;
-    ctx.lineWidth = 1;
+    // The claim is the fat cross -- the ground a city can work -- not the tiles
+    // it happens to be working today. Those change every time it grows, and a
+    // border that moves as citizens are reassigned is not a border.
+    //
+    // Ours only. An enemy's would say how much ground they hold and exactly
+    // where their cities sit, which is a great deal more than seeing one city
+    // tells you.
+    const claimed = new Set<number>();
     for (const c of state.cities) {
       if (c.owner !== viewerId) continue;
-      for (const i of c.workedTiles) {
+      for (const i of fatCrossIndices(c.x, c.y, state.width, state.height)) claimed.add(i);
+    }
+    if (claimed.size > 0) {
+      // Drawn twice: a dark line underneath, then the colour on top. The map
+      // runs from near-black water to pale sand, and a single mid-tone line
+      // disappears against one end or the other.
+      const edges: Array<[number, number, number, number]> = [];
+      for (const i of claimed) {
         const tx = i % state.width;
         const ty = Math.floor(i / state.width);
-        if (tx < x0 || tx > x1 || ty < y0 || ty > y1) continue;
-        if (!viewer.explored[i]) continue;
-        const s = cam.tileToScreen(tx, ty);
-        // Half-pixel offset so a one-pixel line lands on a pixel rather than
-        // straddling two and coming out grey.
-        ctx.strokeRect(s.x + 0.5, s.y + 0.5, size - 1, size - 1);
+        if (tx < x0 - 1 || tx > x1 + 1 || ty < y0 - 1 || ty > y1 + 1) continue;
+        const p = cam.tileToScreen(tx, ty);
+        const has = (nx: number, ny: number) =>
+          nx >= 0 && ny >= 0 && nx < state.width && ny < state.height &&
+          claimed.has(idx(nx, ny, state.width));
+        if (!has(tx, ty - 1)) edges.push([p.x, p.y, p.x + size, p.y]);
+        if (!has(tx, ty + 1)) edges.push([p.x, p.y + size, p.x + size, p.y + size]);
+        if (!has(tx - 1, ty)) edges.push([p.x, p.y, p.x, p.y + size]);
+        if (!has(tx + 1, ty)) edges.push([p.x + size, p.y, p.x + size, p.y + size]);
       }
+      const stroke = (colour: string, width: number, alpha: number) => {
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = width;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        for (const [ax, ay, bx, by] of edges) {
+          ctx.moveTo(Math.round(ax) + 0.5, Math.round(ay) + 0.5);
+          ctx.lineTo(Math.round(bx) + 0.5, Math.round(by) + 0.5);
+        }
+        ctx.stroke();
+      };
+      ctx.save();
+      stroke('#000000', 4, 0.45);
+      stroke(state.players[viewerId].color, 2, 0.95);
+      ctx.restore();
     }
-    ctx.restore();
 
     // --- cities ----------------------------------------------------------
     for (const c of state.cities) {

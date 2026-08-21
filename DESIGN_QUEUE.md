@@ -1370,8 +1370,14 @@ a beneficiary attached, and building it twice would be the usual mistake.
 
 ## 14. Two things the map should say for itself — built
 
-**Both are in.** Worked tiles carry a one-pixel border in the owner colour,
-your own only. A unit fortified or on sentry inside its own city is drawn as a
+**Both are in.** Each of your cities carries a border around the ground it
+claims -- one perimeter around the whole fat cross, not a box per tile, and your
+own only. The first attempt drew a hairline per worked tile and was wrong twice
+over: it vanished into the terrain, and even visible it drew the grid rather
+than the shape, which is the thing you need in order to see where a new city
+would overlap an old one. The claim is the fat cross rather than the tiles being
+worked today, because those move every time a city grows and a border that
+shifts with citizen assignment is not a border. A unit fortified or on sentry inside its own city is drawn as a
 count on the city rather than on the tile, clicking the tile opens the city, and
 the panel lists the garrison with a click to wake each one -- which is the half
 that matters, since the drawing change without it would hide units where nobody
