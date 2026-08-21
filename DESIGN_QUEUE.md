@@ -1212,3 +1212,86 @@ The honest approach is to measure them **as a block**: does a game where the bac
 half of the tree is worth reaching end sooner than one where it is not? That is
 the question the section is actually for, and it is a big enough effect that
 eighteen seeds can see it.
+
+## 12. Two requests that fell out of the queue
+
+Both arrived in the same playtest message as five things that did get built -- the
+capital crown, beakers in the city readout, the destruction delay, and experience
+for razing. These two were never written down and never built. That is a
+bookkeeping failure rather than a decision, so they are recorded here properly.
+
+### Auto-build: "auto next" and "auto coin"
+
+Asked for: when a building finishes, a prompt to choose the next thing, with
+**auto next** and **auto coin** as standing options so the prompt can be skipped.
+
+**Most of the machinery already exists**, which makes this smaller than it sounds.
+
+- `CityTurnEvents.completed` already reports the turn a city finishes something,
+  so the trigger needs no new detection.
+- `'coin'` is already a `ProductionItem` kind, and a city set to it already turns
+  production into gold. **Auto coin is therefore not a new mechanic at all** -- it
+  is a default for what happens when nothing is chosen.
+
+**The question left open at the time was per-city or global.** Per-city is the
+better answer: a frontier city turning out units on repeat while the capital is
+managed by hand is exactly the case worth having, and a global switch cannot
+express it across an empire of a dozen cities in different situations.
+
+Which brings the constraint that actually matters:
+
+**It belongs in the simulation, not the interface.** A standing order resolves
+during turn processing, so it has to serialise into a save and replay
+identically. That makes it game state, like a unit's `goto` -- which is the
+precedent to copy, a standing order stored on the thing it governs. Worth
+settling before a line is written, because retrofitting it means touching saves.
+
+**"Next" needs a definition.** Repeat the same item is the honest default for
+units and meaningless for buildings, which cannot be built twice. A workable
+rule, which doubles as the explanation of what the setting does: repeat it if it
+was a unit, otherwise the cheapest structure the city does not have, otherwise
+Coin.
+
+**This is not a balance lever.** The game should play out identically whether a
+human chose the item or the standing order did. Worth saying plainly, because the
+finding in 4c and 4e -- that per-city mechanics amplify a city-count lead -- is
+about mechanics and does not apply to a convenience that changes no rule.
+
+The `idle` city overlay already written into ART_PROMPTS.md was drawn for this: a
+city sitting on Coin with nothing chosen.
+
+### The Horde Report
+
+Asked for by name, and now specified: **an easy way to see your full current
+empire at a glance.** Your own only -- no intelligence on anybody else, since
+there are no spying mechanics at this stage and inventing one to feed a screen
+would be the tail wagging the dog.
+
+Worth correcting an earlier guess in this file: this is **not** the end-of-turn
+summary queued in section 5. That one answers *what happened while you were not
+looking*, and is a log of events. This one answers *where do I stand*, and is a
+snapshot of state. They are complementary and neither replaces the other.
+
+What it wants to show, all of it derivable from state that already exists:
+
+- **Cities** -- size, what each is building and how many turns are left, food and
+  whether any are starving or in disorder, and which is the capital. This is the
+  bulk of it and the reason to have it: the information exists today only by
+  opening each city in turn.
+- **The army** -- unit counts by type, how many are promoted, and which are out
+  of supply. `supplyQuality` already computes the last one per unit.
+- **The economy** -- gold in hand and per turn, beakers per turn, and what is
+  being researched with turns remaining.
+
+Two notes on building it:
+
+- **Read-only, and derived.** Everything above can be computed from `GameState`
+  on open. It should store nothing and change nothing, which keeps it out of
+  saves entirely and makes it impossible to break a game with.
+- **Opened, not pushed.** A screen you choose to look at is ignorable; one that
+  appears every turn is a click to dismiss forty times a game. The advisors in
+  section 9 are the thing that interrupts, and only for major reasons -- this is
+  the one you go and read.
+
+The Kingdom needs its own name for it. Same screen, drier register: the Horde
+gets a Report and the Kingdom gets something like a Survey or a Return.
