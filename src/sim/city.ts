@@ -521,6 +521,10 @@ export function buildOptions(
   const seat = capitalOf(state, city.owner);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
+    // A second tier needs its first standing here. Without this the cheap one
+    // is skippable and the expensive one is a parallel choice rather than an
+    // upgrade -- and a city could hold a Cathedral it never built a Chapel for.
+    .filter((b) => !b.needs || already.has(b.needs))
     .filter((b) => buildingsForFaction(owner.faction).some((f) => f.id === b.id))
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
@@ -625,8 +629,15 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           // Nowhere to put it; hold the shields until a tile frees up.
           events.blocked = true;
         } else {
-          const veteran = city.buildings.includes('barracks');
-          const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], veteran);
+          // Best of everything standing here, so a drill ground does not have
+          // to care whether the barracks beneath it still exists.
+          const rank = city.buildings.reduce((best, id) => {
+            const b = BUILDINGS[id];
+            if (!b) return best;
+            return Math.max(best, b.startingRank ?? (b.veteranUnits ? 1 : 0));
+          }, 0);
+          const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], rank > 0);
+          unit.rank = Math.max(unit.rank, rank);
           unit.homeCity = city.id;
           city.shields -= cost;
           // Remembered so a standing order can put it back on afterwards.

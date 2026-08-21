@@ -25,6 +25,21 @@ export interface BuildingDef {
   foodKept?: number;
   /** New land units are built as veterans. */
   veteranUnits?: boolean;
+  /**
+   * Rank new units are built at, when that beats plain veterancy.
+   *
+   * A city takes the best of everything standing in it, so a second-tier drill
+   * building need not know whether the barracks under it still exists.
+   */
+  startingRank?: number;
+  /**
+   * A building that must already stand here before this one may be built.
+   *
+   * What makes a second tier a tier rather than a parallel choice: the cheap
+   * one is not skippable, so the expensive one is genuinely an upgrade and not
+   * an alternative for a city that never bothered with the first.
+   */
+  needs?: BuildingId;
   /** Extra share of this city's gold income, as a fraction. 0.5 = +50%. */
   goldBonus?: number;
   /** Extra share of this city's research output, as a fraction. */
@@ -66,6 +81,30 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     veteranUnits: true,
     blurb: 'Units built here start as veterans, having been shouted at properly.',
+  },
+  yellingGrounds: {
+    id: 'yellingGrounds',
+    name: 'The Yelling Grounds',
+    faction: 'orc',
+    cost: 100,
+    upkeep: 2,
+    startingRank: 2,
+    needs: 'barracks',
+    blurb:
+      'Everything the barracks does, at greater volume and for longer. ' +
+      'Units arrive already hardened, and faintly deaf.',
+  },
+  paradeGround: {
+    id: 'paradeGround',
+    name: 'The Parade Ground',
+    faction: 'human',
+    cost: 100,
+    upkeep: 2,
+    startingRank: 2,
+    needs: 'barracks',
+    blurb:
+      'Marching, in squares, until it stops being marching and becomes character. ' +
+      'Units arrive hardened and very tired of squares.',
   },
   granary: {
     id: 'granary',
@@ -122,6 +161,27 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     blurb: 'Two citizens are reassured that things are, on balance, going fine.',
   },
 
+  bigTotem: {
+    id: 'bigTotem',
+    name: 'Considerably Larger Totem',
+    faction: 'orc',
+    cost: 90,
+    upkeep: 2,
+    contentBonus: 3,
+    needs: 'totem',
+    blurb: 'The old pole, but much bigger. Nobody has asked what it is for in some time.',
+  },
+  cathedral: {
+    id: 'cathedral',
+    name: 'Cathedral of Firm Conviction',
+    faction: 'human',
+    cost: 90,
+    upkeep: 2,
+    contentBonus: 3,
+    needs: 'chapel',
+    blurb: 'Mild optimism, formalised, with a roof worth the walk.',
+  },
+
   // ------------------------------------------------------------- treasuries
   outpost: {
     id: 'outpost',
@@ -171,6 +231,26 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
 
   // --------------------------------------------------------- places to think
+  bigVault: {
+    id: 'bigVault',
+    name: 'Goblin Vault, Reinforced',
+    faction: 'orc',
+    cost: 110,
+    upkeep: 2,
+    goldBonus: 0.5,
+    needs: 'treasury',
+    blurb: 'The treasury, but with a door on it now. The goblins are terribly proud.',
+  },
+  exchange: {
+    id: 'exchange',
+    name: 'Slightly Complicated Market',
+    faction: 'human',
+    cost: 110,
+    upkeep: 2,
+    goldBonus: 0.5,
+    needs: 'market',
+    blurb: 'Now with a second stall, and a man who writes things down.',
+  },
   thinkingRock: {
     id: 'thinkingRock',
     name: 'The Thinking Rock',
@@ -181,6 +261,26 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     blurb:
       'One orc sits on it at a time. Every so often something occurs to them, ' +
       'and they are helped down and asked to describe it.',
+  },
+  biggerRock: {
+    id: 'biggerRock',
+    name: 'The Considerably Bigger Rock',
+    faction: 'orc',
+    cost: 130,
+    upkeep: 2,
+    scienceBonus: 0.5,
+    needs: 'thinkingRock',
+    blurb: 'Three orcs fit on it now. Progress has roughly tripled, or at least the sitting has.',
+  },
+  library: {
+    id: 'library',
+    name: 'Hall of Cross-Referenced Notes',
+    faction: 'human',
+    cost: 130,
+    upkeep: 2,
+    scienceBonus: 0.5,
+    needs: 'scriptorium',
+    blurb: 'The notes now refer to one another, which everyone agrees is the hard part.',
   },
   scriptorium: {
     id: 'scriptorium',

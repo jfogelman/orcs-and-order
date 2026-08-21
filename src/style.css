@@ -1045,3 +1045,12 @@ button.small.rush[disabled] {
 .bad-text {
   color: var(--bad, #d9705a);
 }
+
+/* Report rows open the city they name. */
+.report-table tr[data-city] {
+  cursor: pointer;
+}
+
+.report-table tr[data-city]:hover {
+  background: rgba(255, 255, 255, 0.05);
+}

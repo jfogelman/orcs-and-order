@@ -82,12 +82,17 @@ function cityRow(state: GameState, city: City, capitalId: number | null): string
   // The real helper rather than size * FOOD_PER_CITIZEN spelled out again,
   // which would quietly stop agreeing with the rules if the constant moved.
   const surplus = foodSurplus(state, city);
+  // Contentment as size against the limit rather than a bare number: what you
+  // act on is the headroom, and one figure without the other does not give it.
+  const limit = contentLimit(state, city);
+  const headroom = limit - city.size;
   return `
-    <tr>
+    <tr data-city="${city.id}">
       <td>${escapeHtml(city.name)}${flags ? ` <span class="muted">(${escapeHtml(flags)})</span>` : ''}</td>
       <td class="num">${city.size}</td>
       <td class="num ${surplus < 0 ? 'bad-text' : ''}">${city.food}/${foodToGrow(city.size)}
         <span class="muted">${surplus >= 0 ? '+' : ''}${surplus}</span></td>
+      <td class="num ${headroom <= 0 ? 'bad-text' : ''}">${city.size}/${limit}</td>
       <td>${escapeHtml(productionName(item))}${eta !== null ? ` <span class="muted">${eta}t</span>` : ''}</td>
     </tr>`;
 }
@@ -121,7 +126,11 @@ function armyRows(state: GameState, units: Unit[]): string {
     .join('');
 }
 
-export function openHordeReport(state: GameState, playerId: number): void {
+export function openHordeReport(
+  state: GameState,
+  playerId: number,
+  onOpenCity?: (city: City) => void,
+): void {
   const player = state.players[playerId];
   const cities = playerCities(state, playerId);
   const units = playerUnits(state, playerId);
@@ -157,11 +166,11 @@ export function openHordeReport(state: GameState, playerId: number): void {
       <div class="panel-title">Cities</div>
       <div class="report-scroll">
         <table class="report-table">
-          <thead><tr><th>Name</th><th class="num">Size</th><th class="num">Food</th><th>Building</th></tr></thead>
+          <thead><tr><th>Name</th><th class="num">Size</th><th class="num">Food</th><th class="num">Content</th><th>Building</th></tr></thead>
           <tbody>
             ${
               cities.length === 0
-                ? '<tr><td colspan="4" class="muted">No cities. That is usually the end of it.</td></tr>'
+                ? '<tr><td colspan="5" class="muted">No cities. That is usually the end of it.</td></tr>'
                 : cities.map((c) => cityRow(state, c, capital?.id ?? null)).join('')
             }
           </tbody>
@@ -175,5 +184,17 @@ export function openHordeReport(state: GameState, playerId: number): void {
           <tbody>${armyRows(state, units)}</tbody>
         </table>
       </div>`,
+    onMount: (root, close) => {
+      // A report you can act on beats one you have to read and then go
+      // hunting through the map for.
+      root.querySelectorAll<HTMLTableRowElement>('[data-city]').forEach((row) => {
+        row.addEventListener('click', () => {
+          const city = cities.find((c) => c.id === Number(row.dataset.city));
+          if (!city) return;
+          close();
+          onOpenCity?.(city);
+        });
+      });
+    },
   });
 }
