@@ -98,13 +98,14 @@ export interface Unit {
 /**
  * What a city does when it finishes something and needs a new order.
  *
- * `ask` leaves it on Coin for the interface to raise with the player. `next`
- * picks the next thing itself. `coin` banks the shields and stops asking --
+ * `ask` leaves it on Coin for the interface to raise with the player.
+ * `repeat` goes back to making the unit it was making. `coin` banks the
+ * shields and stops asking --
  * which, before this existed, could not be expressed at all: a city left on
  * Coin was quietly given something to build on the following turn whether that
  * was wanted or not.
  */
-export type AutoBuild = 'ask' | 'next' | 'coin';
+export type AutoBuild = 'ask' | 'repeat' | 'coin';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
@@ -131,6 +132,14 @@ export interface City {
    * `ask`, which is what a player who has never touched the setting expects.
    */
   autoBuild?: AutoBuild;
+  /**
+   * The last unit this city built, so `repeat` knows what to go back to.
+   *
+   * Needed because finishing a unit does not clear `producing` -- a city making
+   * units already makes more without being told -- so by the time a standing
+   * order is consulted at all, what it should repeat has been gone a while.
+   */
+  lastUnit?: UnitTypeId;
   /** Flat tile indices currently worked by citizens (excludes the centre). */
   workedTiles: number[];
   /** True while the city is rioting; it produces nothing. */

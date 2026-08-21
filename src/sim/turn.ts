@@ -115,7 +115,7 @@ function runEconomy(state: GameState, player: Player): void {
       if (managed) {
         const suggestion = defaultProduction(state, city);
         if (suggestion.kind !== 'coin') city.producing = suggestion;
-      } else if (auto === 'next') {
+      } else if (auto === 'repeat') {
         const suggestion = nextProduction(state, city);
         if (suggestion.kind !== 'coin') city.producing = suggestion;
       }

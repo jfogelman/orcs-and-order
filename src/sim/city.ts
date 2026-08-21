@@ -585,6 +585,8 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], veteran);
           unit.homeCity = city.id;
           city.shields -= cost;
+          // Remembered so a standing order can put it back on afterwards.
+          city.lastUnit = item.id;
           events.completed = unitType(item.id).name;
           recomputeVisibility(state, city.owner);
         }
@@ -664,20 +666,22 @@ export function autoBuildOf(city: City): AutoBuild {
 }
 
 /**
- * What a city on `next` starts once it has run out of orders.
+ * What a city on `repeat` goes back to once it has run out of orders.
  *
- * Cheapest missing structure first, then the cheapest unit, then Coin.
+ * The unit it was last making, if it can still be made. A city churning out
+ * Three Orcs that stops to put up a Barracks returns to Three Orcs afterwards
+ * rather than idling or being handed something it never asked for, which is the
+ * whole point of the setting.
  *
- * Structures lead because a city that was making units never gets here on its
- * own -- finishing a unit leaves `producing` untouched, so it simply makes
- * another -- which means this is usually being asked right after a building
- * completed, and another building is what was meant.
+ * The remembering is necessary rather than fussy: finishing a unit does not
+ * clear `producing`, so a city making units already makes more without being
+ * told, and a standing order is only ever consulted after a *building*
+ * completed -- by which time what it was making has been gone for turns.
  *
- * The fall-through to units is not a nicety. Buildings are gated behind
- * advances, and at the start of a game none are unlocked at all, so a
- * structures-only rule would leave `next` doing nothing whatsoever for the
- * opening stretch -- which is not what anybody asking for "auto next" wants.
- * It also gives a built-out frontier city something to do forever.
+ * Falls back to the cheapest unit it can build if the old one is no longer
+ * available, and only then to Coin. Note it never reaches for a structure:
+ * picking buildings on the player's behalf is what "auto" should not do, and
+ * `ask` is there for when the answer is genuinely open.
  *
  * Deliberately separate from `defaultProduction`, which is the AI's fallback
  * and reaches for the cheapest *attacker*. Sharing one function would have
@@ -685,11 +689,11 @@ export function autoBuildOf(city: City): AutoBuild {
  * do, and those are not the same question.
  */
 export function nextProduction(state: GameState, city: City): ProductionItem {
-  const options = buildOptions(state, city);
-  const structure = [...options.buildings].sort((a, b) => a.cost - b.cost)[0];
-  if (structure) return { kind: 'building', id: structure.id };
-  const unit = [...options.units].sort((a, b) => a.cost - b.cost)[0];
-  return unit ? { kind: 'unit', id: unit.id } : { kind: 'coin' };
+  const units = buildOptions(state, city).units;
+  const again = city.lastUnit && units.find((u) => u.id === city.lastUnit);
+  if (again) return { kind: 'unit', id: again.id };
+  const cheapest = [...units].sort((a, b) => a.cost - b.cost)[0];
+  return cheapest ? { kind: 'unit', id: cheapest.id } : { kind: 'coin' };
 }
 
 export function defaultProduction(state: GameState, city: City): ProductionItem {

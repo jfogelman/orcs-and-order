@@ -215,7 +215,7 @@ export function openCityPanel(
         <div class="panel-body auto-build">
           <span class="muted">When it finishes:</span>
           ${autoBtn('ask', 'Ask me', 'Stop and wait to be told what to build next')}
-          ${autoBtn('next', 'Auto next', 'Start the cheapest structure this city has not got')}
+          ${autoBtn('repeat', 'Auto same unit', 'Go back to making the unit it was making')}
           ${autoBtn('coin', 'Auto coin', 'Bank the shields as gold and stop asking')}
         </div>
         <div class="panel-title">Units</div>
