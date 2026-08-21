@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { unitType } from '../src/model/units';
 import type { City, GameState } from '../src/model/types';
 import { resupply, resupplyBlocked } from '../src/sim/combat';
+import { capitalOf } from '../src/sim/city';
 import { createGame, playerCities, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
 import { beginPlayerTurn } from '../src/sim/turn';
@@ -140,5 +141,57 @@ describe('the AI settling near danger', () => {
     }
 
     expect(playerCities(state, aiId).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Taking somebody else's ancient capital used to move your own seat of
+ * government into it, because the search was simply "oldest city you own".
+ * That put the whole supply network on the front line on the turn you captured
+ * a city, which is the reverse of what capturing one ought to do.
+ */
+describe('the capital', () => {
+  it('does not move to a conquered city, however old it is', () => {
+    const state = arena();
+    const mine = city(state, 0, 10, 10);
+    mine.foundedTurn = 20;
+    mine.foundedBy = 0;
+
+    const taken = city(state, 0, 16, 10);
+    taken.foundedTurn = 2; // founded long before ours...
+    taken.foundedBy = 1; // ...but by somebody else
+
+    expect(capitalOf(state, 0)?.id).toBe(mine.id);
+  });
+
+  it('still finds one for a player living entirely in captured cities', () => {
+    const state = arena();
+    const taken = city(state, 0, 16, 10);
+    taken.foundedTurn = 2;
+    taken.foundedBy = 1;
+
+    // Supply has to run from somewhere, so a fallback is required.
+    expect(capitalOf(state, 0)?.id).toBe(taken.id);
+  });
+
+  it('takes the oldest of the cities a player actually founded', () => {
+    const state = arena();
+    const first = city(state, 0, 10, 10);
+    first.foundedTurn = 5;
+    first.foundedBy = 0;
+    const later = city(state, 0, 14, 10);
+    later.foundedTurn = 9;
+    later.foundedBy = 0;
+
+    expect(capitalOf(state, 0)?.id).toBe(first.id);
+  });
+
+  it('assumes the holder founded it when a save does not say', () => {
+    const state = arena();
+    const old = city(state, 0, 10, 10);
+    old.foundedTurn = 3;
+    delete old.foundedBy;
+
+    expect(capitalOf(state, 0)?.id).toBe(old.id);
   });
 });

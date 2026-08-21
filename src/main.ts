@@ -237,6 +237,25 @@ class App {
    * Says why when it cannot, rather than doing nothing: a button that has
    * quietly declined is indistinguishable from one that is broken.
    */
+  /**
+   * Call off a standing march.
+   *
+   * A unit could be sent somewhere and then never told to stop: the order
+   * resumed every turn and the only way out was to walk it somewhere by hand,
+   * which the standing order would then override again the following turn.
+   *
+   * Leaves the unit where it is with its remaining movement intact, so calling
+   * off a march and doing something else with it is one decision rather than a
+   * wasted turn.
+   */
+  private orderHalt(): void {
+    const unit = this.selected;
+    if (!unit?.goto) return;
+    unit.goto = null;
+    this.overlay.gotoPath = null;
+    this.refreshSidebar();
+  }
+
   private orderResupply(): void {
     const unit = this.selected;
     if (!unit) return;
@@ -961,6 +980,9 @@ class App {
       case 'u':
         this.orderResupply();
         break;
+      case 'x':
+        this.orderHalt();
+        break;
       case 'r':
         this.arm('ranged');
         break;
@@ -1094,6 +1116,9 @@ class App {
             })
             .join('')}
           ${
+            unit.goto ? '<button class="small" data-act="halt">Halt (X)</button>' : ''
+          }
+          ${
             resupplyBlocked(this.state, unit) === null
               ? '<button class="small" data-act="resupply">Resupply (U)</button>'
               : ''
@@ -1117,6 +1142,9 @@ class App {
               break;
             case 'found':
               this.orderFound();
+              break;
+            case 'halt':
+              this.orderHalt();
               break;
             case 'resupply':
               this.orderResupply();

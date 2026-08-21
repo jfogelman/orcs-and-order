@@ -276,15 +276,34 @@ export function productionCostIn(state: GameState, city: City, item: ProductionI
  * stale. Losing your capital promotes the next oldest, which is the right
  * behaviour anyway -- the front collapses toward whatever you have left.
  */
+/**
+ * The oldest city this player **founded** and still holds.
+ *
+ * Founded, not merely held: taking somebody else's ancient capital used to move
+ * your own seat of government into it, because the search was by age across
+ * everything you owned. That moved the whole supply network to the front line
+ * on the turn you captured a city, which is the opposite of what capturing one
+ * should do.
+ *
+ * Falls back to the oldest city held when a player founded none that survive --
+ * a civilisation living entirely in captured cities still has to run its
+ * supply from somewhere.
+ */
 export function capitalOf(state: GameState, playerId: number): City | null {
-  let best: City | null = null;
+  const older = (a: City, b: City) =>
+    a.foundedTurn < b.foundedTurn || (a.foundedTurn === b.foundedTurn && a.id < b.id);
+
+  let own: City | null = null;
+  let any: City | null = null;
   for (const c of state.cities) {
     if (c.owner !== playerId) continue;
-    if (!best || c.foundedTurn < best.foundedTurn || (c.foundedTurn === best.foundedTurn && c.id < best.id)) {
-      best = c;
-    }
+    if (!any || older(c, any)) any = c;
+    // Old saves do not record a founder; treat the holder as one, which is
+    // what the rule used to assume for everybody.
+    if ((c.foundedBy ?? c.owner) !== playerId) continue;
+    if (!own || older(c, own)) own = c;
   }
-  return best;
+  return own ?? any;
 }
 
 /** Does this city feed an army standing near it? */
@@ -613,6 +632,19 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           // Remembered so a standing order can put it back on afterwards.
           city.lastUnit = item.id;
           events.completed = unitType(item.id).name;
+          // A city set to ask has to actually stop, and finishing a unit does
+          // not clear production on its own -- which is why "Ask me" appeared
+          // to do nothing at all for a city building units. Dropping to Coin
+          // is what makes it idle, and idle is what raises the prompt.
+          //
+          // Only for a player who can be asked. The AI has no interface for it
+          // and would simply lose a turn's production every time.
+          if (
+            autoBuildOf(city) === 'ask' &&
+            state.players[city.owner].controller === 'human'
+          ) {
+            city.producing = { kind: 'coin' };
+          }
           recomputeVisibility(state, city.owner);
         }
       } else {
@@ -671,6 +703,7 @@ export function foundCity(state: GameState, unit: Unit): City | null {
     workedTiles: [],
     disorder: false,
     foundedTurn: state.turn,
+    foundedBy: unit.owner,
   };
   state.cities.push(city);
   assignWorkers(state, city);
