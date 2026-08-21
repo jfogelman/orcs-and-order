@@ -856,9 +856,12 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
             unknown.append(f"{path.name}: no idea which state '{base}' is")
             continue
         name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
-        if name not in known:
+        split = split_variant(name, known)
+        if split is None:
             unknown.append(f"{path.name} -> '{name}'")
             continue
+        creature, suffix = split
+        name = "-".join(x for x in (creature, suffix) if x)
 
         keyed, cut_out = remove_background(Image.open(path))
         if not cut_out:
@@ -1120,6 +1123,33 @@ def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image |
     return sheet, ""
 
 
+def split_variant(name: str, known: set[str]) -> tuple[str, str] | None:
+    """
+    Read `ogre-quake` as the ogre carrying something different, not as an
+    unknown creature.
+
+    The output side of this pipeline has always used that shape --
+    `axethrower-disarmed_attack.png` -- but it could only be reached through a
+    parenthetical tag mapped by VARIANTS, so a file named for its variant
+    directly was rejected. The idle sheets in `art_src/units` are named exactly
+    that way and pass, because that pass validates nothing; the attack and state
+    sheets do validate, and turned it away.
+
+    Matches the longest creature it can, so a creature whose own id contained a
+    hyphen would still win against a shorter one. Returns None when nothing
+    matches, which is a genuinely unrecognised name and should be reported.
+    """
+    if name in known:
+        return name, ""
+    best: tuple[str, str] | None = None
+    for creature in known:
+        if name.startswith(f"{creature}-"):
+            suffix = name[len(creature) + 1 :]
+            if suffix and (best is None or len(creature) > len(best[0])):
+                best = (creature, suffix)
+    return best
+
+
 def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     """
     Per-creature attack animations, sliced the same way the effect strips are.
@@ -1156,11 +1186,12 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
         base, variant = normalise_stem(path.stem)
         base = re.sub(r"\s*attack$", "", base).strip()
         name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
-        if name not in known:
+        split = split_variant(name, known)
+        if split is None:
             unknown.append(f"{path.name} -> '{name}'")
             continue
-        if variant:
-            name = f"{name}-{variant}"
+        creature, suffix = split
+        name = "-".join(x for x in (creature, suffix, variant) if x)
         keyed, cut_out = remove_background(Image.open(path))
         if not cut_out:
             problems_early.append(f"{name}: background would not key")

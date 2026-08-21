@@ -890,3 +890,42 @@ and worth asking for by name elsewhere.
 **`conquest-orc`, `points-orc` and `points-human` — keep.** The only blemish in
 the three is the blank banner across the top of `points-human`, which is a crop
 away from gone.
+
+### Status overlays and ogre variants: done
+
+All seven status overlays are drawn and processed, and all three ogre club
+variants now have both an idle and an attack sheet.
+
+**burning / burning-fading** and **frozen / frozen-fading** pair exactly: the
+fading version is visibly the same ring decaying, which is what makes the swap
+read as one effect running down rather than as two different pictures.
+
+**confused-fading** was re-rolled out of question marks and into the same ring of
+stars as `confused`, which fixes the idiom -- the two now read as one status
+wearing out rather than as two different ones. Worth recording that it is the
+faintest of the six by some way. Measured as the share of the frame actually
+drawn, each fading version keeps this much of its full version:
+
+| pair | fading keeps |
+|---|---|
+| frozen | 88% |
+| burning | 77% |
+| confused | **40%** |
+
+At 4% of the frame drawn it is the sparsest overlay in the set, and on a busy
+tile it will be the hardest to spot. Usable, and a large improvement on what it
+replaced -- but if anything here is ever re-rolled again this is the one, and the
+note is simply to dim it less. `burning-fading` is the reference for how far to
+take it.
+
+**The ogre attack sheets** read as intended: the fiery club leaves a flame arc,
+the exploding club destroys its own head on impact -- which is the self-damage in
+the mechanic, drawn -- and the quake club cracks the ground outward. All three
+keep the base ogre's body and pose language, so they read as the same creature
+carrying something different rather than as three creatures.
+
+Naming worth recording, since it caught the pipeline out: an attack or state
+sheet for a variant is named `<creature>-<variant> attack.<ext>`, matching both
+the idle sheets in `art_src/units` and the `axethrower-disarmed_attack.png` this
+pipeline has always written. That form is now accepted on input as well as
+produced on output.
