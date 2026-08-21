@@ -29,13 +29,18 @@ Thumbs.db
 __pycache__/
 *.pyc
 
-# The original audio downloads are kept out of the repository.
+# art_src/ is raw material, not game assets, and is kept out of the repository.
 #
-# public/sfx and public/music are tracked, because they are what the game loads
-# and what gets deployed -- audio bundled inside a game is the ordinary use these
-# licences are written for. These two directories are the untouched originals as
-# they came off Pixabay, which is closer to redistributing the sounds as sounds,
-# and the game does not need them to run. Every file is credited by name and id
-# in CREDITS.md, so nothing is lost by leaving the originals out.
-art_src/sfx/
-art_src/music/
+# It holds untouched generator output -- 1024px JPEGs, several megabytes each --
+# and the original audio downloads exactly as they came off Pixabay. public/ holds
+# what the game actually loads, and that is tracked.
+#
+# Two reasons. It is heavy: every re-roll of a sprite adds another 7MB to the
+# history for good, and none of it is what anybody clones the repository to get.
+# And the audio in it is the untouched downloads, which is nearer to
+# redistributing the sounds as sounds than shipping a game that plays them.
+#
+# Nothing is lost. Every sound is credited by uploader and Pixabay id in
+# CREDITS.md and can be fetched again; every picture has its prompt in
+# ART_PROMPTS.md. The files stay on disk, so `npm run art` still works here.
+art_src/

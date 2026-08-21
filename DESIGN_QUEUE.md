@@ -1020,7 +1020,7 @@ drawn diamond, which is the reason none of them read as anything in particular.
 
 Text only -- no video, no voice -- in the manner of Civ2's advisors, using the
 animation the game already has rather than anything new. Twelve of them are drawn,
-six a side, and `art_src/advisors/advisor_bible.md` has the full brief: role,
+six a side, and `docs/advisor_bible.md` has the full brief: role,
 appearance, personality and a sample line for each.
 
 The pairs are mirrored by role, which is the useful part for implementation:

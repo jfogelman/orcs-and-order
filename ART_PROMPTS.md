@@ -25,7 +25,9 @@ land on the same line, scales it to 96×96 and writes an optimised PNG into
 Missing files are expected and silent — anything without art falls back to a
 procedural placeholder, and the game stays playable throughout.
 
-> `art_src/` is the raw material and is not shipped. `public/` is generated — treat it
+> `art_src/` is the raw material. It is not shipped, and it is not in the
+> repository either — it lives only on the machine the art was made on, since it
+> is heavy and none of it is what the game loads. `public/` is generated — treat it
 > as build output and don't hand-edit it.
 
 ## You do not need to draw groups
