@@ -1,4 +1,4 @@
-import { idx } from '../engine/grid';
+import { fatCrossIndices, idx } from '../engine/grid';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { unitType } from '../model/units';
@@ -7,7 +7,7 @@ import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
-import { capitalOf, inSupply } from '../sim/city';
+import { garrisonOf, capitalOf, inSupply } from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
 
@@ -276,6 +276,61 @@ export class MapRenderer {
       }
     }
 
+    // --- our borders -----------------------------------------------------
+    // The outline around everything our cities claim, drawn as one perimeter
+    // rather than a box per tile. Per-tile borders were the first attempt and
+    // were the wrong idea twice over: at a hairline they vanished into the
+    // terrain, and even visible they drew the *grid* rather than the shape,
+    // which is the thing you actually need in order to see where a new city
+    // would overlap an old one.
+    //
+    // The claim is the fat cross -- the ground a city can work -- not the tiles
+    // it happens to be working today. Those change every time it grows, and a
+    // border that moves as citizens are reassigned is not a border.
+    //
+    // Ours only. An enemy's would say how much ground they hold and exactly
+    // where their cities sit, which is a great deal more than seeing one city
+    // tells you.
+    const claimed = new Set<number>();
+    for (const c of state.cities) {
+      if (c.owner !== viewerId) continue;
+      for (const i of fatCrossIndices(c.x, c.y, state.width, state.height)) claimed.add(i);
+    }
+    if (claimed.size > 0) {
+      // Drawn twice: a dark line underneath, then the colour on top. The map
+      // runs from near-black water to pale sand, and a single mid-tone line
+      // disappears against one end or the other.
+      const edges: Array<[number, number, number, number]> = [];
+      for (const i of claimed) {
+        const tx = i % state.width;
+        const ty = Math.floor(i / state.width);
+        if (tx < x0 - 1 || tx > x1 + 1 || ty < y0 - 1 || ty > y1 + 1) continue;
+        const p = cam.tileToScreen(tx, ty);
+        const has = (nx: number, ny: number) =>
+          nx >= 0 && ny >= 0 && nx < state.width && ny < state.height &&
+          claimed.has(idx(nx, ny, state.width));
+        if (!has(tx, ty - 1)) edges.push([p.x, p.y, p.x + size, p.y]);
+        if (!has(tx, ty + 1)) edges.push([p.x, p.y + size, p.x + size, p.y + size]);
+        if (!has(tx - 1, ty)) edges.push([p.x, p.y, p.x, p.y + size]);
+        if (!has(tx + 1, ty)) edges.push([p.x + size, p.y, p.x + size, p.y + size]);
+      }
+      const stroke = (colour: string, width: number, alpha: number) => {
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = width;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        for (const [ax, ay, bx, by] of edges) {
+          ctx.moveTo(Math.round(ax) + 0.5, Math.round(ay) + 0.5);
+          ctx.lineTo(Math.round(bx) + 0.5, Math.round(by) + 0.5);
+        }
+        ctx.stroke();
+      };
+      ctx.save();
+      stroke('#000000', 4, 0.45);
+      stroke(state.players[viewerId].color, 2, 0.95);
+      ctx.restore();
+    }
+
     // --- cities ----------------------------------------------------------
     for (const c of state.cities) {
       const i = idx(c.x, c.y, state.width);
@@ -289,6 +344,11 @@ export class MapRenderer {
       const i = idx(u.x, u.y, state.width);
       if (!viewer.visible[i]) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
+      // A unit resting inside its own city is drawn as a mark on the city
+      // rather than on top of it -- what the player is thinking about at that
+      // tile is the city. The selected one still draws itself, so choosing a
+      // garrison member from the panel shows you which one you picked.
+      if (overlay.selectedUnitId !== u.id && this.restingInCity(state, u)) continue;
       this.drawUnit(ctx, state, u, cam, overlay.selectedUnitId === u.id, viewerId);
     }
 
@@ -467,6 +527,13 @@ export class MapRenderer {
     ctx.setLineDash([]);
   }
 
+  /** True for a unit tucked up inside a city of its own. */
+  private restingInCity(state: GameState, u: Unit): boolean {
+    if (u.order !== 'fortified' && u.order !== 'sentry') return false;
+    const here = state.cities.find((c) => c.x === u.x && c.y === u.y);
+    return !!here && here.owner === u.owner;
+  }
+
   // ------------------------------------------------------------- pieces
 
   private drawCity(
@@ -500,6 +567,28 @@ export class MapRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(c.size), s.x + r + 2, s.y + r + 3);
+
+    // How many are tucked up inside. A garrison you cannot see at all is how a
+    // player loses a city they were sure was defended, so hiding the units
+    // only works if the city says how many it is holding.
+    const garrison = garrisonOf(state, c).length;
+    if (garrison > 0 && size >= 24) {
+      const gr = Math.max(5, size * 0.15);
+      const gx = s.x + size - gr - 2;
+      const gy = s.y + size - gr - 2;
+      ctx.fillStyle = 'rgba(12,10,8,0.85)';
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#c8b48a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#f2e6c8';
+      ctx.font = `bold ${Math.round(gr * 1.2)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(garrison), gx, gy + 1);
+    }
 
     // A crown on the capital, opposite the size badge.
     if (isCapital) {

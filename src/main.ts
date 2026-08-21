@@ -376,7 +376,7 @@ class App {
   }
 
   private openCity(city: City): void {
-    openCityPanel(this.state, city, () => this.refreshHud());
+    openCityPanel(this.state, city, () => this.refreshHud(), (u) => this.select(u));
   }
 
   /**
@@ -528,7 +528,7 @@ class App {
       (c) => c.size > 0 && c.producing.kind === 'coin' && autoBuildOf(c) === 'ask',
     );
     if (!city) return;
-    openCityPanel(this.state, city, () => this.refreshHud());
+    openCityPanel(this.state, city, () => this.refreshHud(), (u) => this.select(u));
   }
 
   private promptResearchIfIdle(): void {
@@ -889,9 +889,17 @@ class App {
     const myCity = city && city.owner === this.viewerId;
 
     if (mine) {
-      // A garrison sits on top of its city, so the unit would otherwise swallow
-      // every click and the city could never be opened. Clicking a unit that is
-      // already selected falls through to whatever it is standing on.
+      // A unit resting in its own city is not what the player is clicking at:
+      // they are clicking the city. It is not drawn on the tile either, so
+      // selecting it here would select something invisible. The city panel
+      // lists the garrison and wakes them, which is the way back to it.
+      if (myCity && (unit.order === 'fortified' || unit.order === 'sentry')) {
+        this.openCity(city);
+        return;
+      }
+      // Otherwise a unit standing on its city would swallow every click and the
+      // city could never be opened. Clicking one that is already selected falls
+      // through to whatever it is standing on.
       if (this.overlay.selectedUnitId !== unit.id) {
         this.select(unit);
         return;

@@ -1,7 +1,8 @@
 import { BUILDINGS } from '../model/buildings';
-import type { AutoBuild, City, GameState, ProductionItem } from '../model/types';
+import type { AutoBuild, City, GameState, ProductionItem, Unit } from '../model/types';
 import {
   autoBuildOf,
+  garrisonOf,
   buildOptions,
   cityYield,
   contentLimit,
@@ -20,10 +21,11 @@ import {
   syncCitizens,
   isRuined
 } from '../sim/city';
-import { bar, escapeHtml, openModal } from './dom';
+import { bar, closeModal, escapeHtml, openModal } from './dom';
 import { splitTrade } from '../sim/research';
 import { openPedia } from './pedia';
 import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
+import { unitType } from '../model/units';
 
 /**
  * Edge of one citizen portrait **as rendered**, which is what the offset below
@@ -100,6 +102,7 @@ export function openCityPanel(
   state: GameState,
   city: City,
   onChange: () => void,
+  onWake?: (unit: Unit) => void,
 ): void {
   const yields = cityYield(state, city);
   const surplus = foodSurplus(state, city);
@@ -126,6 +129,9 @@ export function openCityPanel(
 
   // What this city does when it runs out of orders. Marked with the same
   // `armed` style the ability buttons use, so a set city reads at a glance.
+  // Units resting here are drawn as a number on the city rather than on the
+  // tile, so this list is the only way back to them.
+  const garrison = garrisonOf(state, city);
   const auto = autoBuildOf(city);
   const autoBtn = (mode: AutoBuild, label: string, title: string) =>
     `<button class="small${auto === mode ? ' armed' : ''}" data-auto="${mode}"
@@ -190,6 +196,25 @@ export function openCityPanel(
               : ''
           }
           <div class="stat-row"><span class="label">Founded</span><span class="value">Turn ${city.foundedTurn}</span></div>
+        </div>
+        <div class="panel-title">Garrison</div>
+        <div class="panel-body garrison-row">
+          ${
+            garrison.length === 0
+              ? '<span class="muted">Nobody is watching the gate.</span>'
+              : garrison
+                  .map(
+                    (u) =>
+                      `<button class="small" data-wake="${u.id}"
+                               title="${escapeHtml(unitType(u.type).blurb)}">
+                         ${escapeHtml(unitType(u.type).name)}
+                         <span class="muted">${escapeHtml(u.order)}${
+                           u.rank > 0 ? ` &middot; rank ${u.rank}` : ''
+                         }</span>
+                       </button>`,
+                  )
+                  .join(' ')
+          }
         </div>
         <div class="panel-title">Standing Structures</div>
         <div class="panel-body">
@@ -261,6 +286,16 @@ export function openCityPanel(
     body,
     width: 'min(920px, 94vw)',
     onMount: (root) => {
+      // Waking is the way back out: these units are not on the map to click.
+      root.querySelectorAll<HTMLButtonElement>('[data-wake]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const unit = garrison.find((u) => u.id === Number(btn.dataset.wake));
+          if (!unit) return;
+          unit.order = 'none';
+          closeModal();
+          onWake?.(unit);
+        });
+      });
       root.querySelectorAll<HTMLImageElement>('.building-icon').forEach((img) => {
         img.addEventListener('error', () => img.remove());
       });

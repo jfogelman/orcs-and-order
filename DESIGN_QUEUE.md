@@ -1368,7 +1368,20 @@ Points to settle before building:
 Both of these want the disband machinery first: the sacrifice is a disband with
 a beneficiary attached, and building it twice would be the usual mistake.
 
-## 14. Two things the map should say for itself
+## 14. Two things the map should say for itself — built
+
+**Both are in.** Each of your cities carries a border around the ground it
+claims -- one perimeter around the whole fat cross, not a box per tile, and your
+own only. The first attempt drew a hairline per worked tile and was wrong twice
+over: it vanished into the terrain, and even visible it drew the grid rather
+than the shape, which is the thing you need in order to see where a new city
+would overlap an old one. The claim is the fat cross rather than the tiles being
+worked today, because those move every time a city grows and a border that
+shifts with citizen assignment is not a border. A unit fortified or on sentry inside its own city is drawn as a
+count on the city rather than on the tile, clicking the tile opens the city, and
+the panel lists the garrison with a click to wake each one -- which is the half
+that matters, since the drawing change without it would hide units where nobody
+could reach them.
 
 ### Thin outlines on worked tiles
 
@@ -1432,3 +1445,46 @@ alongside it. Walks toward unexplored ground on its own and **halts the moment
 it sees an enemy or a city**, which is the part that makes it useful rather than
 a way to lose a unit unattended. Reuses the standing-order machinery that `goto`
 already has, and wants the same Halt action the march does.
+
+## 16. Choosing which tiles a city works
+
+Citizens are assigned greedily and the player cannot overrule it. That is
+tolerable while every tile of a kind is worth the same, and stops being
+tolerable the moment the terrain modifiers and land specials land -- at that
+point the greedy pick is choosing between things it has no way to weigh, and
+choosing wrongly is invisible.
+
+Wants: the fat cross drawn in the city screen with each tile's yield on it,
+click to assign or unassign, and the greedy assignment as the default so nobody
+who does not care is made to care. Two things follow from that:
+
+- **It has to survive growth.** A hand-assigned tile must not be silently
+  reshuffled when the city grows or a citizen starves, or the choice was
+  pointless. That means a per-city flag saying "these were chosen" and
+  `assignWorkers` filling only the remainder.
+- **It has to survive losing the tile.** An enemy standing on a worked tile, or
+  taking the city next door, can make a chosen tile unworkable. Falling back to
+  the greedy pick for that one citizen is right, but it should say so.
+
+The map border added in section 14 is the other half of this: the border says
+which ground is yours to assign, and this says what to do with it.
+
+## 17. Measured: nothing yet
+
+Two changes landed recently that move the numbers and have not been measured:
+
+- **The AI no longer founds cities into an enemy stack** (section 14 work). A
+  clear improvement in play, but it changes what the AI does with settlers.
+- **Second-tier gold and science buildings**, which are per-city multipliers --
+  the exact class that measured badly in 4c and 4e by amplifying whoever already
+  had more cities.
+- **Settlers now cost a citizen**, which is the largest of the three. Expansion
+  was very nearly free: a city of one could produce settlers forever without
+  shrinking, so the only brake on city count was shields and walking time. City
+  count is the dominant term in every measurement in this file, so this is the
+  first change in a long while that acts directly on it.
+
+The last of those is the one to measure first, and the interesting question is
+not whether it slows expansion -- it must -- but **whether it slows the AI more
+than the player**, since the AI expands by rule and the player expands by
+judgement. If it does, the see-saw in 4i gets worse rather than better.
