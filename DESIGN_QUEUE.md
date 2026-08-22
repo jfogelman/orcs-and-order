@@ -1547,6 +1547,63 @@ Worth trying, in order of how little they disturb:
 Whichever, it wants the same two-set treatment. `SETTLER.costsCitizen` exists so
 the control arm can be run without editing the rules.
 
+### The size gate, measured: same result, better brake
+
+Option one built and swept the same way, two seed sets, control against
+`minCitySize: 3`.
+
+| | set A control | set A gated | set B control | set B gated |
+|---|---|---|---|---|
+| peak cities, both | 19.33 | 18.17 | 18.22 | 17.78 |
+| population, Horde | 23.83 | 30.67 | 32.00 | 21.67 |
+| reached the turn limit | 13/18 | 14/18 | 16/18 | 14/18 |
+| wins, Horde | 5 | 4 | 7 | 2 |
+
+**As a brake it is the better of the two.** Expansion fell in both sets this time
+-- 6% and 2.4% -- where the citizen charge fell 10% and then rose 1%. And it does
+not drag on the turn limit: +1 then −2, no direction, against the charge's
+consistent worsening.
+
+**But it costs the Horde exactly as much.** Pooled over thirty-six seeds per arm:
+
+| arm | Horde wins |
+|---|---|
+| no brake | 12 / 36 (33%) |
+| citizen charge | 6 / 36 (17%) |
+| size-3 gate | 6 / 36 (17%) |
+
+Two different interventions, the same number. That is what makes the mechanism
+credible rather than a coincidence: **both brakes are denominated in city size,
+and Horde cities are about half the size of Kingdom ones** -- 22 to 32
+population against 52 to 56. A charge of one citizen is a bigger share of a
+small city; a threshold of three citizens takes a small city longer to reach.
+Either way the brake binds harder on whoever builds small, and that is the Horde
+by design.
+
+### The finding that matters more than either
+
+The control arm is **12 wins in 36 for the Horde**, about two standard
+deviations below an even split. The Horde was already losing two games in three
+*before any of this was added*. Both attempts then took it to one in six.
+
+So expansion is probably the wrong thing to be tuning. Nothing here has found a
+brake that does not land on the weaker side, and the weaker side is weak for
+reasons this file has not identified yet. Worth attacking that directly:
+
+- **Where does the Horde actually lose?** Both arms have it peaking at a similar
+  city count to the Kingdom (8 against 9--11) but finishing with fewer and with
+  half the population. It is not failing to expand -- it is failing to *hold* and
+  failing to *grow*. That points at content limits, food, or losing cities back,
+  not at settlers.
+- **A brake denominated in something other than city size**, if one is still
+  wanted. Cost scaling with the number of cities already held would tax the side
+  that is running away rather than the side with small cities, which is the
+  opposite of both attempts here.
+
+**Recommended for now:** `minCitySize: 2`, which closes the degenerate case a
+size-one city producing settlers forever without being much of a brake at all,
+and leave the balance question to the growth work above.
+
 ## 18. The AI should escort its settlers
 
 It does not. `guardedAt` is the only escort-shaped code in `ai.ts`, and all it
