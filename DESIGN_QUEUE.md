@@ -1600,7 +1600,7 @@ reasons this file has not identified yet. Worth attacking that directly:
   that is running away rather than the side with small cities, which is the
   opposite of both attempts here.
 
-**Recommended for now:** `minCitySize: 2`, which closes the degenerate case a
+**Set to `minCitySize: 2`**, which closes the degenerate case a
 size-one city producing settlers forever without being much of a brake at all,
 and leave the balance question to the growth work above.
 
