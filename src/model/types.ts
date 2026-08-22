@@ -164,8 +164,12 @@ export type DamageKind = 'physical' | 'magic';
  * `conquest` is the last civilisation standing, `dominance` is holding most of
  * the world long enough for it to count, and `points` is the clock running out
  * -- which the game itself describes as satisfying nobody.
+ *
+ * `draw` is the clock running out with the totals exactly level, and is the one
+ * ending with no winner at all: `winner` stays null. Use isOver() rather than a
+ * null check to ask whether a game has finished.
  */
-export type VictoryKind = 'conquest' | 'dominance' | 'points';
+export type VictoryKind = 'conquest' | 'dominance' | 'points' | 'draw';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }

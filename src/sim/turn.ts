@@ -252,6 +252,20 @@ const CAPITULATION_TURN = 15;
  * of three hundred points are routine -- a threshold met for one turn would
  * fire on noise.
  */
+/**
+ * Is this game finished?
+ *
+ * Not the same question as "is there a winner", which is why this exists. A
+ * drawn game has no winner and is over, and `winner === null` was read as
+ * "still playing" in a dozen places before a draw was possible.
+ *
+ * The `winner` clause carries saves from before draws existed, where a finished
+ * game recorded its winner and nothing about how.
+ */
+export function isOver(state: GameState): boolean {
+  return state.winner !== null || state.victory !== undefined;
+}
+
 export const DOMINANCE = {
   /** Share of every city on the map. */
   share: 0.6,
@@ -275,7 +289,7 @@ export const DOMINANCE = {
 };
 
 function checkDominance(state: GameState): void {
-  if (state.winner !== null) return;
+  if (isOver(state)) return;
   const total = state.cities.length;
   for (const p of state.players) {
     if (!p.alive) {
@@ -328,7 +342,7 @@ function checkElimination(state: GameState): void {
   }
 
   const survivors = state.players.filter((p) => p.alive);
-  if (survivors.length === 1 && state.winner === null) {
+  if (survivors.length === 1 && !isOver(state)) {
     state.winner = survivors[0].id;
     state.victory = 'conquest';
     log(state, `${survivors[0].name} stands alone. That is the whole of it.`, 'good');
@@ -338,11 +352,28 @@ function checkElimination(state: GameState): void {
   checkDominance(state);
 
   // Nobody has managed it by the deadline: whoever built most, wins.
-  if (state.winner === null && state.turn > state.settings.maxTurns) {
+  if (!isOver(state) && state.turn > state.settings.maxTurns) {
     const ranked = [...survivors].sort(
       (a, b) => playerScore(state, b.id) - playerScore(state, a.id),
     );
     if (ranked.length > 0) {
+      // Level on points is a draw, and says so. Sorting is stable, so taking
+      // the first of a tie handed the game to whoever came first in player
+      // order -- the Horde, every time -- and then announced they were "ahead
+      // on points", which was the one line in the game that could be false.
+      const tied =
+        ranked.length > 1 &&
+        playerScore(state, ranked[0].id) === playerScore(state, ranked[1].id);
+      if (tied) {
+        state.victory = 'draw';
+        log(
+          state,
+          `Turn ${state.settings.maxTurns} passes and the totals agree exactly. ` +
+            'Nobody has won, which everyone finds even less satisfying.',
+          'info',
+        );
+        return;
+      }
       state.winner = ranked[0].id;
       state.victory = 'points';
       log(
@@ -369,7 +400,7 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
 
 /** Hand control to the next living player, advancing the calendar on wrap. */
 export function endPlayerTurn(state: GameState): void {
-  if (state.winner !== null) return;
+  if (isOver(state)) return;
   checkElimination(state);
 
   for (let step = 0; step < state.players.length; step++) {
