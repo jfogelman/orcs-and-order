@@ -136,10 +136,26 @@ export interface Status {
  */
 export type DamageKind = 'physical' | 'magic';
 
+/**
+ * What a city is working on.
+ *
+ * The three standing choices -- coin, beakers, calm -- are things a city can
+ * always do, as opposed to things it can finish. They never complete, so a city
+ * set to one stays on it until told otherwise, and none of them can be
+ * exhausted the way a building list can.
+ *
+ * `calm` matters more than it looks. A rioting city produces nothing, so before
+ * this existed it could be left with no action that would end the riot once
+ * every content building was already up: a trap rather than a setback. Spending
+ * production on placating people is always available, so there is always a way
+ * out.
+ */
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
   | { kind: 'building'; id: BuildingId }
-  | { kind: 'coin' };
+  | { kind: 'coin' }
+  | { kind: 'beakers' }
+  | { kind: 'calm' };
 
 export interface City {
   id: number;

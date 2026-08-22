@@ -93,15 +93,47 @@ export function cityYield(state: GameState, city: City): Yield {
     total.shields += y.shields;
     total.trade += y.trade;
   }
-  if (city.disorder) return { food: total.food, shields: 0, trade: 0 };
+  if (city.disorder) {
+    // A rioting city downs tools -- except on the one thing everybody in it
+    // agrees about, which is whatever will calm the place down.
+    //
+    // Without this exception disorder is a trap rather than a setback: no
+    // shields means the calming building can never be finished, growth is
+    // capped at zero in the same breath so the city cannot shrink out either,
+    // and the only escape is an empire-wide advance arriving for other
+    // reasons. Measured at a third of all Horde city-turns and a fifth of the
+    // Kingdom's, which is most of the gap between them -- see section 20.
+    //
+    // Deliberately narrow. Units, walls, treasuries and the rest still stop
+    // dead, and trade is still nothing, so a riot is no cheaper than it was.
+    // The city can work on its own way out and on nothing else.
+    return { food: total.food, shields: calmingBuild(city) ? total.shields : 0, trade: 0 };
+  }
   return total;
 }
+
+/** True when this city is building something that would raise its own limit. */
+export function calmingBuild(city: City): boolean {
+  const item = city.producing;
+  return item.kind === 'building' && (BUILDINGS[item.id]?.contentBonus ?? 0) > 0;
+}
+
+/**
+ * How placated a city is while it spends its whole production on placating.
+ *
+ * Worth more than a Totem, because it costs everything the city makes rather
+ * than being built once and then forgotten. That is what keeps the buildings
+ * worth having: they are permanent and leave the city free to do something
+ * else, where this is neither.
+ */
+export const CALM_BONUS = 3;
 
 export function contentLimit(state: GameState, city: City): number {
   const owner = state.players[city.owner];
   let limit = BASE_CONTENT;
   for (const b of city.buildings) limit += BUILDINGS[b]?.contentBonus ?? 0;
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
+  if (city.producing.kind === 'calm') limit += CALM_BONUS;
   return limit;
 }
 
@@ -514,7 +546,8 @@ export function productionCost(item: ProductionItem): number {
  */
 export function rushCost(state: GameState, city: City): number {
   const item = city.producing;
-  if (item.kind === 'coin') return 0;
+  // None of the standing choices ever completes, so none of them has a cost.
+  if (item.kind !== 'unit' && item.kind !== 'building') return 0;
   const remaining = productionCostIn(state, city, item) - city.shields;
   if (remaining <= 0) return 0;
   const base = 2 * remaining + (remaining * remaining) / 20;
@@ -523,7 +556,8 @@ export function rushCost(state: GameState, city: City): number {
 
 /** Why this city cannot be rushed, or null if it can. */
 export function rushBlocked(state: GameState, city: City): string | null {
-  if (city.producing.kind === 'coin') return 'This city is not building anything.';
+  const kind = city.producing.kind;
+  if (kind !== 'unit' && kind !== 'building') return 'This city is not building anything.';
   const cost = rushCost(state, city);
   if (cost <= 0) return 'This is already paid for.';
   if (state.players[city.owner].gold < cost) return `Needs ${cost} gold.`;
@@ -553,6 +587,8 @@ export function rushBuy(state: GameState, city: City): boolean {
 export function productionName(item: ProductionItem): string {
   if (item.kind === 'unit') return unitType(item.id).name;
   if (item.kind === 'building') return BUILDINGS[item.id].name;
+  if (item.kind === 'beakers') return 'Study';
+  if (item.kind === 'calm') return 'Placating';
   return 'Coin';
 }
 
@@ -617,6 +653,8 @@ export interface CityTurnEvents {
   blocked: boolean;
   /** Blocked specifically because the city is too small to spare anybody. */
   tooSmall: boolean;
+  /** Production turned straight into research this turn, if any. */
+  beakers: number;
   enteredDisorder: boolean;
 }
 
@@ -627,6 +665,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     completed: null,
     blocked: false,
     tooSmall: false,
+    beakers: 0,
     enteredDisorder: false,
   };
   const owner = state.players[city.owner];
@@ -673,8 +712,16 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
   const net = yields.shields - unitUpkeep(state, city);
   city.shields = Math.max(0, city.shields + net);
   const item = city.producing;
-  if (item.kind === 'coin') {
-    owner.gold += Math.max(0, net);
+  if (item.kind === 'coin' || item.kind === 'beakers' || item.kind === 'calm') {
+    // The standing choices. None of them ever finishes, so the shield box is
+    // emptied each turn rather than accumulating toward anything.
+    //
+    // Calm banks nothing at all: the production goes on placating people, and
+    // what it buys is the content bonus in contentLimit rather than a number
+    // anywhere. That is the point of it -- it is the one thing a rioting city
+    // can always work at, so disorder is a setback rather than a dead end.
+    if (item.kind === 'coin') owner.gold += Math.max(0, net);
+    if (item.kind === 'beakers') events.beakers = Math.max(0, net);
     city.shields = 0;
   } else {
     const cost = productionCostIn(state, city, item);

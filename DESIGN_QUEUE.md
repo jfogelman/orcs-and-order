@@ -1764,3 +1764,63 @@ Its whole reachable tree is 2190 beakers against 1801.
    once cities stop freezing solid. Changing three things at once is how the
    last two sweeps ended up unreadable.
 3. **Only then** consider Walls, the orc's stat line, or the ladder cost.
+
+## 21. The disorder fix, measured
+
+A rioting city may now work on a building that would calm it, and Placating is
+always available as a standing choice, so disorder is a setback rather than a
+dead end. Same eighteen seeds, twice, before and after.
+
+| | orc before | orc after | human before | human after |
+|---|---|---|---|---|
+| % turns in disorder | 31 / 33 | **18 / 18** | 20 / 20 | **12 / 10** |
+| population | ~25 | **45.5 / 43.9** | ~57 | 54.2 / 57.8 |
+| units alive | 26 / 32 | **35 / 39** | 58 / 47 | 51 / 55 |
+| final cities | 5.6 / 6.3 | **6.4 / 6.6** | 8.8 / 7.9 | 7.8 / 8.2 |
+| wins | 5 / 7 | **5 / 7** | 13 / 11 | 13 / 11 |
+| reached the turn limit | 13/18, 16/18 | **17/18, 18/18** | | |
+
+### It worked, economically
+
+Disorder is down by nearly half on both sides. **Horde population very nearly
+doubled**, from about 25 to about 45, and the gap that looked like the whole
+problem -- 25 against 57 -- closed to 45 against 54. Units and cities moved the
+same way. A third of Horde cities were frozen solid; now they are not.
+
+That was worth doing on its own merits. A city that cannot act its way out of a
+state is a defect wherever it appears, and this one was eating a third of one
+side's economy.
+
+### It changed nothing about who wins
+
+**The win counts are identical.** Twelve to the Horde in thirty-six, before and
+after, seed for seed in both sets.
+
+That is the useful part. Roughly doubling the Horde's economy did not move the
+result at all, which rules out the economy as the cause and leaves what section
+20 measured underneath it:
+
+- A Kingdom city defends at **9.00** against a Horde city's **4.05**, because
+  defence is what multiplies and Walls are Kingdom-only.
+- So an orc takes a Kingdom city **25%** of the time and a footman takes a Horde
+  city **33%**, at every rung of the ladder.
+
+The Horde now has the material to fight with and still loses, so **the combat
+asymmetry is the whole of it**. That is where to go next, and it is now isolated
+rather than tangled up with an economy three sizes too small.
+
+### It made the turn limit worse, and that is now urgent
+
+**35 games in 36 reach turn 300**, against 29 before. Nearly every game is
+decided on points.
+
+This is the second time the same shape has appeared: the settler sweep in
+section 17 found that closing the gap between the sides produced more
+stalemates, and this does it again and harder. Two sides that are evenly matched
+and both solvent cannot finish each other.
+
+Section 4i has been the oldest open problem in this file for a long time. It is
+no longer possible to postpone it: every balance improvement makes it worse,
+because a fair fight between two healthy empires is exactly the fight nobody
+wins. Whatever is done about it has to make *finishing* easier rather than
+making the sides more equal, and the two goals genuinely pull against each other.

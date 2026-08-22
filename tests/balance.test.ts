@@ -55,6 +55,18 @@ function play(seed: number): Outcome {
 
   const owners = new Map<number, number>();
   let captures = 0;
+  // Counted as it happens, for the same reason captures are: `log()` keeps only
+  // the last 400 entries, and a game that runs to the turn limit pushes its
+  // early fighting straight out of the window. Read off the tail, a seed with
+  // thirty-seven fights reports none.
+  let combats = 0;
+  let readLog = 0;
+  const countCombat = () => {
+    for (let i = readLog; i < state.log.length; i++) {
+      if (state.log[i].kind === 'combat') combats++;
+    }
+    readLog = state.log.length;
+  };
   const sweep = () => {
     for (const c of state.cities) {
       const was = owners.get(c.id);
@@ -64,8 +76,13 @@ function play(seed: number): Outcome {
   };
   sweep();
   for (let i = 0; i < HALF_TURNS && state.winner === null; i++) {
+    const before = state.log.length;
+    // The window slid if the log was trimmed while the turn ran; start again
+    // from whatever is still there rather than from an index that has moved.
+    if (before < readLog) readLog = 0;
     runAiTurn(state, state.activePlayer);
     endPlayerTurn(state);
+    countCombat();
     sweep();
   }
   const per = (p: number) => playerUnits(state, p).map((u) => u.type);
@@ -73,7 +90,7 @@ function play(seed: number): Outcome {
     seed,
     turns: state.turn,
     winner: state.winner,
-    combats: state.log.filter((e) => e.kind === 'combat').length,
+    combats,
     captures,
     cities: [playerCities(state, 0).length, playerCities(state, 1).length],
     population: [

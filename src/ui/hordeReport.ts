@@ -75,7 +75,9 @@ function cityRow(state: GameState, city: City, capitalId: number | null): string
   const yields = cityYield(state, city);
   const item = city.producing;
   const eta =
-    item.kind === 'coin' || yields.shields <= 0
+    item.kind !== 'unit' && item.kind !== 'building'
+      ? null
+      : yields.shields <= 0
       ? null
       : Math.max(1, Math.ceil((productionCostIn(state, city, item) - city.shields) / yields.shields));
   const flags = cityFlags(state, city, capitalId);
