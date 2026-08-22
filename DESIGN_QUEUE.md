@@ -2095,3 +2095,75 @@ One observation kept as unexplained rather than as a result: on set B alone,
 Horde units rise from 32 to 42 and Kingdom units fall from 34 to 29 as caution
 rises. Monotonic, sizeable, and absent from set A. Recorded so that nobody
 including me builds a story on it without checking the other set first.
+
+## 27. Roads and terrain work
+
+Peons and peasants dig holes for a living and currently do nothing with the
+ground except stand on it. Roads, and whatever else the terrain modifiers bring,
+are the obvious thing for them to be for.
+
+### What the map can and cannot take today
+
+`state.terrain` is a flat array of terrain ids and `state.specials` a parallel
+0/1 array, and **nothing writes to either after worldgen** -- every reference in
+`sim/` and `ai/` reads. So the map is currently a constant, and the first piece
+of terrain work makes it a variable. That is the real change here, more than any
+particular improvement.
+
+A road is not a terrain, it is something *on* a terrain, so it wants **a third
+parallel array** rather than a new `TerrainId`. Replacing the terrain would lose
+what the tile was, and the tile's food, shields, defence and blend all still
+have to come from underneath.
+
+Consequences worth knowing before starting:
+
+- **It changes the save.** The map is currently reproducible from its seed,
+  which is why saves are small. Anything that edits tiles has to be stored
+  tile-by-tile, or as a diff against the generated map. The second is smaller
+  and is what the README already promises: "map stored as seed + diffs".
+- **It changes pathfinding.** `terrainMoveCost` is read in four places in
+  `movement.ts` and in the pathfinder. A road that costs less to enter has to be
+  consulted everywhere terrain currently is, and the AI's routing has to notice
+  roads or it will walk beside them.
+- **It gives the fog something new to hide.** Whether an enemy's roads are
+  visible on explored-but-unseen ground is a real question, and the answer
+  should match how cities are already treated.
+
+Worth doing in the order: the overlay array and the save format first, then
+movement cost, then trade, then anything that changes the tile's yield. The
+first two are the parts that are hard to change later.
+
+## 28. A separate settler unit
+
+The peon is both the worker and the settler, and section 27 gives it a second
+job it cannot do at the same time as the first. Splitting them is the obvious
+answer, and it is more entangled than it looks.
+
+`settler: true` is read in **eight places** outside the unit table -- the AI's
+garrison count, its expansion count, its production choice, its unit dispatch,
+the interface's Found City button, the city's own garrison check, and the
+minimum-city-size gate. Each of those means something slightly different by
+"settler":
+
+- the garrison counts want "cannot fight", which is really `attack === 0`
+- the expansion counts want "will become a city"
+- the size gate wants "costs the city something to send"
+
+Splitting the unit without splitting those meanings is how a worker ends up
+counting toward the expansion target, or a settler ends up garrisoning a city.
+**Give the flags the meanings the call sites actually want first**, then add the
+unit; the reverse order will produce a fortnight of small strange bugs.
+
+Also worth settling:
+
+- **What the peon keeps.** If it stops founding cities, the joke in its blurb --
+  "Digs holes. Occasionally a city happens." -- stops being true, and that joke
+  is the reason the unit is called a peon.
+- **What it costs.** A settler that costs more than the current 20 shields
+  changes expansion rates, which section 25 just finished measuring; expect to
+  re-measure `targetCities` afterwards, because the two numbers are coupled.
+- **Whether the AI needs both.** It currently builds settlers by one rule and
+  everything else by another. A worker has no rule at all yet, and an AI that
+  never builds one makes roads a player-only advantage -- which is the same trap
+  as section 18's escorts, where a rule the AI cannot follow lands entirely on
+  one side.
