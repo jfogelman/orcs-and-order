@@ -1574,9 +1574,13 @@ consistent worsening.
 
 Two different interventions, the same number. That is what makes the mechanism
 credible rather than a coincidence: **both brakes are denominated in city size,
-and Horde cities are about half the size of Kingdom ones** -- 22 to 32
-population against 52 to 56. A charge of one citizen is a bigger share of a
-small city; a threshold of three citizens takes a small city longer to reach.
+and Horde cities are smaller** -- measured directly in section 20, 4.5 to 5.5
+citizens against 6.4 to 6.5, so about a quarter to a third smaller. (An earlier
+draft here said "about half", read off total population, which is a city-count
+gap and not a size gap. A later correction called them "nearly identical", which
+was measured off one arm's aggregates and was further wrong. The direct figure
+is the one above.) A charge of one citizen is a bigger share of a small city; a
+threshold of three citizens takes a small city longer to reach.
 Either way the brake binds harder on whoever builds small, and that is the Horde
 by design.
 
@@ -1659,3 +1663,104 @@ Three things in the code this has to reckon with:
 human settler. It only makes sense in a game where both sides can be the same
 kind -- the multiple-factions idea in section 15 -- so it belongs there rather
 than here, if anywhere.
+
+## 20. Why the Horde loses: measured
+
+Eighteen seeds, twice, base game, both sides AI. Every city a player stops
+holding left by exactly one of two doors, so counting both says which.
+
+| | orc (A) | human (A) | orc (B) | human (B) |
+|---|---|---|---|---|
+| cities founded | 11.94 | 11.94 | 11.28 | 12.50 |
+| taken from enemy | 5.67 | 7.89 | 6.11 | 7.28 |
+| lost to capture | 7.89 | 5.67 | 7.28 | 6.11 |
+| avg city size | 4.54 | 6.43 | 5.51 | 6.47 |
+| **% turns unhappy** | **31.2** | 20.4 | **33.6** | 20.5 |
+| **% turns in disorder** | **30.9** | 20.2 | **33.3** | 20.3 |
+| % turns starving | 0.2 | 0.6 | 0.5 | 0.7 |
+| units alive | 26.22 | 57.89 | 32.22 | 46.61 |
+| advances | 21.83 | 22.50 | 22.17 | 23.11 |
+
+### Expansion was never the problem
+
+**Both sides found the same number of cities** -- 11.94 against 11.94, and 11.28
+against 12.50. The Horde is not slower to settle and never was. Every measurement
+in section 17 was aimed at a mechanism that does not exist, which is worth
+remembering the next time a number looks like it needs a brake.
+
+What differs is what happens afterwards. The Horde **loses more cities than it
+takes** and the Kingdom does the reverse, by the same margin, in both sets.
+
+### The root is disorder, and disorder is a trap
+
+The Horde spends **a third of all city-turns in disorder** against the Kingdom's
+fifth, consistently. Food is not involved at all -- both sides starve under 1% of
+the time.
+
+That matters more than the ratio suggests, because of what disorder does:
+
+```ts
+if (city.disorder) return { food: total.food, shields: 0, trade: 0 };
+```
+
+**A city in disorder produces no shields.** It therefore cannot build the very
+building that would end its disorder. The AI already tries -- `chooseProduction`
+reaches for a `contentBonus` building the moment a city riots -- and it can never
+finish one, because there is nothing to finish it with. Growth is capped at zero
+in the same breath, so the city cannot shrink its way out either. **The only
+escape is an empire-wide advance raising the limit for everybody.**
+
+That is a design defect rather than a balance knob, and it is not faction
+specific. It simply catches the Horde half again as often.
+
+### Everything else follows from it
+
+- **Half the army.** 26 units against 58, and 32 against 47. A third of your
+  cities producing nothing is most of that gap.
+- **Smaller cities**, 4.5--5.5 against 6.4--6.5, because disorder caps growth.
+- **Fewer advances than the trade would suggest**, since disorder zeroes trade
+  as well as shields.
+
+### Two structural asymmetries underneath
+
+Neither is a bug, but both point the same way and neither was deliberate as far
+as this file records.
+
+**A Kingdom city defends at more than twice a Horde one, for the same cost.**
+
+| | unit (20 shields) | atk / def | city building | fortified defence |
+|---|---|---|---|---|
+| Kingdom | footman | 2 / 3 | **Walls x2** (human only) | **9.00** |
+| Horde | orc | 3 / 2 | Broken Catapult x1.35 | **4.05** |
+
+Two things compound. The orc trades a point of defence for a point of attack at
+equal cost, and **defence multiplies while attack does not** -- fortify x1.5,
+terrain, and the city building all apply to defence, where attack gets only a
+siege bonus. Then Walls are Kingdom-only at x2 against the Horde's x1.35.
+
+The result inverts the flavour: an orc attacking a Kingdom city wins a round
+**25%** of the time, and a footman attacking a Horde city **33%**. The Kingdom is
+better at taking cities than the Horde is, at every rung of the ladder -- the
+same 25/33 holds for orc_x10 against footman_x10.
+
+**And the Horde pays roughly 1.8x the research for the same rung.**
+
+| | rungs to x10 | beakers |
+|---|---|---|
+| Horde | x3, x4, x6, x8, x10 | 550 |
+| Kingdom | x2, x3, x5, x10 | 301 |
+
+Its whole reachable tree is 2190 beakers against 1801.
+
+### What to do, in order
+
+1. **Fix the disorder trap.** A city that cannot act its way out of a state is a
+   dead end wherever it appears. Options: leave a floor of shields during
+   disorder so the calming building is reachable; let disorder decay on its own
+   after some turns; or let a city in disorder still finish something it had
+   already started. This helps both sides and the Horde more, which is exactly
+   the shape a fix should have.
+2. **Re-measure.** The two structural asymmetries may not need touching at all
+   once cities stop freezing solid. Changing three things at once is how the
+   last two sweeps ended up unreadable.
+3. **Only then** consider Walls, the orc's stat line, or the ladder cost.
