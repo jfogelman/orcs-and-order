@@ -1469,7 +1469,7 @@ who does not care is made to care. Two things follow from that:
 The map border added in section 14 is the other half of this: the border says
 which ground is yours to assign, and this says what to do with it.
 
-## 17. Measured: nothing yet
+## 17. The settler cost, measured
 
 Two changes landed recently that move the numbers and have not been measured:
 
@@ -1488,3 +1488,61 @@ The last of those is the one to measure first, and the interesting question is
 not whether it slows expansion -- it must -- but **whether it slows the AI more
 than the player**, since the AI expands by rule and the player expands by
 judgement. If it does, the see-saw in 4i gets worse rather than better.
+
+### What the sweep said
+
+Two arms over the same maps, `SETTLER.costsCitizen` off and on, eighteen seeds
+each, then the whole thing repeated on a fresh seed set. AI against AI, which is
+worth remembering: it cannot answer the question above about player versus AI,
+because there is no player in it.
+
+| | free | costs a citizen | free (fresh) | costs (fresh) |
+|---|---|---|---|---|
+| peak cities, both sides | 19.33 | 17.44 | 18.22 | 18.39 |
+| peak cities, Kingdom | 11.06 | 9.33 | 9.72 | 10.11 |
+| population, Horde | 23.83 | 29.89 | 32.00 | 27.78 |
+| reached the turn limit | 13/18 | 15/18 | 16/18 | 17/18 |
+| wins, Horde | 5 | 3 | 7 | 3 |
+
+**The headline from the first set did not survive the second.** It looked like
+the rule cut total expansion by a tenth and took almost all of it out of the
+Kingdom, narrowing the gap between the sides on every territorial measure. On
+fresh seeds total expansion did not fall at all (+1%), the Kingdom's peak went
+*up* rather than down, and the Horde's population fell instead of rising. Every
+part of that story reversed sign, so none of it is real.
+
+**What did replicate is the thing dismissed as noise the first time.** The Horde
+won less under the rule in both sets, 5 to 3 and then 7 to 3. Pooled over
+thirty-six seeds that is twelve wins down to six -- about 2.1 standard
+deviations, which is suggestive rather than settled, but it is the only
+direction that held across two independent sets.
+
+The likely mechanism is city size. Horde cities are much smaller than Kingdom
+ones -- 24 to 32 population against 54 to 58 -- so a flat one-citizen charge is
+a far larger share of an orc city, and a city of one or two is gated out of
+settlers entirely. A cost expressed in citizens is regressive against whoever
+builds small cities.
+
+**The turn limit got slightly worse in both sets**, 13 to 15 and 16 to 17, with
+games five to twelve turns longer. Small, but consistent, and pointing the wrong
+way for section 4i.
+
+### What to do about it
+
+The rule is still worth having on its own terms: a size-one city producing
+settlers forever was an exploit, and expansion being entirely free is not a
+thing anyone designed. But it is currently a tax on the side that was already
+losing, which is the opposite of what a balance change should do.
+
+Worth trying, in order of how little they disturb:
+
+- **Gate on size rather than charge a citizen** -- only cities of three or more
+  may build settlers. Same brake on early runaway expansion, no ongoing charge,
+  and it does not scale with how small your cities are.
+- **Charge the citizen but make the Horde's settler cheaper in shields**, which
+  is the compensation the flavour already suggests -- peons are expendable.
+- **Leave it and fix the Horde elsewhere.** Defensible, but it means carrying a
+  known regression while looking for the offset.
+
+Whichever, it wants the same two-set treatment. `SETTLER.costsCitizen` exists so
+the control arm can be run without editing the rules.
