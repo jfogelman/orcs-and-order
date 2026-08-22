@@ -339,6 +339,12 @@ button.small {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   max-width: min(1100px, 96vw);
   max-height: 92vh;
+  /* A column, so the content pane below can be told how much room it has.
+     Without this max-height clips the modal without the content ever
+     scrolling, and anything past the fold -- the Another Go button, on a short
+     window -- simply cannot be reached. */
+  display: flex;
+  flex-direction: column;
   display: flex;
   flex-direction: column;
 }
@@ -363,6 +369,9 @@ button.small {
 .modal-content {
   padding: 14px;
   overflow: auto;
+  /* Lets it shrink below its content and actually scroll, rather than pushing
+     the modal past the bottom of the screen. */
+  min-height: 0;
 }
 
 /* ----------------------------------------------------------- city screen */
@@ -1060,4 +1069,22 @@ button.small.rush[disabled] {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* The end-of-game picture. Full width of the modal, its own aspect kept. */
+.victory-art {
+  display: block;
+  width: 100%;
+  /* Capped, because at full aspect a 16:9 scene is 400px of a short window and
+     pushes the score and the Another Go button off the bottom -- measured at
+     744px on a 479px-tall viewport, which is unreachable. The scenes are wide
+     with their action across the middle, so cropping a little sky and ground
+     costs nothing. */
+  max-height: 42vh;
+  object-fit: cover;
+  object-position: center;
+  border-bottom: 2px solid var(--edge);
+  /* Pixel art at 1024 wide, shown smaller, so let the browser smooth it rather
+     than crunching the detail. */
+  image-rendering: auto;
 }

@@ -158,6 +158,15 @@ export type DamageKind = 'physical' | 'magic';
  * production on placating people is always available, so there is always a way
  * out.
  */
+/**
+ * The three ways a game can end.
+ *
+ * `conquest` is the last civilisation standing, `dominance` is holding most of
+ * the world long enough for it to count, and `points` is the clock running out
+ * -- which the game itself describes as satisfying nobody.
+ */
+export type VictoryKind = 'conquest' | 'dominance' | 'points';
+
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
   | { kind: 'building'; id: BuildingId }
@@ -291,5 +300,13 @@ export interface GameState {
   nextCityId: number;
   log: LogEntry[];
   winner: number | null;
+  /**
+   * How the game ended, so the ending can be shown rather than described.
+   *
+   * Optional because a save from before this existed knows it has a winner but
+   * not how; the interface falls back to the conquest picture, which is right
+   * for two of the three routes.
+   */
+  victory?: VictoryKind;
   settings: GameSettings;
 }
