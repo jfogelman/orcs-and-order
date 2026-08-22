@@ -1546,3 +1546,59 @@ Worth trying, in order of how little they disturb:
 
 Whichever, it wants the same two-set treatment. `SETTLER.costsCitizen` exists so
 the control arm can be run without editing the rules.
+
+## 18. The AI should escort its settlers
+
+It does not. `guardedAt` is the only escort-shaped code in `ai.ts`, and all it
+asks is whether something of ours *happens* to be adjacent at the moment of
+founding. Nothing arranges a guard, and nothing walks one alongside a settler.
+They travel alone, every time.
+
+That is worth fixing on its own, but it is also a **prerequisite** for something
+else. Settlers already have `attack: 0`; dropping `defense` to 0 as well, so they
+must be escorted the way later Civ games do it, is a tempting rule and currently
+a trap. A rule that punishes unescorted settlers punishes whoever cannot escort,
+and today that is the AI and only the AI -- a human escorts by habit. It would
+land entirely on one side, and the Horde is already the weaker one.
+
+Two more things to settle before that rule, separate from the AI:
+
+- **With `defense: 0` it is not a fight, it is an auto-delete.** `pAttack` is
+  `atk / (atk + def)`, so zero defence means every round lands, every time.
+- **There is no unit capture**, so a caught settler simply vanishes. Civ softens
+  the same rule by handing the settler over; here it would not.
+
+So: escort first, measure, and only then consider taking the last point of
+defence away.
+
+## 19. Resettlement: a captured city takes time to become yours
+
+Thematically an orc cannot simply move into a human town and carry on. There
+should be a period after capture where the old population is leaving and the new
+one arriving -- **longer for a larger city**, since there are more people to
+move -- during which the place can build **Coin and neutral structures only**,
+and **no units at all**.
+
+Three things in the code this has to reckon with:
+
+- **There is already a timer, and it is flat.** Capture sets
+  `ruinedUntil = turn + RUIN.turns`, a fixed fifteen turns whatever the size,
+  during which nothing grows. Resettlement is a better-motivated version of the
+  same idea, so it should almost certainly **replace** that timer rather than run
+  a second one beside it. Two overlapping penalties for the same event is how a
+  captured city becomes not worth capturing.
+- **"Neutral" is thinner than it sounds.** Only two buildings are `faction:
+  'both'` -- Barracks and Granary. So in practice the rule reads "Coin, or one of
+  two things", which may be the right amount of nothing to do, but is worth
+  knowing before it is called a choice.
+- **The buildings already standing there are the open question.** Capture
+  destroys a few at random and the rest change hands intact, so an orc currently
+  inherits a working Chapel of Mild Optimism. The theme says it should not work
+  for them. Options: it stops working during resettlement and then does, it stops
+  permanently, or it is destroyed on capture. The middle one is the most
+  interesting and the easiest to explain.
+
+**Settler capture stays out**, and for the same reason: an orc has no use for a
+human settler. It only makes sense in a game where both sides can be the same
+kind -- the multiple-factions idea in section 15 -- so it belongs there rather
+than here, if anywhere.
