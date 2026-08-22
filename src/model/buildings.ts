@@ -135,10 +135,18 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     sallyBonus: 1,
     // Deliberately far short of the x2 a wall gives. It is a large broken
-    // object in the way, not a fortification.
+    // object in the way, not a fortification, and the difference in character
+    // is carried by the sally bonus above rather than by this number: a wall
+    // does nothing but defend and falls to siege, where this survives siege
+    // and sends the garrison out swinging.
+    //
+    // Briefly raised to 2 on the strength of a comparison that turned out to
+    // describe a matchup which does not happen -- neither this nor a wall is
+    // ever actually built in a played-out game, so those numbers were theory.
+    // See section 24.
     defenseMult: 1.35,
     blurb:
-      "This would have been a marvellous ranged weapon if anybody here " +
+      'This would have been a marvellous ranged weapon if anybody here ' +
       'understood wheels. As it stands, everyone gets very worked up and ' +
       'runs out to fight instead, which turns out to work.',
   },

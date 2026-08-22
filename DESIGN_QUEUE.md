@@ -1934,3 +1934,62 @@ on turn 300, which is why eighteen seeds could never separate two settings.
 Games that end when they are decided, seventy per cent fewer late captures, are
 games whose results mean something. **Every future measurement in this file gets
 easier because of this one.**
+
+## 24. There is no combat asymmetry
+
+Section 20 claimed one, on the strength of this comparison:
+
+> a Kingdom city defends at 9.00 against a Horde city's 4.05, because Walls are
+> Kingdom-only at x2 against the Broken Catapult's x1.35
+
+**That table describes a matchup that does not happen.** Played out to the end,
+**Walls stand in 0 cities out of 14 and the Catapult in 1.** Neither building is
+ever really built, so the multipliers were theory. Raising the Catapult to x2 to
+match Walls produced results identical to the control on every metric, in both
+seed sets, to two decimal places -- which is what varying a number nothing reads
+looks like. It has been put back to 1.35.
+
+Without the buildings, which is the ordinary case, the mirrored stat lines
+already balance exactly: orc 3 against a fortified footman at 4.50 takes it 40%
+of the time, and footman 2 against a fortified orc at 3.00 takes it 40%.
+
+### And the fortify bonus is not it either
+
+The remaining theory was that defence is simply worth more than attack -- it is
+multiplied by fortifying, by terrain and by buildings, where attack is
+multiplied by nothing but a siege bonus -- so the faction that trades defence
+for attack pays in the weaker currency. Lowering the fortify bonus from 1.5 to
+1.25 to test it moved Horde wins from 9 in 36 to 10, with the two seed sets
+disagreeing on the direction. Noise.
+
+### What the numbers actually say
+
+| | founded | took | lost | own razed | final |
+|---|---|---|---|---|---|
+| Horde | **7.67** | 4.39 | 5.06 | 1.11 | 5.89 |
+| Kingdom | **11.28** | 5.06 | 4.39 | 3.39 | 8.56 |
+
+**Captures are balanced.** The Horde takes 4.39 and loses 5.06; the Kingdom takes
+5.06 and loses 4.39 -- the same numbers mirrored, which is what a fair fight
+looks like. The Kingdom actually loses *more* cities to razing.
+
+**The entire gap is founding**, 7.67 against 11.28, and it is there from the
+start: by turn 100 it is already 6.17 against 8.00. The Horde finishes below its
+expansion target of six while the Kingdom sits at the cap of eight.
+
+It is not the settler gate either. Turning it off narrows the founding gap to
+8.17 against 10.00 and Horde wins go *down*, from 4 to 2.
+
+### So the question changes
+
+The Horde does not lose fights and is not held back by a rule anyone has found.
+**It fails to expand as far as it is trying to.** Both AI personalities aim at
+six cities; one reaches eight and the other stops at six. Where the settlers go,
+or why they are not built, is the thing to measure next -- and it is a question
+about production and priorities rather than about combat.
+
+Three theories have now been wrong in a row here -- the economy (fixed, changed
+nothing), the buildings (never built), the fortify multiplier (noise). The
+common thread is that each was reasoned from a table rather than from what a
+played game contains. **Check that a mechanic occurs before explaining anything
+with it.**

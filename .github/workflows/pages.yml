@@ -40,6 +40,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # Tests before the build, because until now nothing here ran them: the
+      # deploy typechecked and bundled, so a green deploy said nothing at all
+      # about whether the game still worked. A broken test sat on main for
+      # several merges without anybody being told.
+      - run: npm test
       # `npm run build` typechecks before it bundles, so a type error stops
       # the deploy rather than shipping.
       - run: npm run build

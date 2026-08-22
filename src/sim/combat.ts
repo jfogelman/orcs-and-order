@@ -76,7 +76,19 @@ export function awardXp(state: GameState, unit: Unit, amount: number): boolean {
   }
   return promoted;
 }
-export const FORTIFY_BONUS = 1.5;
+/**
+ * What digging in is worth to a defender.
+ *
+ * Held in an object as well as a constant so a sweep can vary it. This is the
+ * lever that decides whether attack or defence is the better buy: defence is
+ * multiplied by this, by terrain, and by any city building, where attack is
+ * multiplied by nothing except a siege bonus. A faction that trades defence for
+ * attack -- which is the Horde, by design -- is paying for the weaker currency.
+ */
+export const FORTIFY_BONUS_REF = { value: 1.5 };
+
+/** The value itself, for anything that only needs to read it. */
+export const FORTIFY_BONUS = FORTIFY_BONUS_REF.value;
 /** Chance a survivor is promoted after winning a fight. */
 export const PROMOTION_CHANCE = 0.25;
 
@@ -307,7 +319,7 @@ export function defenseStrength(
   total *= rankBonus(defender);
   if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   total *= terrain.defense;
-  if (fortified) total *= FORTIFY_BONUS;
+  if (fortified) total *= FORTIFY_BONUS_REF.value;
   total *= wallsMult;
   if (berserk) total *= 0.75;
 

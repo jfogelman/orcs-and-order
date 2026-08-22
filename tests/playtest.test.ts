@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { unitType } from '../src/model/units';
 import type { City, GameState } from '../src/model/types';
 import { resupply, resupplyBlocked } from '../src/sim/combat';
-import { buildOptions, capitalOf, foundCity, productionCostIn } from '../src/sim/city';
+import { SETTLER, buildOptions, capitalOf, foundCity, productionCostIn } from '../src/sim/city';
 import { createGame, playerCities, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
@@ -197,11 +197,13 @@ describe('the capital', () => {
 });
 
 /**
- * A settler is people, not equipment: the ones who walk out are the ones who
- * were living there. Without this a city of one could pump settlers forever
- * without ever shrinking, which made expansion very nearly free.
+ * Sending settlers out is gated on how big the city is, rather than charged per
+ * settler. The charge was measured first and rejected: it braked expansion no
+ * more reliably than nothing at all, and cost the Horde about half its wins,
+ * because a cost denominated in citizens is regressive against whoever builds
+ * small cities. See DESIGN_QUEUE section 17.
  */
-describe('settlers cost a citizen', () => {
+describe('settlers need a city big enough to spare them', () => {
   function cityBuilding(size: number, id: string) {
     const state = createGame({ seed: 20260821, width: 40, height: 30 });
     const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
@@ -212,39 +214,40 @@ describe('settlers cost a citizen', () => {
     return { state, city: c };
   }
 
-  it('takes one off the city when a settler is finished', () => {
-    const { state, city } = cityBuilding(3, 'peon');
+  it('lets a city at the threshold send one, and keeps its citizens', () => {
+    const { state, city } = cityBuilding(SETTLER.minCitySize, 'peon');
+    const before = city.size;
     beginPlayerTurn(state, 0);
     endPlayerTurn(state);
-    expect(city.size).toBe(2);
+
+    // No per-settler charge: that was the version that hurt the small-city side.
+    expect(city.size).toBe(before);
+    expect(state.units.filter((u) => u.owner === 0 && u.type === 'peon').length).toBeGreaterThan(1);
   });
 
-  it('leaves the city alone for anything that is not a settler', () => {
-    const { state, city } = cityBuilding(3, 'goblin');
-    beginPlayerTurn(state, 0);
-    endPlayerTurn(state);
-    expect(city.size).toBe(3);
-  });
-
-  it('will not let a city of one send its last citizen away', () => {
-    const { state, city } = cityBuilding(1, 'peon');
+  it('holds the shields when the city is below the threshold', () => {
+    const { state, city } = cityBuilding(SETTLER.minCitySize - 1, 'peon');
     const shields = city.shields;
     beginPlayerTurn(state, 0);
     endPlayerTurn(state);
 
-    // Holds the shields rather than destroying the city, the same way it holds
-    // them when there is nowhere to put what it built.
-    expect(city.size).toBe(1);
+    expect(city.size).toBe(SETTLER.minCitySize - 1);
     expect(city.shields).toBeGreaterThanOrEqual(shields);
     expect(state.cities).toContain(city);
   });
 
-  it('does not offer a settler to a city that cannot afford one', () => {
+  it('does not offer a settler to a city too small for one', () => {
     const { state, city } = cityBuilding(1, 'goblin');
-    const offered = buildOptions(state, city).units.filter((u) => u.settler);
-    expect(offered).toHaveLength(0);
+    expect(buildOptions(state, city).units.some((u) => u.settler)).toBe(false);
 
-    city.size = 2;
+    city.size = SETTLER.minCitySize;
     expect(buildOptions(state, city).units.some((u) => u.settler)).toBe(true);
+  });
+
+  it('leaves anything that is not a settler alone', () => {
+    const { state, city } = cityBuilding(1, 'goblin');
+    beginPlayerTurn(state, 0);
+    endPlayerTurn(state);
+    expect(city.size).toBe(1);
   });
 });
