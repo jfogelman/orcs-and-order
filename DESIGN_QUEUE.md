@@ -2020,15 +2020,19 @@ sample size. Seven is taken because it levels the city counts rather than
 tipping them, and because it is the smaller move -- this file already records an
 overcorrection from going one step too far on the Kingdom's caution.
 
-### Also measured, and worth keeping
+### Also measured -- and then withdrawn
 
-Raising the Horde's `caution` from 0.25 towards the Kingdom's 0.48 **does** fix
-settler production -- 8.67 built to 11.08 -- because a reckless AI empties its
-own garrisons, and production step 1 rebuilds a defender before step 2 ever
-reaches a settler. But final cities did not move and wins did not move, because
-the binding constraint was the cap, not the supply. **Relieving a constraint
-that is not the binding one changes nothing**, which is worth remembering the
-next time a mechanism is confirmed but the outcome refuses to follow.
+The first pass here reported that raising the Horde's `caution` from 0.25
+towards the Kingdom's 0.48 **fixed settler production**, 8.67 built to 11.08,
+on the reasoning that a reckless AI empties its own garrisons and production
+step 1 rebuilds a defender before step 2 ever reaches a settler. Final cities
+and wins did not move, which was put down to the cap being the binding
+constraint rather than the supply.
+
+**That was one seed set, and it does not replicate.** Re-measured across two
+sets at the new cap -- see section 26 -- settler production rises with caution
+on one set and falls on the other. The mechanism was a plausible story fitted to
+a single sample.
 
 ### Five wrong theories, and what they had in common
 
@@ -2038,7 +2042,7 @@ next time a mechanism is confirmed but the outcome refuses to follow.
 | Walls and the Broken Catapult | the buildings are never built; the table described nothing |
 | the fortify multiplier | noise, the two seed sets disagreed on direction |
 | the settler brakes | measured twice, rejected twice |
-| the Horde's caution | mechanism confirmed, outcome unmoved |
+| the Horde's caution | inert; the "confirmed mechanism" did not replicate |
 
 Every one was reasoned from a table in the source. The answer came from counting
 what a played game actually contains -- settlers built against cities founded
@@ -2049,3 +2053,45 @@ minute run.
 symptom was "fewer cities"; four of the five theories were plausible stories
 about fewer cities. The question that worked was "what stops it founding the
 seventh", and that has exactly one answer.
+
+## 26. Caution re-tested at the new cap: inert
+
+Section 25 left caution as a mechanism that worked but was blocked by the
+expansion cap. With the cap moved from six to seven, it was worth asking again.
+Three levels, two seed sets, thirty games each level.
+
+| caution | set A wins | set B wins | combined |
+|---|---|---|---|
+| 0.25 (current) | 7/12 | 11/18 | 18/30 |
+| 0.35 | 6/12 | 11/18 | 17/30 |
+| 0.45 | 7/12 | 11/18 | 18/30 |
+
+**Flat.** Set B returns eleven wins at every level. Final cities barely move
+either -- 7.9 / 7.8 / 7.9 on one set, 7.7 / 8.3 / 7.7 on the other.
+
+**And the settler effect does not replicate.** Set A has settler production
+rising with caution, 11.42 to 13.83; set B has it falling, 11.06 to 9.67. The
+two sets point in opposite directions, which is what a null result looks like
+when it has been read off one sample and dressed as a mechanism.
+
+So `caution` stays at 0.25 and is not a lever. The Kingdom's copy of the number
+was measured properly and *is* sensitive; that does not make the Horde's copy
+sensitive, and assuming it did was the error.
+
+### The withdrawal is the point
+
+Section 25 reported this as "mechanism confirmed, outcome unmoved" and offered a
+tidy explanation for why the outcome refused to follow. The explanation was
+wrong because there was nothing to explain: the mechanism was noise on one seed
+set.
+
+That is a more dangerous failure than the five wrong theories before it, because
+those were contradicted by the numbers while this one was *supported* by them --
+until it was asked twice. **A mechanism confirmed on one seed set is a
+hypothesis, not a finding**, and the tell was there in plain sight: an effect
+large enough to matter that nonetheless moved no outcome at all.
+
+One observation kept as unexplained rather than as a result: on set B alone,
+Horde units rise from 32 to 42 and Kingdom units fall from 34 to 29 as caution
+rises. Monotonic, sizeable, and absent from set A. Recorded so that nobody
+including me builds a story on it without checking the other set first.
