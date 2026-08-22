@@ -929,3 +929,37 @@ sheet for a variant is named `<creature>-<variant> attack.<ext>`, matching both
 the idle sheets in `art_src/units` and the `axethrower-disarmed_attack.png` this
 pipeline has always written. That form is now accepted on input as well as
 produced on output.
+
+## The tie screen
+
+The points ending can come out level, and when it does the game currently hands
+the win to whoever sorts first -- the Horde, every time -- and announces they
+are "declared ahead on points", which is a lie. Measured over thirty-six games
+it never actually happened, the closest being four points apart, so this is
+about being correct rather than about being common. A human playing deliberately
+to the limit will hit it far sooner than two AIs did.
+
+**One picture, not two.** Conquest and points each get a scene per faction
+because one side is winning them. A draw is the one ending where **both sides
+have to be in the frame**, because the joke is that neither of them can claim
+it. Save as `art_src/victory/draw.<ext>`, same format as the others -- full
+scene, wide 16:9, no magenta, no text, no blank signage.
+
+> Two long tables pushed end to end under a grey sky, orcs seated down one side
+> and humans down the other, both sets of tally boards turned to face the middle
+> where a single small clerk stands between them holding two identical scrolls
+> at arm's length and looking at neither. Every figure is leaning in and none of
+> them is celebrating. An orc and a knight opposite each other have both begun
+> to point at the same number. Chunky pixel art, 90s fantasy strategy game
+> illustration, heavy outlines, flat overcast light with no sun anywhere, no
+> signs, no plaques, no banners, no boards, no blank panels, no text, no
+> lettering, wide 16:9 composition.
+
+Three things carry it: **the two identical scrolls**, the clerk refusing to look
+at either side, and the fact that nobody in the picture is happy. It should read
+as the moment before an argument rather than the end of one.
+
+Worth avoiding: any hint of a handshake or a truce. Neither side has agreed to
+anything. They have simply run out of turns while exactly level, which in a game
+whose own text calls the points ending unsatisfying is the least satisfying
+outcome available -- and therefore the right one to draw.

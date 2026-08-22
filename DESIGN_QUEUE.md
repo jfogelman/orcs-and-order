@@ -2167,3 +2167,48 @@ Also worth settling:
   never builds one makes roads a player-only advantage -- which is the same trap
   as section 18's escorts, where a rule the AI cannot follow lands entirely on
   one side.
+
+## 29. The points ending cannot express a tie
+
+`checkElimination` sorts the survivors by score and takes the first:
+
+```ts
+const ranked = [...survivors].sort((a, b) => playerScore(b) - playerScore(a));
+state.winner = ranked[0].id;
+```
+
+`Array.sort` is stable, so on an exact tie `ranked[0]` is **whoever comes first
+in player order** -- the Horde, always -- and the game then logs that they are
+"declared ahead on points". They are not. It is the one line in the game that
+can state something false.
+
+**Measured over thirty-six games: no exact tie occurred**, the closest being four
+points. Two of the three endings do not involve scores at all, and dominance now
+takes 78% of games, so points endings are only 7 in 36 to begin with. This is a
+correctness problem rather than a frequency one -- and a human playing
+deliberately to the limit will reach it far sooner than two AIs did.
+
+### Where a draw would have to live
+
+`winner: number | null` has no room for one, because **`null` already means
+"still playing"** and is read that way in twelve places. So a draw needs either
+
+- a separate `over` flag, with those twelve reads becoming `!isOver(state)`; or
+- `winner` widened to carry a draw, which changes every read rather than twelve.
+
+The first is the smaller change and the one to take. It also leaves `winner`
+meaning exactly what it says, which the second does not.
+
+### And what a draw should be
+
+Worth deciding rather than defaulting:
+
+- **A genuine draw**, ending with nobody winning. Fits the game's own opinion of
+  the points ending, which it already describes as satisfying nobody, and is
+  the funniest of the options.
+- **Broken on something secondary** -- cities held, or population -- which keeps
+  every game producing a winner at the cost of the joke.
+
+A tie screen is prompted in ART_PROMPTS. It is deliberately **one picture rather
+than one per faction**: conquest and points have a side that is winning them,
+and a draw is the only ending where both sides have to be in the frame.
