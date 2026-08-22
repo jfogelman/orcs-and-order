@@ -49,6 +49,14 @@ export interface Player {
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */
   visible: number[];
   alive: boolean;
+  /**
+   * Turn this player first held a commanding share of the map without
+   * interruption, or absent if they do not hold one now.
+   *
+   * Optional so old saves load unchanged. Cleared the moment the share slips,
+   * so it measures an unbroken run rather than a total.
+   */
+  dominantSince?: number;
 }
 
 // ---------------------------------------------------------------------- units

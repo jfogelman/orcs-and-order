@@ -237,6 +237,78 @@ export function playerScore(state: GameState, playerId: number): number {
 /** Grace period before losing your last city counts as losing the game. */
 const CAPITULATION_TURN = 15;
 
+/**
+ * Winning by being obviously in front, rather than by wiping anybody out.
+ *
+ * The game had exactly two endings: total elimination, and the clock. Section
+ * 4i measured that the first never happens -- the fewest cities either side
+ * ever holds averages 3.4 and 4.1, so nobody comes close to losing -- and every
+ * attempt since to make the war more decisive has either done nothing or made
+ * the sides more equal and therefore less decisive. Thirty-three games in
+ * thirty-six were being settled on points.
+ *
+ * So this converts "effectively decided" into "decided". It asks for a share
+ * held *without interruption*, because 4i also measured that late-game swings
+ * of three hundred points are routine -- a threshold met for one turn would
+ * fire on noise.
+ */
+export const DOMINANCE = {
+  /** Share of every city on the map. */
+  share: 0.6,
+  /** Consecutive turns it must be held. */
+  turns: 10,
+  /**
+   * Below this many cities in total, the share means nothing.
+   *
+   * Six was the first guess and was far too low: a side that founded four
+   * cities while the other founded two won outright, having never met them.
+   * The threshold has to describe a settled map rather than an early lead.
+   */
+  minCities: 12,
+  /**
+   * And not before this turn, whatever the share.
+   *
+   * A dominance win should mean the other side was beaten, not that they were
+   * slower to settle. Winning the opening is not winning.
+   */
+  notBefore: 120,
+};
+
+function checkDominance(state: GameState): void {
+  if (state.winner !== null) return;
+  const total = state.cities.length;
+  for (const p of state.players) {
+    if (!p.alive) {
+      delete p.dominantSince;
+      continue;
+    }
+    const share = total > 0 ? playerCities(state, p.id).length / total : 0;
+    if (
+      state.turn < DOMINANCE.notBefore ||
+      total < DOMINANCE.minCities ||
+      share < DOMINANCE.share
+    ) {
+      // Slipped, so the run starts again from nothing rather than resuming.
+      delete p.dominantSince;
+      continue;
+    }
+    if (p.dominantSince === undefined) {
+      p.dominantSince = state.turn;
+      continue;
+    }
+    if (state.turn - p.dominantSince >= DOMINANCE.turns) {
+      state.winner = p.id;
+      log(
+        state,
+        `${p.name} has held most of the world for ${DOMINANCE.turns} turns together. ` +
+          'The rest is shouting.',
+        'good',
+      );
+      return;
+    }
+  }
+}
+
 function checkElimination(state: GameState): void {
   for (const p of state.players) {
     if (!p.alive) continue;
@@ -260,6 +332,8 @@ function checkElimination(state: GameState): void {
     log(state, `${survivors[0].name} stands alone. That is the whole of it.`, 'good');
     return;
   }
+
+  checkDominance(state);
 
   // Nobody has managed it by the deadline: whoever built most, wins.
   if (state.winner === null && state.turn > state.settings.maxTurns) {
