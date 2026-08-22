@@ -298,6 +298,7 @@ function checkDominance(state: GameState): void {
     }
     if (state.turn - p.dominantSince >= DOMINANCE.turns) {
       state.winner = p.id;
+      state.victory = 'dominance';
       log(
         state,
         `${p.name} has held most of the world for ${DOMINANCE.turns} turns together. ` +
@@ -329,6 +330,7 @@ function checkElimination(state: GameState): void {
   const survivors = state.players.filter((p) => p.alive);
   if (survivors.length === 1 && state.winner === null) {
     state.winner = survivors[0].id;
+    state.victory = 'conquest';
     log(state, `${survivors[0].name} stands alone. That is the whole of it.`, 'good');
     return;
   }
@@ -342,6 +344,7 @@ function checkElimination(state: GameState): void {
     );
     if (ranked.length > 0) {
       state.winner = ranked[0].id;
+      state.victory = 'points';
       log(
         state,
         `Turn ${state.settings.maxTurns} passes. ${ranked[0].name} is declared ahead on points, which nobody finds satisfying.`,

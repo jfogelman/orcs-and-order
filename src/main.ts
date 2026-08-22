@@ -8,7 +8,7 @@ import { FACTIONS } from './model/factions';
 import { TERRAIN } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
-import type { City, GameState, Unit } from './model/types';
+import type { City, GameState, Unit, Player } from './model/types';
 import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
 import { EffectLayer } from './render/effects';
@@ -552,6 +552,44 @@ class App {
     openTechPanel(this.state, player, () => this.refreshHud());
   }
 
+  /**
+   * The picture for how this game ended, from the winner's point of view.
+   *
+   * Conquest and dominance share a scene: both are "you beat them", and the
+   * difference between wiping somebody out and merely holding most of the
+   * world is not one a picture can carry. Points has its own, because losing
+   * patience is a different ending from winning.
+   *
+   * A save from before the ending was recorded falls back to conquest, which
+   * is right for two routes out of three.
+   */
+  private victoryArt(winner: Player): string {
+    const kind = this.state.victory === 'points' ? 'points' : 'conquest';
+    const side = winner.faction === 'orc' ? 'orc' : 'human';
+    const base = import.meta.env.BASE_URL;
+    const root = base.endsWith('/') ? base : `${base}/`;
+    return `${root}victory/${kind}-${side}.jpg`;
+  }
+
+  /** One line about how it ended, rather than merely that it did. */
+  private victoryLine(winner: Player, you: boolean): string {
+    if (this.state.victory === 'points') {
+      return you
+        ? 'Turn ' + this.state.settings.maxTurns +
+          ' arrives and somebody totals the columns. It is you. Nobody cheers.'
+        : 'The clock ran out and the sums were done by people who were not there.';
+    }
+    if (this.state.victory === 'dominance') {
+      return you
+        ? 'Most of the world is yours and has stayed that way long enough that ' +
+          'the rest has stopped arguing about it.'
+        : `${escapeHtml(winner.name)} holds most of the world, and holding it is the whole argument.`;
+    }
+    return you
+      ? 'History will record this as inevitable. History was not watching turns 4 through 30.'
+      : 'The survivors have agreed never to discuss what happened here.';
+  }
+
   private showVictory(): void {
     const winner = this.state.players[this.state.winner!];
     const you = winner.id === this.viewerId;
@@ -575,16 +613,13 @@ class App {
 
     openModal({
       title: you ? 'You have won' : 'You have lost',
-      width: 'min(600px, 94vw)',
+      width: 'min(760px, 96vw)',
       body: `
+        <img class="victory-art" src="${this.victoryArt(winner)}" alt="" />
         <div class="panel-body">
           <p style="font-size:16px">${escapeHtml(winner.name)} comes out on top after ${this.state.turn} turns.</p>
           ${scores}
-          <p class="flavor">${
-            you
-              ? 'History will record this as inevitable. History was not watching turns 4 through 30.'
-              : 'The survivors have agreed never to discuss what happened here.'
-          }</p>
+          <p class="flavor">${this.victoryLine(winner, you)}</p>
         </div>
         <div class="button-row" style="justify-content:flex-end">
           <button class="primary" id="btn-again">Another Go</button>
