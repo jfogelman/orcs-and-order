@@ -1,6 +1,7 @@
 import { BUILDINGS } from '../model/buildings';
 import type { AutoBuild, City, GameState, ProductionItem, Unit } from '../model/types';
 import {
+  CALM_BONUS,
   autoBuildOf,
   garrisonOf,
   buildOptions,
@@ -93,7 +94,8 @@ function citizenFaces(state: GameState, city: City, limit: number): string {
 
 function turnsLeft(city: City, perTurn: number): number | null {
   const cost = productionCost(city.producing);
-  if (city.producing.kind === 'coin') return null;
+  // None of the standing choices finishes, so none of them has a countdown.
+  if (city.producing.kind !== 'unit' && city.producing.kind !== 'building') return null;
   if (perTurn <= 0) return null;
   return Math.max(1, Math.ceil((cost - city.shields) / perTurn));
 }
@@ -143,7 +145,8 @@ export function openCityPanel(
         'id' in city.producing &&
         'id' in item &&
         city.producing.id === item.id) ||
-      (city.producing.kind === 'coin' && item.kind === 'coin');
+      // The standing choices carry no id, so matching on kind is the whole of it.
+      (city.producing.kind === item.kind && !('id' in item));
     const turns = netShields > 0 ? Math.max(1, Math.ceil((cost - city.shields) / netShields)) : null;
     return `
       <button class="build-option${active ? ' active' : ''}"
@@ -277,6 +280,13 @@ export function openCityPanel(
                   .join('')
           }
           ${optionRow({ kind: 'coin' }, 'Coin', 0, 'Turn production straight into gold.')}
+          ${optionRow({ kind: 'beakers' }, 'Study', 0, 'Turn production straight into research.')}
+          ${optionRow(
+            { kind: 'calm' },
+            'Placating',
+            0,
+            `Spend everything on keeping people calm. Worth ${CALM_BONUS} content citizens, and the one thing a rioting city can always get on with.`,
+          )}
         </div>
       </div>
     </div>`;
@@ -324,7 +334,9 @@ export function openCityPanel(
           const kind = btn.dataset.kind as ProductionItem['kind'];
           const id = btn.dataset.id ?? '';
           // Switching build targets keeps accumulated shields, Civ2 style.
-          city.producing = kind === 'coin' ? { kind: 'coin' } : ({ kind, id } as ProductionItem);
+          city.producing = id
+            ? ({ kind, id } as ProductionItem)
+            : ({ kind } as ProductionItem);
           onChange();
           openCityPanel(state, city, onChange);
         });

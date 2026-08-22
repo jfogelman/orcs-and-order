@@ -294,6 +294,11 @@ function chooseProduction(
   if (city.size >= contentLimit(state, city) - 1) {
     const calming = options.buildings.find((b) => b.contentBonus);
     if (calming) return { kind: 'building', id: calming.id };
+    // Only when it is actually rioting, and only when there is nothing left to
+    // build that would help. Placating costs the city its whole production,
+    // which is no loss at all while it is producing nothing anyway -- but a
+    // city merely approaching its limit is still working, and should carry on.
+    if (city.disorder) return { kind: 'calm' };
   }
 
   // 3b. If the enemy is turtling behind walls, build something that ignores
