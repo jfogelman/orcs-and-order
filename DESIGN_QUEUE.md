@@ -1546,3 +1546,116 @@ Worth trying, in order of how little they disturb:
 
 Whichever, it wants the same two-set treatment. `SETTLER.costsCitizen` exists so
 the control arm can be run without editing the rules.
+
+### The size gate, measured: same result, better brake
+
+Option one built and swept the same way, two seed sets, control against
+`minCitySize: 3`.
+
+| | set A control | set A gated | set B control | set B gated |
+|---|---|---|---|---|
+| peak cities, both | 19.33 | 18.17 | 18.22 | 17.78 |
+| population, Horde | 23.83 | 30.67 | 32.00 | 21.67 |
+| reached the turn limit | 13/18 | 14/18 | 16/18 | 14/18 |
+| wins, Horde | 5 | 4 | 7 | 2 |
+
+**As a brake it is the better of the two.** Expansion fell in both sets this time
+-- 6% and 2.4% -- where the citizen charge fell 10% and then rose 1%. And it does
+not drag on the turn limit: +1 then −2, no direction, against the charge's
+consistent worsening.
+
+**But it costs the Horde exactly as much.** Pooled over thirty-six seeds per arm:
+
+| arm | Horde wins |
+|---|---|
+| no brake | 12 / 36 (33%) |
+| citizen charge | 6 / 36 (17%) |
+| size-3 gate | 6 / 36 (17%) |
+
+Two different interventions, the same number. That is what makes the mechanism
+credible rather than a coincidence: **both brakes are denominated in city size,
+and Horde cities are about half the size of Kingdom ones** -- 22 to 32
+population against 52 to 56. A charge of one citizen is a bigger share of a
+small city; a threshold of three citizens takes a small city longer to reach.
+Either way the brake binds harder on whoever builds small, and that is the Horde
+by design.
+
+### The finding that matters more than either
+
+The control arm is **12 wins in 36 for the Horde**, about two standard
+deviations below an even split. The Horde was already losing two games in three
+*before any of this was added*. Both attempts then took it to one in six.
+
+So expansion is probably the wrong thing to be tuning. Nothing here has found a
+brake that does not land on the weaker side, and the weaker side is weak for
+reasons this file has not identified yet. Worth attacking that directly:
+
+- **Where does the Horde actually lose?** Both arms have it peaking at a similar
+  city count to the Kingdom (8 against 9--11) but finishing with fewer and with
+  half the population. It is not failing to expand -- it is failing to *hold* and
+  failing to *grow*. That points at content limits, food, or losing cities back,
+  not at settlers.
+- **A brake denominated in something other than city size**, if one is still
+  wanted. Cost scaling with the number of cities already held would tax the side
+  that is running away rather than the side with small cities, which is the
+  opposite of both attempts here.
+
+**Set to `minCitySize: 2`**, which closes the degenerate case a
+size-one city producing settlers forever without being much of a brake at all,
+and leave the balance question to the growth work above.
+
+## 18. The AI should escort its settlers
+
+It does not. `guardedAt` is the only escort-shaped code in `ai.ts`, and all it
+asks is whether something of ours *happens* to be adjacent at the moment of
+founding. Nothing arranges a guard, and nothing walks one alongside a settler.
+They travel alone, every time.
+
+That is worth fixing on its own, but it is also a **prerequisite** for something
+else. Settlers already have `attack: 0`; dropping `defense` to 0 as well, so they
+must be escorted the way later Civ games do it, is a tempting rule and currently
+a trap. A rule that punishes unescorted settlers punishes whoever cannot escort,
+and today that is the AI and only the AI -- a human escorts by habit. It would
+land entirely on one side, and the Horde is already the weaker one.
+
+Two more things to settle before that rule, separate from the AI:
+
+- **With `defense: 0` it is not a fight, it is an auto-delete.** `pAttack` is
+  `atk / (atk + def)`, so zero defence means every round lands, every time.
+- **There is no unit capture**, so a caught settler simply vanishes. Civ softens
+  the same rule by handing the settler over; here it would not.
+
+So: escort first, measure, and only then consider taking the last point of
+defence away.
+
+## 19. Resettlement: a captured city takes time to become yours
+
+Thematically an orc cannot simply move into a human town and carry on. There
+should be a period after capture where the old population is leaving and the new
+one arriving -- **longer for a larger city**, since there are more people to
+move -- during which the place can build **Coin and neutral structures only**,
+and **no units at all**.
+
+Three things in the code this has to reckon with:
+
+- **There is already a timer, and it is flat.** Capture sets
+  `ruinedUntil = turn + RUIN.turns`, a fixed fifteen turns whatever the size,
+  during which nothing grows. Resettlement is a better-motivated version of the
+  same idea, so it should almost certainly **replace** that timer rather than run
+  a second one beside it. Two overlapping penalties for the same event is how a
+  captured city becomes not worth capturing.
+- **"Neutral" is thinner than it sounds.** Only two buildings are `faction:
+  'both'` -- Barracks and Granary. So in practice the rule reads "Coin, or one of
+  two things", which may be the right amount of nothing to do, but is worth
+  knowing before it is called a choice.
+- **The buildings already standing there are the open question.** Capture
+  destroys a few at random and the rest change hands intact, so an orc currently
+  inherits a working Chapel of Mild Optimism. The theme says it should not work
+  for them. Options: it stops working during resettlement and then does, it stops
+  permanently, or it is destroyed on capture. The middle one is the most
+  interesting and the easiest to explain.
+
+**Settler capture stays out**, and for the same reason: an orc has no use for a
+human settler. It only makes sense in a game where both sides can be the same
+kind -- the multiple-factions idea in section 15 -- so it belongs there rather
+than here, if anywhere.

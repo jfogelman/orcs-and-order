@@ -215,14 +215,32 @@ export function militiaStrength(city: City): number {
  * it without editing this file; 0 restores the old behaviour exactly.
  */
 /**
- * Whether producing a settler takes a citizen with it.
+ * What it takes to send settlers out.
  *
- * A mutable object rather than a bare const so a sweep can run the arm with it
- * off, in the same style as MILITIA and SUPPLY below. Expansion is the dominant
- * term in every measurement in DESIGN_QUEUE, so this is the one switch worth
- * being able to turn off without editing the rules.
+ * A mutable object rather than bare consts so a sweep can run a control arm
+ * without editing the rules, in the same style as MILITIA and SUPPLY below.
+ * Expansion is the dominant term in every measurement in DESIGN_QUEUE, so these
+ * are the switches most worth being able to turn off.
+ *
+ * `costsCitizen` was the first attempt and is off after measuring: it braked
+ * expansion no more reliably than nothing at all, and cost the Horde about half
+ * its wins across two seed sets. A charge denominated in citizens is regressive
+ * against whoever builds small cities, and Horde cities are roughly half the
+ * size of Kingdom ones. See section 17.
+ *
+ * `minCitySize` is the replacement, and is set to the smallest value that does
+ * the job. Three was measured and brakes expansion properly -- more reliably
+ * than the charge ever did -- but it cost the Horde exactly as many wins,
+ * because a threshold in citizens takes a small city longer to reach and Horde
+ * cities are half the size of Kingdom ones. Both attempts were denominated in
+ * city size, and both landed on the side that builds small.
+ *
+ * So two: enough to stop a size-one city producing settlers forever, which was
+ * the actual defect, and not enough to be a balance lever. The Horde was
+ * already losing two games in three before any of this existed, and that is the
+ * problem worth solving instead. See section 17.
  */
-export const SETTLER = { costsCitizen: true };
+export const SETTLER = { minCitySize: 2, costsCitizen: false };
 
 export const MILITIA = { perCitizen: 0.3 };
 
@@ -550,8 +568,10 @@ export function buildOptions(
   // A city of one cannot send anybody away without ceasing to exist, so it is
   // not offered the choice rather than being allowed to queue something it can
   // never finish.
+  // A city below the threshold is not offered a settler at all, rather than
+  // allowed to queue one it can never finish.
   const units =
-    !SETTLER.costsCitizen || city.size > 1 ? allUnits : allUnits.filter((u) => !u.settler);
+    city.size >= SETTLER.minCitySize ? allUnits : allUnits.filter((u) => !u.settler);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
     // A second tier needs its first standing here. Without this the cheap one
@@ -665,8 +685,11 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
         // ones who were living here. A city of one has nobody to send without
         // ceasing to be a city, so it holds the shields until it has grown --
         // the same way it holds them when there is nowhere to stand.
-        const takesCitizen = SETTLER.costsCitizen && unitType(item.id).settler;
-        if (takesCitizen && city.size <= 1) {
+        const isSettler = unitType(item.id).settler;
+        const takesCitizen = SETTLER.costsCitizen && isSettler;
+        // Too small to send anybody out. Holds the shields rather than
+        // shrinking below the point where it stops being a city.
+        if (isSettler && city.size < SETTLER.minCitySize) {
           events.blocked = true;
           events.tooSmall = true;
         } else if (!spot) {
