@@ -259,8 +259,21 @@ describe('the Broken Catapult', () => {
     const plain = defenseStrength(bare.state, bare.garrison).total;
     const behindCatapult = defenseStrength(armed.state, armed.garrison).total;
     expect(behindCatapult).toBeCloseTo(plain * BUILDINGS.catapult.defenseMult!);
+
     // The point of the thing is offence; the defence is a consolation.
     expect(BUILDINGS.catapult.defenseMult!).toBeLessThan(BUILDINGS.walls.defenseMult!);
+  });
+
+  it('is still nothing like a wall, where it counts', () => {
+    // The character of the two is carried by what they do that the other does
+    // not, rather than by one simply being a worse version of the other:
+    // a wall falls to siege and this does not, and this sharpens a sally while
+    // a wall does nothing for anyone who comes outside. Both are pinned by
+    // their own tests below.
+    expect(BUILDINGS.walls.negatedBySiege).toBe(true);
+    expect(BUILDINGS.catapult.negatedBySiege).toBeUndefined();
+    expect(BUILDINGS.catapult.sallyBonus).toBeGreaterThan(0);
+    expect(BUILDINGS.walls.sallyBonus).toBeUndefined();
   });
 
   it('keeps its defence against siege, where a wall would not', () => {
