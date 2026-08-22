@@ -12,7 +12,7 @@ import {
 } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { tryStep } from '../src/sim/movement';
-import { DOMINANCE, beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
+import { DOMINANCE, beginPlayerTurn, endPlayerTurn, isOver, playerScore } from '../src/sim/turn';
 
 /**
  * Disorder used to be a trap rather than a setback.
@@ -243,5 +243,65 @@ describe('a dominance victory', () => {
     const state = board(4, 1, DOMINANCE.notBefore + 1);
     run(state, DOMINANCE.turns * 2 + 4);
     expect(state.winner).toBeNull();
+  });
+});
+
+/**
+ * Level on points is a draw, and says so.
+ *
+ * Sorting the survivors by score is stable, so taking the first of a tie handed
+ * the game to whoever came first in player order -- the Horde, every time --
+ * and then logged that they were "ahead on points". It was the one line in the
+ * game that could state something false. Measured over thirty-six games it
+ * never fired, the closest being four points apart, so this is about being
+ * correct rather than about being common.
+ */
+describe('a game that ends exactly level', () => {
+  function atTheBell(orcCities: number, humanCities: number): GameState {
+    const state = createGame({ seed: 20260822, width: 40, height: 30 });
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.winner = null;
+    delete state.victory;
+    let id = 1;
+    const add = (owner: number, size: number) => {
+      state.cities.push({
+        id: id++, owner, name: `C${id}`, x: 2 + id * 2, y: 3 + owner * 6, size,
+        food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+        workedTiles: [], disorder: false, foundedTurn: 1, foundedBy: owner,
+      });
+    };
+    for (let i = 0; i < orcCities; i++) add(0, 3);
+    for (let i = 0; i < humanCities; i++) add(1, 3);
+    state.turn = state.settings.maxTurns + 1;
+    return state;
+  }
+
+  it('is a draw, with nobody winning', () => {
+    const state = atTheBell(3, 3);
+    expect(playerScore(state, 0)).toBe(playerScore(state, 1));
+
+    endPlayerTurn(state);
+
+    expect(state.victory).toBe('draw');
+    expect(state.winner).toBeNull();
+  });
+
+  it('is over, even though there is no winner', () => {
+    const state = atTheBell(3, 3);
+    endPlayerTurn(state);
+    // The reason isOver exists: a dozen places read `winner === null` as
+    // "still playing", which a drawn game is not.
+    expect(isOver(state)).toBe(true);
+  });
+
+  it('still declares a winner when the totals differ', () => {
+    const state = atTheBell(4, 3);
+    expect(playerScore(state, 0)).toBeGreaterThan(playerScore(state, 1));
+
+    endPlayerTurn(state);
+
+    expect(state.victory).toBe('points');
+    expect(state.winner).toBe(0);
   });
 });

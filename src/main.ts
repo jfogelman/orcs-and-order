@@ -29,7 +29,7 @@ import {
   tryStep,
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
-import { beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
+import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import { resupply, resupplyBlocked } from './sim/combat';
 import { openHordeReport } from './ui/hordeReport';
@@ -302,7 +302,7 @@ class App {
 
   private actOn(x: number, y: number): void {
     const unit = this.selected;
-    if (!unit || unit.owner !== this.viewerId || this.state.winner !== null) return;
+    if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
     if (unit.x === x && unit.y === y) return;
 
     // Note both types up front: either combatant may not survive the call.
@@ -455,7 +455,7 @@ class App {
    * looking at the unit.
    */
   private endTurn(): void {
-    if (this.state.winner !== null) return;
+    if (isOver(this.state)) return;
     const waiting = idleUnits(this.state, this.viewerId);
     if (waiting.length > 0 && !this.endTurnArmed) {
       this.selectNextIdle();
@@ -469,7 +469,7 @@ class App {
     // Play out every AI in sequence until control returns here.
     let guard = 0;
     while (
-      this.state.winner === null &&
+      !isOver(this.state) &&
       this.state.players[this.state.activePlayer].controller === 'ai' &&
       guard++ < 64
     ) {
@@ -482,7 +482,8 @@ class App {
     this.selectNextIdle();
     this.refreshHud();
     this.playLogCues();
-    if (this.state.winner !== null) {
+    // A drawn game is over too, and has an ending to show.
+    if (isOver(this.state)) {
       this.showVictory();
       return;
     }
@@ -510,7 +511,7 @@ class App {
    * nothing else is open.
    */
   private promptPerkIfOwed(): void {
-    if (isModalOpen() || this.state.winner !== null) return;
+    if (isModalOpen() || isOver(this.state)) return;
     const unit = playerUnits(this.state, this.viewerId).find((u) => owedPerks(u) > 0);
     if (!unit) return;
     const options = perkChoices(unit);
@@ -537,7 +538,7 @@ class App {
    * the panel this opens.
    */
   private promptBuildIfIdle(): void {
-    if (isModalOpen() || this.state.winner !== null) return;
+    if (isModalOpen() || isOver(this.state)) return;
     const city = playerCities(this.state, this.viewerId).find(
       (c) => c.size > 0 && c.producing.kind === 'coin' && autoBuildOf(c) === 'ask',
     );
@@ -547,7 +548,7 @@ class App {
 
   private promptResearchIfIdle(): void {
     const player = this.state.players[this.viewerId];
-    if (player.researching || isModalOpen() || this.state.winner !== null) return;
+    if (player.researching || isModalOpen() || isOver(this.state)) return;
     if (researchableTechs(player).length === 0) return;
     openTechPanel(this.state, player, () => this.refreshHud());
   }
@@ -563,16 +564,24 @@ class App {
    * A save from before the ending was recorded falls back to conquest, which
    * is right for two routes out of three.
    */
-  private victoryArt(winner: Player): string {
-    const kind = this.state.victory === 'points' ? 'points' : 'conquest';
-    const side = winner.faction === 'orc' ? 'orc' : 'human';
+  private victoryArt(winner: Player | null): string {
     const base = import.meta.env.BASE_URL;
     const root = base.endsWith('/') ? base : `${base}/`;
+    // A draw has no side, so it has one picture with both of them in it.
+    if (!winner) return `${root}victory/draw.jpg`;
+    const kind = this.state.victory === 'points' ? 'points' : 'conquest';
+    const side = winner.faction === 'orc' ? 'orc' : 'human';
     return `${root}victory/${kind}-${side}.jpg`;
   }
 
   /** One line about how it ended, rather than merely that it did. */
-  private victoryLine(winner: Player, you: boolean): string {
+  private victoryLine(winner: Player | null, you: boolean): string {
+    if (!winner) {
+      return (
+        'Everything was counted twice and came out the same both times. ' +
+        'Both sides have declared the result a technicality and gone home.'
+      );
+    }
     if (this.state.victory === 'points') {
       return you
         ? 'Turn ' + this.state.settings.maxTurns +
@@ -591,8 +600,9 @@ class App {
   }
 
   private showVictory(): void {
-    const winner = this.state.players[this.state.winner!];
-    const you = winner.id === this.viewerId;
+    // Null on a draw, which is the whole point of it: nobody won.
+    const winner = this.state.winner === null ? null : this.state.players[this.state.winner];
+    const you = winner !== null && winner.id === this.viewerId;
     audio.playMusic('victory');
     // Show the breakdown, not just a total: a player who lost on points
     // deserves to see which column beat them.
@@ -612,12 +622,18 @@ class App {
       .join('');
 
     openModal({
-      title: you ? 'You have won' : 'You have lost',
+      title: !winner ? 'Nobody has won' : you ? 'You have won' : 'You have lost',
       width: 'min(760px, 96vw)',
       body: `
         <img class="victory-art" src="${this.victoryArt(winner)}" alt="" />
         <div class="panel-body">
-          <p style="font-size:16px">${escapeHtml(winner.name)} comes out on top after ${this.state.turn} turns.</p>
+          <p style="font-size:16px">${
+            winner
+              ? `${escapeHtml(winner.name)} comes out on top after ${this.state.turn} ` +
+                `${this.state.turn === 1 ? 'turn' : 'turns'}.`
+              : `After ${this.state.turn} ${this.state.turn === 1 ? 'turn' : 'turns'} ` +
+                'the two sides are exactly level.'
+          }</p>
           ${scores}
           <p class="flavor">${this.victoryLine(winner, you)}</p>
         </div>
@@ -625,6 +641,11 @@ class App {
           <button class="primary" id="btn-again">Another Go</button>
         </div>`,
       onMount: (root, close) => {
+        // Art that has not been drawn yet leaves a broken-image icon in the
+        // middle of the ending, which is worse than no picture. The draw
+        // scene is prompted but not yet made.
+        const art = root.querySelector<HTMLImageElement>('.victory-art');
+        art?.addEventListener('error', () => art.remove());
         root.querySelector('#btn-again')?.addEventListener('click', () => {
           close();
           this.openNewGame();
@@ -784,7 +805,7 @@ class App {
    */
   private updateMusic(): void {
     // The victory theme outranks everything.
-    if (this.state.winner !== null) return;
+    if (isOver(this.state)) return;
     if (this.enemyInSight()) {
       this.calmAgainOnTurn = this.state.turn + BATTLE_LINGER_TURNS;
     }
