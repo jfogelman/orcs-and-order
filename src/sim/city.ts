@@ -214,6 +214,16 @@ export function militiaStrength(city: City): number {
  * Held in an object rather than as a bare constant so a measurement can sweep
  * it without editing this file; 0 restores the old behaviour exactly.
  */
+/**
+ * Whether producing a settler takes a citizen with it.
+ *
+ * A mutable object rather than a bare const so a sweep can run the arm with it
+ * off, in the same style as MILITIA and SUPPLY below. Expansion is the dominant
+ * term in every measurement in DESIGN_QUEUE, so this is the one switch worth
+ * being able to turn off without editing the rules.
+ */
+export const SETTLER = { costsCitizen: true };
+
 export const MILITIA = { perCitizen: 0.3 };
 
 /**
@@ -540,7 +550,8 @@ export function buildOptions(
   // A city of one cannot send anybody away without ceasing to exist, so it is
   // not offered the choice rather than being allowed to queue something it can
   // never finish.
-  const units = city.size > 1 ? allUnits : allUnits.filter((u) => !u.settler);
+  const units =
+    !SETTLER.costsCitizen || city.size > 1 ? allUnits : allUnits.filter((u) => !u.settler);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
     // A second tier needs its first standing here. Without this the cheap one
@@ -654,7 +665,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
         // ones who were living here. A city of one has nobody to send without
         // ceasing to be a city, so it holds the shields until it has grown --
         // the same way it holds them when there is nowhere to stand.
-        const takesCitizen = unitType(item.id).settler;
+        const takesCitizen = SETTLER.costsCitizen && unitType(item.id).settler;
         if (takesCitizen && city.size <= 1) {
           events.blocked = true;
           events.tooSmall = true;
