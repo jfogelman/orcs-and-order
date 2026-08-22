@@ -169,6 +169,11 @@ describe('a city sacked to nothing', () => {
     const state = board();
     town(state, 3);
     for (let round = 0; round < 3; round++) {
+      // A city still clearing the rubble cannot change hands again, so the
+      // visits have to be spread out. That is the rule from section 4i doing
+      // its job -- what is being tested here is that three sackings erase the
+      // town, not that they can all happen on the same afternoon.
+      state.turn += RUIN.turns + 1;
       const raider = spawnUnit(state, round % 2 === 0 ? 0 : 1, 'goblin', 11, 10);
       raider.moves = 2;
       tryStep(state, raider, 10, 10);

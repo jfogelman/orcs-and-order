@@ -5,7 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
-import { RUIN } from './city';
+import { RUIN, isRuined } from './city';
 import type { CombatResult } from './combat';
 import {
   breatheThrough,
@@ -468,6 +468,29 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
 
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
+
+  // A city still clearing the rubble of its last sacking cannot change hands
+  // again. The old population is leaving and the new one has not settled, so
+  // there is no functioning place to take.
+  //
+  // This is the see-saw fix from section 4i. The war there is reciprocal:
+  // whoever loses a city takes it straight back, because the army that lost it
+  // is still standing next to it, so no lead ever compounds into a win and
+  // every game runs to the turn limit. Captures after turn 150 outnumbered
+  // those before it two to one and settled nothing.
+  //
+  // Deliberately reuses `ruinedUntil`, which capture already sets, rather than
+  // inventing a second clock: the period a city spends unable to grow and the
+  // period it spends unable to be taken are the same period, and two
+  // overlapping timers for one event is how a captured city stops being worth
+  // capturing.
+  if (capturing && city && RUIN.protects && isRuined(state, city)) {
+    return {
+      kind: 'blocked',
+      reason: `${city.name} is still being resettled and cannot be taken yet.`,
+      retryable: true,
+    };
+  }
 
   // Nobody is holding the gate -- there is no unit here, or the attack branch
   // above would have run -- but the people who live here are still in it.

@@ -1824,3 +1824,113 @@ no longer possible to postpone it: every balance improvement makes it worse,
 because a fair fight between two healthy empires is exactly the fight nobody
 wins. Whatever is done about it has to make *finishing* easier rather than
 making the sides more equal, and the two goals genuinely pull against each other.
+
+## 22. Section 4i, candidate 1: measured and rejected
+
+"A captured city cannot change hands again for N turns" was the candidate 4i
+liked best -- a flat rule rather than a per-city bonus, which is the category
+that had failed repeatedly. Built by reusing `ruinedUntil`, which capture
+already sets, so the period a city spends clearing rubble is the period it
+cannot be taken. Two seed sets, immunity on against off, everything else equal.
+
+| | captures/game | decided before the limit | Horde wins |
+|---|---|---|---|
+| no immunity | 15.50 / 15.06 | 1/18, 0/18 | 5, 7 |
+| immunity | 16.06 / 16.06 | 2/18, 1/18 | 7, 6 |
+
+**It changes nothing.** Captures are identical, slightly higher if anything, in
+both sets. Decisiveness moves from one game in thirty-six to three, which is
+inside noise on that sample. Wins do not move.
+
+### Why, which is the useful part
+
+4i assumed the see-saw was *the same city* flipping back and forth, and that
+stopping the immediate retake would slow the war. It is not that. **The churn is
+distributed**: blocked from retaking one city, the army walks to a different one
+and takes that instead. Total captures come out the same because the war is not
+short of targets.
+
+That retires a whole line of thinking, not just this rule. Anything that makes an
+individual city harder to take will be routed around as long as there are other
+cities. **Candidate 2 -- "make losing compound" -- is the same shape and should
+be expected to fail the same way** unless it attacks the attacker's ability to
+keep attacking, rather than the defender's vulnerability.
+
+### The rule is kept, reclassified
+
+It stays in, but as groundwork for the resettlement in section 19 rather than as
+a fix for anything. It is thematically right -- a city mid-resettlement has no
+functioning government to capture -- it costs nothing measurable, and section 19
+wants exactly this window for its other effects. `RUIN.protects` turns it off.
+
+What it is *not* is an answer to 4i.
+
+### What is left
+
+Only **candidate 3: a victory condition that can actually be met.** The evidence
+now points there hard. 4i measured that nobody ever comes close to losing -- the
+fewest cities either side ever holds averages 3.4 and 4.1 -- and every attempt
+since to make the war more decisive has either done nothing or made the sides
+more equal and therefore *less* decisive. The game has exactly two endings, total
+elimination and the clock, and the first never happens.
+
+A dominance condition converts "effectively decided" into "decided" without
+requiring anyone to be wiped out. It is the only candidate that does not depend
+on the war becoming something it has repeatedly refused to become.
+
+## 23. Section 4i solved: a victory that can be met
+
+Hold 60% of every city on the map for ten consecutive turns and the game ends.
+Two seed sets, on against off, everything else equal.
+
+| | captures <=150 | captures >150 | avg turns | decided before the limit | Horde wins |
+|---|---|---|---|---|---|
+| control | 7.67 / 7.17 | 8.39 / 8.89 | 295 / 296 | 2/18, 1/18 | 7, 6 |
+| dominance | 7.00 / 6.78 | **2.44 / 2.61** | **189 / 181** | **15/18, 16/18** | 4, 5 |
+
+**Three games in thirty-six became thirty-one.** Games run about forty per cent
+shorter, and the late-game churn that 4i identified -- "the war gets busier, not
+more decisive" -- collapses by seventy per cent, because games now end instead of
+grinding on. Captures before turn 150 barely move, which is the right shape: it
+does not change how the war is fought, it ends it once it is decided.
+
+This is the first thing tried against 4i that worked, after a flat rule that did
+nothing (section 22) and two balance changes that made it worse by making the
+sides more equal (sections 17 and 21).
+
+### Why the other candidates could not have worked
+
+4i measured that nobody ever comes close to losing. Every other candidate tried
+to make the *war* decisive, and the war refuses: block a retake and the army
+takes a different city, improve a side's economy and the sides become more evenly
+matched and finish each other less. **The game had two endings and one of them
+never happened.** Adding a third that does not require anyone to be wiped out was
+the only move left.
+
+### The catch, which is real
+
+**Horde wins fall from 13 in 36 to 9.** About 1.4 standard deviations --
+suggestive rather than settled, but it points the same way as everything else and
+the mechanism is obvious: the condition is denominated in **cities held**, and
+section 20 measured that the Kingdom is better at taking and holding cities than
+the Horde is. A victory measured in the thing one side is better at rewards that
+side.
+
+That is the same pattern as the settler brakes in section 17, which were
+denominated in city size and hurt whoever built small. It is worth stating as a
+rule of thumb: **a mechanic denominated in X favours whoever is better at X**, so
+choose the denominator deliberately.
+
+The fix is not to abandon the condition -- 3/36 to 31/36 is worth far more than
+four games of faction drift -- but to fix the cause at source. Section 20 has it:
+a Kingdom city defends at 9.00 against a Horde city's 4.05, so an orc takes a
+Kingdom city 25% of the time and a footman takes a Horde city 33%.
+
+### A bonus worth noting
+
+4i also warned that "a game whose result is largely end-state churn cannot be
+tuned" -- outcomes were substantially decided by which cities happened to be held
+on turn 300, which is why eighteen seeds could never separate two settings.
+Games that end when they are decided, seventy per cent fewer late captures, are
+games whose results mean something. **Every future measurement in this file gets
+easier because of this one.**

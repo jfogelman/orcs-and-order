@@ -501,7 +501,14 @@ export function syncCitizens(state: GameState, city: City): string[] {
  * were ground out of existence. A ruin that stays ruined is what lets repeated
  * capture actually finish the job.
  */
-export const RUIN = { turns: 15 };
+/**
+ * How long a city spends clearing the rubble after being taken.
+ *
+ * `protects` makes that same period one in which it cannot change hands again.
+ * A mutable object so a sweep can run the arm without it, in the style of
+ * MILITIA and SUPPLY.
+ */
+export const RUIN = { turns: 15, protects: true };
 
 /** Is this place still clearing the rubble? */
 export function isRuined(state: GameState, city: City): boolean {
