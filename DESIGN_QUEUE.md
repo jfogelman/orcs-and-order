@@ -1993,3 +1993,59 @@ nothing), the buildings (never built), the fortify multiplier (noise). The
 common thread is that each was reasoned from a table rather than from what a
 played game contains. **Check that a mechanic occurs before explaining anything
 with it.**
+
+## 25. The Horde stopped at six because it was told to
+
+Section 24 left the question as "why does the Horde found 7.67 cities to the
+Kingdom's 11.28". The answer was in the personality table the whole time:
+`targetCities: 6`, and production step 2 reads `if (cities + settlers <
+targetCities) build a settler`. Six cities, and it stops for good.
+
+The Kingdom has the *same* target. It reaches 8.4 anyway, because it exceeds its
+cap by conquest -- six founded plus two taken -- where the Horde's 5.8 is six
+founded minus losses. **A symmetric expansion target produces an asymmetric
+result the moment the war stops being symmetric.**
+
+Two seed sets, thirty games:
+
+| target | Horde wins | final cities, orc / human |
+|---|---|---|
+| 6 | 7/30 (23%) | 5.8 / 8.4 and 6.2 / 7.8 |
+| **7** | **18/30 (60%)** | 7.9 / 8.2 and 7.7 / 7.6 |
+| 8 | 19/30 (63%) | 8.8 / 8.4 and 8.7 / 7.8 |
+| 10 | 9/12 (75%) | one set only, plainly overcorrected |
+
+Seven and eight are one game apart over thirty and cannot be separated at this
+sample size. Seven is taken because it levels the city counts rather than
+tipping them, and because it is the smaller move -- this file already records an
+overcorrection from going one step too far on the Kingdom's caution.
+
+### Also measured, and worth keeping
+
+Raising the Horde's `caution` from 0.25 towards the Kingdom's 0.48 **does** fix
+settler production -- 8.67 built to 11.08 -- because a reckless AI empties its
+own garrisons, and production step 1 rebuilds a defender before step 2 ever
+reaches a settler. But final cities did not move and wins did not move, because
+the binding constraint was the cap, not the supply. **Relieving a constraint
+that is not the binding one changes nothing**, which is worth remembering the
+next time a mechanism is confirmed but the outcome refuses to follow.
+
+### Five wrong theories, and what they had in common
+
+| theory | outcome |
+|---|---|
+| the Horde's economy | fixed -- population nearly doubled, wins unchanged |
+| Walls and the Broken Catapult | the buildings are never built; the table described nothing |
+| the fortify multiplier | noise, the two seed sets disagreed on direction |
+| the settler brakes | measured twice, rejected twice |
+| the Horde's caution | mechanism confirmed, outcome unmoved |
+
+Every one was reasoned from a table in the source. The answer came from counting
+what a played game actually contains -- settlers built against cities founded
+against legal sites available -- which killed three of them in a single ten
+minute run.
+
+**Explain the thing that is preventing the next step, not the symptom.** The
+symptom was "fewer cities"; four of the five theories were plausible stories
+about fewer cities. The question that worked was "what stops it founding the
+seventh", and that has exactly one answer.

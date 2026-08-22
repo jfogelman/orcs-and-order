@@ -50,7 +50,25 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     // The Horde is supposed to be the numerous one. Expanding to only four
     // cities left it permanently behind on trade, and therefore permanently
     // stuck at the bottom of its own counting ladder.
-    targetCities: 6,
+    //
+    // Then six stopped being enough, for a reason worth writing down rather
+    // than just bumping past. Both sides cap their *own* founding at this
+    // number, but only the Kingdom reliably exceeds its cap by conquest -- its
+    // 8.4 cities were six founded plus two taken, where the Horde's 5.8 were
+    // six founded minus losses. A symmetric target produces an asymmetric
+    // result the moment the war stops being symmetric, so this number has to
+    // track what the other side actually *achieves*, not what it is told to
+    // aim at. Measured over two seed sets, thirty games, Horde wins:
+    //
+    //   6   7/30  (23%)  cities 5.8/8.4 and 6.2/7.8 -- beaten to the land
+    //   7  18/30  (60%)  cities 7.9/8.2 and 7.7/7.6 -- level
+    //   8  19/30  (63%)  cities 8.8/8.4 and 8.7/7.8 -- Horde ahead
+    //  10   9/12  (75%)  one set only, plainly overcorrected
+    //
+    // Seven and eight are one game apart over thirty and cannot be told apart
+    // at this sample size; seven is chosen because it levels the city counts
+    // rather than tipping them, and because it is the smaller move.
+    targetCities: 7,
     // See the note on the Kingdom's copy of this field: one defender per city
     // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
