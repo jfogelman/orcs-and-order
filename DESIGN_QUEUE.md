@@ -1824,3 +1824,56 @@ no longer possible to postpone it: every balance improvement makes it worse,
 because a fair fight between two healthy empires is exactly the fight nobody
 wins. Whatever is done about it has to make *finishing* easier rather than
 making the sides more equal, and the two goals genuinely pull against each other.
+
+## 22. Section 4i, candidate 1: measured and rejected
+
+"A captured city cannot change hands again for N turns" was the candidate 4i
+liked best -- a flat rule rather than a per-city bonus, which is the category
+that had failed repeatedly. Built by reusing `ruinedUntil`, which capture
+already sets, so the period a city spends clearing rubble is the period it
+cannot be taken. Two seed sets, immunity on against off, everything else equal.
+
+| | captures/game | decided before the limit | Horde wins |
+|---|---|---|---|
+| no immunity | 15.50 / 15.06 | 1/18, 0/18 | 5, 7 |
+| immunity | 16.06 / 16.06 | 2/18, 1/18 | 7, 6 |
+
+**It changes nothing.** Captures are identical, slightly higher if anything, in
+both sets. Decisiveness moves from one game in thirty-six to three, which is
+inside noise on that sample. Wins do not move.
+
+### Why, which is the useful part
+
+4i assumed the see-saw was *the same city* flipping back and forth, and that
+stopping the immediate retake would slow the war. It is not that. **The churn is
+distributed**: blocked from retaking one city, the army walks to a different one
+and takes that instead. Total captures come out the same because the war is not
+short of targets.
+
+That retires a whole line of thinking, not just this rule. Anything that makes an
+individual city harder to take will be routed around as long as there are other
+cities. **Candidate 2 -- "make losing compound" -- is the same shape and should
+be expected to fail the same way** unless it attacks the attacker's ability to
+keep attacking, rather than the defender's vulnerability.
+
+### The rule is kept, reclassified
+
+It stays in, but as groundwork for the resettlement in section 19 rather than as
+a fix for anything. It is thematically right -- a city mid-resettlement has no
+functioning government to capture -- it costs nothing measurable, and section 19
+wants exactly this window for its other effects. `RUIN.protects` turns it off.
+
+What it is *not* is an answer to 4i.
+
+### What is left
+
+Only **candidate 3: a victory condition that can actually be met.** The evidence
+now points there hard. 4i measured that nobody ever comes close to losing -- the
+fewest cities either side ever holds averages 3.4 and 4.1 -- and every attempt
+since to make the war more decisive has either done nothing or made the sides
+more equal and therefore *less* decisive. The game has exactly two endings, total
+elimination and the clock, and the first never happens.
+
+A dominance condition converts "effectively decided" into "decided" without
+requiring anyone to be wiped out. It is the only candidate that does not depend
+on the war becoming something it has repeatedly refused to become.

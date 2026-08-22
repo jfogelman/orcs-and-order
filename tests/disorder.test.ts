@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { City, GameState } from '../src/model/types';
+import type { City, GameState, Unit } from '../src/model/types';
 import {
   BASE_CONTENT,
   CALM_BONUS,
   cityYield,
   contentLimit,
   foundCity,
+  isRuined,
+  RUIN,
   rushBlocked,
 } from '../src/sim/city';
-import { createGame } from '../src/sim/gamestate';
+import { createGame, spawnUnit } from '../src/sim/gamestate';
+import { tryStep } from '../src/sim/movement';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
 /**
@@ -94,5 +97,77 @@ describe('the standing production choices', () => {
       city.producing = { kind } as never;
       expect(rushBlocked(state, city)).toMatch(/not building anything/);
     }
+  });
+});
+
+/**
+ * The see-saw fix from DESIGN_QUEUE section 4i.
+ *
+ * The war there is reciprocal: whoever loses a city takes it straight back,
+ * because the army that lost it is still standing next to it. Captures after
+ * turn 150 outnumbered those before it two to one and settled nothing, so no
+ * lead ever compounded into a win and every game ran to the turn limit.
+ */
+describe('a city still being resettled', () => {
+  function taken(): { state: GameState; city: City; retaker: Unit } {
+    const state = createGame({ seed: 20260822, width: 30, height: 24 });
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.terrain.fill('grass');
+    const city: City = {
+      id: 1, owner: 0, name: 'Hold', x: 10, y: 10, size: 8,
+      food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+      workedTiles: [], disorder: false, foundedTurn: 1, foundedBy: 0,
+    };
+    state.cities.push(city);
+    const raider = spawnUnit(state, 1, 'orc', 11, 10, false);
+    raider.moves = 2;
+    tryStep(state, raider, 10, 10);
+    // The raider marches on. What is left is an empty city mid-resettlement,
+    // which is exactly the case the see-saw was made of: the army that lost it
+    // is still next door and walks straight back in.
+    state.units = state.units.filter((u) => u.id !== raider.id);
+    // Big enough that the townsfolk cannot see it off, so the test is about
+    // the resettlement rule rather than about a militia roll.
+    const retaker = spawnUnit(state, 0, 'orc_x3', 9, 10, false);
+    retaker.moves = 2;
+    return { state, city, retaker };
+  }
+
+  it('cannot be taken straight back', () => {
+    const { state, city, retaker } = taken();
+    expect(city.owner).toBe(1);
+    expect(isRuined(state, city)).toBe(true);
+
+    const result = tryStep(state, retaker, 10, 10);
+
+    expect(result.kind).toBe('blocked');
+    expect(city.owner).toBe(1);
+  });
+
+  it('can be taken once the resettling is over', () => {
+    const { state, city, retaker } = taken();
+    state.turn += RUIN.turns + 1;
+    retaker.moves = 2;
+
+    tryStep(state, retaker, 10, 10);
+
+    expect(city.owner).toBe(0);
+  });
+
+  it('leaves a city nobody has touched perfectly takeable', () => {
+    const { state } = taken();
+    const quiet: City = {
+      id: 2, owner: 0, name: 'Quiet', x: 20, y: 10, size: 5,
+      food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+      workedTiles: [], disorder: false, foundedTurn: 1, foundedBy: 0,
+    };
+    state.cities.push(quiet);
+    const raider = spawnUnit(state, 1, 'orc', 21, 10, false);
+    raider.moves = 2;
+
+    tryStep(state, raider, 20, 10);
+
+    expect(quiet.owner).toBe(1);
   });
 });
