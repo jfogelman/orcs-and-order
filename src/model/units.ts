@@ -269,6 +269,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'deathknight',
     // A death knight's touch is not a weapon blow.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     name: 'Death Knight',
     plural: 'Death Knights',
     faction: 'orc',
@@ -291,6 +294,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'dragon',
     // Breath, not bite.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     lineBreath: true,
     name: 'Dragon',
     plural: 'Dragons',
@@ -434,6 +440,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'mage',
     // The whole point of a mage.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     range: 2,
     name: 'Mage',
     plural: 'Mages',

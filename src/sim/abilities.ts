@@ -5,6 +5,7 @@ import {
   attackStrength,
   defenseStrength,
   applyDamage,
+  applySpellEffects,
   damageKindOf,
   damagePerRound,
   destroyUnit,
@@ -144,6 +145,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   // An arrow and a fireball are not the same thing to something that resists
   // one of them, so a thrown blow carries its thrower's kind.
   const amount = applyDamage(target, landed * dmg, damageKindOf(unit));
+  applySpellEffects(state, unit, target);
   unit.moves = 0;
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);

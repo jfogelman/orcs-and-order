@@ -7,6 +7,7 @@ import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, SUPPLY } from './city';
 import { hasFlag } from './rules';
+import { SPELL_TURNS, applyStatus } from './status';
 
 /**
  * Civ2-flavoured combat: two strengths, repeated coin flips, one survivor.
@@ -153,6 +154,24 @@ export function applyDamage(unit: Unit, amount: number, kind: DamageKind): numbe
 /** What this creature's blows are made of. */
 export function damageKindOf(unit: Unit): DamageKind {
   return unitType(unit.type).damageKind ?? 'physical';
+}
+
+/**
+ * Magic that leaves something behind.
+ *
+ * Only magical damage carries a spell, which is what makes the two advances
+ * worth reaching for a side that has magical units and worth nothing at all to
+ * a side that has none. An axe stays an axe.
+ *
+ * Applied to a target that survived: setting a corpse alight teaches nobody
+ * anything, and a status on a unit about to be removed is a wasted lookup.
+ */
+export function applySpellEffects(state: GameState, attacker: Unit, target: Unit): void {
+  if (target.hp <= 0) return;
+  if (damageKindOf(attacker) !== 'magic') return;
+  const owner = state.players[attacker.owner];
+  if (hasFlag(owner, 'pyromancy')) applyStatus(target, 'burning', SPELL_TURNS.burning);
+  if (hasFlag(owner, 'cryomancy')) applyStatus(target, 'frozen', SPELL_TURNS.frozen);
 }
 
 /** What a dragon's breath does to whatever is standing behind its target. */
@@ -423,6 +442,11 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
 
   attacker.hp = Math.max(0, attacker.hp);
   defender.hp = Math.max(0, defender.hp);
+
+  // Whatever the magical one did, it leaves behind. Both directions: a mage
+  // that fought off an orc has still set it alight.
+  applySpellEffects(state, attacker, defender);
+  applySpellEffects(state, defender, attacker);
 
   return {
     attackerId: attacker.id,

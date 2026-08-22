@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { UNIT_TYPES, unitType } from '../src/model/units';
 import type { GameState, Unit } from '../src/model/types';
-import { applyDamage, damageKindOf, MAX_RESIST, resistance } from '../src/sim/combat';
+import { applyDamage, applySpellEffects, damageKindOf, MAX_RESIST, resistance } from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import {
   applyStatus,
   BURN_DAMAGE,
+  FREEZE_SLOW,
   clearStatus,
   hasStatus,
   statusTurns,
@@ -113,14 +114,31 @@ describe('statuses', () => {
     expect(a.seed).toBe(b.seed);
   });
 
-  it('freeze a unit out of its turn', () => {
+  it('slow a frozen unit rather than stopping it', () => {
+    const state = arena();
+    const fast = spawnUnit(state, 0, 'dragon', 9, 9, false);
+    const full = unitType(fast.type).move;
+    applyStatus(fast, 'frozen', 3);
+
+    beginPlayerTurn(state, 0);
+
+    // Half, not all. A unit that cannot act at all is a unit removed from the
+    // game for the duration, which is strictly better than damage -- section 11
+    // warned about exactly this before either was built.
+    expect(fast.moves).toBeLessThan(full);
+    expect(fast.moves).toBe(Math.max(1, Math.floor(full * FREEZE_SLOW)));
+  });
+
+  it('never freeze a slow unit into place permanently', () => {
     const state = arena();
     const orc = spawnUnit(state, 0, 'orc', 6, 6, false);
     applyStatus(orc, 'frozen', 3);
 
     beginPlayerTurn(state, 0);
 
-    expect(orc.moves).toBe(0);
+    // A one-move unit halved would be nothing at all, which is the thing the
+    // slow is meant to avoid.
+    expect(orc.moves).toBeGreaterThan(0);
   });
 
   it('stop a spent unit regenerating', () => {
@@ -141,17 +159,35 @@ describe('statuses', () => {
 });
 
 describe('typed damage', () => {
-  it('resists nothing today, on purpose', () => {
+  it('is resisted only by the magical, and only when it is magic', () => {
     const state = arena();
-    // The mechanism exists; the numbers that move the balance are deliberately
-    // not set yet. If a creature is ever given magicResist, this test should be
-    // changed rather than deleted -- it is the record of that decision.
-    for (const type of Object.values(UNIT_TYPES)) {
-      expect(type.magicResist).toBe(0);
-    }
-    const orc = spawnUnit(state, 0, 'orc', 6, 6, false);
+    // This test used to assert that nothing resisted anything, as the record of
+    // a deliberate decision to leave the numbers off until the advances that
+    // make them matter existed. Those advances exist now, so it records the
+    // new decision instead: death knights, mages and dragons, and nobody else.
+    const resistant = Object.values(UNIT_TYPES).filter((t) => t.magicResist > 0);
+    expect(new Set(resistant.map((t) => t.base))).toEqual(
+      new Set(['deathknight', 'mage', 'dragon']),
+    );
+
+    const knight = spawnUnit(state, 0, 'deathknight', 6, 6, false);
+    expect(resistance(knight, 'magic')).toBeGreaterThan(0);
+    // An axe is still an axe.
+    expect(resistance(knight, 'physical')).toBe(0);
+
+    const orc = spawnUnit(state, 0, 'orc', 7, 6, false);
     expect(resistance(orc, 'magic')).toBe(0);
-    expect(resistance(orc, 'physical')).toBe(0);
+  });
+
+  it('resists more with rank, and never all of it', () => {
+    const state = arena();
+    const green = spawnUnit(state, 0, 'dragon', 6, 6, false);
+    const veteran = spawnUnit(state, 0, 'dragon', 8, 6, false);
+    veteran.rank = 3;
+
+    expect(resistance(veteran, 'magic')).toBeGreaterThan(resistance(green, 'magic'));
+    expect(resistance(veteran, 'magic')).toBeLessThanOrEqual(MAX_RESIST);
+    expect(MAX_RESIST).toBeLessThan(1);
   });
 
   it('knows which creatures strike with magic', () => {
@@ -184,5 +220,55 @@ describe('typed damage', () => {
     // Even at the highest rank, with a base resistance higher than the cap.
     const capped = Math.min(MAX_RESIST, 0.9 + dragon.rank * 0.08);
     expect(capped).toBeLessThan(1);
+  });
+});
+
+/**
+ * The two advances from DESIGN_QUEUE section 11 that give the back half of the
+ * tree somewhere to go. Only magical damage carries a spell, which is what
+ * makes them worth reaching for a side with magical units and worth nothing to
+ * a side without.
+ */
+describe('magic that leaves something behind', () => {
+  function duel(flag: 'pyromancy' | 'cryomancy' | null) {
+    const state = arena();
+    const mage = spawnUnit(state, 0, 'mage', 6, 6, false);
+    const orc = spawnUnit(state, 1, 'orc', 7, 6, false);
+    orc.hp = unitType(orc.type).hp;
+    if (flag) state.players[0].techs.push(flag === 'pyromancy' ? 'pyromancy' : 'cryomancy');
+    return { state, mage, orc };
+  }
+
+  it('sets a target alight when the caster knows how', () => {
+    const { state, mage, orc } = duel('pyromancy');
+    applySpellEffects(state, mage, orc);
+    expect(hasStatus(orc, 'burning')).toBe(true);
+  });
+
+  it('does nothing without the advance', () => {
+    const { state, mage, orc } = duel(null);
+    applySpellEffects(state, mage, orc);
+    expect(orc.statuses).toBeUndefined();
+  });
+
+  it('leaves a target cold when the caster knows that instead', () => {
+    const { state, mage, orc } = duel('cryomancy');
+    applySpellEffects(state, mage, orc);
+    expect(hasStatus(orc, 'frozen')).toBe(true);
+    expect(hasStatus(orc, 'burning')).toBe(false);
+  });
+
+  it('is carried by magic and not by an axe', () => {
+    const { state, orc } = duel('pyromancy');
+    const swinger = spawnUnit(state, 0, 'orc', 5, 6, false);
+    applySpellEffects(state, swinger, orc);
+    expect(orc.statuses).toBeUndefined();
+  });
+
+  it('does not bother setting fire to something already dead', () => {
+    const { state, mage, orc } = duel('pyromancy');
+    orc.hp = 0;
+    applySpellEffects(state, mage, orc);
+    expect(orc.statuses).toBeUndefined();
   });
 });

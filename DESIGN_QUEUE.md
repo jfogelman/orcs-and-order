@@ -2212,3 +2212,61 @@ Worth deciding rather than defaulting:
 A tie screen is prompted in ART_PROMPTS. It is deliberately **one picture rather
 than one per faction**: conquest and points have a side that is winning them,
 and a draw is the only ending where both sides have to be in the frame.
+
+## 30. Section 11, first slice: built, and unmeasurable
+
+Magical resistance, and two advances off the back of the tree that make magical
+damage leave something behind -- **Setting Things Alight** (burning) and **The
+Cold Shoulder** (slowed). Both `faction: 'both'`, both requiring Insanity, which
+is where section 11 wanted them.
+
+Also, section 11's own warning about freezing taken seriously: it said a unit
+that cannot act is *"strictly better than damage and historically the thing that
+breaks a strategy game"*. The groundwork had implemented frozen as `moves = 0`,
+so it now halves movement with a floor of one -- otherwise a one-move unit is
+frozen in place for the duration, which is exactly the failure being warned
+about.
+
+### It cannot be measured, and the reason is a defect
+
+Both arms came out **identical to two decimal places** on turns, cities and
+wins. The cause:
+
+| | orc | human |
+|---|---|---|
+| magic units ever built, per game | **0.00** | **0.00** |
+| magic units alive at the end | 0.00 | 0.00 |
+| advances that unlock them, held | 0.94 | 1.22 |
+
+**The AI never builds a death knight, a dragon or a mage.** Not rarely -- never,
+in eighteen games, while holding the advances that unlock them. So resistance
+protects nobody, magical damage never happens, and neither spell can fire.
+
+That is the third time a mechanic has been explained before checking that it
+occurs -- after the walls in section 24 and the caution in section 26. The rule
+written down after the second time was *check that a mechanic occurs before
+explaining anything with it*, and it should have been applied **before building
+this**, not after.
+
+The feature itself is correct and tested: eleven tests cover the advances, the
+resistance, and that an axe carries no spell. A human player who builds a dragon
+will get all of it. What cannot be claimed is that it does anything to a game
+between two AIs.
+
+### The defect is worth more than the feature
+
+The dragon is the strongest unit in the game -- attack 10, defence 6, four
+movement, and it flies -- and the AI has never once built one. Production step 4
+sorts the attackers by attack and takes the first it can afford, so a dragon
+should be the obvious pick the moment `full-of-fire` lands. Something between
+those two facts is wrong, and until it is fixed:
+
+- the back half of the tree buys the AI nothing, which is the whole complaint
+  section 11 exists to answer;
+- every remaining item in section 11 that touches a magical unit is equally
+  unmeasurable, so **this wants fixing before the rest of the section is built**;
+- and the AI is fighting every war with goblins and footmen while holding the
+  advances for better.
+
+Worth checking first: whether step 4 is ever reached at all, given steps 1 and 2
+now return a defender or a settler far more often with `targetCities` at seven.

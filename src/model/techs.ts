@@ -21,7 +21,11 @@ export type TechFlag =
   /** +1 content citizen in every city. */
   | 'contentment'
   /** +25% attack, -25% defence, army-wide. Seemed like a good idea at the time. */
-  | 'berserk';
+  | 'berserk'
+  /** Magical damage sets its target alight for a few turns. */
+  | 'pyromancy'
+  /** Magical damage leaves its target slow for a few turns. */
+  | 'cryomancy';
 
 export interface TechDef {
   id: TechId;
@@ -142,6 +146,32 @@ export const TECHS: TechDef[] = [
     buildings: [],
     flags: ['contentment'],
     flavor: 'Formal proof that people who are not miserable work slightly harder.',
+  },
+  {
+    id: 'pyromancy',
+    name: 'Setting Things Alight',
+    faction: 'both',
+    cost: 165,
+    prereqs: ['insanity'],
+    units: [],
+    buildings: [],
+    flags: ['pyromancy'],
+    flavor:
+      'Fire was always available. What is new is doing it to somebody deliberately, ' +
+      'from a distance, and then walking away while it continues.',
+  },
+  {
+    id: 'cryomancy',
+    name: 'The Cold Shoulder',
+    faction: 'both',
+    cost: 180,
+    prereqs: ['insanity'],
+    units: [],
+    buildings: [],
+    flags: ['cryomancy'],
+    flavor:
+      'Nobody has worked out how to make a thing colder. They have worked out how to ' +
+      'make a thing very slow, which for military purposes is the same discovery.',
   },
   {
     id: 'insanity',
