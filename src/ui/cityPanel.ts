@@ -1,5 +1,5 @@
 import { BUILDINGS } from '../model/buildings';
-import type { AutoBuild, City, GameState, ProductionItem, Unit } from '../model/types';
+import type { AutoBuild, City, GameState, ProductionItem, Unit, UnitTypeId } from '../model/types';
 import {
   CALM_BONUS,
   autoBuildOf,
@@ -46,6 +46,36 @@ const CITIZEN_FACE = 32;
 function buildingIconPath(id: string): string {
   const base = import.meta.env.BASE_URL;
   return `${base.endsWith('/') ? base : `${base}/`}buildings/${id}.png`;
+}
+
+/**
+ * Where a creature's portrait lives.
+ *
+ * Keyed on the *base* creature rather than the group, because Three Orcs are
+ * orcs: the map composes a group sprite at runtime by stamping the single
+ * portrait, and a list one line high has no room for the crowd anyway.
+ */
+function unitIconPath(id: UnitTypeId): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}units/${unitType(id).base}.png`;
+}
+
+/**
+ * The little picture beside a line in the build list.
+ *
+ * Coin, beakers and placating the mob have no art and are never going to --
+ * they are not things, they are what a city does when it is not making a
+ * thing. They get an empty slot of the same width so the names stay in a
+ * column rather than stepping in and out.
+ */
+function productionIcon(item: ProductionItem): string {
+  if (item.kind === 'unit') {
+    return `<img class="build-icon unit-icon" src="${unitIconPath(item.id)}" alt="" />`;
+  }
+  if (item.kind === 'building') {
+    return `<img class="build-icon building-icon" src="${buildingIconPath(item.id)}" alt="" />`;
+  }
+  return '<span class="build-icon build-icon-blank"></span>';
 }
 
 /** Turns remaining on the current build, or null when it will never finish. */
@@ -151,6 +181,7 @@ export function openCityPanel(
     return `
       <button class="build-option${active ? ' active' : ''}"
               data-kind="${item.kind}" data-id="${'id' in item ? escapeHtml(item.id) : ''}">
+        ${productionIcon(item)}
         <span class="build-name">${escapeHtml(name)}</span>
         <span class="build-cost">${cost > 0 ? `${cost}s` : '—'}${turns !== null && cost > 0 ? ` · ${turns}t` : ''}</span>
         ${
@@ -208,8 +239,9 @@ export function openCityPanel(
               : garrison
                   .map(
                     (u) =>
-                      `<button class="small" data-wake="${u.id}"
+                      `<button class="small garrison-unit" data-wake="${u.id}"
                                title="${escapeHtml(unitType(u.type).blurb)}">
+                         <img class="unit-icon" src="${unitIconPath(u.type)}" alt="" />
                          ${escapeHtml(unitType(u.type).name)}
                          <span class="muted">${escapeHtml(u.order)}${
                            u.rank > 0 ? ` &middot; rank ${u.rank}` : ''
@@ -306,7 +338,10 @@ export function openCityPanel(
           onWake?.(unit);
         });
       });
-      root.querySelectorAll<HTMLImageElement>('.building-icon').forEach((img) => {
+      // Every icon in the panel, not only the ones on standing structures.
+      // Art is dropped in a file at a time, so a missing portrait has to leave
+      // a tidy gap rather than a broken-image glyph.
+      root.querySelectorAll<HTMLImageElement>('.building-icon, .unit-icon').forEach((img) => {
         img.addEventListener('error', () => img.remove());
       });
       root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {

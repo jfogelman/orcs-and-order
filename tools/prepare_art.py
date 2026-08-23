@@ -87,6 +87,8 @@ TECH_ICONS = [
     "see-the-world", "archery", "pointed-ears", "arrows-glory",
     "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
     "lordship",
+    # The two magic advances off Insanity, from DESIGN_QUEUE section 11.
+    "pyromancy", "cryomancy",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -94,6 +96,11 @@ TECH_ICONS = [
 BUILDING_ICONS = [
     "barracks", "granary", "walls", "catapult", "totem", "chapel",
     "treasury", "market", "thinkingRock", "scriptorium",
+    # Supply, and the tier-two upgrades. Each of the upgrades is deliberately
+    # the earlier icon again, more so -- see ART_PROMPTS.
+    "outpost", "depot",
+    "bigTotem", "cathedral", "bigVault", "exchange", "biggerRock", "library",
+    "yellingGrounds", "paradeGround",
 ]
 
 # Icons are read at a glance in a crowded tree, so they stay small.
