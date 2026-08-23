@@ -236,7 +236,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 3,
     hp: 15,
     move: 1,
-    cost: 35,
+    // Dearer than the raw numbers justify, because it heals at twice the rate
+    // and that never appears in a value figure. See DESIGN_QUEUE section 35.
+    cost: 42,
     sight: 1,
     counts: [1, 2, 3],
     regenMultiplier: 2,
@@ -256,7 +258,8 @@ export const CREATURES: CreatureDef[] = [
     defense: 4,
     hp: 20,
     move: 1,
-    cost: 50,
+    // Was 50, which made it the best buy in the game by a distance.
+    cost: 62,
     sight: 1,
     counts: [1, 2],
     artScale: 1.28,
@@ -280,7 +283,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 3,
     hp: 15,
     move: 2,
-    cost: 55,
+    // Cheaper: it was priced as a heavyweight and fought like a middleweight,
+    // so nothing ever picked it even once the AI started valuing units properly.
+    cost: 48,
     sight: 2,
     counts: [1, 2],
     executeChance: 0.3,
@@ -306,7 +311,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 6,
     hp: 25,
     move: 4,
-    cost: 90,
+    // The capstone of the tree, and it should be expensive enough to feel like
+    // one. At 90 it was better value than anything the Kingdom could field.
+    cost: 110,
     sight: 3,
     counts: [1],
     flies: true,
@@ -404,7 +411,9 @@ export const CREATURES: CreatureDef[] = [
     role: 'melee',
     attack: 5,
     defense: 3,
-    hp: 14,
+    // Sixteen rather than fourteen. The Kingdom had nothing in the middle of
+    // its roster worth building next to the Horde's ogres.
+    hp: 16,
     move: 2,
     cost: 40,
     sight: 2,
@@ -452,7 +461,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 2,
     hp: 12,
     move: 1,
-    cost: 55,
+    // Was 55, which made it the worst buy on either roster despite being the
+    // Kingdom's only answer to a dragon.
+    cost: 45,
     sight: 3,
     counts: [1, 2],
     artScale: 0.98,

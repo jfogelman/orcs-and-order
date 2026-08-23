@@ -2525,3 +2525,55 @@ goblins against footmen.
 
 **Next: reprice both rosters against the value measure**, now that there is
 finally a measure to price them against, and re-check on a fresh seed set.
+
+## 35. Repricing both rosters
+
+Section 34 left the mechanism working and the rosters uncalibrated: the Horde
+won 17-1 because its specials were simply the better buys, and nobody had ever
+noticed because until that commit none of them had ever been built.
+
+Six changes, aimed at the top of each roster rather than spread across it:
+
+| unit | change | value before | after |
+|---|---|---|---|
+| Ogre | cost 50 → 62 | 2.80 | 2.26 |
+| Dragon | cost 90 → 110 | 2.78 | 2.27 |
+| Troll | cost 35 → 42 | 2.14 | 1.79 |
+| Death Knight | cost 55 → 48 | 1.64 | 1.88 |
+| Knight | hp 14 → 16 | 1.75 | 2.00 |
+| Mage | cost 55 → 45 | 1.31 | 1.60 |
+
+Value is `attack * hp / cost`, the same measure the AI now buys on. The troll is
+deliberately below the band because it heals at twice the rate and that never
+shows up in the figure; the death knight and the mage went *down* in price
+because both were priced as heavyweights and fought like middleweights, so
+neither was ever picked even after the AI learned to value units properly.
+
+### Result, tuned on one seed set and judged on another
+
+| | tuning set | fresh set |
+|---|---|---|
+| wins before, orc/human | 17 / 1 | 13 / 2 |
+| **wins after, orc/human** | **9 / 6** | **10 / 5** |
+| cities before | 11.56 / 5.06 | 10.78 / 5.78 |
+| cities after | 8.72 / 8.11 | 10.06 / 8.17 |
+| turns | 146 → 164 | 151 → 165 |
+| games decided | 18/18 → 15/18 | 15/18 → 15/18 |
+
+The fresh set moved the same way as the tuning set, which is the check that
+matters -- this is a real effect and not a fit to eighteen maps. The Kingdom now
+fields its best unit in numbers (paladins 21-23 a game, up from nothing) and the
+city counts are within a city of each other on the tuning set.
+
+**Two things it did not fix.**
+
+- **The Horde still wins about 63% across the 36 games.** Better than 88%, not
+  parity.
+- **Decisiveness slipped**, from 18/18 to 15/18 on the tuning set, because games
+  now run about 18 turns longer. Section 23 worked hard for that number and it
+  should not be quietly given back.
+
+The next lever is probably not more unit pricing. `targetCities` was set to 7
+for the Horde in section 25, to rescue a Horde that was *losing* -- under a
+combat model that no longer exists. The city counts say expansion, not combat,
+is now carrying the remaining gap.

@@ -181,7 +181,7 @@ recipe to follow when any of it is re-rolled.
 
 ---
 
-## Advance icons — all 42 done
+## Advance icons — 42 of 44 done
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -277,7 +277,7 @@ went wrong.
 
 ---
 
-## Building icons — all 10 done
+## Building icons — 10 of 20 done
 
 Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
 Same rules as advance icons: **plain magenta background, no text**, and a missing icon
@@ -963,3 +963,66 @@ Worth avoiding: any hint of a handshake or a truce. Neither side has agreed to
 anything. They have simply run out of turns while exactly level, which in a game
 whose own text calls the points ending unsatisfying is the least satisfying
 outcome available -- and therefore the right one to draw.
+
+---
+
+## The advances and structures added since the last pass
+
+Twelve icons: two advances and ten buildings. All 48×48, all the **same preamble
+as every other icon** — plain solid magenta background, single centred object,
+thick dark outline, no text, no numerals.
+
+### Two advances
+
+Both sit off Insanity at the far end of the tree, and both are about magic
+leaving something behind after the blow has landed.
+
+| id | Advance | Icon subject |
+|---|---|---|
+| `pyromancy` | Setting Things Alight | a single orange flame burning steadily on top of a plain grey rock, the rock entirely unbothered and not obviously flammable |
+| `cryomancy` | The Cold Shoulder | a single armoured shoulder pauldron encased in pale blue ice, three icicles hanging off the bottom edge |
+
+The Cold Shoulder is a pun and should be drawn as one — **a shoulder, frozen**,
+not a generic snowflake. If the generator keeps producing snowflakes, ask for
+"a suit-of-armour shoulder piece, sculpted in ice" and drop the word cold
+entirely.
+
+### Ten structures
+
+These are **tier-two upgrades of icons that already exist**, and that is the
+whole joke: each one should be immediately recognisable as its tier-one
+counterpart, only *more so*. Draw the pairs together and keep the palette,
+angle and framing identical between them — the gag only lands if you can see
+the first icon inside the second.
+
+| id | Faction | Upgrade of | Icon subject |
+|---|---|---|---|
+| `bigTotem` | orc | `totem` | the same carved totem pole with the same snarling painted face, absurdly taller, running off the top of the frame so the top is not visible |
+| `cathedral` | human | `chapel` | the same white chapel with the same steep red roof, now enormous, with a rose window and two small spires |
+| `bigVault` | orc | `treasury` | the same battered gold-filled chest, now with one heavy iron door bolted to the front of it, the rest of the chest still open |
+| `exchange` | human | `market` | the same striped stall awning, now with a second smaller stall behind it and a ledger open on the counter |
+| `biggerRock` | orc | `thinkingRock` | the same smooth grey boulder, much wider, with three worn seat-shaped dips across the top instead of one |
+| `library` | human | `scriptorium` | the same stack of leather books, now a tall shelf of them, with lengths of red string running between three of the spines |
+| `yellingGrounds` | orc | `barracks` | a crude wooden megaphone cone mounted on a post, mouth toward the viewer, with three thick sound rings coming out |
+| `paradeGround` | human | `barracks` | a small square of flagstones with four boot prints on it arranged in a perfect square, one pennant on a pole at the corner |
+| `outpost` | orc | — | a lopsided wooden lean-to with a partial roof and a sack of food leaning against it, one post visibly shorter than the others |
+| `depot` | human | — | a neat wooden crate stack with a clipboard hanging on a nail beside it, three sheets of paper on the clipboard |
+
+Notes worth having in front of you while prompting:
+
+- **`bigVault` is the funniest one and the easiest to get wrong.** The Goblin
+  Treasury's joke is that it is enormously valuable and completely unguarded;
+  the upgrade's joke is that the goblins have solved this by adding *one door*
+  to an otherwise open chest, and are extremely pleased about it. The door has
+  to look sturdy and the chest has to still be open.
+- **`biggerRock` needs the seats to read.** Three dips, clearly worn, clearly
+  seat-shaped. Without them it is a rock.
+- **`library` wants the string.** Cross-referencing is the entire name, and red
+  string between spines says it at 48px in a way that more books does not.
+- **`outpost` and `depot` are the same building twice**, and they should look
+  like two different civilisations failing at the same task in opposite
+  directions: the Horde's is structurally optimistic, the Kingdom's is
+  administratively thorough. Neither is any use.
+- **`yellingGrounds` and `paradeGround` both upgrade the same barracks**, so
+  they should *not* rhyme with each other — one is noise, the other is
+  geometry.
