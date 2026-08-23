@@ -2577,3 +2577,45 @@ The next lever is probably not more unit pricing. `targetCities` was set to 7
 for the Horde in section 25, to rescue a Horde that was *losing* -- under a
 combat model that no longer exists. The city counts say expansion, not combat,
 is now carrying the remaining gap.
+
+## 36. The Horde no longer needs rescuing
+
+`targetCities` was set to 7 for the Horde in section 25, when six cities meant
+being beaten to the land and losing 77% of its games. That number was measured
+against a game where a stack bought damage and health together and the AI
+reached for the biggest one it could afford. Sections 33 and 34 removed both.
+
+Re-measured across three seed sets, 54 games:
+
+| orc `targetCities` | wins, orc-human | cities | turns | decided |
+|---|---|---|---|---|
+| **6** | **25 - 24** | 7.5 / 8.1 | 148 | 49/54 |
+| 7 | 32 - 16 | 9.4 / 7.7 | 157 | 48/54 |
+
+Six is level -- one game apart over fifty-four -- and its games run about nine
+turns shorter for the same decisiveness. Seven is now a 67% advantage. **The
+rescue became a handicap on the other side the moment the Horde could field a
+dragon instead of fifty goblins.**
+
+### Two notes on method
+
+The individual seed sets returned **7-11, 11-5 and 7-8** for the same setting.
+Any one of them on its own would have argued something different -- one says the
+Kingdom is comfortably ahead, the next says the Horde is. Eighteen seeds is not
+enough to read a four-game swing, and this is the clearest illustration of it so
+far in this file.
+
+Second: three separate runs of this sweep were thrown away before this one,
+because concurrent processes appended to the same output file and `npm test`
+picked the diagnostic up and ran it a second time in parallel. The arms
+interleaved and rows could not be attributed to seed sets. **A measurement you
+cannot attribute is not a weak measurement, it is not one at all**, and the only
+safe thing to do with it is delete it.
+
+### Where that leaves the balance
+
+Across sections 30 to 36 the Horde has gone 3-10, then 17-1, then 9-6, and now
+25-24 over 54 games. The mechanism is sound and the rosters are calibrated. What
+is *not* yet established is whether any of it holds up against a human, since
+every one of these numbers comes from two AIs playing each other -- and the AI
+buys on a formula that a person will happily ignore.

@@ -69,7 +69,22 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     // Seven and eight are one game apart over thirty and cannot be told apart
     // at this sample size; seven is chosen because it levels the city counts
     // rather than tipping them, and because it is the smaller move.
-    targetCities: 7,
+    //
+    // **Back to six**, and everything above is the record of a game that no
+    // longer exists. That measurement was taken when a stack bought damage and
+    // health together and the AI reached for the biggest one it could afford;
+    // six then meant being beaten to the land and losing 77% of the time.
+    // Since sections 33 and 34 the Horde fields dragons and ogres instead of
+    // fifty goblins, and seven cities became an advantage rather than a
+    // rescue. Re-measured over three seed sets, 54 games:
+    //
+    //   6   25-24  cities 7.5/8.1   148 turns   -- level
+    //   7   32-16  cities 9.4/7.7   157 turns   -- Horde ahead
+    //
+    // Worth noting how far the individual sets swing: six returns 7-11, 11-5
+    // and 7-8 on the three sets. Any one of them alone would have argued
+    // something different, which is the argument for all three.
+    targetCities: 6,
     // See the note on the Kingdom's copy of this field: one defender per city
     // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
