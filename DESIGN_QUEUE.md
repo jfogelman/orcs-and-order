@@ -2270,3 +2270,66 @@ those two facts is wrong, and until it is fixed:
 
 Worth checking first: whether step 4 is ever reached at all, given steps 1 and 2
 now return a defender or a settler far more often with `targetCities` at seven.
+
+## 31. The joke ate the game
+
+Section 30 asked why the AI never builds a dragon. It is not a bug in the
+chooser. The chooser is right.
+
+| | attack | defence | hp | cost | attack per shield |
+|---|---|---|---|---|---|
+| Four Orcs | 12 | 8 | 48 | 80 | 0.15 |
+| **Dragon** | **10** | **6** | **25** | **90** | **0.11** |
+| Three Trolls | 15 | 9 | 45 | 105 | 0.14 |
+| **Two Death Knights** | **12** | **6** | **30** | **110** | **0.11** |
+| Ten Orcs | 30 | 20 | 120 | 200 | 0.15 |
+
+A dragon is weaker than four orcs, frailer than four orcs, and costs more than
+four orcs. There is no situation in which building one is correct. The same is
+true of every mage, death knight and ogre on the list -- the counting ladder
+sits at 0.14-0.15 attack per shield and the specials sit at 0.11.
+
+### Why it is worse than the table looks
+
+The ladder multiplies **attack and health together**. Ten Orcs is ten times the
+damage *and* ten times the hit points for ten times the price, and two
+quantities multiplied is a square: a stack twice the size wins roughly four
+times as hard, not twice. Cost is linear, effectiveness is quadratic.
+
+Nothing priced linearly can ever compete with that, which means the specials
+were never going to be built no matter what was hung off them. **This is why
+section 11 measured as inert, and it would have made every later item in
+section 11 inert too.**
+
+The gag -- that N orcs on one tile is strictly efficient -- turns out to be
+*too* true. It is the correct answer to every question in the game, and it has
+quietly turned the entire right-hand half of the tech tree into scenery.
+
+### The proposal on the table
+
+From the design conversation: attacks are answered -- **a defender strikes
+back** -- **advanced units may strike more than once**, and **ranged attackers
+are not struck back at all**. Plus the sanity check that gives it its shape: an
+ogre should not lose to a footman, nor a knight to a goblin, unless it was
+nearly dead already.
+
+That is not decoration, it is the counter to the square law, for a reason worth
+writing down:
+
+- **Extra attacks multiply damage without multiplying health.** This is the
+  only shape of bonus the ladder cannot copy, because the ladder buys both at
+  once and this buys one.
+- **Ranged units taking no answering blow removes their health from the
+  equation entirely.** Their worth stops depending on the quantity the ladder is
+  good at, so an axethrower becomes a different thing rather than a worse orc.
+- **A tough unit shrugging off a weak one** means defence has to stop trading
+  proportionally somewhere -- some floor or threshold -- and a threshold is
+  exactly what a linear ladder cannot buy its way past.
+
+Each of the three attacks the same weakness from a different side, which is
+promising, and is also three separate mechanics that want measuring one at a
+time rather than as a bundle.
+
+**Nothing else in section 11 should be built until this is settled.** Clubs and
+perks hung on units that are never built are three more inert features, and the
+lesson from sections 24, 26 and 30 is that this gets checked first.
