@@ -2670,3 +2670,81 @@ sections 23, 33 and 34 rather than from giving the tree somewhere to go.
 So the anti-stalemate argument for section 11 is largely spent. The flavour
 argument is not, and the confuse mechanic in particular is interesting on its
 own terms. Worth deciding which of those is being bought before building it.
+
+## 38. The AI had never used an ability
+
+`useAbility` was called from `main.ts` and nowhere else. Not rarely -- **never**.
+Every archer, axethrower, ballista and mage the AI has ever built walked up and
+swung, and since section 34 taught it to value units properly it was buying
+ballistas enthusiastically: attack 8 makes one the Kingdom's best purchase on
+paper, and it is a twelve-health unit with a defence of one.
+
+Ranged units already could not be struck back -- that was built, and
+`fireAtRange` says so. The gap was entirely on the AI's side.
+
+### Three attempts, and two wrong theories
+
+**`fireIfPossible` and `takeAim`.** Shoot whatever is at reach, ranked by worth
+over remaining health; otherwise step to a tile at exactly reach with nothing
+closer, since reach is an *exact* distance and a unit that simply marches at the
+enemy walks through its own firing position. Result: **18-16 became 12-20.**
+
+**Wrong theory 1: the disarm asymmetry.** The Horde's only ranged unit throws
+its axe and drops to a quarter strength; the Kingdom's three keep theirs; and
+`resupply` had no AI caller either. All true, all verified in the source, and
+all irrelevant -- adding a restock produced an arm **byte-identical to the
+previous run**, because the code path never executed. That is the fourth time in
+this file a result has been explained by a mechanism nobody checked *occurs*.
+
+**What was actually happening**, once instrumented:
+
+| | Horde | Kingdom |
+|---|---|---|
+| ranged units built | **0.00** | 19.6 |
+| ranged attacks fired | **0.00** | **87.4** |
+
+The Horde never builds an axethrower, because at 1.60 it is the worst combat buy
+it has -- behind ogre 2.26, dragon 2.27, death knight 1.88 and a plain orc 1.80.
+So teaching both sides to shoot handed the Kingdom eighty-seven free attacks a
+game and the Horde nothing. **Same shape as sections 31 and 34: a mechanic is
+inert because the units carrying it are never bought.**
+
+**Wrong theory 2: `RANGED_EDGE = 1.4`.** `worth` is built from attack, health
+and price and none of those can see "strikes without being struck back", so
+reach was folded in. At 1.4 it put a ballista at 2.99 and every other ranged
+unit level with the best melee in the game:
+
+| | control | edge 1.4 |
+|---|---|---|
+| ranged built | 18 / 20 | **161 / 134** |
+| melee built | 133 / 186 | 100 / 104 |
+| decided | 18/18 | 13/18 |
+
+An eighth of the army became two thirds. `worth` can see reach now but still
+cannot see *fragility*, so nothing pushed back.
+
+### Where it landed
+
+`RANGED_EDGE` at 1.15, and **the axe is retrievable** -- a thrower that spends a
+turn not throwing wanders over and picks it up, so it throws every other turn
+rather than once per game. A single throw was priced for a unit with three times
+the health this one has; flat health and the one-way disarm landed on the same
+creature in the same week.
+
+| | control | reach 1.15 + retrievable axe |
+|---|---|---|
+| wins, both sets | 18-16 | **15-15** |
+| ranged survival | 31% / 19% | **45% / 32%** |
+| ranged built | 18 / 20 | 93 / 105 |
+| **games decided** | **34/36** | **30/36** |
+| turns | 136 / 164 | 156 / 168 |
+
+Ranged units are finally used and they survive, and the win split is level. **It
+costs decisiveness**: 34/36 down to 30/36, with games about fifteen turns
+longer, and section 23 worked hard for that number.
+
+**Untested hypothesis for why:** `fireAtRange` deliberately cannot take a city,
+so an army that is 44% ranged is worse at finishing a war than one that is 8%.
+That is a guess with a plausible mechanism and nothing more -- which, given the
+two wrong theories above, is exactly the point at which this file should stop
+and go and measure rather than carry on reasoning.

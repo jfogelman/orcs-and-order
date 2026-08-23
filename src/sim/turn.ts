@@ -11,7 +11,7 @@ import {
   nextProduction,
   processCity,
 } from './city';
-import { destroyUnit } from './combat';
+import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { resumeGotoOrders } from './movement';
@@ -95,6 +95,14 @@ function refreshUnits(state: GameState, player: Player): void {
     const full = effectiveMove(player, unit.type);
     unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
     if (unit.order === 'skip') unit.order = 'none';
+    // The axe was thrown, not destroyed. Given a moment, it is fetched back.
+    if (unit.disarmed && unit.rearmIn !== undefined) {
+      unit.rearmIn -= 1;
+      if (unit.rearmIn <= 0) {
+        delete unit.rearmIn;
+        rearm(state, unit, 'wanders over and picks its axe back up');
+      }
+    }
   }
 }
 

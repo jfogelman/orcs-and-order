@@ -219,6 +219,8 @@ export function resupply(state: GameState, unit: Unit): boolean {
 export function rearm(state: GameState, unit: Unit, how: string): void {
   if (!unit.disarmed) return;
   unit.disarmed = false;
+  // Whichever way the axe came back, the slow way is no longer pending.
+  delete unit.rearmIn;
   log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
 }
 

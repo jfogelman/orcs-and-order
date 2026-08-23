@@ -100,6 +100,15 @@ export interface Unit {
    */
   disarmed: boolean;
   /**
+   * Turns until a thrower has walked over and picked its axe back up.
+   *
+   * The axe is not gone, it is lying over there. Resupplying at a city is the
+   * fast way to get one; this is the slow way, and it exists because a single
+   * throw per game was priced for a unit with three times the health this one
+   * now has. See DESIGN_QUEUE section 38.
+   */
+  rearmIn?: number;
+  /**
    * Conditions this unit is under, with the turns left on each.
    *
    * Optional so old saves and test fixtures need not declare it; absent and

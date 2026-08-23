@@ -16,7 +16,9 @@ import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
-import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
+import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
+import { resupply, resupplyBlocked } from '../sim/combat';
+import { attackTargets, moveToward, reachableTiles, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
@@ -305,9 +307,32 @@ function nearestFrontier(
  * hard the blows land and how many of them the unit stays up for. Divided by
  * price, it is what a shield buys. See DESIGN_QUEUE sections 31 to 34.
  */
+/**
+ * What reach is worth, on top of the raw numbers.
+ *
+ * A ranged attacker strikes without being struck back, which no figure built
+ * out of attack, health and price can see. Leaving it out had a precise cost:
+ * the Horde's only ranged unit is its *worst* combat buy at 1.60 against an
+ * ogre's 2.26, so it was never built once in eighteen games, while the
+ * Kingdom's ballista tops its list and gets built ten times a game. Teaching
+ * the AI to shoot therefore handed the Kingdom eighty-seven free attacks a game
+ * and the Horde nothing at all. See DESIGN_QUEUE section 38.
+ *
+ * Small on purpose. At 1.4 this put a ballista at 2.99 and every other ranged
+ * unit level with the best melee in the game, and the AI went from building
+ * eighteen ranged units a game to a hundred and sixty -- from an eighth of the
+ * army to nearly two thirds. `worth` cannot see that a ballista has one point
+ * of defence, so nothing pushed back. The number has to stay modest until the
+ * formula understands fragility as well as it understands reach.
+ */
+const RANGED_EDGE = 1.15;
+
 function worth(u: UnitTypeDef, defending: boolean): number {
   const strength = defending ? u.defense : u.attack;
-  return (strength * u.hp) / Math.max(1, u.cost);
+  // Only on the attack: reach does nothing for you when something has already
+  // closed and is swinging at you, which is exactly a ranged unit's problem.
+  const reach = !defending && u.range > 1 ? RANGED_EDGE : 1;
+  return (strength * reach * u.hp) / Math.max(1, u.cost);
 }
 
 /**
@@ -534,12 +559,113 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
   if (here.ok && cities === 0) foundCity(state, unit);
 }
 
+/**
+ * Go and get another axe.
+ *
+ * A thrower that has thrown its axe fights at a quarter strength until it
+ * restocks, and `resupply` was called from the interface and nowhere else --
+ * so the moment the AI learned to shoot, the Horde's only ranged unit became a
+ * quarter of a unit permanently. The Kingdom's three ranged units all keep
+ * their weapons, so this asymmetry cost the Horde the war rather than a fight:
+ * 18-16 became 12-20 on the same seeds. See DESIGN_QUEUE section 38.
+ *
+ * Capped on distance. Walking eight tiles home is a fair price for getting a
+ * unit back; walking twenty is worse than fighting on with a rock.
+ */
+const RESTOCK_RANGE = 8;
+
+function restockIfNeeded(state: GameState, unit: Unit): boolean {
+  if (!unit.disarmed || !unitType(unit.type).throwsWeapon) return false;
+  if (resupplyBlocked(state, unit) === null) return resupply(state, unit);
+
+  const cities = playerCities(state, unit.owner);
+  if (cities.length === 0) return false;
+  const nearest = cities.reduce((a, b) =>
+    distance(unit.x, unit.y, b.x, b.y) < distance(unit.x, unit.y, a.x, a.y) ? b : a,
+  );
+  if (distance(unit.x, unit.y, nearest.x, nearest.y) > RESTOCK_RANGE) return false;
+  return moveToward(state, unit, nearest.x, nearest.y).kind !== 'blocked';
+}
+
+/**
+ * Shoot something, if anything is standing at exactly the right distance.
+ *
+ * The AI has never once used an ability -- `useAbility` was called from the
+ * interface and nowhere else -- so every archer, axethrower, ballista and mage
+ * it has ever built walked into melee and swung. That is the worst possible use
+ * of them: a ballista has a defence of one and twelve hit points, and the
+ * production chooser rates it the Kingdom's best buy off an attack of eight.
+ * See DESIGN_QUEUE section 38.
+ *
+ * Targets are ranked by worth over remaining health, which prefers finishing
+ * something valuable and wounded to scratching something fresh.
+ */
+function fireIfPossible(state: GameState, unit: Unit): boolean {
+  if (abilityReady(unit, 'ranged') !== null) return false;
+  const targets = abilityTargets(state, unit, 'ranged');
+  if (targets.length === 0) return false;
+  const rank = (t: Unit) => worth(unitType(t.type), false) / Math.max(1, t.hp);
+  const best = targets.reduce((a, b) => (rank(b) > rank(a) ? b : a));
+  useAbility(state, unit, 'ranged', best);
+  return true;
+}
+
+/**
+ * Step to somewhere a shot is actually possible.
+ *
+ * Reach is *exactly* one distance -- a ranged unit cannot lob one at somebody
+ * standing next to it -- so a unit that simply marches at the enemy walks
+ * straight through its own firing position and ends up in a brawl. This looks
+ * for a reachable tile at exactly that distance from something, and with
+ * nothing closer, which also walks a unit that is already in a brawl back out
+ * of one.
+ */
+function takeAim(state: GameState, unit: Unit): boolean {
+  const reach = unitType(unit.type).range;
+  if (reach <= 1) return false;
+  const seen = state.players[unit.owner].visible;
+  const w = state.width;
+  const enemies = state.units.filter(
+    (u) => u.owner !== unit.owner && seen[u.y * w + u.x],
+  );
+  if (enemies.length === 0) return false;
+
+  let bestIdx: number | null = null;
+  let bestCost = Infinity;
+  for (const [idx, cost] of reachableTiles(state, unit)) {
+    const x = idx % w;
+    const y = Math.floor(idx / w);
+    const nearest = Math.min(...enemies.map((e) => distance(x, y, e.x, e.y)));
+    // Exactly at reach, and nothing has closed inside it.
+    if (nearest !== reach) continue;
+    if (cost < bestCost) {
+      bestCost = cost;
+      bestIdx = idx;
+    }
+  }
+  if (bestIdx === null) return false;
+  const outcome = moveToward(state, unit, bestIdx % w, Math.floor(bestIdx / w));
+  return outcome.kind !== 'blocked';
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
   personality: AiPersonality,
   frontier: Array<[number, number]>,
 ): void {
+  // An empty-handed thrower is a quarter of a unit; getting it an axe back is
+  // worth more than anything else it could do with the turn.
+  if (restockIfNeeded(state, unit)) return;
+
+  // Reach first. A unit that can shoot should shoot, and one that cannot shoot
+  // from where it stands should go and stand somewhere it can.
+  if (fireIfPossible(state, unit)) return;
+  if (unitType(unit.type).range > 1 && takeAim(state, unit)) {
+    fireIfPossible(state, unit);
+    return;
+  }
+
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);
   let bestTarget: { x: number; y: number; odds: number } | null = null;

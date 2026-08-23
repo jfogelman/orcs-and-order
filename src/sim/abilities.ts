@@ -49,6 +49,13 @@ export const RANGED_ROUNDS = 3;
 /** How much harder a thrown weapon hits than the same creature swinging it. */
 export const THROW_BONUS = 1.5;
 
+/**
+ * Turns before a thrower has fetched its own axe back.
+ *
+ * Two, so it throws every other turn rather than once and then never again.
+ */
+export const REARM_TURNS = 2;
+
 /** What a unit is in principle capable of, ignoring its current state. */
 export function abilitiesOf(unit: Unit): AbilityId[] {
   const type = unitType(unit.type);
@@ -150,7 +157,10 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);
   if (target.hp > 0) awardXp(state, target, XP.survive);
-  if (type.throwsWeapon) unit.disarmed = true;
+  if (type.throwsWeapon) {
+    unit.disarmed = true;
+    unit.rearmIn = REARM_TURNS;
+  }
 
   const attackerName = unitType(unit.type).name;
   const targetName = unitType(target.type).name;
