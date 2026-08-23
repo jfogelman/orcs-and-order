@@ -396,7 +396,11 @@ export function canExecute(attacker: Unit, defender: Unit): boolean {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   if (a.executeChance <= 0) return false;
-  if (d.hp > a.hp) return false;
+  // Measured in shields rather than health. Health used to stand in for how
+  // big a thing was, because it scaled with the count; now that it does not,
+  // price is the honest measure -- and without this a Death Knight could once
+  // again delete Ten Orcs, which is the exact thing the guard exists to stop.
+  if (d.cost > a.cost) return false;
   return defender.hp < d.hp * 0.5;
 }
 

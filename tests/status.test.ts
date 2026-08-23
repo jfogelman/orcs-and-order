@@ -72,21 +72,24 @@ describe('statuses', () => {
 
   it('burn for a share of maximum health, not a flat number', () => {
     const state = arena();
-    const one = spawnUnit(state, 0, 'orc', 6, 6, false);
-    const many = spawnUnit(state, 0, 'orc_x3', 8, 6, false);
-    applyStatus(one, 'burning', 3);
-    applyStatus(many, 'burning', 3);
+    // An orc and a dragon rather than an orc and three orcs: group size no
+    // longer changes a health bar, so the pair that makes the point now has to
+    // be two different creatures.
+    const small = spawnUnit(state, 0, 'orc', 6, 6, false);
+    const large = spawnUnit(state, 0, 'dragon', 8, 6, false);
+    applyStatus(small, 'burning', 3);
+    applyStatus(large, 'burning', 3);
 
-    tickStatuses(state, one);
-    tickStatuses(state, many);
+    tickStatuses(state, small);
+    tickStatuses(state, large);
 
-    const lostOne = unitType(one.type).hp - one.hp;
-    const lostMany = unitType(many.type).hp - many.hp;
+    const lostSmall = unitType(small.type).hp - small.hp;
+    const lostLarge = unitType(large.type).hp - large.hp;
     // Fire is equally frightening to both. A flat figure would be lethal to one
     // and beneath the notice of the other.
-    expect(lostMany).toBeGreaterThan(lostOne);
-    expect(lostOne / unitType(one.type).hp).toBeCloseTo(BURN_DAMAGE, 1);
-    expect(lostMany / unitType(many.type).hp).toBeCloseTo(BURN_DAMAGE, 1);
+    expect(lostLarge).toBeGreaterThan(lostSmall);
+    expect(lostSmall / unitType(small.type).hp).toBeCloseTo(BURN_DAMAGE, 1);
+    expect(lostLarge / unitType(large.type).hp).toBeCloseTo(BURN_DAMAGE, 1);
   });
 
   it('report a death so the caller can bury it', () => {

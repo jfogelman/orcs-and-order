@@ -574,7 +574,22 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     role: c.role,
     attack: c.attack * count,
     defense: c.defense * count,
-    hp: c.hp * count,
+    /*
+     * Health does *not* scale with the count, and that is the single most
+     * important number in the game.
+     *
+     * When it did, a rung of the ladder bought N times the damage and N times
+     * the health for N times the price -- and the two multiply, so a stack was
+     * effectively N-squared for a linear cost. Nothing priced linearly could
+     * compete, which is why the AI never once built a dragon and why the whole
+     * right-hand side of the tech tree was scenery. See DESIGN_QUEUE 31 and 32.
+     *
+     * Flat health is also what the design document always claimed the trade
+     * was: N orcs are efficient because they hold one tile and spend one
+     * movement point, and the price is that you lose all of them at once. That
+     * price was never actually being charged.
+     */
+    hp: c.hp,
     move: c.move,
     cost: c.cost * count,
     sight: c.sight,
@@ -591,6 +606,10 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     range: c.range ?? 1,
     throwsWeapon: c.throwsWeapon === true,
     lineBreath: c.lineBreath === true,
+    // Still scaled by the count, unlike health. This is a share of the
+    // *patient's* health bar rather than the healer's, and "one paladin
+    // patches you up halfway, two finish the job" is a designed mechanic that
+    // has nothing to do with how tough the healer is.
     healsTo: Math.min(1, (c.healFraction ?? 0) * count),
     artScale: c.artScale ?? 1,
     silhouette: c.silhouette,

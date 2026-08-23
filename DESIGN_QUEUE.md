@@ -2416,3 +2416,60 @@ nothing bolted on beside it will fix it.**
 
 **(a) or (b), plus (d), plus the specials repriced against whichever is chosen.**
 Then first strikes and withdrawal, measured one at a time.
+
+## 33. Flat health: the duels are fixed, the game is not
+
+Health no longer scales with the count. Ten Orcs have ten orcs' attack, ten
+orcs' defence, ten orcs' price, and **one orc's health**. Two supporting
+changes fell out of it:
+
+- **Execution is measured in shields.** `canExecute` used health as a stand-in
+  for how big a thing was, which only worked while health scaled. Without the
+  change a Death Knight could delete Ten Orcs, which is the exact case the
+  guard exists to prevent.
+- **The paladin heal still scales with the count**, deliberately. It is a share
+  of the *patient's* health bar, and "one paladin patches you up halfway, two
+  finish the job" is a designed mechanic that never had anything to do with how
+  tough the healer was.
+
+Four tests had to be rewritten rather than repaired. One of them required
+`bigHits > smallHits * 4` -- it was pinning the bug down as though it were a
+rule, and had been passing happily for months.
+
+### Duels, 300 runs each
+
+| attacker vs defender | health scaled | flat health |
+|---|---|---|
+| Dragon vs Four Orcs | 23% | **98%** |
+| Dragon vs Ten Orcs | 0% | **64%** |
+| Four Orcs vs Dragon | 84% | **2%** |
+| Ten Orcs vs Dragon | 100% | **37%** |
+| Death Knight vs Four Orcs | 0% | 44% |
+| Ogre vs Three Footmen | 1% | 69% |
+
+That is the target hit almost exactly: a dragon beats four orcs comfortably, and
+ten orcs against a dragon is a real fight rather than a formality.
+
+### And in a real game it made things worse
+
+| | health scaled | flat health |
+|---|---|---|
+| cities, orc/human | 7.61 / 9.72 | **6.00 / 10.78** |
+| wins, orc/human | 5 / 10 | **3 / 10** |
+| specials built | 0.00 | **0.00** |
+
+**Still zero specials.** The reason is the same one section 30 found and it has
+not been addressed yet: production step 4 sorts the available attackers by raw
+`attack` and takes the dearest it can afford. Ten Orcs has attack 30 and a
+dragon has attack 10, so the AI still reaches for the stack -- except a stack is
+now a 200-shield unit with twelve hit points, which is terrible value. **The
+chooser is not merely missing the specials, it is now actively buying the worst
+thing on the list.**
+
+And the Horde suffers most, because the Horde is the side whose personality
+leans on the counting ladder hardest.
+
+So flat health is correct and insufficient. The next piece is not another combat
+mechanic -- it is **teaching the AI what a unit is worth**, on some measure that
+accounts for health and price rather than reading `attack` alone. Nothing else
+in sections 11 or 32 can be measured until the AI will buy the units involved.
