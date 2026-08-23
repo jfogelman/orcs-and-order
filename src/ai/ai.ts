@@ -1,5 +1,6 @@
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
+import type { UnitTypeDef } from '../model/units';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
@@ -275,6 +276,44 @@ function nearestFrontier(
 
 // ------------------------------------------------------------- production
 
+/**
+ * What a fighting unit is worth, per shield spent.
+ *
+ * The chooser used to sort candidates by raw `attack` and take the dearest it
+ * could afford, which was defensible only while health scaled with the group:
+ * attack alone then stood in for everything. It no longer does. Ten Orcs have
+ * attack 30 and twelve hit points for two hundred shields, and sorting on
+ * attack puts that at the top of the list -- so the AI was not merely failing
+ * to notice the dragons, it was actively buying the worst thing available.
+ *
+ * Strength multiplied by health is what a fight is actually decided on: how
+ * hard the blows land and how many of them the unit stays up for. Divided by
+ * price, it is what a shield buys. See DESIGN_QUEUE sections 31 to 34.
+ */
+function worth(u: UnitTypeDef, defending: boolean): number {
+  const strength = defending ? u.defense : u.attack;
+  return (strength * u.hp) / Math.max(1, u.cost);
+}
+
+/**
+ * Ranks candidates by value, preferring the bigger of two equals.
+ *
+ * The counting ladder now scales every stat linearly, so a rung is worth
+ * exactly what its members are worth and one orc ties with ten. The tie is
+ * broken towards the group on purpose: upkeep is charged per *unit* rather
+ * than per orc, and a group also holds one tile and spends one movement point.
+ * That efficiency is the whole reason the ladder exists, and it is real even
+ * though it does not show up in the value figure.
+ */
+function byWorth(defending: boolean) {
+  return (a: UnitTypeDef, b: UnitTypeDef): number => {
+    const wa = worth(a, defending);
+    const wb = worth(b, defending);
+    if (Math.abs(wa - wb) > Math.max(wa, wb) * 0.05) return wb - wa;
+    return b.cost - a.cost;
+  };
+}
+
 function chooseProduction(
   state: GameState,
   city: City,
@@ -296,7 +335,7 @@ function chooseProduction(
   if (garrison < personality.garrisonPerCity) {
     const defender = [...options.units]
       .filter((u) => u.attack > 0)
-      .sort((a, b) => b.defense / b.cost - a.defense / a.cost)[0];
+      .sort(byWorth(true))[0];
     if (defender) return { kind: 'unit', id: defender.id };
   }
 
@@ -372,8 +411,13 @@ function chooseProduction(
   // 4. Otherwise: the biggest stick currently affordable in reasonable time.
   const attackers = [...options.units]
     .filter((u) => u.attack > 0 && !u.settler)
-    .sort((a, b) => b.attack - a.attack);
-  const affordable = attackers.find((u) => u.cost <= 40 + city.size * 22) ?? attackers.at(-1);
+    .sort(byWorth(false));
+  // Falls back to whatever is cheapest rather than to the bottom of the value
+  // ranking, which after the re-sort is the worst unit on the list rather than
+  // the one a small city can actually finish.
+  const affordable =
+    attackers.find((u) => u.cost <= 40 + city.size * 22) ??
+    [...attackers].sort((a, b) => a.cost - b.cost)[0];
   if (affordable) return { kind: 'unit', id: affordable.id };
   void owner;
   return { kind: 'coin' };

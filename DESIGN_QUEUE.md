@@ -2473,3 +2473,55 @@ So flat health is correct and insufficient. The next piece is not another combat
 mechanic -- it is **teaching the AI what a unit is worth**, on some measure that
 accounts for health and price rather than reading `attack` alone. Nothing else
 in sections 11 or 32 can be measured until the AI will buy the units involved.
+
+## 34. Teaching the AI what a unit is worth
+
+One sort key. Production step 4 ranked candidates by raw `attack` and took the
+dearest it could afford; it now ranks by **`attack * hp / cost`**, and step 1
+ranks defenders by `defense * hp / cost` in place of `defense / cost`.
+
+Sorting on attack was defensible only while health scaled with the group, when
+attack stood in for everything. After section 33 it was actively harmful: Ten
+Orcs is attack 30 with twelve hit points for two hundred shields, and it still
+topped an attack-ordered list. The AI was not merely failing to notice the
+dragons, it was buying the worst thing available.
+
+Ties break towards the larger group on purpose. Every stat now scales linearly,
+so one orc and Ten Orcs are worth exactly the same per shield -- but upkeep is
+charged per *unit* rather than per orc, and a group holds one tile and spends
+one movement point. That efficiency is the whole reason the ladder exists and
+it never shows up in the value figure.
+
+### Measured, 18 seeds
+
+| | sorted by attack | valued |
+|---|---|---|
+| **specials built per game** | **0.00** | **48.11** |
+| units built per game | 386.00 | 231.89 |
+| x4+ ladder units | 15.28 | 6.33 |
+| games decided | 13/18 | **18/18** |
+| turns | 171.89 | 146.22 |
+| cities, orc/human | 6.00 / 10.78 | 11.56 / 5.06 |
+| wins, orc/human | 3 / 10 | **17 / 1** |
+
+Most built, before: goblin 172.8, footman 114.6, peon 25.1, orc 20.7.
+Most built, after: **troll 34.9, goblin 27.2, ogre 25.3, dragon 22.8, knight 19.0.**
+
+**The back half of the tech tree is in the game for the first time.** Dragons,
+ogres and trolls are built by the dozen where the count was previously zero, the
+army is a third smaller and considerably better, and every single game now
+reaches a decision instead of five in eighteen timing out.
+
+### And the balance has flipped violently
+
+17-1 to the Horde, from 3-10 against. This is a *different* problem and a much
+better one: it is no longer a broken mechanism, it is an uncalibrated roster.
+
+The Horde's specials are simply better buys than the Kingdom's -- a troll
+regenerates, and an ogre and a dragon both return about 2.8 attack-health per
+shield against a knight's 1.75. Nobody ever noticed, because until this commit
+not one of them had ever been built and every fight in the game's history was
+goblins against footmen.
+
+**Next: reprice both rosters against the value measure**, now that there is
+finally a measure to price them against, and re-check on a fresh seed set.
