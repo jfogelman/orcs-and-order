@@ -2619,3 +2619,54 @@ Across sections 30 to 36 the Horde has gone 3-10, then 17-1, then 9-6, and now
 is *not* yet established is whether any of it holds up against a human, since
 every one of these numbers comes from two AIs playing each other -- and the AI
 buys on a formula that a person will happily ignore.
+
+## 37. The magic block, re-measured: live, and marginal
+
+Section 30 recorded the magic block as **unmeasurable** -- both arms byte-identical,
+because no mage, death knight or dragon had ever been built. Sections 33 and 34
+changed that, so the measurement was redone: two arms, two seed sets, 72 games,
+with the control neutering `applySpellEffects` and zeroing the three
+`magicResist` values.
+
+| | magic on | control |
+|---|---|---|
+| magic units built (6000 / 31337) | 7.00 / 15.94 | 7.61 / 15.28 |
+| spell advances held, of 4 | 2.44 / 3.00 | 2.44 / 3.00 |
+| **burns per game** | **1.50 / 5.17** | 0.00 / 0.00 |
+| **freezes per game** | **0.56 / 2.94** | 0.00 / 0.00 |
+| wins, orc-human | 7-11 / 11-5 | 8-10 / 10-5 |
+| turns | 135.89 / 163.78 | 137.00 / 163.11 |
+| cities | 6.61/8.39, 9.17/7.78 | 6.67/8.39, 9.17/7.83 |
+
+**It is no longer inert. It is marginal.** The spells fire -- the control's flat
+zeroes confirm the arm is isolating the right thing -- but a game contains
+roughly three burns and under two freezes across 150 turns and several hundred
+combats, and nothing downstream moves. Wins differ by one game per set, which
+section 36 established is well inside the swing of an eighteen-seed set.
+
+That is a *better* result than section 30's, because it is a real number rather
+than an absence. It is not a good one.
+
+### Why it is rare, and what that implies for the rest of section 11
+
+A spell needs three things to coincide: a magical attacker (7-16 of the ~230
+units built), its owner holding one of two advances that cost 165 and 180 and
+sit behind Insanity, and a fight happening. The advances land late, and the
+units are a small minority even now that they get built at all.
+
+**Any enhancement gated on a late advance and a rare unit will measure the same
+way.** That is worth knowing before building confuse, three ogre clubs and three
+perks: on this evidence they will each fire a handful of times a game and change
+nothing measurable. They may still be worth building as texture -- a game is not
+only its win rate -- but they should not be sold as a fix for anything.
+
+### And the premise has partly expired
+
+Section 11 exists because *"a game that has not been won by turn 200 has nothing
+left to do but walk units at each other."* That was true when it was written.
+Games now finish at 136-164 turns with 33 of 36 decided, and the fix came from
+sections 23, 33 and 34 rather than from giving the tree somewhere to go.
+
+So the anti-stalemate argument for section 11 is largely spent. The flavour
+argument is not, and the confuse mechanic in particular is interesting on its
+own terms. Worth deciding which of those is being bought before building it.
