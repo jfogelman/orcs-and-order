@@ -2333,3 +2333,86 @@ time rather than as a bundle.
 **Nothing else in section 11 should be built until this is settled.** Clubs and
 perks hung on units that are never built are three more inert features, and the
 lesson from sections 24, 26 and 30 is that this gets checked first.
+
+## 32. Losses, and what Civilization actually does
+
+Two changes, and then the reason neither is enough on its own.
+
+**A count unit fights with what it has left.** `aliveCount` reads the health bar
+and reports survivors: Ten Orcs at half health is Five Orcs, swings like five,
+holds like five, and the badge on the map shows `5` in red rather than the `10`
+that set out. **A singleton never degrades** -- a dragon on its last legs
+breathes the same fire, because there is only ever one of it.
+
+**Odds are recomputed every round.** They were computed once before the fight
+and reused, so losses could not bite inside a battle -- a stack fought at full
+strength down to its last hit point. That single line is what made the first
+version of this measure as nothing at all.
+
+### What it bought
+
+Duels, 400 runs each, attacker's win rate:
+
+| | before | after |
+|---|---|---|
+| Dragon attacks Four Orcs | 1% | **20%** |
+| Four Orcs attacks Dragon | 97% | **81%** |
+| Two Ogres attacks Three Footmen | 62% | 72% |
+| Dragon attacks Ten Orcs | 0% | 0% |
+
+Real movement, right direction, nowhere near enough -- and across full games it
+is close to inert, because **the AI buys on the type's paper stats** and on
+paper a dragon is still worse than four orcs at a higher price. Wins went 6-9
+to 5-10 and specials built stayed at 0.00.
+
+### What Civilization does, and why it cannot have our problem
+
+From Civ4's combat rules and the Civ3 probability derivation:
+
+- **Strength is multiplied by current HP over maximum.** Civ4 has done exactly
+  the losses idea since 2005, and applies it to every unit rather than only to
+  stacks.
+- **Per round, the attacker wins with `R/(1+R)` where `R = A/D`** -- which is
+  `A/(A+D)`, algebraically the same as ours. That part already matched.
+- **Damage per round is `floor(20*(3A+D)/(3D+A))`, floored at 6 and capped at
+  60.** Ours is a function of *maximum health* and ignores strength entirely.
+  This is the real gap: in Civ4 a stronger unit hits harder *and* takes less,
+  which compounds, so quality kills quickly instead of grinding.
+- **First strikes** are free rounds in which only one side does damage -- which
+  is the "ranged attackers are not struck back" idea, already in the game it
+  came from.
+- **Withdrawal** lets a losing *attacker* retreat at its pre-final-round health.
+  That is "Better Part of Valour" from section 11, near enough exactly.
+
+Three of the four things proposed in this conversation turn out to be things
+Civ4 already does. That is a good sign for all three.
+
+**And the fourth thing is the one that matters most: every Civ4 unit has 100
+hit points.** Strength is the only axis that varies. Civ3 is the same within a
+narrow veteran band. The Civ3 derivation shows why that is not an accident --
+win probability compounds over *both* the strength ratio and the hit point
+counts, so a system where one number raises both is exponential in that number.
+
+Our ladder raises both. Ten Orcs is ten times the damage and ten times the
+health for ten times the price, and the two multiply. **That is the root, and
+nothing bolted on beside it will fix it.**
+
+### The fork
+
+- **(a) Flatten health.** Count scales attack and defence; health stays at the
+  base creature's. Kills the square law at the root and makes the original joke
+  *sharper* -- a ten-stack is terrifying and no harder to kill than one orc, so
+  losing it is the catastrophe the design document always said it was. Biggest
+  change to the feel of the game.
+- **(b) Health scales as the square root of count.** Ten Orcs gets 3.2x health
+  and 10x attack. Keeps a stack meaningfully tough while dropping the exponent
+  from 2 to about 1.5.
+- **(c) Price the count superlinearly** and leave the stats alone. Honest, but
+  it makes the top of the ladder unaffordable, which retires the joke rather
+  than fixing it.
+- **(d) Adopt Civ4's damage formula** so strength decides how hard blows land.
+  Wanted regardless, and helps quality -- but on its own it does not remove the
+  exponent.
+
+**(a) or (b), plus (d), plus the specials repriced against whichever is chosen.**
+Then first strikes and withdrawal, measured one at a time.

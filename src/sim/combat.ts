@@ -2,7 +2,7 @@ import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
-import { unitType } from '../model/units';
+import { headcount, unitType } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, SUPPLY } from './city';
@@ -275,6 +275,10 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
       : 1;
 
   let total = type.attack;
+  // Losses. Ten Orcs that have taken half the damage they can take are Five
+  // Orcs, and swing like five, which is what stops a big enough stack being
+  // the answer to every question in the game. A singleton is unaffected.
+  total *= headcount(attacker);
   // Nothing left to fight with but hands and regret.
   if (attacker.disarmed) total *= DISARMED_ATTACK;
   // Hungry, lost, and a long way from anyone who knows the way home. Graded
@@ -335,6 +339,8 @@ export function defenseStrength(
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;
+  // The same losses, on the other foot: fewer of them left to hold the line.
+  total *= headcount(defender);
   total *= rankBonus(defender);
   if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   total *= terrain.defense;
@@ -419,13 +425,25 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const atkMax = unitType(attacker.type).hp;
   const defMax = unitType(defender.type).hp;
   const dmg = damagePerRound(atkMax, defMax);
-  // A defence of zero would make the fight a certainty; keep it a contest.
-  const pAttack = atk.total / Math.max(0.0001, atk.total + def.total);
+  // The strengths above already count the losses each side arrived with, so
+  // divide those out to get the part that does not change during the fight.
+  // Everything else -- terrain, walls, rank, supply -- is fixed for the
+  // duration; only the headcount moves, and it moves every round.
+  const atkStatic = atk.total / Math.max(0.0001, headcount(attacker));
+  const defStatic = def.total / Math.max(0.0001, headcount(defender));
 
   let rounds = 0;
   const result = withRng(state, (rng) => {
     while (attacker.hp > 0 && defender.hp > 0) {
       rounds++;
+      // Recomputed per round rather than fixed at the start. A stack that is
+      // being cut down swings weaker with every exchange, which is the whole
+      // of DESIGN_QUEUE section 31: fixed odds plus health that scales with
+      // the count is what made a big enough stack unbeatable by anything.
+      const a = atkStatic * headcount(attacker);
+      const d = defStatic * headcount(defender);
+      // A defence of zero would make the fight a certainty; keep it a contest.
+      const pAttack = a / Math.max(0.0001, a + d);
       if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
       else applyDamage(attacker, dmg, damageKindOf(defender));
       // Runaway guard: an unwinnable matchup should not spin forever.

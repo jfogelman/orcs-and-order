@@ -622,3 +622,38 @@ export function unitType(id: UnitTypeId): UnitTypeDef {
   if (!t) throw new Error(`Unknown unit type: ${id}`);
   return t;
 }
+
+/**
+ * How many of the creature are still on their feet.
+ *
+ * A count unit is one unit with N drawn on it, so damage has to mean something
+ * other than "the same N, slightly tired". It means losses: Ten Orcs at half
+ * health is Five Orcs, and fights like Five Orcs until it heals.
+ *
+ * **A singleton never degrades.** A dragon on its last legs still breathes the
+ * same fire, because there is only ever one of it and it is either there or it
+ * is not. That asymmetry is the point rather than a side effect -- see
+ * DESIGN_QUEUE section 32.
+ *
+ * Rounds up, so a unit is never reduced below one while it is still alive.
+ */
+export function aliveCount(unit: { type: UnitTypeId; hp: number }): number {
+  const type = unitType(unit.type);
+  if (unit.hp <= 0) return 0;
+  if (type.count <= 1) return 1;
+  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / type.hp))));
+}
+
+/**
+ * Switch for measuring against a control arm, in the manner of
+ * `FORTIFY_BONUS_REF`. Off means the old behaviour: full strength until dead.
+ */
+export const ATTRITION = { enabled: true };
+
+/** The share of its full strength a unit still fights at, from its losses. */
+export function headcount(unit: { type: UnitTypeId; hp: number }): number {
+  if (!ATTRITION.enabled) return 1;
+  const type = unitType(unit.type);
+  if (type.count <= 1) return 1;
+  return aliveCount(unit) / type.count;
+}

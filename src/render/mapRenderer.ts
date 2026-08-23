@@ -1,7 +1,7 @@
 import { fatCrossIndices, idx } from '../engine/grid';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
-import { unitType } from '../model/units';
+import { aliveCount, unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
@@ -721,19 +721,22 @@ export class MapRenderer {
     }
 
     if (size >= 28) {
-      // Count badge: the sprite already shows the crowd, this confirms it.
+      // Count badge: how many are still standing, not how many set out. A
+      // wounded Ten Orcs fights as the number shown here, so the number has to
+      // be the live one or the badge would be quietly lying about the odds.
       if (type.count > 1) {
+        const alive = aliveCount(u);
         const bw = size * 0.3;
         ctx.fillStyle = 'rgba(12,10,8,0.85)';
         ctx.fillRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
-        ctx.strokeStyle = owner.color;
+        ctx.strokeStyle = alive < type.count ? '#c8503c' : owner.color;
         ctx.lineWidth = 1;
         ctx.strokeRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
-        ctx.fillStyle = '#f2e6c8';
+        ctx.fillStyle = alive < type.count ? '#f0b8a8' : '#f2e6c8';
         ctx.font = `bold ${Math.round(bw * 0.78)}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(type.count), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
+        ctx.fillText(String(alive), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
       }
       // Rank badge, in place of the drawn asterisk this used to be. Sits at
       // the bottom-left so it does not collide with the count badge on the
