@@ -61,21 +61,30 @@ function unitIconPath(id: UnitTypeId): string {
 }
 
 /**
+ * Where the icon for a standing order lives -- banking coin, study, or buying
+ * the mob a drink. Optional, like every other icon: a missing one leaves the
+ * slot empty rather than breaking the column.
+ */
+function orderIconPath(kind: 'coin' | 'beakers' | 'calm'): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}orders/${kind}.png`;
+}
+
+/**
  * The little picture beside a line in the build list.
  *
- * Coin, beakers and placating the mob have no art and are never going to --
- * they are not things, they are what a city does when it is not making a
- * thing. They get an empty slot of the same width so the names stay in a
- * column rather than stepping in and out.
+ * Deliberately its own class rather than the one the chips use. A missing icon
+ * here is *hidden* rather than removed, because removing it would collapse the
+ * grid column and step every name on the list left by twenty-six pixels.
  */
 function productionIcon(item: ProductionItem): string {
-  if (item.kind === 'unit') {
-    return `<img class="build-icon unit-icon" src="${unitIconPath(item.id)}" alt="" />`;
-  }
-  if (item.kind === 'building') {
-    return `<img class="build-icon building-icon" src="${buildingIconPath(item.id)}" alt="" />`;
-  }
-  return '<span class="build-icon build-icon-blank"></span>';
+  const src =
+    item.kind === 'unit'
+      ? unitIconPath(item.id)
+      : item.kind === 'building'
+      ? buildingIconPath(item.id)
+      : orderIconPath(item.kind);
+  return `<img class="build-icon" src="${src}" alt="" />`;
 }
 
 /** Turns remaining on the current build, or null when it will never finish. */
@@ -338,11 +347,18 @@ export function openCityPanel(
           onWake?.(unit);
         });
       });
-      // Every icon in the panel, not only the ones on standing structures.
-      // Art is dropped in a file at a time, so a missing portrait has to leave
-      // a tidy gap rather than a broken-image glyph.
+      // Icons that sit inline -- on a structure chip or a garrison button --
+      // are removed outright when the art is missing, because the text beside
+      // them closes the gap tidily.
       root.querySelectorAll<HTMLImageElement>('.building-icon, .unit-icon').forEach((img) => {
         img.addEventListener('error', () => img.remove());
+      });
+      // Icons in the build list hold a grid column open, so a missing one is
+      // hidden in place. Removing it would shunt every name on the list left.
+      root.querySelectorAll<HTMLImageElement>('.build-icon').forEach((img) => {
+        img.addEventListener('error', () => {
+          img.style.visibility = 'hidden';
+        });
       });
       root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
         link.addEventListener('click', (e) => {

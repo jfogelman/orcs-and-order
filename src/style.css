@@ -432,10 +432,7 @@ button.small {
   image-rendering: pixelated;
 }
 
-/* Coin, beakers and placating the mob hold the column open without art. */
-.build-icon-blank {
-  opacity: 0;
-}
+
 
 .garrison-unit {
   display: inline-flex;

@@ -103,6 +103,11 @@ BUILDING_ICONS = [
     "yellingGrounds", "paradeGround",
 ]
 
+# The three standing orders a city can take instead of making a thing: bank the
+# coin, study, or buy the mob a drink. Same size and treatment as a building
+# icon, and equally optional.
+ORDER_ICONS = ["coin", "beakers", "calm"]
+
 # Icons are read at a glance in a crowded tree, so they stay small.
 ICON_SIZE = 48
 
@@ -1513,6 +1518,13 @@ def main() -> int:
     icons += bicons
     missing_icons.extend(missing_bicons)
     failed_icons.extend(failed_bicons)
+    print("Standing order icons:")
+    oicons, missing_oicons, failed_oicons = process_cutouts(
+        "orders", ORDER_ICONS, force, size=ICON_SIZE, quiet_missing=True
+    )
+    icons += oicons
+    missing_icons.extend(missing_oicons)
+    failed_icons.extend(failed_oicons)
     composed, missing_composed = compose_icons(force)
     icons += composed
     missing_icons.extend(missing_composed)

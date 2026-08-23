@@ -1026,3 +1026,34 @@ Notes worth having in front of you while prompting:
 - **`yellingGrounds` and `paradeGround` both upgrade the same barracks**, so
   they should *not* rhyme with each other — one is noise, the other is
   geometry.
+
+---
+
+## Standing order icons — 0 of 3 done
+
+A city that is not making a thing is doing one of three things instead, and the
+build list shows all three alongside the units and structures. They are the only
+lines with no picture, which is exactly where the eye stops.
+
+Drop them at `art_src/orders/<id>.png`. **Same preamble as every other icon** —
+48×48, plain solid magenta background, single centred object, thick dark
+outline, no text, no numerals.
+
+| id | Shown as | Icon subject |
+|---|---|---|
+| `coin` | Coin | a small stack of three fat gold coins, the top one standing upright on its edge and slightly too large for the stack |
+| `beakers` | Study | a round glass flask of glowing blue liquid with one bubble rising, and a bent copper drinking straw resting in the neck |
+| `calm` | Placate | an open palm raised in a calming gesture, with a small iced pastry balanced on the fingertips |
+
+All three jokes are in the last clause, so **do not let the generator tidy them
+away**. The coin that does not fit, the straw in the research, and the pastry
+offered to the mob are the entire point; a neat stack of coins, a plain flask
+and a plain raised hand are three icons nobody will look at twice.
+
+If the straw keeps coming out as a stirring rod, ask for "a bendy drinking
+straw, the kind from a milkshake". If the pastry reads as a stone, ask for
+"a pink iced bun with a cherry on top".
+
+These sit beside portraits of goblins and dragons in the same list, so keep the
+outline weight and the palette in the same family — bright, but not brighter
+than a dragon.
