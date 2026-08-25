@@ -475,6 +475,18 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     if (unitType(striker.type).throwsWeapon && !striker.disarmed) {
       striker.disarmed = true;
       striker.rearmIn = REARM_TURNS;
+      // Says so out loud, which is also what puts the axe on the screen: the
+      // interface reads this cue and throws the animation along the same line.
+      // Without it the one throw in the game had no picture at all.
+      log(
+        state,
+        `${unitType(striker.type).name} throws its axe at ${unitType(struck.type).name}.`,
+        'combat',
+        striker.owner,
+        'axe-throw',
+        [struck.x, struck.y],
+        striker.id,
+      );
     }
   }
 

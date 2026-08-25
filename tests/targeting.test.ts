@@ -528,6 +528,21 @@ describe('the axethrower has exactly one axe', () => {
     expect(axe.rearmIn).toBe(REARM_TURNS);
   });
 
+  it('says so, which is what puts the axe on the screen', () => {
+    const { state, axe, foe } = thrower();
+    state.log.length = 0;
+
+    resolveCombat(state, axe, foe);
+
+    // The interface reads this cue to throw the animation. The axethrower
+    // stopped being artillery in section 39, so the effect no longer comes
+    // from the ranged ability -- and for a while it came from nowhere at all,
+    // leaving the one throw in the game with no picture. See section 43.
+    const thrown = state.log.find((e) => e.cue === 'axe-throw');
+    expect(thrown, 'no cue, so no animation').toBeDefined();
+    expect(thrown?.at).toEqual([foe.x, foe.y]);
+  });
+
   it('does not throw a second axe it has not got', () => {
     const { state, axe, foe } = thrower();
     resolveCombat(state, axe, foe);

@@ -1404,6 +1404,11 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
       return 'demolish';
     case 'holy':
       return 'heal';
+    // The axethrower's opening blow. It stopped being artillery in section 39,
+    // so this no longer comes from the ranged ability -- it comes from the
+    // first strike, and the sim says so with this cue.
+    case 'axe-throw':
+      return 'axe';
     default:
       return entry.kind === 'combat' ? 'clash' : null;
   }
