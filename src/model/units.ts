@@ -45,6 +45,15 @@ export interface CreatureDef {
   sight: number;
   /** Group sizes that exist for this creature. Always includes 1. */
   counts: number[];
+  /**
+   * The Horde is willing to load this one into a catapult.
+   *
+   * Only ever read when something is being reloaded by `sacrifice`, and set on
+   * the two creatures the Horde has in quantity and no particular regard for.
+   * A rule rather than a price threshold, so that nothing ever works out that
+   * a dragon is cheap enough to fire at a wall.
+   */
+  expendable?: boolean;
   /** Can found cities. */
   settler?: boolean;
   /** Ignores terrain movement costs. */
@@ -180,6 +189,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'goblin',
+    expendable: true,
     name: 'Goblin',
     plural: 'Goblins',
     faction: 'orc',
@@ -221,6 +231,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'orc',
+    expendable: true,
     name: 'Orc',
     plural: 'Orcs',
     faction: 'orc',
@@ -460,6 +471,33 @@ export const CREATURES: CreatureDef[] = [
     blurb: 'Expensive, mounted, and deeply committed to being seen being mounted.',
   },
   {
+    id: 'goblincatapult',
+    range: 2,
+    // Three goblins in the hopper. Reloading is a matter of finding three more
+    // goblins, which the Horde has never once found difficult.
+    ammo: 3,
+    reloadsBy: 'sacrifice',
+    // Not `catapult`: that id already belongs to the Broken Catapult, which is
+    // a building, and two things answering to one name breaks the Orcpedia.
+    name: 'Goblin Catapult',
+    plural: 'Goblin Catapults',
+    faction: 'orc',
+    role: 'siege',
+    attack: 7,
+    defense: 1,
+    hp: 12,
+    move: 1,
+    cost: 40,
+    sight: 1,
+    counts: [1],
+    siegeBonus: 2,
+    artScale: 1.08,
+    silhouette: 'engine',
+    body: '#6f7a3a',
+    trim: '#3f3128',
+    blurb: 'The goblins have been told it is a promotion.',
+  },
+  {
     id: 'ballista',
     range: 2,
     // Five bolts, then somebody has to fetch more.
@@ -574,6 +612,7 @@ export interface UnitTypeDef {
   settler: boolean;
   flies: boolean;
   firstStrikes: number;
+  expendable: boolean;
   ammo: number;
   reloadsBy: 'labour' | 'sacrifice';
   siegeBonus: number;
@@ -653,6 +692,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     settler: c.settler === true,
     flies: c.flies === true,
     firstStrikes: c.firstStrikes ?? 0,
+    expendable: c.expendable === true,
     // Not multiplied by the count: three ballistas share the supply wagon.
     ammo: c.ammo ?? 0,
     reloadsBy: c.reloadsBy ?? 'labour',

@@ -119,7 +119,8 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // people who make missiles, which is the archery line; a piece that
       // reloads by sacrifice is fed by whoever is standing closest and least
       // able to argue.
-      return unitType(other.type).reloadsBy === 'sacrifice' || type.firstStrikes > 0;
+      if (unitType(other.type).reloadsBy === 'sacrifice') return type.expendable;
+      return type.firstStrikes > 0;
     }
 
     // Healing is for a neighbour who actually needs it.
@@ -261,7 +262,10 @@ function handOverMissile(state: GameState, unit: Unit, target: Unit): AbilityOut
   const type = unitType(target.type);
   const eaten = type.reloadsBy === 'sacrifice';
 
-  target.ammo = Math.min(type.ammo, ammoLeft(target) + 1);
+  // A sacrifice loads the whole group -- Three Goblins is three shots -- which
+  // is what makes the counting ladder worth something to a siege train.
+  const loaded = eaten ? unitType(unit.type).count : 1;
+  target.ammo = Math.min(type.ammo, ammoLeft(target) + loaded);
   unit.moves = 0;
 
   log(

@@ -442,6 +442,69 @@ describe('a ballista carries a finite number of bolts', () => {
   });
 });
 
+/**
+ * The Horde's answer to the ballista. Where the Kingdom's artillery is fed by
+ * people who make missiles, this one is fed by the missiles themselves, who
+ * have been told it is a promotion.
+ */
+describe('the Goblin Catapult is loaded with goblins', () => {
+  function battery() {
+    const state = board();
+    revealAll(state, 0);
+    const gun = spawnUnit(state, 0, 'goblincatapult', 10, 10);
+    gun.ammo = 0;
+    return { state, gun };
+  }
+
+  it('eats the goblin it is loaded with', () => {
+    const { state, gun } = battery();
+    const volunteer = spawnUnit(state, 0, 'goblin', 11, 10);
+
+    expect(abilityTargets(state, volunteer, 'reload').map((u) => u.id)).toContain(gun.id);
+    useAbility(state, volunteer, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(1);
+    // The whole difference between the two artillery pieces: the Kingdom's
+    // helper walks away, and this one does not.
+    expect(state.units, 'the volunteer should be in the hopper').not.toContain(volunteer);
+  });
+
+  it('loads a whole group at once', () => {
+    const { state, gun } = battery();
+    const three = spawnUnit(state, 0, 'goblin_x3', 11, 10);
+
+    useAbility(state, three, 'reload', gun);
+
+    // Three Goblins is three shots, which is what makes the counting ladder
+    // worth something to a siege train.
+    expect(ammoLeft(gun)).toBe(3);
+    expect(state.units).not.toContain(three);
+  });
+
+  it('will not fire anything the Horde actually values', () => {
+    const { state, gun } = battery();
+    const troll = spawnUnit(state, 0, 'troll', 11, 10);
+    const ogre = spawnUnit(state, 0, 'ogre', 10, 11);
+
+    // A rule rather than a price threshold, so nothing ever works out that a
+    // dragon is cheap enough to fire at a wall.
+    expect(abilityTargets(state, troll, 'reload')).toEqual([]);
+    expect(abilityTargets(state, ogre, 'reload')).toEqual([]);
+    expect(ammoLeft(gun)).toBe(0);
+  });
+
+  it('never overfills, however many volunteers there are', () => {
+    const { state, gun } = battery();
+    const max = unitType('goblincatapult').ammo;
+    // Five goblins into a hopper that holds three.
+    const crowd = spawnUnit(state, 0, 'goblin_x5', 11, 10);
+
+    useAbility(state, crowd, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(max);
+  });
+});
+
 describe('the axethrower has exactly one axe', () => {
   function thrower(): { state: GameState; axe: Unit; foe: Unit } {
     const state = board();

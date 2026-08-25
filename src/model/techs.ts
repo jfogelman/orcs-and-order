@@ -225,7 +225,7 @@ export const TECHS: TechDef[] = [
     faction: 'orc',
     cost: 95,
     prereqs: ['suicidal-goblins'],
-    units: ['sapper_x2'],
+    units: ['sapper_x2', 'goblincatapult'],
     buildings: ['biggerRock'],
     flags: [],
     flavor: 'Everything is better underground, where nobody can see how it is going.',
