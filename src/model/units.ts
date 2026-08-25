@@ -66,6 +66,20 @@ export interface CreatureDef {
    * advances that make it matter, not switching on quietly underneath them.
    */
   magicResist?: number;
+  /**
+   * Free rounds at the start of a fight, in which only this creature lands
+   * blows.
+   *
+   * Civ4's first strikes, and the answer to what an archer or an axethrower is
+   * *for*. They used to be artillery, firing from exactly two tiles for the
+   * whole turn and unable to take a city -- which made an army half made of
+   * them very bad at finishing a war. Section 38 measured a third of all sieges
+   * consisting of besiegers who could not walk in.
+   *
+   * Only the difference between the two sides counts, so two units that both
+   * strike first simply fight.
+   */
+  firstStrikes?: number;
   /** Multiplier when attacking a city. */
   siegeBonus?: number;
   /** Multiplies this creature's natural healing. Trolls are famously hard to keep down. */
@@ -208,7 +222,9 @@ export const CREATURES: CreatureDef[] = [
   {
     id: 'axethrower',
     throwsWeapon: true,
-    range: 2,
+    // The axe leaves its hand as you close, and lands before you arrive. That
+    // is the first strike, and the reason it then has no axe.
+    firstStrikes: 1,
     name: 'Axethrower',
     plural: 'Axethrowers',
     faction: 'orc',
@@ -385,7 +401,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'archer',
-    range: 2,
+    firstStrikes: 1,
     name: 'Archer',
     plural: 'Archers',
     faction: 'human',
@@ -530,6 +546,7 @@ export interface UnitTypeDef {
   sight: number;
   settler: boolean;
   flies: boolean;
+  firstStrikes: number;
   siegeBonus: number;
   /**
    * True when the group is big enough to lose a movement point to internal
@@ -606,6 +623,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     sight: c.sight,
     settler: c.settler === true,
     flies: c.flies === true,
+    firstStrikes: c.firstStrikes ?? 0,
     siegeBonus: c.siegeBonus ?? 1,
     crowded: count >= CROWD_THRESHOLD,
     regenMultiplier: c.regenMultiplier ?? 1,

@@ -2748,3 +2748,74 @@ so an army that is 44% ranged is worse at finishing a war than one that is 8%.
 That is a guess with a plausible mechanism and nothing more -- which, given the
 two wrong theories above, is exactly the point at which this file should stop
 and go and measure rather than carry on reasoning.
+
+## 39. Skirmishers, artillery, and three designs waiting on a decision
+
+Sections 30, 31, 34, 37 and 38 all found the same thing in different clothes: a
+mechanic is inert when the units carrying it are never bought. So this section
+records the designs *and* what each one needs from `worth` before it can work.
+
+### Built: first strike
+
+Archers and axethrowers are no longer artillery. They close like anything else
+and land free rounds at the start of a fight -- Civ4's first strikes, netted, so
+two units that both strike first simply fight. Reach is now only on the mage and
+the ballista, which is what stops an army half made of units that cannot enter a
+city, and section 38 measured a third of all sieges being exactly that.
+
+**The axe leaves the hand during the first strike**, which is both the joke and
+now the mechanic: it fights the rest of the exchange bare-handed and fetches the
+axe back a couple of turns later.
+
+And a rule nothing in the suite had ever stated: **a ballista sees one tile and
+shoots two.** A lone one is blind to everything it is allowed to hit and needs a
+unit standing forward to spot for it. Found by accident, pinned by test.
+
+### Measured, and it did not work
+
+| | built per game |
+|---|---|
+| Horde axethrower | **0.00** |
+| Kingdom ballista | **111.39** |
+
+First strike did not get the axethrower bought. It sits at 1.86 against an ogre
+at 2.26 and a dragon at 2.27, and it cannot win the garrison slot either, where
+it is ranked on a defence of one. **`RANGED_EDGE` has now failed its stated
+purpose twice** -- it never produced a single axethrower at any value -- while
+taking the Kingdom from ten ballistas a game to a hundred and eleven.
+
+The Horde's problem is not the multiplier. It is that its roster has two
+excellent heavy units and the chooser takes the best it can afford.
+
+### Three designs on the table
+
+**Ammunition, for both artillery pieces.** The Goblin Catapult carries a fixed
+number of goblins and throws them; goblins or orcs, singly or in groups, can be
+*informed of their new job* to reload it. The ballista carries a fixed number of
+missiles, and an archer can spend two turns making one, or it returns to a city
+to restock.
+
+This is worth building as **one mechanic, not three**: the axethrower's single
+axe is already `ammo: 1` with a self-fetch, and the two artillery pieces are the
+same idea with a different count and a different way of reloading. It also fixes
+the ballista problem structurally rather than by tuning -- a hundred and eleven
+ballistas cannot all be kept in missiles.
+
+**Note for `worth`:** finite ammunition makes a unit *worse*, and the chooser
+cannot see it. Without a term for it the AI will keep buying ballistas it cannot
+feed. This is the same trap as reach and first strike, and it is now predictable
+enough to write down in advance.
+
+**The death knight takes health rather than giving it.** Choose one unit, take
+half its health, restore twice that to another. The donor must be above half or
+it dies -- buyer beware.
+
+**Note on scale:** this idea is worth less than it was a week ago. Health used to
+scale with the group, so a Ten Orcs was a 120-point battery. Flat health
+compressed every creature in the game into a range of 8 to 25, so the difference
+between draining a goblin and draining a dragon is 10 against 25, not 10 against
+120. Still a real choice, but not the dramatic one it would have been, and worth
+knowing before it is priced.
+
+**A Goblin Catapult for the Horde.** Note `catapult` is already a *building* id
+-- the Broken Catapult -- so the unit needs its own.

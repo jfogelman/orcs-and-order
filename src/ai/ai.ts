@@ -318,21 +318,41 @@ function nearestFrontier(
  * the AI to shoot therefore handed the Kingdom eighty-seven free attacks a game
  * and the Horde nothing at all. See DESIGN_QUEUE section 38.
  *
- * Small on purpose. At 1.4 this put a ballista at 2.99 and every other ranged
- * unit level with the best melee in the game, and the AI went from building
- * eighteen ranged units a game to a hundred and sixty -- from an eighth of the
- * army to nearly two thirds. `worth` cannot see that a ballista has one point
- * of defence, so nothing pushed back. The number has to stay modest until the
- * formula understands fragility as well as it understands reach.
+ * **Set to 1, which is to say off.** It never worked. It was added so the Horde
+ * would field an axethrower, and it produced exactly zero at 1.05, 1.15 and 1.4
+ * alike -- the axethrower loses to an ogre at 2.26 and a dragon at 2.27
+ * whatever reach is worth, and loses the garrison slot on a defence of one. All
+ * it ever did was take the Kingdom from ten ballistas a game to a hundred and
+ * eleven, because `worth` cannot see that a ballista has one point of defence
+ * or that it will run out of things to shoot.
+ *
+ * Kept at 1 rather than deleted because reach *is* worth something, and this is
+ * where that belongs once the formula can also see fragility and ammunition.
+ * See DESIGN_QUEUE section 39.
  */
-const RANGED_EDGE = 1.15;
+
+/**
+ * What a free opening blow is worth, per strike.
+ *
+ * Shipped in the same commit as the mechanic on purpose. A mechanic the chooser
+ * cannot see is a mechanic that never happens -- sections 30, 31, 34, 37 and 38
+ * are all the same finding in different clothes.
+ *
+ * A fight runs a handful of rounds, so one free round is worth something like a
+ * sixth of it. Deliberately modest, for the reason directly above.
+ */
+const FIRST_STRIKE_EDGE = 0.16;
+const RANGED_EDGE = 1;
 
 function worth(u: UnitTypeDef, defending: boolean): number {
   const strength = defending ? u.defense : u.attack;
   // Only on the attack: reach does nothing for you when something has already
   // closed and is swinging at you, which is exactly a ranged unit's problem.
   const reach = !defending && u.range > 1 ? RANGED_EDGE : 1;
-  return (strength * reach * u.hp) / Math.max(1, u.cost);
+  // First strikes count on both attack and defence: the free blow lands
+  // whichever side of the fight this unit is standing on.
+  const opener = 1 + u.firstStrikes * FIRST_STRIKE_EDGE;
+  return (strength * reach * opener * u.hp) / Math.max(1, u.cost);
 }
 
 /**

@@ -115,6 +115,16 @@ export interface StrengthBreakdown {
  */
 export const DISARMED_ATTACK = 0.25;
 
+/**
+ * Turns before a thrower has fetched its own axe back.
+ *
+ * Two, so it throws every other fight rather than once and then never again.
+ * Lives here rather than in `abilities` because the axe now leaves the hand
+ * during a first strike, and `abilities` already imports from this module --
+ * the other direction would be a cycle.
+ */
+export const REARM_TURNS = 2;
+
 /** Extra magical resistance per rank, on top of a creature's own. */
 export const RESIST_PER_RANK = 0.08;
 
@@ -437,6 +447,24 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // duration; only the headcount moves, and it moves every round.
   const atkStatic = atk.total / Math.max(0.0001, headcount(attacker));
   const defStatic = def.total / Math.max(0.0001, headcount(defender));
+
+  // Free rounds before the fight proper, to whoever strikes first and by how
+  // much more than the other. Netting them is what stops two archers giving
+  // each other a free hit and calling it even.
+  const edge = unitType(attacker.type).firstStrikes - unitType(defender.type).firstStrikes;
+  if (edge !== 0) {
+    const striker = edge > 0 ? attacker : defender;
+    const struck = edge > 0 ? defender : attacker;
+    for (let i = 0; i < Math.abs(edge) && struck.hp > 0; i++) {
+      applyDamage(struck, dmg, damageKindOf(striker));
+    }
+    // And for a thrower, the free blow *is* the axe leaving its hand. It gets
+    // the rest of the fight without one, and fetches it back afterwards.
+    if (unitType(striker.type).throwsWeapon && !striker.disarmed) {
+      striker.disarmed = true;
+      striker.rearmIn = REARM_TURNS;
+    }
+  }
 
   let rounds = 0;
   const result = withRng(state, (rng) => {
