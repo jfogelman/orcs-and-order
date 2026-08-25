@@ -14,6 +14,20 @@ export function knowsTech(player: Player, id: string): boolean {
   return player.techs.includes(id);
 }
 
+/**
+ * Every flag this player holds, for callers that need the whole set rather
+ * than one answer -- the promotion menu, which decides what a unit may choose.
+ */
+export function flagsOf(player: Player): TechFlag[] {
+  const out: TechFlag[] = [];
+  for (const id of player.techs) {
+    const t = TECHS_BY_ID[id];
+    if (!t) continue;
+    for (const f of t.flags) if (!out.includes(f)) out.push(f);
+  }
+  return out;
+}
+
 export function hasFlag(player: Player, flag: TechFlag): boolean {
   for (const id of player.techs) {
     const t = TECHS_BY_ID[id];

@@ -25,7 +25,9 @@ export type TechFlag =
   /** Magical damage sets its target alight for a few turns. */
   | 'pyromancy'
   /** Magical damage leaves its target slow for a few turns. */
-  | 'cryomancy';
+  | 'cryomancy'
+  /** Ogres may choose a club when they are promoted. */
+  | 'clubs';
 
 export interface TechDef {
   id: TechId;
@@ -350,6 +352,18 @@ export const TECHS: TechDef[] = [
     buildings: [],
     flags: [],
     flavor: 'The axe goes away from you. This is the entire discovery.',
+  },
+  {
+    id: 'club-improvement',
+    name: 'Improvements to the Club',
+    faction: 'orc',
+    cost: 150,
+    prereqs: ['my-little-friend'],
+    units: [],
+    buildings: [],
+    flags: ['clubs'],
+    flavor:
+      'Three of them, and no agreement on which is best. The argument is ongoing and occasionally on fire.',
   },
   {
     id: 'my-little-friend',

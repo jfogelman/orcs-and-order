@@ -428,6 +428,78 @@ export function canExecute(attacker: Unit, defender: Unit): boolean {
   return defender.hp < d.hp * 0.5;
 }
 
+/** Share of a neighbour's health an exploding club takes off. */
+export const CLUB_BLAST = 0.15;
+/** What the ogre keeps of its own blast. It minds, but less. */
+export const CLUB_SELF = 0.4;
+/** Share of health the ground taking sides costs everyone nearby. */
+export const CLUB_QUAKE = 0.12;
+
+/**
+ * What an ogre's club does after the swing has landed.
+ *
+ * DESIGN_QUEUE section 11 asked for three, and they differ in *who* they catch
+ * rather than in how hard they hit:
+ *
+ * - **Fiery** sets the target alight and nothing else. The only one that is
+ *   safe to swing next to your own line.
+ * - **Exploding** goes off at the target, catching everything around it, friend
+ *   and enemy alike, and the ogre takes a share of its own blast.
+ * - **Quake** shakes the ground under everything next to the *ogre*, which is a
+ *   different shape entirely: it is a way out of being surrounded.
+ *
+ * All three run after the fight resolves, so a dead ogre swings no club and a
+ * dead target still burns nobody.
+ */
+function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
+  if (attacker.hp <= 0) return;
+  if (unitType(attacker.type).base !== 'ogre') return;
+
+  if (hasPerk(attacker, 'fiery-club') && target.hp > 0) {
+    applyStatus(target, 'burning', SPELL_TURNS.burning);
+    log(state, `${unitType(target.type).name} is set alight.`, 'combat', attacker.owner,
+        undefined, [target.x, target.y], target.id);
+  }
+
+  const sweep = (centre: Unit, share: number, hostileOnly: boolean, cue: string, how: string) => {
+    const caught = state.units.filter(
+      (u) =>
+        u.id !== attacker.id &&
+        u.hp > 0 &&
+        distance(u.x, u.y, centre.x, centre.y) <= 1 &&
+        (!hostileOnly || u.owner !== attacker.owner),
+    );
+    if (caught.length === 0 && !hostileOnly) return;
+    const killed: Unit[] = [];
+    for (const victim of caught) {
+      // A blast is a blast: nothing magical resists being stood next to one.
+      applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * share)), 'physical');
+      if (victim.hp <= 0) killed.push(victim);
+    }
+    if (caught.length > 0) {
+      log(state, `${unitType(attacker.type).name} ${how}, catching ${caught.length} unit(s).`,
+          'combat', attacker.owner, cue as never, [centre.x, centre.y], attacker.id);
+    }
+    for (const victim of killed) {
+      const i = state.units.indexOf(victim);
+      if (i >= 0) state.units.splice(i, 1);
+      log(state, `${unitType(victim.type).name} does not get up.`, 'bad', victim.owner);
+    }
+  };
+
+  if (hasPerk(attacker, 'exploding-club')) {
+    sweep(target, CLUB_BLAST, false, 'explosion', 'brings the club down and it goes off');
+    // Its own blast, at a discount. Never enough to kill it outright, because a
+    // unit that explodes itself on a win is a perk nobody would ever choose.
+    const self = Math.max(1, Math.round(unitType(attacker.type).hp * CLUB_BLAST * CLUB_SELF));
+    attacker.hp = Math.max(1, attacker.hp - self);
+  }
+
+  if (hasPerk(attacker, 'quake-club')) {
+    sweep(attacker, CLUB_QUAKE, true, 'explosion', 'hits the ground rather than the ogre in front');
+  }
+}
+
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
   if (canExecute(attacker, defender)) {
     const executed = withRng(state, (rng) => rng.chance(unitType(attacker.type).executeChance));
@@ -523,6 +595,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // that fought off an orc has still set it alight.
   applySpellEffects(state, attacker, defender);
   applySpellEffects(state, defender, attacker);
+  clubEffects(state, attacker, defender);
 
   return {
     attackerId: attacker.id,

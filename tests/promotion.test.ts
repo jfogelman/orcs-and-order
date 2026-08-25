@@ -147,6 +147,11 @@ describe('what a promotion buys', () => {
     // Same numbers, different story: the Horde's are things that happened to
     // it, the Kingdom's are things somebody arranged.
     for (const perk of PERKS) {
+      // Skipping the ones only one side can ever hold. An ogre's club has no
+      // Kingdom name to differ from, because the Kingdom has no ogres -- the
+      // rule is about the *shared* perks reading differently, and inventing a
+      // second name nobody will see would be worse than having one.
+      if (perk.only) continue;
       expect(perkName(perk, 'orc')).not.toBe(perkName(perk, 'human'));
     }
   });

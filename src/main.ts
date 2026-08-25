@@ -1,3 +1,4 @@
+import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
@@ -514,7 +515,7 @@ class App {
     if (isModalOpen() || isOver(this.state)) return;
     const unit = playerUnits(this.state, this.viewerId).find((u) => owedPerks(u) > 0);
     if (!unit) return;
-    const options = perkChoices(unit);
+    const options = perkChoices(unit, flagsOf(this.state.players[this.viewerId]));
     if (options.length === 0) return;
     openPerkMenu(unitType(unit.type).name, this.state.players[this.viewerId].faction, options, (id) => {
       unit.perks = [...(unit.perks ?? []), id];

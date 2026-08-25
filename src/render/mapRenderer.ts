@@ -1,4 +1,5 @@
 import { fatCrossIndices, idx } from '../engine/grid';
+import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
@@ -69,6 +70,20 @@ const VOID_COLOR = '#0a0806';
  * battered at a glance, without counting bars.
  */
 const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
+
+/**
+ * Which club an ogre is swinging, as an art suffix.
+ *
+ * The three sheets are `ogre-fiery_attack`, `ogre-exploding_attack` and
+ * `ogre-quake_attack`. Nothing else in the game has a variant chosen by perk,
+ * so this stays a small named function rather than a system.
+ */
+function clubVariant(u: Unit): string {
+  if (hasPerk(u, 'fiery-club')) return '-fiery';
+  if (hasPerk(u, 'exploding-club')) return '-exploding';
+  if (hasPerk(u, 'quake-club')) return '-quake';
+  return '';
+}
 
 export class MapRenderer {
   private tiles: TerrainTileSet;
@@ -446,7 +461,7 @@ export class MapRenderer {
           : playing.kind === 'regen'
             ? this.sprites.regenFrames(u.type)
             : // A thrower that has thrown swings with nothing in its hand.
-              this.sprites.attackFrames(u.type, u.disarmed);
+              this.sprites.attackFrames(u.type, u.disarmed, clubVariant(u));
       if (frames && frames[playing.frame]) return frames[playing.frame];
     }
     // Standing still, health decides how it looks. Checked before the

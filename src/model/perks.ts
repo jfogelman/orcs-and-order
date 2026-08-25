@@ -1,4 +1,5 @@
 import type { FactionId, Unit } from './types';
+import { unitType } from './units';
 
 /**
  * What a unit chooses when it is promoted.
@@ -16,6 +17,21 @@ export interface PerkDef {
   /** What each side calls it. */
   name: Record<FactionId, string>;
   blurb: string;
+  /**
+   * Base creatures this is offered to. Absent means anybody.
+   *
+   * The first perks in the game were all things that could happen to any unit.
+   * A club is not: it is a thing an ogre is holding.
+   */
+  only?: string[];
+  /**
+   * Advance that has to be in hand before this appears on the menu.
+   *
+   * This is what DESIGN_QUEUE section 11 was actually asking for -- a unit's
+   * menu of choices growing as the tree does, so a late advance lands as
+   * something visible rather than another number.
+   */
+  flag?: string;
 }
 
 export const PERKS: PerkDef[] = [
@@ -44,6 +60,32 @@ export const PERKS: PerkDef[] = [
     name: { orc: 'Thorough', human: 'Requisition Order' },
     blurb: 'Takes noticeably more of a city when it takes one.',
   },
+  /*
+   * The three clubs, from DESIGN_QUEUE section 11. All ogre-only and all
+   * waiting on one advance, so the choice arrives as a choice rather than as
+   * three more units on the list.
+   */
+  {
+    id: 'fiery-club',
+    name: { orc: 'Fiery Club', human: 'Fiery Club' },
+    blurb: 'Sets fire to whatever it hits, and keeps it that way for a while.',
+    only: ['ogre'],
+    flag: 'clubs',
+  },
+  {
+    id: 'exploding-club',
+    name: { orc: 'Exploding Club', human: 'Exploding Club' },
+    blurb: 'Goes off on impact, catching everything around the target. The ogre included, though it minds less.',
+    only: ['ogre'],
+    flag: 'clubs',
+  },
+  {
+    id: 'quake-club',
+    name: { orc: 'Quake Club', human: 'Quake Club' },
+    blurb: 'Hits the ground so hard that everyone standing near the ogre regrets it.',
+    only: ['ogre'],
+    flag: 'clubs',
+  },
   {
     id: 'reputation',
     name: { orc: 'Preceded By Rumour', human: 'Reputation' },
@@ -70,9 +112,21 @@ export function owedPerks(unit: Unit): number {
   return Math.max(0, unit.rank - (unit.perks?.length ?? 0));
 }
 
-/** What this unit could still take, in a stable order. */
-export function perkChoices(unit: Unit): PerkDef[] {
-  return PERKS.filter((p) => !hasPerk(unit, p.id));
+/**
+ * What this unit could still take, in a stable order.
+ *
+ * `flags` is what its owner has researched; omitted, nothing gated on an
+ * advance is offered, which is the safe way round for a caller that has not
+ * been taught about them yet.
+ */
+export function perkChoices(unit: Unit, flags: readonly string[] = []): PerkDef[] {
+  const base = unitType(unit.type).base;
+  return PERKS.filter((p) => {
+    if (hasPerk(unit, p.id)) return false;
+    if (p.only && !p.only.includes(base)) return false;
+    if (p.flag && !flags.includes(p.flag)) return false;
+    return true;
+  });
 }
 
 export function perkName(perk: PerkDef, faction: FactionId): string {

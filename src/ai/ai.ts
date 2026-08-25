@@ -1,3 +1,4 @@
+import { flagsOf } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { UnitTypeDef } from '../model/units';
@@ -937,10 +938,25 @@ function takePromotions(state: GameState, player: Player): void {
   const taste = PERK_TASTE[player.faction] ?? PERK_TASTE.orc;
   for (const unit of playerUnits(state, player.id)) {
     while (owedPerks(unit) > 0) {
-      const options = perkChoices(unit);
+      const options = perkChoices(unit, flagsOf(player));
       if (options.length === 0) break;
-      // First thing on the list that is still going.
-      const pick = taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
+      // A club first, whenever one is going.
+      //
+      // Without this the clubs would never be taken at all: the taste list
+      // holds all six general perks and rank stops at three, so the fallback
+      // below is never reached. That is the same trap as sections 37 and 38 --
+      // a mechanic the AI has no route to is a mechanic that does not happen --
+      // and this time it was spotted before it was measured rather than after.
+      //
+      // Chosen at random among the three rather than in a fixed order, so an
+      // army has some of each. A list would give every ogre in the game the
+      // same club, which is the promotion equivalent of buying a hundred
+      // ballistas.
+      const clubs = options.filter((o) => o.only?.includes('ogre'));
+      const pick =
+        clubs.length > 0
+          ? withRng(state, (rng) => clubs[Math.floor(rng.float() * clubs.length)])
+          : taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
       unit.perks = [...(unit.perks ?? []), pick.id];
     }
   }
