@@ -473,9 +473,13 @@ export const CREATURES: CreatureDef[] = [
   {
     id: 'goblincatapult',
     range: 2,
-    // Three goblins in the hopper. Reloading is a matter of finding three more
-    // goblins, which the Horde has never once found difficult.
-    ammo: 3,
+    // Five goblins in the hopper, matching the ballista's magazine. Three was
+    // picked out of the air and quietly made this the weaker piece -- 1.81
+    // against the ballista's 2.04, which under weighted choice put it fifth on
+    // the Horde's list where the ballista sits near the top of the Kingdom's.
+    // Reloading is a matter of finding five more goblins, which the Horde has
+    // never once found difficult.
+    ammo: 5,
     reloadsBy: 'sacrifice',
     // Not `catapult`: that id already belongs to the Broken Catapult, which is
     // a building, and two things answering to one name breaks the Orcpedia.

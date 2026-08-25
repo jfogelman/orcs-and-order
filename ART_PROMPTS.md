@@ -1057,3 +1057,30 @@ straw, the kind from a milkshake". If the pastry reads as a stone, ask for
 These sit beside portraits of goblins and dragons in the same list, so keep the
 outline weight and the palette in the same family — bright, but not brighter
 than a dragon.
+
+---
+
+## The Goblin Catapult
+
+One unit sprite, `art_src/units/goblincatapult.png`, same rules as every other
+creature: **plain magenta background, full frame, no text**.
+
+> A crude siege catapult built from lashed timber and scrap iron, its throwing
+> arm cocked back, with a wide wooden hopper where the counterweight should be.
+> Two small green goblins sit in the hopper looking pleased with themselves. A
+> third goblin stands on the frame holding the release rope. Mid-1990s fantasy
+> strategy game unit art, thick dark outline, limited palette, flat shading lit
+> from the upper left, plain solid magenta background (#FF00FF), no text.
+
+The joke has to be **in the goblins' faces**, not in the machine. They have been
+told it is a promotion and they believe it. If the generator makes them look
+frightened or captive the whole thing curdles into something else -- ask for
+"cheerful", "eager", "proud", and if that fails, "posing for a photograph".
+
+Keep the machine visibly worse made than the Kingdom's ballista: the ballista is
+carpentry and this is enthusiasm. Lashings rather than joints, one wheel larger
+than the other, at least one plank that clearly came off something else.
+
+It shares the `engine` silhouette with the ballista, so the placeholder already
+reads as artillery until the art lands. If a group version is ever wanted there
+is none to draw -- it is `counts: [1]`, one machine at a time.

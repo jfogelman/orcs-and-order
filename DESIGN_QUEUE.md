@@ -2947,3 +2947,54 @@ Two process notes worth as much as the result:
   no shortlist". It was caught by noticing the Horde fielding eight kinds and
   twenty axethrowers -- numbers winner-take-all cannot produce. **Reading the
   composition, not just the win column, is what caught it.**
+
+## 42. The Goblin Catapult: it works, and it does not matter
+
+The Horde's answer to the ballista, off Underground Smarts. Five goblins in the
+hopper, attack 7, and like all artillery it cannot take a city. The reload is the
+whole difference between the two pieces: the Kingdom's is fed by people who make
+missiles, and this one is fed by the missiles.
+
+**A sacrifice loads the whole group**, so Three Goblins is three shots. That is
+the first use the counting ladder has ever had other than fighting, and it is
+the part of this worth keeping.
+
+Only creatures marked `expendable` go in -- goblins and orcs. A rule rather than
+a price threshold, so nothing can ever work out that a dragon is cheap enough to
+fire at a wall.
+
+### Measured
+
+| | catapults/game | artillery alive | of those dry | wins orc-human | decided |
+|---|---|---|---|---|---|
+| no catapult | 0.0 | 3.8 | 0.03 | 11-19 | 30/36 |
+| hopper 3 | 3.0 | 6.2 | 0.12 | 10-19 | 29/36 |
+| hopper 5 | **4.7** | 6.0 | 0.14 | 10-18 | 28/36 |
+
+**It is built, it stays loaded, and it changes nothing.** Dry catapults run at
+0.1 a game, so the goblins reliably volunteer -- the sacrifice reload works
+exactly as intended. The win split does not move at any setting.
+
+That is a fine outcome and it should be reported as what it is: **a texture
+feature**. It gives the Horde a siege train, gives the ladder a second purpose,
+and tells a good joke. It is not a balance fix and should not be recorded as
+one.
+
+The hopper went from three to five as a **parity correction rather than a buff**.
+Three was picked out of the air and quietly made the Horde's artillery the
+weaker piece -- 1.81 against the ballista's 2.04, which under weighted choice is
+the difference between fifth on the list and near the top. Matching the
+magazines removes an asymmetry that was never intended.
+
+### The outstanding question is elsewhere
+
+Across every recent measurement the Kingdom leads: 10-18 here, and base 6000 in
+particular returns 3-12, 4-12 and 4-9 across three separate arms while base
+77000 returns 7-7 and 6-9. That is a persistent lean plus a large per-map
+effect, and no unit added in sections 38 to 42 has touched it.
+
+**Worth attacking directly rather than through another unit.** The Kingdom's
+roster is deeper in the useful middle -- archer, knight, footman, ballista all
+land between 1.8 and 2.1 -- while the Horde's splits into two excellent heavies
+and a weak floor. Weighted choice buys across the whole list, so depth in the
+middle is now worth more than a good top end, and the Horde has the wrong shape.
