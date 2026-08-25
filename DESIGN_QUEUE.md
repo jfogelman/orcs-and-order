@@ -2819,3 +2819,69 @@ knowing before it is priced.
 
 **A Goblin Catapult for the Horde.** Note `catapult` is already a *building* id
 -- the Broken Catapult -- so the unit needs its own.
+
+## 40. Ammunition, and the reason every number in this file is a cliff
+
+Artillery is the only thing in the game that hits without being hit back and can
+keep doing it forever, and the chooser rated a ballista the Kingdom's best
+purchase on exactly that basis: a hundred and eleven a game. **Ammunition is the
+structural answer** -- a hundred and eleven ballistas cannot all be kept in
+missiles -- rather than another constant to tune.
+
+Five bolts, then a reload. In the field the archery line hands one over at the
+cost of its whole turn; a battery needs a tail, and the tail is paid in turns. A
+city fills the magazine outright. `worth` prices it as a duty cycle,
+`ammo / (ammo + reload)`, shipped in the same commit as the mechanic.
+
+It also let `RANGED_EDGE` come back on. On its own reach was poison because
+nothing pushed back against a unit that could shoot forever; a magazine is that
+push-back, so the two can finally be priced against each other.
+
+### And then the actual finding
+
+Sweeping the magazine, on two seed sets:
+
+| magazine | ballista `worth` | built per game |
+|---|---|---|
+| 3 | 1.84 | **0.5** |
+| 5 | 2.04 | **5.3** |
+| 8 | 2.15 | **93.7** |
+
+**A 17% change in value moves production by two orders of magnitude.** The
+Kingdom's list runs paladin 2.06, knight 2.00, archer 1.86 -- so at 1.84 the
+ballista is fourth and never built, at 2.04 it is second and built five times, at
+2.15 it is first and built ninety-three times.
+
+**Production step 4 is winner-take-all.** It sorts by value and takes the single
+best thing it can afford, so what matters is never a unit's value -- only
+whether it *crosses* another unit in the ranking. Which explains, at last, every
+strange result in sections 38 to 40:
+
+- `RANGED_EDGE` at 1.05 and 1.15 producing byte-identical games. No crossing.
+- 1.4 taking ranged from an eighth of the army to two thirds. One crossing.
+- Adding ammunition taking ballistas from eleven to 0.7. One crossing, downward.
+- The Horde never building an axethrower at any value, because an ogre and a
+  dragon sit permanently above it.
+
+**Every constant in this file is a cliff edge rather than a dial**, and a good
+deal of the tuning recorded here was really an attempt to land a value in a gap
+between two other values. That is why the numbers kept coming out as 0 or 111
+and never as something in between.
+
+### What to do about it
+
+The fix is not a better constant, it is a chooser that builds a **mixture**.
+Options, roughly in order of how principled they are:
+
+- **Role quotas.** An army wants some of each thing; build whatever it is
+  shortest of. Most like a real 4X, most work.
+- **Weighted choice.** Pick among the affordable candidates in proportion to
+  worth rather than taking the maximum. Cheap, and turns every cliff into a
+  slope immediately.
+- **A cap per type**, as a share of the army. Crude, but it would have stopped
+  a hundred and eleven ballistas on its own.
+
+An army of one unit type is also simply worse -- it is why the Kingdom fielded
+a hundred ballistas and had nothing left to storm a city with. **This should be
+fixed before any further unit is priced**, because until it is, every price is
+being chosen against a ranking rather than against the game.

@@ -462,8 +462,13 @@ export const CREATURES: CreatureDef[] = [
   {
     id: 'ballista',
     range: 2,
-    // Three bolts, then somebody has to fetch more.
-    ammo: 3,
+    // Five bolts, then somebody has to fetch more.
+    //
+    // Chosen by measurement rather than by feel, and the measurement is worth
+    // knowing about: at three the AI built half a ballista a game, at five it
+    // builds five, and at eight it builds ninety-three. The value only moves
+    // 17% across that range. See DESIGN_QUEUE section 40.
+    ammo: 5,
     reloadsBy: 'labour',
     name: 'Ballista',
     plural: 'Ballistae',
