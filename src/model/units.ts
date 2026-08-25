@@ -80,6 +80,25 @@ export interface CreatureDef {
    * strike first simply fight.
    */
   firstStrikes?: number;
+  /**
+   * Shots this creature carries before it needs reloading. Absent means it
+   * never runs out.
+   *
+   * Artillery is the only thing in the game that can hit without being hit
+   * back and keep doing it, and the chooser rated a ballista the Kingdom's best
+   * purchase on that basis -- it built a hundred and eleven a game. A magazine
+   * is the structural answer: a hundred and eleven ballistas cannot all be kept
+   * in missiles. See DESIGN_QUEUE section 40.
+   */
+  ammo?: number;
+  /**
+   * Where a reload comes from.
+   *
+   * `labour` -- a neighbour spends its turn making one.
+   * `sacrifice` -- a neighbour *is* the ammunition, and is informed of its new
+   * job. Reserved for the Horde's artillery, which throws goblins.
+   */
+  reloadsBy?: 'labour' | 'sacrifice';
   /** Multiplier when attacking a city. */
   siegeBonus?: number;
   /** Multiplies this creature's natural healing. Trolls are famously hard to keep down. */
@@ -443,6 +462,9 @@ export const CREATURES: CreatureDef[] = [
   {
     id: 'ballista',
     range: 2,
+    // Three bolts, then somebody has to fetch more.
+    ammo: 3,
+    reloadsBy: 'labour',
     name: 'Ballista',
     plural: 'Ballistae',
     faction: 'human',
@@ -547,6 +569,8 @@ export interface UnitTypeDef {
   settler: boolean;
   flies: boolean;
   firstStrikes: number;
+  ammo: number;
+  reloadsBy: 'labour' | 'sacrifice';
   siegeBonus: number;
   /**
    * True when the group is big enough to lose a movement point to internal
@@ -624,6 +648,9 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     settler: c.settler === true,
     flies: c.flies === true,
     firstStrikes: c.firstStrikes ?? 0,
+    // Not multiplied by the count: three ballistas share the supply wagon.
+    ammo: c.ammo ?? 0,
+    reloadsBy: c.reloadsBy ?? 'labour',
     siegeBonus: c.siegeBonus ?? 1,
     crowded: count >= CROWD_THRESHOLD,
     regenMultiplier: c.regenMultiplier ?? 1,
@@ -704,4 +731,20 @@ export function headcount(unit: { type: UnitTypeId; hp: number }): number {
   const type = unitType(unit.type);
   if (type.count <= 1) return 1;
   return aliveCount(unit) / type.count;
+}
+
+/**
+ * Shots this unit has left. Absent on the unit means it is fully loaded, so a
+ * fresh piece and an old save both read correctly without a migration.
+ */
+export function ammoLeft(unit: { type: UnitTypeId; ammo?: number }): number {
+  const max = unitType(unit.type).ammo;
+  if (max <= 0) return Infinity;
+  return unit.ammo ?? max;
+}
+
+/** True for a piece that carries a magazine and has not filled it. */
+export function needsAmmo(unit: { type: UnitTypeId; ammo?: number }): boolean {
+  const max = unitType(unit.type).ammo;
+  return max > 0 && ammoLeft(unit) < max;
 }

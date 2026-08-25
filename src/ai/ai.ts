@@ -1,7 +1,7 @@
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { UnitTypeDef } from '../model/units';
-import { unitType } from '../model/units';
+import { ammoLeft, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
@@ -318,17 +318,15 @@ function nearestFrontier(
  * the AI to shoot therefore handed the Kingdom eighty-seven free attacks a game
  * and the Horde nothing at all. See DESIGN_QUEUE section 38.
  *
- * **Set to 1, which is to say off.** It never worked. It was added so the Horde
- * would field an axethrower, and it produced exactly zero at 1.05, 1.15 and 1.4
- * alike -- the axethrower loses to an ogre at 2.26 and a dragon at 2.27
- * whatever reach is worth, and loses the garrison slot on a defence of one. All
- * it ever did was take the Kingdom from ten ballistas a game to a hundred and
- * eleven, because `worth` cannot see that a ballista has one point of defence
- * or that it will run out of things to shoot.
+ * Switched off once, and back on now, for a reason worth recording. On its own
+ * it was poison: it never produced the axethrower it was added for -- zero at
+ * 1.05, 1.15 and 1.4 alike -- and it took the Kingdom from ten ballistas a game
+ * to a hundred and eleven, because nothing in the formula pushed back against a
+ * unit that could hit without being hit and keep doing it forever.
  *
- * Kept at 1 rather than deleted because reach *is* worth something, and this is
- * where that belongs once the formula can also see fragility and ammunition.
- * See DESIGN_QUEUE section 39.
+ * Ammunition is that push-back. Reach is worth something real, and now that a
+ * ballista runs dry after three shots the two can be priced against each other
+ * rather than one of them being left out. See DESIGN_QUEUE section 40.
  */
 
 /**
@@ -342,7 +340,18 @@ function nearestFrontier(
  * sixth of it. Deliberately modest, for the reason directly above.
  */
 const FIRST_STRIKE_EDGE = 0.16;
-const RANGED_EDGE = 1;
+
+/**
+ * Turns a reload costs somebody, for pricing a magazine.
+ *
+ * A piece fires its whole magazine, then a neighbour spends a turn handing over
+ * one missile -- or it walks back to a city. So what a shooter is worth is the
+ * share of its turns it spends shooting: `ammo / (ammo + this)`. A ballista
+ * with three bolts is therefore three quarters of an unlimited one, which is
+ * roughly what turned a hundred and eleven of them into a sane number.
+ */
+const RELOAD_COST = 1;
+const RANGED_EDGE = 1.15;
 
 function worth(u: UnitTypeDef, defending: boolean): number {
   const strength = defending ? u.defense : u.attack;
@@ -352,7 +361,11 @@ function worth(u: UnitTypeDef, defending: boolean): number {
   // First strikes count on both attack and defence: the free blow lands
   // whichever side of the fight this unit is standing on.
   const opener = 1 + u.firstStrikes * FIRST_STRIKE_EDGE;
-  return (strength * reach * opener * u.hp) / Math.max(1, u.cost);
+  // A magazine is a duty cycle. Without this the chooser sees only that a
+  // ballista hits hard and cannot be hit back, which is how it came to build a
+  // hundred and eleven of them and keep none of them loaded.
+  const supply = u.ammo > 0 ? u.ammo / (u.ammo + RELOAD_COST) : 1;
+  return (strength * reach * opener * supply * u.hp) / Math.max(1, u.cost);
 }
 
 /**
@@ -595,7 +608,12 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
 const RESTOCK_RANGE = 8;
 
 function restockIfNeeded(state: GameState, unit: Unit): boolean {
-  if (!unit.disarmed || !unitType(unit.type).throwsWeapon) return false;
+  const type = unitType(unit.type);
+  const wantsAxe = unit.disarmed && type.throwsWeapon;
+  // Only when it is completely dry. A piece with one bolt left should spend it,
+  // not walk across the map to make the number tidy.
+  const wantsMissiles = type.ammo > 0 && ammoLeft(unit) <= 0;
+  if (!wantsAxe && !wantsMissiles) return false;
   if (resupplyBlocked(state, unit) === null) return resupply(state, unit);
 
   const cities = playerCities(state, unit.owner);
@@ -719,6 +737,17 @@ function actSoldier(
     // Not enough of us yet. Dig in where we stand and wait for the rest.
     unit.order = 'fortified';
     return;
+  }
+
+  // Nothing better to do? Feed the gun next door. Deliberately this late: it
+  // costs the helper its whole turn, so it should be what a unit does when it
+  // was not going to fight anyway.
+  if (abilityReady(unit, 'reload') === null) {
+    const dry = abilityTargets(state, unit, 'reload').filter((t) => ammoLeft(t) <= 0);
+    if (dry.length > 0) {
+      useAbility(state, unit, 'reload', dry[0]);
+      return;
+    }
   }
 
   // Hold undefended home cities.

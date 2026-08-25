@@ -109,6 +109,13 @@ export interface Unit {
    */
   rearmIn?: number;
   /**
+   * Shots left, for a creature that carries a finite number.
+   *
+   * Absent means "as its type says" -- a fresh piece is loaded, and old saves
+   * and fixtures need not declare it. Only ever spent by firing at range.
+   */
+  ammo?: number;
+  /**
    * Conditions this unit is under, with the turns left on each.
    *
    * Optional so old saves and test fixtures need not declare it; absent and

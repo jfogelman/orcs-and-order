@@ -2,7 +2,7 @@ import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
-import { headcount, unitType } from '../model/units';
+import { headcount, needsAmmo, unitType } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, SUPPLY } from './city';
@@ -202,8 +202,13 @@ export const BREATH_CARRY = 0.6;
  * an absurd way to lose a unit's usefulness for the rest of a war.
  */
 export function resupplyBlocked(state: GameState, unit: Unit): string | null {
-  if (!unitType(unit.type).throwsWeapon) return 'This unit has nothing to restock.';
-  if (!unit.disarmed) return 'It already has its axe.';
+  const type = unitType(unit.type);
+  const wantsAxe = type.throwsWeapon && unit.disarmed;
+  const wantsMissiles = needsAmmo(unit);
+  if (!type.throwsWeapon && type.ammo <= 0) return 'This unit has nothing to restock.';
+  if (!wantsAxe && !wantsMissiles) {
+    return type.throwsWeapon ? 'It already has its axe.' : 'It is already loaded.';
+  }
   if (unit.moves <= 0) return 'No movement left this turn.';
   const near = state.cities.some(
     (c) => c.owner === unit.owner && distance(c.x, c.y, unit.x, unit.y) <= 1,
@@ -221,6 +226,13 @@ export function resupplyBlocked(state: GameState, unit: Unit): string | null {
  */
 export function resupply(state: GameState, unit: Unit): boolean {
   if (resupplyBlocked(state, unit) !== null) return false;
+  const type = unitType(unit.type);
+  // A city has a whole armoury in it, so this fills the magazine rather than
+  // handing over one missile the way a neighbour in the field does.
+  if (type.ammo > 0 && needsAmmo(unit)) {
+    unit.ammo = type.ammo;
+    log(state, `${type.name} loads up from the city stores.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
+  }
   rearm(state, unit, 'draws a fresh axe from the stores');
   unit.moves = 0;
   return true;

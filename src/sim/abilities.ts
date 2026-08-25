@@ -1,5 +1,5 @@
 import { distance } from '../engine/grid';
-import { unitType } from '../model/units';
+import { ammoLeft, needsAmmo, unitType } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import {
   attackStrength,
@@ -24,7 +24,7 @@ import { log, recomputeVisibility, withRng } from './gamestate';
  * yet, which gives the position away just as surely as drawing the unit would.
  */
 
-export type AbilityId = 'ranged' | 'heal';
+export type AbilityId = 'ranged' | 'heal' | 'reload';
 
 export interface AbilitySpec {
   id: AbilityId;
@@ -41,7 +41,11 @@ export interface AbilitySpec {
 export const ABILITIES: Record<AbilityId, AbilitySpec> = {
   ranged: { id: 'ranged', label: 'Ranged', key: 'r', friendly: false, verb: 'strike at range' },
   heal: { id: 'heal', label: 'Heal', key: 'h', friendly: true, verb: 'patch anyone up' },
+  reload: { id: 'reload', label: 'Reload', key: 'l', friendly: true, verb: 'hand over a missile' },
 };
+
+/** Re-exported: they live in the model, so `combat` can use them too. */
+export { ammoLeft, needsAmmo } from '../model/units';
 
 /** Rounds a ranged attack resolves before both sides stop. */
 export const RANGED_ROUNDS = 3;
@@ -58,6 +62,8 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
   const out: AbilityId[] = [];
   if (type.range > 1) out.push('ranged');
   if (type.healsTo > 0) out.push('heal');
+  // Anything that is not itself a piece of artillery can pass one a missile.
+  if (type.ammo <= 0 && !type.settler) out.push('reload');
   return out;
 }
 
@@ -72,6 +78,10 @@ export function abilityReady(unit: Unit, ability: AbilityId): string | null {
   // You get one axe. Having thrown it, there is nothing to throw.
   if (ability === 'ranged' && unit.disarmed && unitType(unit.type).throwsWeapon) {
     return 'It has thrown its axe and has not got it back yet.';
+  }
+  // An empty magazine is the whole point of a magazine.
+  if (ability === 'ranged' && ammoLeft(unit) <= 0) {
+    return 'Out of missiles. Reload it, or take it back to a city.';
   }
   return null;
 }
@@ -98,6 +108,18 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // next to it, which is the drawback that makes the range worth having.
       if (other.owner === unit.owner) return false;
       return d === type.range;
+    }
+
+    if (ability === 'reload') {
+      // A neighbour of ours with a magazine that is not full...
+      if (other.owner !== unit.owner) return false;
+      if (d > 1) return false;
+      if (!needsAmmo(other)) return false;
+      // ...and we have to be the right sort of neighbour. A ballista is fed by
+      // people who make missiles, which is the archery line; a piece that
+      // reloads by sacrifice is fed by whoever is standing closest and least
+      // able to argue.
+      return unitType(other.type).reloadsBy === 'sacrifice' || type.firstStrikes > 0;
     }
 
     // Healing is for a neighbour who actually needs it.
@@ -150,6 +172,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const amount = applyDamage(target, landed * dmg, damageKindOf(unit));
   applySpellEffects(state, unit, target);
   unit.moves = 0;
+  if (unitType(unit.type).ammo > 0) unit.ammo = Math.max(0, ammoLeft(unit) - 1);
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);
   if (target.hp > 0) awardXp(state, target, XP.survive);
@@ -225,6 +248,38 @@ function healFriend(state: GameState, unit: Unit, target: Unit): AbilityOutcome 
  * the only place that actually changes anything, so it does not take that on
  * trust.
  */
+/**
+ * Hand a missile to the artillery next door.
+ *
+ * Costs the helper its whole turn for one shot, which is the point: a battery
+ * of ballistas needs a tail of people feeding it, and that is a real price paid
+ * in turns rather than a number in a table. A piece that reloads by
+ * `sacrifice` eats the helper instead -- see DESIGN_QUEUE section 40.
+ */
+function handOverMissile(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
+  if (!needsAmmo(target)) return { ok: false, reason: 'It is already loaded.' };
+  const type = unitType(target.type);
+  const eaten = type.reloadsBy === 'sacrifice';
+
+  target.ammo = Math.min(type.ammo, ammoLeft(target) + 1);
+  unit.moves = 0;
+
+  log(
+    state,
+    eaten
+      ? `${unitType(unit.type).name} is informed of its new job by the ${type.name}.`
+      : `${unitType(unit.type).name} hands the ${type.name} a missile.`,
+    eaten ? 'bad' : 'good',
+    unit.owner,
+    undefined,
+    [target.x, target.y],
+    target.id,
+  );
+
+  if (eaten) destroyUnit(state, unit, 'is loaded, aimed, and released');
+  return { ok: true, amount: 1 };
+}
+
 export function useAbility(
   state: GameState,
   unit: Unit,
@@ -236,5 +291,7 @@ export function useAbility(
   if (!abilityTargets(state, unit, ability).some((t) => t.id === target.id)) {
     return { ok: false, reason: 'Not a legal target.' };
   }
-  return ability === 'ranged' ? fireAtRange(state, unit, target) : healFriend(state, unit, target);
+  if (ability === 'ranged') return fireAtRange(state, unit, target);
+  if (ability === 'reload') return handOverMissile(state, unit, target);
+  return healFriend(state, unit, target);
 }

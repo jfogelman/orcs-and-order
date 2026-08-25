@@ -9,8 +9,8 @@ import {
   RANGED_ROUNDS,
   useAbility,
 } from '../src/sim/abilities';
-import { resolveCombat } from '../src/sim/combat';
-import { REARM_TURNS } from '../src/sim/abilities';
+import { resolveCombat, resupply, resupplyBlocked } from '../src/sim/combat';
+import { REARM_TURNS, ammoLeft } from '../src/sim/abilities';
 import { createGame, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
 import { SFX_FILES } from '../src/audio/audio';
@@ -69,11 +69,17 @@ describe('which units have a targeted ability', () => {
       expect(unitType(id).range, `${id} should have to close`).toBe(1);
       expect(unitType(id).firstStrikes, `${id} should open the fight`).toBeGreaterThan(0);
     }
-    for (const id of ['orc', 'footman', 'knight', 'troll', 'peon']) {
+    for (const id of ['orc', 'footman', 'knight', 'troll']) {
       expect(unitType(id).range, `${id} should have to close`).toBe(1);
       expect(unitType(id).firstStrikes, `${id} should not strike first`).toBe(0);
-      expect(abilitiesOf(spawnUnit(state, 0, id, 1, 1))).toEqual([]);
+      // Everything that is not itself a gun can in principle carry ammunition
+      // to one; whether it may feed a *particular* gun is a question for the
+      // target list, since a ballista is loaded by the archery line and the
+      // Horde's artillery is loaded with whoever is standing nearest.
+      expect(abilitiesOf(spawnUnit(state, 0, id, 1, 1))).toEqual(['reload']);
     }
+    // A settler has other things to be doing.
+    expect(abilitiesOf(spawnUnit(state, 0, 'peon', 1, 1))).toEqual([]);
   });
 
   it('scales the paladin heal with the size of the group', () => {
@@ -355,6 +361,84 @@ describe('a ballista needs someone to spot for it', () => {
     recomputeVisibility(state, 1);
 
     expect(abilityTargets(state, ballista, 'ranged').map((u) => u.id)).toContain(target.id);
+  });
+});
+
+/**
+ * Artillery is the only thing in the game that hits without being hit back and
+ * can keep doing it, and the chooser rated a ballista the Kingdom's best buy on
+ * exactly that basis -- it built a hundred and eleven a game. A magazine is the
+ * structural answer rather than another constant to tune: a hundred and eleven
+ * ballistas cannot all be kept in missiles. See DESIGN_QUEUE section 40.
+ */
+describe('a ballista carries a finite number of bolts', () => {
+  function battery() {
+    const state = board();
+    revealAll(state, 1);
+    const gun = spawnUnit(state, 1, 'ballista', 10, 10);
+    const spotter = spawnUnit(state, 1, 'footman', 11, 10);
+    const foe = spawnUnit(state, 0, 'orc', 12, 10);
+    recomputeVisibility(state, 1);
+    return { state, gun, spotter, foe };
+  }
+
+  it('starts loaded and spends a bolt a shot', () => {
+    const { state, gun, foe } = battery();
+    const max = unitType('ballista').ammo;
+    expect(max).toBeGreaterThan(0);
+    // Absent on a fresh unit rather than written out, so old saves read as full.
+    expect(gun.ammo).toBeUndefined();
+    expect(ammoLeft(gun)).toBe(max);
+
+    useAbility(state, gun, 'ranged', foe);
+    expect(ammoLeft(gun)).toBe(max - 1);
+  });
+
+  it('stops firing when it runs dry, and says so', () => {
+    const { state, gun, foe } = battery();
+    gun.ammo = 0;
+    gun.moves = 2;
+    expect(abilityReady(gun, 'ranged')).toMatch(/missile/i);
+    const out = useAbility(state, gun, 'ranged', foe);
+    expect(out.ok).toBe(false);
+    expect(foe.hp).toBe(unitType(foe.type).hp);
+  });
+
+  it('is fed by the archery line and not by just anyone', () => {
+    const { state, gun, spotter } = battery();
+    gun.ammo = 0;
+    const archer = spawnUnit(state, 1, 'archer', 10, 11);
+
+    expect(abilityTargets(state, archer, 'reload').map((u) => u.id)).toContain(gun.id);
+    // A footman has no idea how to make a ballista bolt.
+    expect(abilityTargets(state, spotter, 'reload')).toEqual([]);
+  });
+
+  it('costs the helper its whole turn for one bolt', () => {
+    const { state, gun } = battery();
+    gun.ammo = 0;
+    const archer = spawnUnit(state, 1, 'archer', 10, 11);
+    archer.moves = 2;
+
+    useAbility(state, archer, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(1);
+    expect(archer.moves, 'a battery needs a tail, and the tail costs turns').toBe(0);
+    expect(state.units, 'labour reloading must not eat the helper').toContain(archer);
+  });
+
+  it('fills right up from a city instead', () => {
+    const { state, gun } = battery();
+    gun.ammo = 0;
+    state.cities.push({
+      id: 99, owner: 1, name: 'Armoury', x: 10, y: 11, size: 3, food: 0, shields: 0,
+      buildings: [], producing: { kind: 'coin' }, workedTiles: [], disorder: false, foundedTurn: 1,
+    });
+
+    expect(resupplyBlocked(state, gun)).toBeNull();
+    expect(resupply(state, gun)).toBe(true);
+    // A city has an armoury in it; a neighbour in the field has one bolt.
+    expect(ammoLeft(gun)).toBe(unitType('ballista').ammo);
   });
 });
 
