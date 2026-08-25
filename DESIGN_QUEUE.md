@@ -2885,3 +2885,65 @@ An army of one unit type is also simply worse -- it is why the Kingdom fielded
 a hundred ballistas and had nothing left to storm a city with. **This should be
 fixed before any further unit is priced**, because until it is, every price is
 being chosen against a ranking rather than against the game.
+
+## 41. Weighted choice: the cliff becomes a slope, and a shortlist that was noise
+
+Section 40 found that production was winner-take-all -- it sorted by value and
+took the single best affordable unit, so a unit's value never mattered, only
+whether it *crossed* another unit in the ranking. Candidates are now drawn in
+proportion to `worth ** 4` instead.
+
+### It worked, and the proof is the same sweep
+
+Ballistas built, sweeping the magazine over the same seeds:
+
+| magazine | winner-take-all | weighted |
+|---|---|---|
+| 3 | 0.5 | **7.7** |
+| 5 | 5.3 | **10.5** |
+| 8 | 93.7 | **18.4** |
+
+Two orders of magnitude of step function became a smooth, proportionate climb.
+**Every constant in this file is now a dial rather than a cliff edge.**
+
+And the finding that came free: **the axethrower is built at last**, 17 to 26 a
+game, having been 0.00 at every value of every multiplier tried in sections 38
+to 40. It never needed to beat the ogre and the dragon. It needed the chooser to
+stop giving everything to first place. The whole `RANGED_EDGE` saga was solving
+a problem that did not exist.
+
+Both sides now field seven or eight kinds of fighter, against effectively two to
+four before.
+
+### The shortlist: proposed, measured, and dropped
+
+Weighting across everything affordable taxes whoever has the worse floor, and
+the Horde's is worse -- a goblin at 1.0 and a sapper at 1.2 against a Kingdom
+footman at 1.2 and an archer at 1.86. On the tuning seeds the Horde lost 9-24.
+So candidates were restricted to the best few, which is what a person does
+anyway.
+
+On the tuning seeds a shortlist of six looked like the answer: **16-14**, near
+level, against 9-24 without.
+
+On two seed sets that had never been used, it **inverted**:
+
+| | 6000 / 31337 | 77000 / 91234 |
+|---|---|---|
+| no shortlist | 9-24 | **13-16** |
+| shortlist 6 | **16-14** | 11-21 |
+
+The shortlist was a fit to two seed sets, chosen against numbers that swing by
+five wins per set. **Dropped.** Plain weighted choice ships; the extra concept
+does not.
+
+Two process notes worth as much as the result:
+
+- The confirmation run existed only because section 36 established the ±5 swing,
+  and it killed a change that was one commit from shipping. This is the first
+  time in this file that a held-out seed set has actually vetoed something.
+- The control arm in that run was **mislabelled**. `git stash` removed only the
+  uncommitted shortlist, so what ran as "winner-take-all" was really "weighted,
+  no shortlist". It was caught by noticing the Horde fielding eight kinds and
+  twenty axethrowers -- numbers winner-take-all cannot produce. **Reading the
+  composition, not just the win column, is what caught it.**
