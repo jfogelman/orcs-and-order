@@ -387,6 +387,53 @@ function byWorth(defending: boolean) {
   };
 }
 
+/**
+ * How sharply the chooser prefers the better unit.
+ *
+ * Weights are `worth ** this`, so 1 buys almost at random and a large number
+ * reproduces the old behaviour of always taking the best. Four keeps a good
+ * unit several times likelier than a mediocre one -- on the Kingdom's list a
+ * paladin comes out about eight times as often as a footman -- while still
+ * fielding a mixture.
+ */
+const MIX_SHARPNESS = 4;
+
+/**
+ * Buy in proportion to worth rather than always buying the best.
+ *
+ * Step 4 used to sort by value and take the single best affordable unit, which
+ * meant a unit's value never mattered -- only whether it *crossed* another unit
+ * in the ranking. Measured: moving a ballista's value by 17% moved production
+ * from half a ballista a game to ninety-three, because it stepped over a knight
+ * and then a paladin. Every constant in DESIGN_QUEUE was a cliff edge rather
+ * than a dial, and much of the tuning recorded there was really an attempt to
+ * land a number in the gap between two other numbers. See section 40.
+ *
+ * It also produces an army worth having. A hundred ballistas and nothing to
+ * storm a city with is not a strategy, and section 38 measured exactly that.
+ *
+ * Uses the seeded RNG, so a game stays reproducible from its seed.
+ */
+function pickWeighted(
+  state: GameState,
+  candidates: UnitTypeDef[],
+  defending: boolean,
+): UnitTypeDef {
+  if (candidates.length <= 1) return candidates[0];
+  const weights = candidates.map((u) =>
+    Math.pow(Math.max(0.01, worth(u, defending)), MIX_SHARPNESS),
+  );
+  const total = weights.reduce((a, b) => a + b, 0);
+  return withRng(state, (rng) => {
+    let roll = rng.float() * total;
+    for (let i = 0; i < candidates.length; i++) {
+      roll -= weights[i];
+      if (roll <= 0) return candidates[i];
+    }
+    return candidates[candidates.length - 1];
+  });
+}
+
 function chooseProduction(
   state: GameState,
   city: City,
@@ -485,13 +532,18 @@ function chooseProduction(
   const attackers = [...options.units]
     .filter((u) => u.attack > 0 && !u.settler)
     .sort(byWorth(false));
-  // Falls back to whatever is cheapest rather than to the bottom of the value
-  // ranking, which after the re-sort is the worst unit on the list rather than
-  // the one a small city can actually finish.
-  const affordable =
-    attackers.find((u) => u.cost <= 40 + city.size * 22) ??
-    [...attackers].sort((a, b) => a.cost - b.cost)[0];
-  if (affordable) return { kind: 'unit', id: affordable.id };
+  const budget = 40 + city.size * 22;
+  const affordable = attackers.filter((u) => u.cost <= budget);
+  // Weighted among everything this city could actually finish, rather than
+  // always the single best -- see pickWeighted. Falls back to whatever is
+  // cheapest when nothing is affordable, rather than to the bottom of the value
+  // ranking, which is the worst unit on the list and not the one a small city
+  // can finish.
+  const pick =
+    affordable.length > 0
+      ? pickWeighted(state, affordable, false)
+      : [...attackers].sort((a, b) => a.cost - b.cost)[0];
+  if (pick) return { kind: 'unit', id: pick.id };
   void owner;
   return { kind: 'coin' };
 }
