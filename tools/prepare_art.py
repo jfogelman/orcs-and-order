@@ -63,7 +63,7 @@ IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 # runtime, so only these are needed as art.
 CREATURES = [
     "peon", "goblin", "sapper", "orc", "axethrower", "troll", "ogre",
-    "deathknight", "dragon",
+    "deathknight", "dragon", "goblincatapult",
     "peasant", "footman", "outrider", "archer", "knight", "ballista",
     "mage", "paladin",
 ]

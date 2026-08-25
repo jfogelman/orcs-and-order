@@ -2998,3 +2998,31 @@ roster is deeper in the useful middle -- archer, knight, footman, ballista all
 land between 1.8 and 2.1 -- while the Horde's splits into two excellent heavies
 and a weak floor. Weighted choice buys across the whole list, so depth in the
 middle is now worth more than a good top end, and the Horde has the wrong shape.
+
+## 43. Art that has arrived ahead of the code
+
+Processed and live:
+
+- **The three standing orders** -- coin, beakers, calm. The build list has had
+  slots held open for these since section 39; they now fill.
+- **The Goblin Catapult** -- sprite, attack animation and hurt sheet. It needed
+  adding to `CREATURES` in the pipeline, which is a hardcoded list, exactly like
+  the tech and building lists were in section 39. **Third time.** Anything added
+  to `src/model/units.ts` needs adding there too or its art is silently skipped.
+- **`goblin-toss`**, a six-frame effect strip, now wired as the catapult's
+  projectile.
+
+### Two things waiting on code
+
+**The three ogre clubs.** `ogre-fiery_attack`, `ogre-exploding_attack` and
+`ogre-quake_attack` are processed and sitting in `public/units/`. The units do
+not exist -- they are section 11's club variants, still unbuilt. The art is
+ready whenever they are.
+
+**The axe throw has nowhere to play.** `PROJECTILES` is only read for the
+`ranged` ability, and the axethrower stopped being artillery in section 39 -- it
+closes and throws the axe as its opening blow. So its entry was dead code and
+has been removed. The animation and the sound are both still in the game and
+still good; re-homing them needs an effect to fire from `resolveCombat` when a
+first strike lands, which nothing currently does. Worth doing: it is the most
+visible mechanic in the game with no visual at all.

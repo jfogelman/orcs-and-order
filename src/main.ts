@@ -1361,9 +1361,15 @@ class App {
  */
 const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
   archer: { effect: 'arrow', sound: 'arrow' },
-  axethrower: { effect: 'axe', sound: 'axe-throw' },
   ballista: { effect: 'bolt', sound: 'siege' },
+  goblincatapult: { effect: 'goblin-toss', sound: 'siege' },
   mage: { effect: 'magic', sound: 'magic' },
+  // The axethrower used to be here. It is not artillery any more -- it closes
+  // and throws the axe as its opening blow -- and this table is only read for
+  // the `ranged` ability, so the entry was dead. The axe animation and its
+  // sound are both still in the game and want re-homing onto the first strike;
+  // that needs the effect to fire from `resolveCombat` rather than from an
+  // ability, which nothing does yet. See DESIGN_QUEUE section 43.
 };
 
 /**
