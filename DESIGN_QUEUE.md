@@ -3077,3 +3077,63 @@ was measured in, and that game no longer exists -- which is worth noting as a
 general hazard of this file, since **every conclusion here is conditional on the
 version of the AI that produced it.** Section 36's `targetCities` finding was
 overturned the same way, by the combat model changing underneath it.
+
+## 45. Advisors, and two levers that make disorder survivable
+
+Section 9 had twelve finished portraits, a full brief in `docs/advisor_bible.md`
+-- role, appearance, personality and a sample line each -- and **not one line of
+code**. It was the largest gap in the project between what was drawn and what
+was playable.
+
+### The three pieces
+
+**An empire divides its trade three ways.** Coin, study and keeping people calm,
+in twelfths, starting perfectly even, and you cannot raise one without lowering
+another. Trade was previously split two ways by a `taxRate` fixed at 4 that had
+no interface at all.
+
+Spending on calm raises what a city will put up with, and is deliberately
+measured against the trade the *tiles produce* rather than the trade collected,
+because collection is zero during disorder. A rule reading the collected figure
+would do nothing at the one moment anybody wants it to. The city in a riot is
+not gathering that money; the empire is spending on it regardless, which is what
+buying your way out of a riot means.
+
+**Rush-buying during disorder was already allowed**, and never had been blocked
+-- `rushBlocked` never looked at it. Three tests now pin that down so it cannot
+quietly acquire a check later. What cannot be rushed is a standing choice like
+Placating, which has no cost to pay.
+
+Between them these are the two ways out of a riot that do not require an advance
+to turn up for unrelated reasons, which section 21 measured as most of the gap
+between the two sides.
+
+**Twelve advisors.** Each has an ordered list of concerns, and **the order is
+the character**: the Knight-Marshal checks for enemies before he checks for
+walls, because he would always rather attack than build. They are not experts
+and they do not agree -- the Paladin distrusts the mages the Archmage keeps
+asking for, and the Death Knight considers your goblins expendable, using the
+same flag the Goblin Catapult loads itself with.
+
+### Three details worth keeping
+
+- The situation is gathered **once** and handed to all six, so two advisors
+  cannot disagree about the facts. They may only disagree about what to do.
+- It reads the viewer's own player only. An advisor alarmed about an enemy the
+  viewer has not found would be a fog-of-war leak with a face on it.
+- Idle lines are chosen **by turn rather than at random**, so opening the panel
+  twice in one turn cannot get two opinions out of the same person.
+
+And a `count` helper, because an advisor who says "1 cities" stops sounding like
+a person immediately. Nineteen lines went through it.
+
+### What this does not do
+
+Nothing here touches balance, and it is not meant to. The advisors are read-only
+and the AI does not consult them. The trade split is a lever a *human* can pull;
+the AI still leaves it on even, so every measurement in sections 30 to 44 stands
+unchanged.
+
+Worth noting for later: **the AI never adjusts its rates**, which means a human
+who spends on calm has a tool the AI does not use. That is a real advantage and
+it is unmeasured.
