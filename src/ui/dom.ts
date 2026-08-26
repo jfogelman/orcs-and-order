@@ -30,9 +30,33 @@ export interface ModalOptions {
 }
 
 let closeCurrent: (() => void) | null = null;
+let pendingAfterClose: Array<() => void> = [];
+/** True while `openModal` is dismissing whatever it is about to replace. */
+let replacing = false;
 
 export function isModalOpen(): boolean {
   return closeCurrent !== null;
+}
+
+/**
+ * Run something once the modal on screen has gone.
+ *
+ * The end of a turn asks up to three questions -- a promotion, what to
+ * research, what to build -- and every one of them declines to open while
+ * another is up. Asked in a row that meant only the first was ever asked: a
+ * player with a promotion waiting was never asked what to build, and the city
+ * quietly banked its shields as Coin instead. This is how each answer hands on
+ * to the next question.
+ *
+ * Not fired when a modal is merely being replaced by another, which would
+ * reopen the chain underneath the modal that replaced it.
+ */
+export function afterModalCloses(fn: () => void): void {
+  if (!isModalOpen()) {
+    fn();
+    return;
+  }
+  pendingAfterClose.push(fn);
 }
 
 export function closeModal(): void {
@@ -40,7 +64,9 @@ export function closeModal(): void {
 }
 
 export function openModal(options: ModalOptions): void {
+  replacing = true;
   closeModal();
+  replacing = false;
   const root = el('modal-root');
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -59,6 +85,10 @@ export function openModal(options: ModalOptions): void {
     backdrop.remove();
     if (closeCurrent === close) closeCurrent = null;
     window.removeEventListener('keydown', onKey);
+    if (replacing) return;
+    const waiting = pendingAfterClose;
+    pendingAfterClose = [];
+    for (const fn of waiting) fn();
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
