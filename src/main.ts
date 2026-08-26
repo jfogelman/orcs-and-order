@@ -9,7 +9,7 @@ import { FACTIONS } from './model/factions';
 import { TERRAIN } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
-import type { City, GameState, Unit, Player } from './model/types';
+import type { City, GameState, LogEntry, Player, Unit } from './model/types';
 import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
 import { EffectLayer } from './render/effects';
@@ -409,6 +409,7 @@ class App {
     this.soundedLogEntries = this.state.log.length;
     const heard = new Set<string>();
     let shown = 0;
+    let look: [number, number] | null = null;
     for (const entry of entries) {
       // Sound is addressed: you hear about your own empire.
       const addressed = entry.player === null || entry.player === this.viewerId;
@@ -444,7 +445,44 @@ class App {
       if (!this.canSee(ex, ey)) continue;
       this.effects.spawn(effect, ex, ey, { delay: shown * EFFECT_STAGGER });
       shown++;
+      // The first thing worth watching that is happening off the edge of the
+      // screen. Only the first: a busy AI turn would otherwise drag the camera
+      // across the map once per fight and settle wherever the last one was.
+      if (!look && this.worthWatching(entry) && !this.onScreen(ex, ey)) look = [ex, ey];
     }
+    // Moved after the loop rather than during it, so the choice is made
+    // against where the camera actually was when the batch started.
+    if (look) this.camera.centerOnTile(look[0], look[1]);
+  }
+
+  /** Whether a tile is inside the part of the map currently being drawn. */
+  private onScreen(x: number, y: number): boolean {
+    const r = this.camera.visibleTileRange();
+    // A tile half off the edge is one you cannot really watch, so the edges
+    // are trimmed rather than taken at face value.
+    return x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1;
+  }
+
+  /**
+   * Is this an event the viewer would want the camera to move for?
+   *
+   * Fighting only, and only their own. Sound and the animation already play
+   * for anything visible, whoever it belongs to -- but hearing a distant
+   * skirmish between two other people is not a reason to be dragged away from
+   * what you were doing. Losing a unit somewhere you were not looking is.
+   */
+  private worthWatching(entry: LogEntry): boolean {
+    if (entry.kind !== 'combat' && entry.kind !== 'bad') return false;
+    if (!entry.at) return false;
+    if (entry.player === this.viewerId) return true;
+    // A message addressed to somebody else can still be about us: an enemy
+    // killing one of our units is written for them. So ask the map instead.
+    const [x, y] = entry.at;
+    const mine = (ux: number, uy: number) => Math.abs(ux - x) <= 1 && Math.abs(uy - y) <= 1;
+    return (
+      this.state.units.some((u) => u.owner === this.viewerId && mine(u.x, u.y)) ||
+      this.state.cities.some((c) => c.owner === this.viewerId && mine(c.x, c.y))
+    );
   }
 
   /**
