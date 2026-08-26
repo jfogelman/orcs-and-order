@@ -3166,14 +3166,27 @@ per advisor, each 512x2064.
   between the still and the animation is more noticeable than either being
   slightly off on its own.
 
-### And a decision to make first
+### The shape it wants: ask one, and let the others interrupt
 
-The panel currently shows six advisors at once, which is the right shape for
-"six people who disagree" but the wrong shape for animation: six looping faces
-is a lot of movement for a screen someone is trying to read.
+The panel shows six advisors at once, which is the right shape for "six people
+who disagree" and the wrong shape for animation -- six looping faces is a lot of
+movement for a screen somebody is trying to read.
 
-Worth settling before building it. Either the cycle plays only on the advisor
-being hovered or focused, or the panel changes to one advisor at a time in the
-manner of Civ2, which is what the section originally described. **The second is
-closer to the brief and a bigger change**, so it should be a decision rather
-than something that falls out of the implementation.
+**Resolved: you ask one.** Click an advisor and they animate and answer. The
+others may then reply, but only if they *disagree*, which is the part that makes
+this worth building rather than a hover effect:
+
+- It gives the animation a reason to start and a moment to stop, so nothing
+  loops in the corner of the eye.
+- **It turns the panel from six opinions into an argument**, which is what the
+  characters were written for. The Paladin distrusting the mages the Archmage
+  just asked for is already in the writing; this is the shape that lets him say
+  so out loud.
+- It is the first thing in the game where the advisors relate to each other
+  rather than to the empire, so `Concern` will need a notion of who a line
+  contradicts -- probably a tag on the concern rather than pairwise rules
+  between advisors, which would be thirty-odd relationships to maintain.
+
+That means a GUI change, so it is deliberately **not** an immediate piece of
+work. The stills are wired and the cycles are drawn; this is the design they are
+waiting on rather than a blocker for anything already shipped.
