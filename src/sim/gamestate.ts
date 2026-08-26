@@ -1,3 +1,4 @@
+import { EVEN_RATES } from './research';
 import { Rng } from '../engine/rng';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
@@ -217,7 +218,7 @@ function makePlayer(
     beakers: 0,
     researching: null,
     techs: [def.startTech],
-    taxRate: 4,
+    rates: { ...EVEN_RATES },
     explored: new Array(tileCount).fill(0),
     visible: new Array(tileCount).fill(0),
     alive: true,
