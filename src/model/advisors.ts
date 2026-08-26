@@ -100,12 +100,30 @@ export interface AdvisorDef {
   idle: string[];
 }
 
+const NUMBER_WORDS = [
+  'no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+  'seventeen', 'eighteen', 'nineteen', 'twenty',
+];
+
 /**
- * "1 city", "3 cities". Nobody with a written voice says "1 cities", and an
- * advisor who does stops sounding like a person immediately.
+ * Numbers up to twenty in words, and in figures after that.
+ *
+ * These are people talking, and people say "three cities". A digit in the
+ * middle of a spoken line reads as a readout rather than a sentence, which is
+ * the difference between an advisor and a status bar. Zero is "no" rather than
+ * "nought", because "no cities rioting" is what somebody would actually say.
+ */
+export function spell(n: number): string {
+  return n >= 0 && n <= 20 ? NUMBER_WORDS[n] : String(n);
+}
+
+/**
+ * "one city", "three cities". Nobody with a written voice says "1 cities", and
+ * an advisor who does stops sounding like a person immediately.
  */
 export function count(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
+  return `${spell(n)} ${n === 1 ? one : many}`;
 }
 
 // ------------------------------------------------------------ the Kingdom
@@ -121,7 +139,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
-          `Orcs. ${s.enemiesSeen} of them, in the open, unpunished. Every hour we do not ` +
+          `Orcs. ${spell(s.enemiesSeen)} of them, in the open, unpunished. Every hour we do not ` +
           `ride out is an hour they will tell their children about.`,
       },
       {
@@ -177,7 +195,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.paladins === 0 && s.army > 6,
         say: (s) =>
-          `An army of ${s.army}, and not one paladin among them. A host without virtue is ` +
+          `An army of ${spell(s.army)}, and not one paladin among them. A host without virtue is ` +
           `simply a mob that has been issued equipment.`,
       },
       {
@@ -221,7 +239,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.restless > 0 && s.calmBuildings < s.cities,
         say: (s) =>
-          `${count(s.restless, 'city', 'cities')} a bad week from trouble, and ${s.cities - s.calmBuildings} ` +
+          `${count(s.restless, 'city', 'cities')} a bad week from trouble, and ${spell(s.cities - s.calmBuildings)} ` +
           `with nothing built to hold them steady. Build the thing. Then we shall see.`,
       },
       {
@@ -247,13 +265,13 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.goldPerTurn < 0,
         say: (s) =>
-          `We are losing ${Math.abs(s.goldPerTurn)} a turn. Losing. I have written it down ` +
+          `We are losing ${spell(Math.abs(s.goldPerTurn))} a turn. Losing. I have written it down ` +
           `in the ledger, in a colour I do not enjoy using.`,
       },
       {
         when: (s) => s.rates.coin < 3,
         say: (s) =>
-          `${s.rates.coin} parts in twelve to the treasury. I have seen shipwrecks with ` +
+          `${spell(s.rates.coin)} parts in twelve to the treasury. I have seen shipwrecks with ` +
           `better arrangements. At least they were *trying* to keep the gold aboard.`,
       },
       {
@@ -265,7 +283,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.gold > 400,
         say: (s) =>
-          `${s.gold} in the vault. Beautiful. Do not touch it. I shall know.`,
+          `${spell(s.gold)} in the vault. Beautiful. Do not touch it. I shall know.`,
       },
     ],
     idle: [
@@ -322,8 +340,8 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.rates.beakers < 3,
         say: (s) =>
-          `${s.rates.beakers} parts in twelve to study. One cannot discover very much on ` +
-          `${s.rates.beakers}. One can barely discover the problem.`,
+          `${spell(s.rates.beakers)} parts in twelve to study. One cannot discover very much on ` +
+          `${spell(s.rates.beakers)}. One can barely discover the problem.`,
       },
       {
         when: (s) => s.magicUnits === 0 && s.army > 8,
@@ -359,7 +377,7 @@ const HORDE: AdvisorDef[] = [
       {
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
-          `${s.enemiesSeen} of them. Standing there. Being alive. I do not know what else ` +
+          `${spell(s.enemiesSeen)} of them. Standing there. Being alive. I do not know what else ` +
           `you want me to say about it.`,
       },
       {
@@ -441,7 +459,7 @@ const HORDE: AdvisorDef[] = [
       {
         when: (s) => s.enemiesSeen > 2,
         say: (s) =>
-          `${s.enemiesSeen} of dem out dere. We could rush dem. Or we could wait, and let ` +
+          `${spell(s.enemiesSeen)} of dem out dere. We could rush dem. Or we could wait, and let ` +
           `dem come to us, tired. I prefer tired.`,
       },
       {
@@ -478,7 +496,7 @@ const HORDE: AdvisorDef[] = [
       {
         when: (s) => s.rates.beakers < 3,
         say: (s) =>
-          `${s.rates.beakers} parts of twelve to study. Progress is slow. The dead make poor ` +
+          `${spell(s.rates.beakers)} parts of twelve to study. Progress is slow. The dead make poor ` +
           `assistants — motivated, but forgetful.`,
       },
       {
@@ -510,7 +528,7 @@ const HORDE: AdvisorDef[] = [
       {
         when: (s) => s.rankAndFile > s.army * 0.6 && s.army > 6,
         say: (s) =>
-          `${s.rankAndFile} of our ${s.army} are goblins and common orcs. They will break. ` +
+          `${spell(s.rankAndFile)} of our ${spell(s.army)} are goblins and common orcs. They will break. ` +
           `They always break. Spend them somewhere it matters and let the rest of us hold ` +
           `the line.`,
       },
@@ -549,25 +567,25 @@ const HORDE: AdvisorDef[] = [
       {
         when: (s) => s.goldPerTurn < 0,
         say: (s) =>
-          `Left head says we lose ${Math.abs(s.goldPerTurn)} coin every turn. Right head ` +
+          `Left head says we lose ${spell(Math.abs(s.goldPerTurn))} coin every turn. Right head ` +
           `says that is fine because coin is not food. Left head is upset.`,
       },
       {
         when: (s) => s.gold < 20,
         say: (s) =>
-          `${s.gold} coin. Both heads counted. Both heads got ${s.gold}. Left head is ` +
+          `${spell(s.gold)} coin. Both heads counted. Both heads got ${spell(s.gold)}. Left head is ` +
           `worried, right head is hungry, nobody is happy.`,
       },
       {
         when: (s) => s.rates.coin < 3,
         say: (s) =>
-          `Only ${s.rates.coin} bits of twelve go in the coin pile. Left head says that is ` +
+          `Only ${spell(s.rates.coin)} bits of twelve go in the coin pile. Left head says that is ` +
           `not many bits. Right head has eaten a bit. Now fewer bits.`,
       },
       {
         when: (s) => s.gold > 300,
         say: (s) =>
-          `Big pile now. ${s.gold}. Right head wants to eat it. Left head says no. This is ` +
+          `Big pile now. ${spell(s.gold)}. Right head wants to eat it. Left head says no. This is ` +
           `an ongoing disagreement and you should probably spend it before it resolves.`,
       },
     ],

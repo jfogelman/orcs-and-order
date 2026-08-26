@@ -5,6 +5,7 @@ import {
   advisorLine,
   advisorsFor,
   count,
+  spell,
 } from '../src/model/advisors';
 import { situationOf } from '../src/ui/advisors';
 import { createGame } from '../src/sim/gamestate';
@@ -41,16 +42,59 @@ function calm(): Situation {
 
 describe('counting things out loud', () => {
   it('never says "1 cities"', () => {
-    expect(count(1, 'city', 'cities')).toBe('1 city');
-    expect(count(3, 'city', 'cities')).toBe('3 cities');
-    // Nought is plural, which is what English does and what a table of numbers
-    // does not.
-    expect(count(0, 'city', 'cities')).toBe('0 cities');
+    expect(count(1, 'city', 'cities')).toBe('one city');
+    expect(count(3, 'city', 'cities')).toBe('three cities');
+    // Zero is plural and reads as "no", which is what somebody would say.
+    expect(count(0, 'city', 'cities')).toBe('no cities');
   });
 
   it('adds an s by itself when that is all it takes', () => {
-    expect(count(1, 'soldier')).toBe('1 soldier');
-    expect(count(2, 'soldier')).toBe('2 soldiers');
+    expect(count(1, 'soldier')).toBe('one soldier');
+    expect(count(2, 'soldier')).toBe('two soldiers');
+  });
+
+  it('writes numbers up to twenty as words, and larger ones as figures', () => {
+    // These are people talking. A digit in the middle of a spoken line reads
+    // as a readout rather than a sentence, which is the difference between an
+    // advisor and a status bar.
+    expect(spell(0)).toBe('no');
+    expect(spell(1)).toBe('one');
+    expect(spell(19)).toBe('nineteen');
+    expect(spell(20)).toBe('twenty');
+    // Past twenty it stops being something anybody says aloud.
+    expect(spell(21)).toBe('21');
+    expect(spell(450)).toBe('450');
+  });
+
+  it('leaves no bare digit in any line it can reach', () => {
+    const quiet = calm();
+    const loud: Situation = {
+      ...quiet,
+      rioting: 2,
+      starving: 1,
+      restless: 3,
+      undefended: 4,
+      enemiesSeen: 5,
+      army: 7,
+      magicUnits: 0,
+      paladins: 0,
+      walled: 0,
+      barracks: 0,
+      coinBuildings: 0,
+      calmBuildings: 0,
+      supplyPosts: 0,
+      goldPerTurn: -6,
+      beakersPerTurn: 2,
+      gold: 8,
+      researching: null,
+      rates: { coin: 1, beakers: 1, calm: 10 },
+    };
+    for (const advisor of ADVISORS) {
+      for (const s of [quiet, loud]) {
+        const line = advisorLine(advisor, { ...s, faction: advisor.faction });
+        expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
+      }
+    }
   });
 });
 
@@ -103,8 +147,8 @@ describe('what they notice', () => {
 
   it('counts a lone rioting city as one city', () => {
     const overseer = advisorsFor('orc').find((a) => a.id === 'goblin-overseer')!;
-    expect(advisorLine(overseer, { ...calm(), rioting: 1 })).toContain('1 city ');
-    expect(advisorLine(overseer, { ...calm(), rioting: 3 })).toContain('3 cities ');
+    expect(advisorLine(overseer, { ...calm(), rioting: 1 })).toContain('one city ');
+    expect(advisorLine(overseer, { ...calm(), rioting: 3 })).toContain('three cities ');
   });
 });
 

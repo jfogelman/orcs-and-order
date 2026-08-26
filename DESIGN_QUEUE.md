@@ -3137,3 +3137,43 @@ unchanged.
 Worth noting for later: **the AI never adjusts its rates**, which means a human
 who spends on calm has a tool the AI does not use. That is a real advantage and
 it is unmeasured.
+
+## 46. Advisors that move while they talk
+
+Section 9 asked for advisors "using the animation the game already has rather
+than anything new". The still portraits are in and wired; the talking cycles are
+drawn and not yet processed.
+
+**What is sitting in `art_src/advisors/Talking Cycles/`:** twelve sheets, one
+per advisor, each 512x2064.
+
+### What the implementation has to deal with
+
+- **They are vertical strips.** Every strip the pipeline slices today is
+  horizontal -- the Goblin Catapult's attack is four frames from 2064x512, and
+  these are the same four frames from 512x2064. `slice_strip` will need to know
+  which way round it is looking, rather than assuming.
+- **Four frames of 512x516**, not 512x512: 2064 does not divide by four evenly
+  at 512, and the existing slicer already handles the horizontal case the same
+  way. Worth confirming rather than assuming, since a one-pixel drift per frame
+  is exactly the kind of thing that looks like bad art rather than bad maths.
+- **Two filenames do not match their ids.** `Ogre talking.jpg` is the Ogre
+  Quartermaster and `Troll talking.jpg` is the Troll Headhunter. The aliased
+  pass added for the portraits already exists for precisely this and just needs
+  a second map.
+- **The Blademaster may want redrawing.** Flagged in the design conversation;
+  check his cycle against his portrait before wiring the set, since a mismatch
+  between the still and the animation is more noticeable than either being
+  slightly off on its own.
+
+### And a decision to make first
+
+The panel currently shows six advisors at once, which is the right shape for
+"six people who disagree" but the wrong shape for animation: six looping faces
+is a lot of movement for a screen someone is trying to read.
+
+Worth settling before building it. Either the cycle plays only on the advisor
+being hovered or focused, or the panel changes to one advisor at a time in the
+manner of Civ2, which is what the section originally described. **The second is
+closer to the brief and a bigger change**, so it should be a decision rather
+than something that falls out of the implementation.
