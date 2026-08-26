@@ -613,7 +613,19 @@ export function advisorsFor(faction: FactionId): AdvisorDef[] {
  */
 export function advisorLine(advisor: AdvisorDef, s: Situation): string {
   for (const concern of advisor.concerns) {
-    if (concern.when(s)) return concern.say(s);
+    if (concern.when(s)) return sentence(concern.say(s));
   }
-  return advisor.idle[s.turn % advisor.idle.length];
+  return sentence(advisor.idle[s.turn % advisor.idle.length]);
+}
+
+/**
+ * Start the line with a capital.
+ *
+ * Spelling numbers out put words like "one" and "no" at the front of a
+ * sentence, and "one city rioting, boss" reads as a fragment somebody
+ * interrupted. Done here rather than in every line, since the first word is
+ * only known once the number has been chosen.
+ */
+function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

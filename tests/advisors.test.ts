@@ -147,8 +147,20 @@ describe('what they notice', () => {
 
   it('counts a lone rioting city as one city', () => {
     const overseer = advisorsFor('orc').find((a) => a.id === 'goblin-overseer')!;
-    expect(advisorLine(overseer, { ...calm(), rioting: 1 })).toContain('one city ');
-    expect(advisorLine(overseer, { ...calm(), rioting: 3 })).toContain('three cities ');
+    expect(advisorLine(overseer, { ...calm(), rioting: 1 })).toContain('One city ');
+    expect(advisorLine(overseer, { ...calm(), rioting: 3 })).toContain('Three cities ');
+  });
+
+  it('starts every line with a capital', () => {
+    // Spelling numbers out put words like "one" and "no" at the front, and
+    // "one city rioting, boss" reads as a fragment somebody interrupted.
+    const quiet = calm();
+    for (const advisor of ADVISORS) {
+      for (const rioting of [0, 1, 4]) {
+        const line = advisorLine(advisor, { ...quiet, faction: advisor.faction, rioting });
+        expect(line[0], `${advisor.id}: ${line}`).toBe(line[0].toUpperCase());
+      }
+    }
   });
 });
 
