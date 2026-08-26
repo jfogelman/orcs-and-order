@@ -1169,3 +1169,70 @@ button.small.rush[disabled] {
   background: var(--gold);
   border-color: var(--gold);
 }
+
+/* Six people with opinions, stacked. Portrait, who they are, what they think.
+   Wide enough that a line of theirs is not a column of two words. */
+.advisor-note {
+  font-size: 11.5px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.advisors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 9px 9px;
+}
+
+.advisor {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #2a2318, #211c14);
+}
+
+.advisor-face {
+  grid-row: 1 / span 2;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: #15110c;
+}
+
+.advisor-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 8px;
+}
+
+.advisor-name {
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.advisor-role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.advisor-blurb {
+  flex-basis: 100%;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.advisor-line {
+  font-size: 12.5px;
+  line-height: 1.45;
+}

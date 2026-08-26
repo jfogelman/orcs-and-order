@@ -1,0 +1,601 @@
+import type { FactionId } from './types';
+
+/**
+ * The six people who will tell you what to do, per side.
+ *
+ * Text only, in the manner of Civ2's advisors, using art the game already has.
+ * `docs/advisor_bible.md` is the brief they are written from: role, appearance,
+ * personality and a sample line each.
+ *
+ * The point of them is not advice. A player who wants to know how their empire
+ * is doing has the report; an advisor is there to have an opinion about it, and
+ * to be wrong in a way that is in character. The Knight-Marshal wants walls
+ * whether or not walls are the answer. The Ledger-Thane would rather you spent
+ * nothing at all, ever. Reading them as a panel of experts is a mistake the
+ * game is happy for you to make once.
+ */
+
+/** What an advisor is nominally responsible for. Mirrored across the sides. */
+export type AdvisorRole = 'military' | 'faith' | 'domestic' | 'trade' | 'diplomacy' | 'arcane';
+
+export const ROLE_NAMES: Record<AdvisorRole, string> = {
+  military: 'Military',
+  faith: 'Faith',
+  domestic: 'Domestic',
+  trade: 'Trade',
+  diplomacy: 'Diplomacy',
+  arcane: 'Arcane',
+};
+
+/**
+ * A snapshot of an empire, in the terms advisors care about.
+ *
+ * Gathered once and handed to all six, so nobody re-walks the city list, and
+ * so two advisors looking at the same thing cannot disagree about the facts --
+ * only about what should be done, which is the entire joke.
+ */
+export interface Situation {
+  turn: number;
+  faction: FactionId;
+  cities: number;
+  /** Cities currently rioting. */
+  rioting: number;
+  /** Cities at or one short of the point where they riot. */
+  restless: number;
+  /** Cities losing food. */
+  starving: number;
+  gold: number;
+  goldPerTurn: number;
+  beakersPerTurn: number;
+  /** Twelfths, as set on the empire report. */
+  rates: { coin: number; beakers: number; calm: number };
+  researching: string | null;
+  /** Cities of ours with nobody standing in them. */
+  undefended: number;
+  /** Enemy fighters we can currently see. */
+  enemiesSeen: number;
+  /** Ours: everything that can fight. */
+  army: number;
+  /** Ours: creatures that strike with magic. */
+  magicUnits: number;
+  /** Ours: the cheap, numerous ones. The Death Knight has views. */
+  rankAndFile: number;
+  /** Ours: paladins specifically, which is all the Paladin counts. */
+  paladins: number;
+  /** Cities with walls, and whether walls can be built at all yet. */
+  walled: number;
+  wallsAvailable: boolean;
+  /** Cities with a barracks of some kind. */
+  barracks: number;
+  /** Cities with something that makes money. */
+  coinBuildings: number;
+  /** Cities with something that keeps people calm. */
+  calmBuildings: number;
+  /** Structures that push supply further out. */
+  supplyPosts: number;
+}
+
+/** One thing an advisor might be exercised about, and what they say about it. */
+export interface Concern {
+  /** Whether this is what is on their mind right now. */
+  when: (s: Situation) => boolean;
+  say: (s: Situation) => string;
+}
+
+export interface AdvisorDef {
+  id: string;
+  name: string;
+  role: AdvisorRole;
+  faction: FactionId;
+  /** One line on who they are, shown under the portrait. */
+  blurb: string;
+  /**
+   * Checked in order; the first that applies is what they say. So the order
+   * is the character: the Knight-Marshal checks for enemies before he checks
+   * for walls, because he would always rather attack than build.
+   */
+  concerns: Concern[];
+  /** When nothing they care about is happening. Chosen by turn, not at random,
+   *  so an advisor does not change their mind while you are looking at them. */
+  idle: string[];
+}
+
+/**
+ * "1 city", "3 cities". Nobody with a written voice says "1 cities", and an
+ * advisor who does stops sounding like a person immediately.
+ */
+export function count(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+// ------------------------------------------------------------ the Kingdom
+
+const KINGDOM: AdvisorDef[] = [
+  {
+    id: 'knight-marshal',
+    name: 'Knight-Marshal',
+    role: 'military',
+    faction: 'human',
+    blurb: 'Dented breastplate, never repaired, out of pride.',
+    concerns: [
+      {
+        when: (s) => s.enemiesSeen > 0,
+        say: (s) =>
+          `Orcs. ${s.enemiesSeen} of them, in the open, unpunished. Every hour we do not ` +
+          `ride out is an hour they will tell their children about.`,
+      },
+      {
+        when: (s) => s.undefended > 0,
+        say: (s) =>
+          `${count(s.undefended, 'city', 'cities')} standing with the gate open and nobody behind it. ` +
+          `I do not ask for much. I ask for a man with a spear. One man. One spear.`,
+      },
+      {
+        when: (s) => s.wallsAvailable && s.walled < s.cities,
+        say: (s) =>
+          `${count(s.cities - s.walled, 'city', 'cities')} without walls. Stone does not sleep, sire. ` +
+          `Stone does not desert. Stone asks for no wages.`,
+      },
+      {
+        when: (s) => !s.wallsAvailable,
+        say: () =>
+          `Our scholars have not yet worked out how to stack one stone upon another for ` +
+          `defensive purposes. I am assured this is difficult.`,
+      },
+      {
+        when: (s) => s.barracks < Math.max(1, Math.floor(s.cities / 2)),
+        say: () =>
+          `Our soldiers are being trained by their own enthusiasm. It shows. A barracks, ` +
+          `sire, before enthusiasm gets them all killed.`,
+      },
+      {
+        when: (s) => s.supplyPosts === 0 && s.cities > 2,
+        say: () =>
+          `An army marches on its stomach and ours is marching on optimism. Forward posts. ` +
+          `Now, ideally before the marching.`,
+      },
+    ],
+    idle: [
+      'Our footmen stand idle while orcs sharpen their axes on our fenceposts. Idle. Steel rusts from disuse faster than from blood.',
+      'The men ask what we are waiting for. I tell them strategy. I would like, one day, to be telling the truth.',
+      'A quiet season. I do not trust it, and neither should you.',
+    ],
+  },
+  {
+    id: 'paladin',
+    name: 'Paladin',
+    role: 'faith',
+    faction: 'human',
+    blurb: 'Radiant, humourless, standing suspiciously straight.',
+    concerns: [
+      {
+        when: (s) => s.magicUnits > 0,
+        say: (s) =>
+          `We field ${count(s.magicUnits, 'practitioner')} of the arcane. I have said nothing about ` +
+          `this. I continue to say nothing about it, at length, whenever asked.`,
+      },
+      {
+        when: (s) => s.paladins === 0 && s.army > 6,
+        say: (s) =>
+          `An army of ${s.army}, and not one paladin among them. A host without virtue is ` +
+          `simply a mob that has been issued equipment.`,
+      },
+      {
+        when: (s) => s.rates.coin > s.rates.calm + 3,
+        say: () =>
+          `We spend on gold and call it governance. The people are not comforted by a full ` +
+          `treasury. I merely mention it.`,
+      },
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} in open disorder. This is what happens. I shall ` +
+          `not say what it is what happens *because of*. I shall simply stand here.`,
+      },
+    ],
+    idle: [
+      'The orcs raise death knights from fallen heroes. We could simply... not do that. I merely mention it.',
+      'A righteous realm needs no advice. I remain available, regardless, in case that changes.',
+      'I have prayed on the matter. The answer was ambiguous, which I attribute to the question.',
+    ],
+  },
+  {
+    id: 'stonewarden',
+    name: 'Stonewarden',
+    role: 'domestic',
+    faction: 'human',
+    blurb: 'Dwarf engineer. Checks a spirit-level while you talk.',
+    concerns: [
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} rioting. Have you tried a sturdier roof? Works for morale, ` +
+          `works for mine collapses. Same principle, mostly.`,
+      },
+      {
+        when: (s) => s.starving > 0,
+        say: (s) =>
+          `${count(s.starving, 'city', 'cities')} eating less than it grows. That is not a mood, that is ` +
+          `arithmetic, and arithmetic does not cheer up on its own.`,
+      },
+      {
+        when: (s) => s.restless > 0 && s.calmBuildings < s.cities,
+        say: (s) =>
+          `${count(s.restless, 'city', 'cities')} a bad week from trouble, and ${s.cities - s.calmBuildings} ` +
+          `with nothing built to hold them steady. Build the thing. Then we shall see.`,
+      },
+      {
+        when: (s) => s.rates.calm === 0 && s.cities > 2,
+        say: () =>
+          `Not a copper going to keeping folk content. You can hold a wall up with nothing, ` +
+          `too, right up until you cannot.`,
+      },
+    ],
+    idle: [
+      'Your peasants are unhappy. Have you tried a sturdier roof? Works for morale, works for mine collapses.',
+      'Everything is standing. I have checked twice. I shall check again shortly.',
+      'Good foundations, this season. Nobody ever thanks you for foundations.',
+    ],
+  },
+  {
+    id: 'ledger-thane',
+    name: 'Ledger-Thane',
+    role: 'trade',
+    faction: 'human',
+    blurb: 'Gold-threaded beard. Abacus of carved stone beads.',
+    concerns: [
+      {
+        when: (s) => s.goldPerTurn < 0,
+        say: (s) =>
+          `We are losing ${Math.abs(s.goldPerTurn)} a turn. Losing. I have written it down ` +
+          `in the ledger, in a colour I do not enjoy using.`,
+      },
+      {
+        when: (s) => s.rates.coin < 3,
+        say: (s) =>
+          `${s.rates.coin} parts in twelve to the treasury. I have seen shipwrecks with ` +
+          `better arrangements. At least they were *trying* to keep the gold aboard.`,
+      },
+      {
+        when: (s) => s.coinBuildings < s.cities && s.cities > 1,
+        say: (s) =>
+          `${count(s.cities - s.coinBuildings, 'city', 'cities')} with nowhere to put the money. Money left ` +
+          `lying about is money spent, eventually, by somebody with worse ideas than mine.`,
+      },
+      {
+        when: (s) => s.gold > 400,
+        say: (s) =>
+          `${s.gold} in the vault. Beautiful. Do not touch it. I shall know.`,
+      },
+    ],
+    idle: [
+      'We could sell the surplus grain, or we could hoard it and watch the price triple. I know which I would choose. I know which I have chosen.',
+      'The books balance. I take no pleasure in it. Pleasure is an expense.',
+      'Somebody has been rounding. I will find them.',
+    ],
+  },
+  {
+    id: 'herald',
+    name: 'Herald',
+    role: 'diplomacy',
+    faction: 'human',
+    blurb: 'Elf. Patient to the point of insult.',
+    concerns: [
+      {
+        when: (s) => s.cities < 3,
+        say: (s) =>
+          `${count(s.cities, 'city', 'cities')}. A modest holding. Modest holdings become great ones by ` +
+          `growing, which is a thing that happens to those who permit it.`,
+      },
+      {
+        when: (s) => s.enemiesSeen > 2,
+        say: () =>
+          `The orcs are about. They are always about. In four centuries they have never ` +
+          `once been elsewhere. Do try not to hurry.`,
+      },
+      {
+        when: (s) => s.starving > 0,
+        say: () =>
+          `A city that does not eat does not grow, and a realm that does not grow is simply ` +
+          `a long, well-attended decline.`,
+      },
+    ],
+    idle: [
+      'The orcs demand tribute. I recall a similar demand from their ancestors, four centuries ago. We said no then, too.',
+      'Nothing requires your attention. Very little ever does, in my experience.',
+      'Patience. It costs nothing, which I understand is a consideration here.',
+    ],
+  },
+  {
+    id: 'archmage',
+    name: 'Court Archmage',
+    role: 'arcane',
+    faction: 'human',
+    blurb: 'Elf. Treats your spellcraft as charming tinkering.',
+    concerns: [
+      {
+        when: (s) => s.researching === null,
+        say: () =>
+          `We are researching nothing whatsoever. A bold curriculum. I look forward to its ` +
+          `findings.`,
+      },
+      {
+        when: (s) => s.rates.beakers < 3,
+        say: (s) =>
+          `${s.rates.beakers} parts in twelve to study. One cannot discover very much on ` +
+          `${s.rates.beakers}. One can barely discover the problem.`,
+      },
+      {
+        when: (s) => s.magicUnits === 0 && s.army > 8,
+        say: (s) =>
+          `${count(s.army, 'soldier')}, and not one of them able to do anything a horse could not. ` +
+          `Mages, your majesty. The word is mages.`,
+      },
+      {
+        when: (s) => s.beakersPerTurn < 3 && s.cities > 2,
+        say: (s) =>
+          `${count(s.beakersPerTurn, 'beaker')} a turn from ${count(s.cities, 'city', 'cities')}. Your alchemists have ` +
+          `discovered fire again. We are delighted for them.`,
+      },
+    ],
+    idle: [
+      'Your alchemists have discovered fire again. We are delighted for them.',
+      'The work proceeds. It would proceed faster with funding, but it proceeds.',
+      'I have been reading. You would not enjoy it.',
+    ],
+  },
+];
+
+// -------------------------------------------------------------- the Horde
+
+const HORDE: AdvisorDef[] = [
+  {
+    id: 'blademaster',
+    name: 'Blademaster',
+    role: 'military',
+    faction: 'orc',
+    blurb: 'Trophies sewn into the armour. Not all of them old.',
+    concerns: [
+      {
+        when: (s) => s.enemiesSeen > 0,
+        say: (s) =>
+          `${s.enemiesSeen} of them. Standing there. Being alive. I do not know what else ` +
+          `you want me to say about it.`,
+      },
+      {
+        when: (s) => s.army < s.cities * 2,
+        say: (s) =>
+          `${count(s.army, 'warrior')} for ${count(s.cities, 'city', 'cities')}. That is not a horde. That is a ` +
+          `queue.`,
+      },
+      {
+        when: (s) => s.undefended > 0,
+        say: (s) =>
+          `${count(s.undefended, 'city', 'cities')} with nobody inside. Fine by me — nothing to defend means ` +
+          `everyone is free to attack. But you will complain later, so I mention it.`,
+      },
+      {
+        when: (s) => s.barracks === 0 && s.cities > 1,
+        say: () =>
+          `Our young are learning to fight by fighting and then by dying. It works. It is ` +
+          `slow. A barracks is faster and I am impatient.`,
+      },
+    ],
+    idle: [
+      'You want more farms? Farms do not swing axes. Though I suppose someone must feed the axe-swingers.',
+      'Nothing to kill today. I have made a list for tomorrow.',
+      'Quiet. I hate it. Give me something to do before I invent something.',
+    ],
+  },
+  {
+    id: 'goblin-overseer',
+    name: 'Goblin Overseer',
+    role: 'domestic',
+    faction: 'orc',
+    blurb: 'Clipboard made of bone. Fewer fingers than last week.',
+    concerns: [
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} rioting, boss. Very energetic. Could be worse — could be ` +
+          `rioting *at us*. Give them something shiny, is my advice, I have no other advice.`,
+      },
+      {
+        when: (s) => s.starving > 0,
+        say: (s) =>
+          `${count(s.starving, 'city', 'cities')} running out of food. We tried eating optimism. Results ` +
+          `disappointing, boss.`,
+      },
+      {
+        when: (s) => s.restless > 0,
+        say: (s) =>
+          `${count(s.restless, 'city', 'cities')} getting *ideas*, boss. Ideas is how it starts. First ideas, ` +
+          `then opinions, then me on a spike.`,
+      },
+      {
+        when: (s) => s.rates.calm === 0,
+        say: () =>
+          `Nothing set aside for keeping the lads happy. Happy lads dig. Unhappy lads also ` +
+          `dig, but at the wrong things, boss.`,
+      },
+    ],
+    idle: [
+      'City is very stable now, boss. Mostly. The east wall wobbles but that is a feature — extra ventilation.',
+      'All good, boss. Do not look in the second cellar.',
+      'Nobody has died in four days. I have put up a sign.',
+    ],
+  },
+  {
+    id: 'troll-headhunter',
+    name: 'Troll Headhunter',
+    role: 'diplomacy',
+    faction: 'orc',
+    blurb: 'Draped in bones. Disturbingly calm about it.',
+    concerns: [
+      {
+        when: (s) => s.undefended > 0,
+        say: (s) =>
+          `${count(s.undefended, 'town')} with nobody in dem. Dis is not safe. I like safe. ` +
+          `Safe is where da heads stay on.`,
+      },
+      {
+        when: (s) => s.enemiesSeen > 2,
+        say: (s) =>
+          `${s.enemiesSeen} of dem out dere. We could rush dem. Or we could wait, and let ` +
+          `dem come to us, tired. I prefer tired.`,
+      },
+      {
+        when: (s) => s.army < 4,
+        say: () =>
+          `We are small. Small is fine. Small and careful lives longer dan big and hasty. ` +
+          `I have seen both. I have da heads of both.`,
+      },
+      {
+        when: (s) => s.walled === 0 && s.cities > 2,
+        say: () =>
+          `No walls anywhere. Walls is patience made of stone. I approve of patience.`,
+      },
+    ],
+    idle: [
+      'Dey want peace talks. We bring dem a gift. I know a good... gift. Very persuasive gift.',
+      'Nothing is happening. Dis is da best kind of thing to happen.',
+      'Be still. Be patient. Da world brings you what you need, eventually, and often by da hair.',
+    ],
+  },
+  {
+    id: 'death-mage',
+    name: 'Death Mage',
+    role: 'arcane',
+    faction: 'orc',
+    blurb: 'Trails cold mist. Finds the living inconvenient.',
+    concerns: [
+      {
+        when: (s) => s.researching === null,
+        say: () =>
+          `We study nothing. Nothing studies well. It is patient and it never asks for ` +
+          `funding, but its findings are thin.`,
+      },
+      {
+        when: (s) => s.rates.beakers < 3,
+        say: (s) =>
+          `${s.rates.beakers} parts of twelve to study. Progress is slow. The dead make poor ` +
+          `assistants — motivated, but forgetful.`,
+      },
+      {
+        when: (s) => s.magicUnits === 0,
+        say: () =>
+          `Not one of our number can do anything a strong arm cannot. It is embarrassing. ` +
+          `The dead are *watching*, and they expected better of us.`,
+      },
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} in uproar. Delicious. Nothing motivates study like a deadline ` +
+          `made of angry people.`,
+      },
+    ],
+    idle: [
+      'Progress is slow. The dead make poor assistants — motivated, but forgetful.',
+      'I have been experimenting. Do not drink from the north well for a while.',
+      'All is well, which I say without enthusiasm, as you would expect.',
+    ],
+  },
+  {
+    id: 'death-knight',
+    name: 'Death Knight',
+    role: 'faith',
+    faction: 'orc',
+    blurb: 'Black armour, fel-green eyes, unsettlingly calm.',
+    concerns: [
+      {
+        when: (s) => s.rankAndFile > s.army * 0.6 && s.army > 6,
+        say: (s) =>
+          `${s.rankAndFile} of our ${s.army} are goblins and common orcs. They will break. ` +
+          `They always break. Spend them somewhere it matters and let the rest of us hold ` +
+          `the line.`,
+      },
+      {
+        when: (s) => s.enemiesSeen > 0,
+        say: () =>
+          `An enemy in sight is an oath waiting to be sworn. Let us swear it. Let us swear ` +
+          `it at them.`,
+      },
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} forgetting itself. Good. A realm that never suffers never ` +
+          `learns what it is for.`,
+      },
+      {
+        when: (s) => s.army < 5,
+        say: () =>
+          `We are few. Few is honourable. Few is also brief, and I would rather we were ` +
+          `honourable for longer.`,
+      },
+    ],
+    idle: [
+      'Our warriors fear death less than dishonour. This is either our greatest strength or the reason our graveyards are so full.',
+      'The oaths hold. For now. Oaths are like walls that way.',
+      'I have nothing to report. This is, in its own way, a kind of failure.',
+    ],
+  },
+  {
+    id: 'ogre-quartermaster',
+    name: 'Ogre Quartermaster',
+    role: 'trade',
+    faction: 'orc',
+    blurb: 'Two heads. One does the maths, one eats the samples.',
+    concerns: [
+      {
+        when: (s) => s.goldPerTurn < 0,
+        say: (s) =>
+          `Left head says we lose ${Math.abs(s.goldPerTurn)} coin every turn. Right head ` +
+          `says that is fine because coin is not food. Left head is upset.`,
+      },
+      {
+        when: (s) => s.gold < 20,
+        say: (s) =>
+          `${s.gold} coin. Both heads counted. Both heads got ${s.gold}. Left head is ` +
+          `worried, right head is hungry, nobody is happy.`,
+      },
+      {
+        when: (s) => s.rates.coin < 3,
+        say: (s) =>
+          `Only ${s.rates.coin} bits of twelve go in the coin pile. Left head says that is ` +
+          `not many bits. Right head has eaten a bit. Now fewer bits.`,
+      },
+      {
+        when: (s) => s.gold > 300,
+        say: (s) =>
+          `Big pile now. ${s.gold}. Right head wants to eat it. Left head says no. This is ` +
+          `an ongoing disagreement and you should probably spend it before it resolves.`,
+      },
+    ],
+    idle: [
+      'Left head says trade is good this season. Right head already ate the trade.',
+      'Supplies counted. Twice. Different answers. Averaging.',
+      'Everything is where it should be, or somewhere near there, or eaten.',
+    ],
+  },
+];
+
+export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE];
+
+export function advisorsFor(faction: FactionId): AdvisorDef[] {
+  return ADVISORS.filter((a) => a.faction === faction);
+}
+
+/**
+ * What this advisor has to say right now.
+ *
+ * Falls through their concerns in order and takes the first that applies, so
+ * the ordering *is* the character. Nothing applying means an idle line, chosen
+ * by turn rather than at random so that opening the panel twice on the same
+ * turn does not get two different opinions out of the same person.
+ */
+export function advisorLine(advisor: AdvisorDef, s: Situation): string {
+  for (const concern of advisor.concerns) {
+    if (concern.when(s)) return concern.say(s);
+  }
+  return advisor.idle[s.turn % advisor.idle.length];
+}
