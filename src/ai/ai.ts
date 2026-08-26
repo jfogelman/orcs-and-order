@@ -122,6 +122,11 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'axes-crazy',
       'beyond-stupid',
       'my-little-friend',
+      // The clubs sit behind this, and without it here the advance is only ever
+      // picked up by the cheapest-thing fallback -- so the whole of section 11's
+      // ogre line was reachable in principle and researched almost never. Clubs
+      // were taken 0.2 times a game on one seed set. See DESIGN_QUEUE 44.
+      'club-improvement',
       'not-just-stupid',
       'dead-messed-up',
       'stupidity-for-all',

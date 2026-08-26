@@ -3026,3 +3026,54 @@ has been removed. The animation and the sound are both still in the game and
 still good; re-homing them needs an effect to fire from `resolveCombat` when a
 first strike lands, which nothing currently does. Worth doing: it is the most
 visible mechanic in the game with no visual at all.
+
+## 44. The clubs, and a correction to section 37
+
+Section 11's three clubs, built as promotion choices gated on an advance. They
+differ in *who* they catch rather than how hard they hit, which is what makes
+choosing between them a decision rather than a ranking.
+
+### Measured, and the gate that nearly made them pointless
+
+| | clubs taken/game | spread |
+|---|---|---|
+| advance unlisted | 2.1 / **0.2** | uneven; exploding never taken on one set |
+| **advance prioritised** | **4.3 / 3.1** | fiery 1.4/0.9, exploding 1.6/1.0, quake 1.3/1.2 |
+
+`club-improvement` was not on the Horde's research list, so it was only ever
+picked up by the cheapest-thing fallback -- late, and on one seed set
+essentially never. **The whole ogre line was reachable in principle and reached
+almost never**, which is section 37's prediction landing exactly: an enhancement
+gated on a late advance and a rare unit fires a handful of times a game.
+
+With the advance on the list the clubs are taken three to four times a game and
+all three appear in roughly equal numbers. The win split does not move -- 10-19
+against 9-20 -- so like the Goblin Catapult this is **texture rather than
+balance**, and should be recorded as such.
+
+Two things were caught by inspection rather than measurement, which is a change
+from most of this file:
+
+- The AI would never have taken a club at all. Its taste list holds all six
+  general perks and rank stops at three, so the fallback that reaches a club is
+  never reached. Spotted before the first measurement rather than after it.
+- A fixed preference order would have given every ogre in the game the same
+  club. The choice is drawn at random among the three instead -- the promotion
+  equivalent of section 40's winner-take-all problem.
+
+### Section 37 is superseded
+
+Section 37 concluded the magic block was **live but marginal**: burns at 1.50
+and 5.17 a game, "roughly three burns and under two freezes across 150 turns",
+and nothing downstream moving.
+
+**Burns now run 24 to 47 a game.** Nothing was done to the magic block. What
+changed is section 41: weighted choice means mages, death knights and dragons
+are actually built, so the spells that were waiting on them now fire five to ten
+times as often.
+
+That verdict should not be trusted as written. It was correct about the game it
+was measured in, and that game no longer exists -- which is worth noting as a
+general hazard of this file, since **every conclusion here is conditional on the
+version of the AI that produced it.** Section 36's `targetCities` finding was
+overturned the same way, by the combat model changing underneath it.
