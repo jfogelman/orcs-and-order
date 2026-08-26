@@ -8,7 +8,7 @@ import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
 import type { City, GameState, ProductionItem, Unit, AutoBuild, Player } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
-import { splitTrade } from './research';
+import { TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 
 /**
@@ -128,12 +128,35 @@ export function calmingBuild(city: City): boolean {
  */
 export const CALM_BONUS = 3;
 
+/** Trade per extra content citizen, when an empire spends on keeping calm. */
+export const LUXURY_PER_CONTENT = 2;
+
+/**
+ * Trade the tiles here produce, before a riot stops anyone collecting it.
+ *
+ * Deliberately not `cityYield().trade`, which is zero during disorder -- money
+ * spent on keeping people calm has to work on the city that is actually
+ * rioting, or the setting would be useless at the only moment it is wanted.
+ * A city in a riot is not collecting this; the empire is spending on it anyway,
+ * which is what buying your way out of a riot means.
+ */
+export function baseTrade(state: GameState, city: City): number {
+  let trade = tileYield(state, idx(city.x, city.y, state.width), true).trade;
+  for (const i of city.workedTiles) trade += tileYield(state, i, false).trade;
+  return trade;
+}
+
 export function contentLimit(state: GameState, city: City): number {
   const owner = state.players[city.owner];
   let limit = BASE_CONTENT;
   for (const b of city.buildings) limit += BUILDINGS[b]?.contentBonus ?? 0;
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
+  // What the empire spends on keeping this particular city calm.
+  const rates = tradeRates(owner);
+  limit += Math.floor(
+    (baseTrade(state, city) * rates.calm) / (TRADE_STEPS * LUXURY_PER_CONTENT),
+  );
   return limit;
 }
 

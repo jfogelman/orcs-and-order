@@ -33,6 +33,7 @@ import { researchableTechs, techCost } from './sim/research';
 import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import { resupply, resupplyBlocked } from './sim/combat';
+import { openAdvisors } from './ui/advisors';
 import { openHordeReport } from './ui/hordeReport';
 import { afterModalCloses, closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
@@ -849,8 +850,11 @@ class App {
 
     el<HTMLButtonElement>('btn-new').addEventListener('click', () => this.openNewGame());
     el<HTMLButtonElement>('btn-save').addEventListener('click', () => this.openSaves());
+    el<HTMLButtonElement>('btn-advisors').addEventListener('click', () =>
+      openAdvisors(this.state, this.viewerId),
+    );
     el<HTMLButtonElement>('btn-report').addEventListener('click', () =>
-      openHordeReport(this.state, this.viewerId, (c) => this.openCity(c)),
+      openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud()),
     );
     el<HTMLButtonElement>('btn-pedia').addEventListener('click', () =>
       openPedia(this.state.players[this.viewerId], this.selected?.type),
@@ -1132,8 +1136,11 @@ class App {
       case 'p':
         openPedia(this.state.players[this.viewerId], this.selected?.type);
         break;
+      case 'a':
+        openAdvisors(this.state, this.viewerId);
+        break;
       case 'i':
-        openHordeReport(this.state, this.viewerId, (c) => this.openCity(c));
+        openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud());
         break;
       case 'u':
         this.orderResupply();

@@ -4,7 +4,7 @@ import { TECHS_BY_ID, techsForFaction } from '../model/techs';
 import type { TechDef } from '../model/techs';
 import { unitType, UNIT_TYPES } from '../model/units';
 import type { UnitTypeDef } from '../model/units';
-import type { GameState, Player, TechId } from '../model/types';
+import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
 
 /**
@@ -130,7 +130,43 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
 }
 
 /** Split a turn's trade between the treasury and the laboratories. */
-export function splitTrade(player: Player, trade: number): { gold: number; beakers: number } {
-  const gold = Math.round((trade * player.taxRate) / 10);
-  return { gold, beakers: trade - gold };
+/** Twelfths, so an even three-way split is a whole number each. */
+export const TRADE_STEPS = 12;
+
+/** What an empire starts on: evenly divided, and moved off it on purpose. */
+export const EVEN_RATES: TradeRates = {
+  coin: TRADE_STEPS / 3,
+  beakers: TRADE_STEPS / 3,
+  calm: TRADE_STEPS / 3,
+};
+
+/**
+ * How this empire divides its trade, defaulting for saves written before the
+ * setting existed. An old `taxRate` is honoured on the way past, so a game in
+ * progress keeps the balance it had rather than silently being reset.
+ */
+export function tradeRates(player: Player): TradeRates {
+  if (player.rates) return player.rates;
+  if (player.taxRate !== undefined) {
+    const coin = Math.round((player.taxRate / 10) * TRADE_STEPS);
+    return { coin, beakers: TRADE_STEPS - coin, calm: 0 };
+  }
+  return EVEN_RATES;
+}
+
+/**
+ * Divide a city's trade three ways.
+ *
+ * Rounded so the parts always add back up to the whole: gold and beakers are
+ * rounded and luxury takes the remainder, rather than each being rounded on its
+ * own and the total quietly gaining or losing a point.
+ */
+export function splitTrade(
+  player: Player,
+  trade: number,
+): { gold: number; beakers: number; luxury: number } {
+  const rates = tradeRates(player);
+  const gold = Math.round((trade * rates.coin) / TRADE_STEPS);
+  const beakers = Math.round((trade * rates.beakers) / TRADE_STEPS);
+  return { gold, beakers, luxury: Math.max(0, trade - gold - beakers) };
 }

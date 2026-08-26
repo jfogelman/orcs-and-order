@@ -43,7 +43,16 @@ export interface Player {
   researching: TechId | null;
   techs: TechId[];
   /** Share of trade sent to the treasury, 0..10. The remainder becomes science. */
-  taxRate: number;
+  /**
+   * How the empire divides what its cities earn, in twelfths.
+   *
+   * Optional so that a save written before this existed still loads: absent
+   * means the even split everyone starts on. Read through `tradeRates` rather
+   * than directly, which is what applies that default.
+   */
+  rates?: TradeRates;
+  /** Superseded by `rates`. Kept so old saves still open. */
+  taxRate?: number;
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */
@@ -252,6 +261,20 @@ export interface City {
 }
 
 // ------------------------------------------------------------------ game meta
+
+/**
+ * The three things trade can be spent on, in twelfths of the total.
+ *
+ * Twelve because it divides by three, and the whole point is that an empire
+ * starts perfectly even and moves off it deliberately -- you cannot raise one
+ * without lowering another.
+ */
+export interface TradeRates {
+  coin: number;
+  beakers: number;
+  /** Keeping people calm. The way out of a riot that no building can reach. */
+  calm: number;
+}
 
 export interface LogEntry {
   turn: number;

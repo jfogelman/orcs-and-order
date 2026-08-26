@@ -108,6 +108,29 @@ BUILDING_ICONS = [
 # icon, and equally optional.
 ORDER_ICONS = ["coin", "beakers", "calm"]
 
+# Advisor portraits, keyed by the id the game uses. The value is what the file
+# is actually called, which is a display name with spaces in it -- so the two
+# are kept apart rather than putting a space in a URL. Six a side; see
+# docs/advisor_bible.md for who they are.
+ADVISOR_PORTRAITS = {
+    "knight-marshal": "knight-marshal",
+    "paladin": "paladin",
+    "stonewarden": "stonewarden",
+    "ledger-thane": "ledger thane",
+    "herald": "herald",
+    "archmage": "archmage",
+    "blademaster": "blademaster",
+    "goblin-overseer": "goblin overseer",
+    "troll-headhunter": "troll headhunter",
+    "death-mage": "death mage",
+    "death-knight": "death knight",
+    "ogre-quartermaster": "ogre quartermaster",
+}
+
+# Big enough to read a face at, small enough that twelve of them are not a
+# download. They sit beside a paragraph of text, not on the map.
+PORTRAIT_SIZE = 128
+
 # Icons are read at a glance in a crowded tree, so they stay small.
 ICON_SIZE = 48
 
@@ -473,6 +496,44 @@ def find_source(folder: Path, name: str) -> Path | None:
         if best is None or path.stat().st_mtime > best.stat().st_mtime:
             best = path
     return best
+
+
+def process_aliased(
+    folder: str,
+    names: dict[str, str],
+    force: bool,
+    size: int,
+) -> tuple[int, list[str], list[str]]:
+    """
+    Like `process_cutouts`, but where the file is not called what the game
+    calls the thing. Advisor portraits arrive named for a person rather than
+    for an id, and an id with a space in it becomes a URL with a space in it.
+    """
+    src = SRC / folder
+    out = OUT / folder
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    failed: list[str] = []
+
+    for out_id, source_name in names.items():
+        path = find_source(src, source_name)
+        if path is None:
+            missing.append(out_id)
+            continue
+        target = out / f"{out_id}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        img = Image.open(path)
+        img, cut_out = remove_background(img)
+        img = trim_and_square(img, size)
+        img.save(target, optimize=True)
+        flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        print(f"  {folder}/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            failed.append(out_id)
+        done += 1
+    return done, missing, failed
 
 
 def process_cutouts(
@@ -1518,11 +1579,17 @@ def main() -> int:
     icons += bicons
     missing_icons.extend(missing_bicons)
     failed_icons.extend(failed_bicons)
+    print("Advisor portraits:")
+    portraits, missing_portraits, failed_portraits = process_aliased(
+        "advisors", ADVISOR_PORTRAITS, force, PORTRAIT_SIZE
+    )
     print("Standing order icons:")
     oicons, missing_oicons, failed_oicons = process_cutouts(
         "orders", ORDER_ICONS, force, size=ICON_SIZE, quiet_missing=True
     )
-    icons += oicons
+    icons += portraits + oicons
+    missing_icons.extend(missing_portraits)
+    failed_icons.extend(failed_portraits)
     missing_icons.extend(missing_oicons)
     failed_icons.extend(failed_oicons)
     composed, missing_composed = compose_icons(force)
