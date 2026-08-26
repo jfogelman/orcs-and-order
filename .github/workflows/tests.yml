@@ -1,0 +1,44 @@
+# Run the tests on every pull request.
+#
+# This exists because until it did, nothing checked a branch before it was
+# merged. The only workflow ran on push to main, so `npm test` happened at
+# deploy time -- *after* the merge -- and a broken test once sat on main for
+# several merges with nobody told, while local runs looked green because the
+# fix was sitting uncommitted. A green deploy said nothing about whether the
+# game still worked, and by the time it said anything it was too late to stop.
+name: Tests
+
+on:
+  pull_request:
+  # Pushes to main are already covered by Pages, which runs the same tests
+  # before it builds. Listing them here too would only double every run.
+  workflow_dispatch:
+
+# Least privilege: this job only ever needs to read the code.
+permissions:
+  contents: read
+
+# Newer pushes supersede older ones on the same branch. Unlike the deploy,
+# there is nothing to lose by cancelling a run whose commit is already stale.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # The suite plays a number of full AI games and takes a bit over a minute
+    # locally. Ten is generous rather than tight, so a slow runner does not
+    # start failing pull requests for no reason.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Separately from the build, so a type error reports as a type error
+      # rather than as a failed bundle.
+      - run: npm run typecheck
+      - run: npm test

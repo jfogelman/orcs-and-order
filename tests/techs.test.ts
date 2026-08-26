@@ -97,13 +97,20 @@ describe('tech graph integrity', () => {
 });
 
 describe('unit type generation', () => {
-  it('scales stats linearly with the size of the group', () => {
+  it('scales strength with the group, and health not at all', () => {
     const one = UNIT_TYPES.orc;
     const ten = UNIT_TYPES.orc_x10;
     expect(ten.attack).toBe(one.attack * 10);
     expect(ten.defense).toBe(one.defense * 10);
-    expect(ten.hp).toBe(one.hp * 10);
     expect(ten.cost).toBe(one.cost * 10);
+
+    // The important one. While health scaled too, a rung of the ladder bought
+    // N times the damage and N times the staying power for N times the price,
+    // and those multiply -- so a stack was worth N-squared for a linear cost
+    // and no other unit in the game could ever be worth building. Ten Orcs are
+    // terrifying and exactly as easy to kill as one orc, which is the trade
+    // the design document always described. See DESIGN_QUEUE 31 and 32.
+    expect(ten.hp).toBe(one.hp);
   });
 
   it('names groups in words', () => {

@@ -45,6 +45,15 @@ export interface CreatureDef {
   sight: number;
   /** Group sizes that exist for this creature. Always includes 1. */
   counts: number[];
+  /**
+   * The Horde is willing to load this one into a catapult.
+   *
+   * Only ever read when something is being reloaded by `sacrifice`, and set on
+   * the two creatures the Horde has in quantity and no particular regard for.
+   * A rule rather than a price threshold, so that nothing ever works out that
+   * a dragon is cheap enough to fire at a wall.
+   */
+  expendable?: boolean;
   /** Can found cities. */
   settler?: boolean;
   /** Ignores terrain movement costs. */
@@ -66,6 +75,39 @@ export interface CreatureDef {
    * advances that make it matter, not switching on quietly underneath them.
    */
   magicResist?: number;
+  /**
+   * Free rounds at the start of a fight, in which only this creature lands
+   * blows.
+   *
+   * Civ4's first strikes, and the answer to what an archer or an axethrower is
+   * *for*. They used to be artillery, firing from exactly two tiles for the
+   * whole turn and unable to take a city -- which made an army half made of
+   * them very bad at finishing a war. Section 38 measured a third of all sieges
+   * consisting of besiegers who could not walk in.
+   *
+   * Only the difference between the two sides counts, so two units that both
+   * strike first simply fight.
+   */
+  firstStrikes?: number;
+  /**
+   * Shots this creature carries before it needs reloading. Absent means it
+   * never runs out.
+   *
+   * Artillery is the only thing in the game that can hit without being hit
+   * back and keep doing it, and the chooser rated a ballista the Kingdom's best
+   * purchase on that basis -- it built a hundred and eleven a game. A magazine
+   * is the structural answer: a hundred and eleven ballistas cannot all be kept
+   * in missiles. See DESIGN_QUEUE section 40.
+   */
+  ammo?: number;
+  /**
+   * Where a reload comes from.
+   *
+   * `labour` -- a neighbour spends its turn making one.
+   * `sacrifice` -- a neighbour *is* the ammunition, and is informed of its new
+   * job. Reserved for the Horde's artillery, which throws goblins.
+   */
+  reloadsBy?: 'labour' | 'sacrifice';
   /** Multiplier when attacking a city. */
   siegeBonus?: number;
   /** Multiplies this creature's natural healing. Trolls are famously hard to keep down. */
@@ -147,6 +189,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'goblin',
+    expendable: true,
     name: 'Goblin',
     plural: 'Goblins',
     faction: 'orc',
@@ -188,6 +231,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'orc',
+    expendable: true,
     name: 'Orc',
     plural: 'Orcs',
     faction: 'orc',
@@ -208,7 +252,9 @@ export const CREATURES: CreatureDef[] = [
   {
     id: 'axethrower',
     throwsWeapon: true,
-    range: 2,
+    // The axe leaves its hand as you close, and lands before you arrive. That
+    // is the first strike, and the reason it then has no axe.
+    firstStrikes: 1,
     name: 'Axethrower',
     plural: 'Axethrowers',
     faction: 'orc',
@@ -236,7 +282,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 3,
     hp: 15,
     move: 1,
-    cost: 35,
+    // Dearer than the raw numbers justify, because it heals at twice the rate
+    // and that never appears in a value figure. See DESIGN_QUEUE section 35.
+    cost: 42,
     sight: 1,
     counts: [1, 2, 3],
     regenMultiplier: 2,
@@ -256,7 +304,8 @@ export const CREATURES: CreatureDef[] = [
     defense: 4,
     hp: 20,
     move: 1,
-    cost: 50,
+    // Was 50, which made it the best buy in the game by a distance.
+    cost: 62,
     sight: 1,
     counts: [1, 2],
     artScale: 1.28,
@@ -269,6 +318,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'deathknight',
     // A death knight's touch is not a weapon blow.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     name: 'Death Knight',
     plural: 'Death Knights',
     faction: 'orc',
@@ -277,7 +329,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 3,
     hp: 15,
     move: 2,
-    cost: 55,
+    // Cheaper: it was priced as a heavyweight and fought like a middleweight,
+    // so nothing ever picked it even once the AI started valuing units properly.
+    cost: 48,
     sight: 2,
     counts: [1, 2],
     executeChance: 0.3,
@@ -291,6 +345,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'dragon',
     // Breath, not bite.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     lineBreath: true,
     name: 'Dragon',
     plural: 'Dragons',
@@ -300,7 +357,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 6,
     hp: 25,
     move: 4,
-    cost: 90,
+    // The capstone of the tree, and it should be expensive enough to feel like
+    // one. At 90 it was better value than anything the Kingdom could field.
+    cost: 110,
     sight: 3,
     counts: [1],
     flies: true,
@@ -372,7 +431,7 @@ export const CREATURES: CreatureDef[] = [
   },
   {
     id: 'archer',
-    range: 2,
+    firstStrikes: 1,
     name: 'Archer',
     plural: 'Archers',
     faction: 'human',
@@ -398,7 +457,9 @@ export const CREATURES: CreatureDef[] = [
     role: 'melee',
     attack: 5,
     defense: 3,
-    hp: 14,
+    // Sixteen rather than fourteen. The Kingdom had nothing in the middle of
+    // its roster worth building next to the Horde's ogres.
+    hp: 16,
     move: 2,
     cost: 40,
     sight: 2,
@@ -410,8 +471,47 @@ export const CREATURES: CreatureDef[] = [
     blurb: 'Expensive, mounted, and deeply committed to being seen being mounted.',
   },
   {
+    id: 'goblincatapult',
+    range: 2,
+    // Five goblins in the hopper, matching the ballista's magazine. Three was
+    // picked out of the air and quietly made this the weaker piece -- 1.81
+    // against the ballista's 2.04, which under weighted choice put it fifth on
+    // the Horde's list where the ballista sits near the top of the Kingdom's.
+    // Reloading is a matter of finding five more goblins, which the Horde has
+    // never once found difficult.
+    ammo: 5,
+    reloadsBy: 'sacrifice',
+    // Not `catapult`: that id already belongs to the Broken Catapult, which is
+    // a building, and two things answering to one name breaks the Orcpedia.
+    name: 'Goblin Catapult',
+    plural: 'Goblin Catapults',
+    faction: 'orc',
+    role: 'siege',
+    attack: 7,
+    defense: 1,
+    hp: 12,
+    move: 1,
+    cost: 40,
+    sight: 1,
+    counts: [1],
+    siegeBonus: 2,
+    artScale: 1.08,
+    silhouette: 'engine',
+    body: '#6f7a3a',
+    trim: '#3f3128',
+    blurb: 'The goblins have been told it is a promotion.',
+  },
+  {
     id: 'ballista',
     range: 2,
+    // Five bolts, then somebody has to fetch more.
+    //
+    // Chosen by measurement rather than by feel, and the measurement is worth
+    // knowing about: at three the AI built half a ballista a game, at five it
+    // builds five, and at eight it builds ninety-three. The value only moves
+    // 17% across that range. See DESIGN_QUEUE section 40.
+    ammo: 5,
+    reloadsBy: 'labour',
     name: 'Ballista',
     plural: 'Ballistae',
     faction: 'human',
@@ -434,6 +534,9 @@ export const CREATURES: CreatureDef[] = [
     id: 'mage',
     // The whole point of a mage.
     damageKind: 'magic',
+    // Magical things are hard to do magic to. Improves with rank, capped well
+    // short of immunity -- see resistance() in sim/combat.
+    magicResist: 0.3,
     range: 2,
     name: 'Mage',
     plural: 'Mages',
@@ -443,7 +546,9 @@ export const CREATURES: CreatureDef[] = [
     defense: 2,
     hp: 12,
     move: 1,
-    cost: 55,
+    // Was 55, which made it the worst buy on either roster despite being the
+    // Kingdom's only answer to a dragon.
+    cost: 45,
     sight: 3,
     counts: [1, 2],
     artScale: 0.98,
@@ -510,6 +615,10 @@ export interface UnitTypeDef {
   sight: number;
   settler: boolean;
   flies: boolean;
+  firstStrikes: number;
+  expendable: boolean;
+  ammo: number;
+  reloadsBy: 'labour' | 'sacrifice';
   siegeBonus: number;
   /**
    * True when the group is big enough to lose a movement point to internal
@@ -565,12 +674,32 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     role: c.role,
     attack: c.attack * count,
     defense: c.defense * count,
-    hp: c.hp * count,
+    /*
+     * Health does *not* scale with the count, and that is the single most
+     * important number in the game.
+     *
+     * When it did, a rung of the ladder bought N times the damage and N times
+     * the health for N times the price -- and the two multiply, so a stack was
+     * effectively N-squared for a linear cost. Nothing priced linearly could
+     * compete, which is why the AI never once built a dragon and why the whole
+     * right-hand side of the tech tree was scenery. See DESIGN_QUEUE 31 and 32.
+     *
+     * Flat health is also what the design document always claimed the trade
+     * was: N orcs are efficient because they hold one tile and spend one
+     * movement point, and the price is that you lose all of them at once. That
+     * price was never actually being charged.
+     */
+    hp: c.hp,
     move: c.move,
     cost: c.cost * count,
     sight: c.sight,
     settler: c.settler === true,
     flies: c.flies === true,
+    firstStrikes: c.firstStrikes ?? 0,
+    expendable: c.expendable === true,
+    // Not multiplied by the count: three ballistas share the supply wagon.
+    ammo: c.ammo ?? 0,
+    reloadsBy: c.reloadsBy ?? 'labour',
     siegeBonus: c.siegeBonus ?? 1,
     crowded: count >= CROWD_THRESHOLD,
     regenMultiplier: c.regenMultiplier ?? 1,
@@ -582,6 +711,10 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     range: c.range ?? 1,
     throwsWeapon: c.throwsWeapon === true,
     lineBreath: c.lineBreath === true,
+    // Still scaled by the count, unlike health. This is a share of the
+    // *patient's* health bar rather than the healer's, and "one paladin
+    // patches you up halfway, two finish the job" is a designed mechanic that
+    // has nothing to do with how tough the healer is.
     healsTo: Math.min(1, (c.healFraction ?? 0) * count),
     artScale: c.artScale ?? 1,
     silhouette: c.silhouette,
@@ -612,4 +745,55 @@ export function unitType(id: UnitTypeId): UnitTypeDef {
   const t = UNIT_TYPES[id];
   if (!t) throw new Error(`Unknown unit type: ${id}`);
   return t;
+}
+
+/**
+ * How many of the creature are still on their feet.
+ *
+ * A count unit is one unit with N drawn on it, so damage has to mean something
+ * other than "the same N, slightly tired". It means losses: Ten Orcs at half
+ * health is Five Orcs, and fights like Five Orcs until it heals.
+ *
+ * **A singleton never degrades.** A dragon on its last legs still breathes the
+ * same fire, because there is only ever one of it and it is either there or it
+ * is not. That asymmetry is the point rather than a side effect -- see
+ * DESIGN_QUEUE section 32.
+ *
+ * Rounds up, so a unit is never reduced below one while it is still alive.
+ */
+export function aliveCount(unit: { type: UnitTypeId; hp: number }): number {
+  const type = unitType(unit.type);
+  if (unit.hp <= 0) return 0;
+  if (type.count <= 1) return 1;
+  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / type.hp))));
+}
+
+/**
+ * Switch for measuring against a control arm, in the manner of
+ * `FORTIFY_BONUS_REF`. Off means the old behaviour: full strength until dead.
+ */
+export const ATTRITION = { enabled: true };
+
+/** The share of its full strength a unit still fights at, from its losses. */
+export function headcount(unit: { type: UnitTypeId; hp: number }): number {
+  if (!ATTRITION.enabled) return 1;
+  const type = unitType(unit.type);
+  if (type.count <= 1) return 1;
+  return aliveCount(unit) / type.count;
+}
+
+/**
+ * Shots this unit has left. Absent on the unit means it is fully loaded, so a
+ * fresh piece and an old save both read correctly without a migration.
+ */
+export function ammoLeft(unit: { type: UnitTypeId; ammo?: number }): number {
+  const max = unitType(unit.type).ammo;
+  if (max <= 0) return Infinity;
+  return unit.ammo ?? max;
+}
+
+/** True for a piece that carries a magazine and has not filled it. */
+export function needsAmmo(unit: { type: UnitTypeId; ammo?: number }): boolean {
+  const max = unitType(unit.type).ammo;
+  return max > 0 && ammoLeft(unit) < max;
 }

@@ -1,5 +1,5 @@
 import { BUILDINGS } from '../model/buildings';
-import type { AutoBuild, City, GameState, ProductionItem, Unit } from '../model/types';
+import type { AutoBuild, City, GameState, ProductionItem, Unit, UnitTypeId } from '../model/types';
 import {
   CALM_BONUS,
   autoBuildOf,
@@ -46,6 +46,45 @@ const CITIZEN_FACE = 32;
 function buildingIconPath(id: string): string {
   const base = import.meta.env.BASE_URL;
   return `${base.endsWith('/') ? base : `${base}/`}buildings/${id}.png`;
+}
+
+/**
+ * Where a creature's portrait lives.
+ *
+ * Keyed on the *base* creature rather than the group, because Three Orcs are
+ * orcs: the map composes a group sprite at runtime by stamping the single
+ * portrait, and a list one line high has no room for the crowd anyway.
+ */
+function unitIconPath(id: UnitTypeId): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}units/${unitType(id).base}.png`;
+}
+
+/**
+ * Where the icon for a standing order lives -- banking coin, study, or buying
+ * the mob a drink. Optional, like every other icon: a missing one leaves the
+ * slot empty rather than breaking the column.
+ */
+function orderIconPath(kind: 'coin' | 'beakers' | 'calm'): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}orders/${kind}.png`;
+}
+
+/**
+ * The little picture beside a line in the build list.
+ *
+ * Deliberately its own class rather than the one the chips use. A missing icon
+ * here is *hidden* rather than removed, because removing it would collapse the
+ * grid column and step every name on the list left by twenty-six pixels.
+ */
+function productionIcon(item: ProductionItem): string {
+  const src =
+    item.kind === 'unit'
+      ? unitIconPath(item.id)
+      : item.kind === 'building'
+      ? buildingIconPath(item.id)
+      : orderIconPath(item.kind);
+  return `<img class="build-icon" src="${src}" alt="" />`;
 }
 
 /** Turns remaining on the current build, or null when it will never finish. */
@@ -151,6 +190,7 @@ export function openCityPanel(
     return `
       <button class="build-option${active ? ' active' : ''}"
               data-kind="${item.kind}" data-id="${'id' in item ? escapeHtml(item.id) : ''}">
+        ${productionIcon(item)}
         <span class="build-name">${escapeHtml(name)}</span>
         <span class="build-cost">${cost > 0 ? `${cost}s` : '—'}${turns !== null && cost > 0 ? ` · ${turns}t` : ''}</span>
         ${
@@ -208,8 +248,9 @@ export function openCityPanel(
               : garrison
                   .map(
                     (u) =>
-                      `<button class="small" data-wake="${u.id}"
+                      `<button class="small garrison-unit" data-wake="${u.id}"
                                title="${escapeHtml(unitType(u.type).blurb)}">
+                         <img class="unit-icon" src="${unitIconPath(u.type)}" alt="" />
                          ${escapeHtml(unitType(u.type).name)}
                          <span class="muted">${escapeHtml(u.order)}${
                            u.rank > 0 ? ` &middot; rank ${u.rank}` : ''
@@ -306,8 +347,18 @@ export function openCityPanel(
           onWake?.(unit);
         });
       });
-      root.querySelectorAll<HTMLImageElement>('.building-icon').forEach((img) => {
+      // Icons that sit inline -- on a structure chip or a garrison button --
+      // are removed outright when the art is missing, because the text beside
+      // them closes the gap tidily.
+      root.querySelectorAll<HTMLImageElement>('.building-icon, .unit-icon').forEach((img) => {
         img.addEventListener('error', () => img.remove());
+      });
+      // Icons in the build list hold a grid column open, so a missing one is
+      // hidden in place. Removing it would shunt every name on the list left.
+      root.querySelectorAll<HTMLImageElement>('.build-icon').forEach((img) => {
+        img.addEventListener('error', () => {
+          img.style.visibility = 'hidden';
+        });
       });
       root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
         link.addEventListener('click', (e) => {

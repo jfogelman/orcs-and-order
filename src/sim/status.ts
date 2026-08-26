@@ -34,13 +34,26 @@ import { log } from './gamestate';
 /** What each condition does, in one place, so the rules are readable together. */
 export const STATUS_RULES: Record<StatusKind, { label: string; blurb: string }> = {
   burning: { label: 'On fire', blurb: 'Loses health each turn until it goes out.' },
-  frozen: { label: 'Frozen', blurb: 'Cannot move or act.' },
+  frozen: { label: 'Frozen', blurb: 'Moves at half pace until it thaws.' },
   confused: { label: 'Confused', blurb: 'Cannot tell friend from enemy.' },
   spent: { label: 'Spent', blurb: 'Cannot regenerate for the moment.' },
 };
 
 /** Share of maximum health lost per turn while alight. */
 export const BURN_DAMAGE = 0.1;
+
+/**
+ * What being frozen costs, as a share of a turn's movement.
+ *
+ * Half, not all. Section 11 warned about this before either was built: a unit
+ * that cannot act at all is a unit removed from the game for three turns, which
+ * is strictly better than damage and is historically the thing that breaks a
+ * strategy game. Halving is a real cost that still leaves the unit playing.
+ */
+export const FREEZE_SLOW = 0.5;
+
+/** How long magical fire and cold last, in turns. */
+export const SPELL_TURNS = { burning: 3, frozen: 2, confused: 2 };
 
 /** Never less than this, so a burning Goblin still feels it. */
 export const BURN_FLOOR = 1;

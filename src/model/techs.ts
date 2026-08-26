@@ -21,7 +21,13 @@ export type TechFlag =
   /** +1 content citizen in every city. */
   | 'contentment'
   /** +25% attack, -25% defence, army-wide. Seemed like a good idea at the time. */
-  | 'berserk';
+  | 'berserk'
+  /** Magical damage sets its target alight for a few turns. */
+  | 'pyromancy'
+  /** Magical damage leaves its target slow for a few turns. */
+  | 'cryomancy'
+  /** Ogres may choose a club when they are promoted. */
+  | 'clubs';
 
 export interface TechDef {
   id: TechId;
@@ -144,6 +150,32 @@ export const TECHS: TechDef[] = [
     flavor: 'Formal proof that people who are not miserable work slightly harder.',
   },
   {
+    id: 'pyromancy',
+    name: 'Setting Things Alight',
+    faction: 'both',
+    cost: 165,
+    prereqs: ['insanity'],
+    units: [],
+    buildings: [],
+    flags: ['pyromancy'],
+    flavor:
+      'Fire was always available. What is new is doing it to somebody deliberately, ' +
+      'from a distance, and then walking away while it continues.',
+  },
+  {
+    id: 'cryomancy',
+    name: 'The Cold Shoulder',
+    faction: 'both',
+    cost: 180,
+    prereqs: ['insanity'],
+    units: [],
+    buildings: [],
+    flags: ['cryomancy'],
+    flavor:
+      'Nobody has worked out how to make a thing colder. They have worked out how to ' +
+      'make a thing very slow, which for military purposes is the same discovery.',
+  },
+  {
     id: 'insanity',
     name: 'Insanity',
     faction: 'both',
@@ -195,7 +227,7 @@ export const TECHS: TechDef[] = [
     faction: 'orc',
     cost: 95,
     prereqs: ['suicidal-goblins'],
-    units: ['sapper_x2'],
+    units: ['sapper_x2', 'goblincatapult'],
     buildings: ['biggerRock'],
     flags: [],
     flavor: 'Everything is better underground, where nobody can see how it is going.',
@@ -320,6 +352,18 @@ export const TECHS: TechDef[] = [
     buildings: [],
     flags: [],
     flavor: 'The axe goes away from you. This is the entire discovery.',
+  },
+  {
+    id: 'club-improvement',
+    name: 'Improvements to the Club',
+    faction: 'orc',
+    cost: 150,
+    prereqs: ['my-little-friend'],
+    units: [],
+    buildings: [],
+    flags: ['clubs'],
+    flavor:
+      'Three of them, and no agreement on which is best. The argument is ongoing and occasionally on fire.',
   },
   {
     id: 'my-little-friend',

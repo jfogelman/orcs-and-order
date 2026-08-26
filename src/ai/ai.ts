@@ -1,6 +1,8 @@
+import { flagsOf } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
-import { unitType } from '../model/units';
+import type { UnitTypeDef } from '../model/units';
+import { ammoLeft, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
@@ -15,7 +17,9 @@ import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
-import { attackTargets, moveToward, routeTo, tryStep } from '../sim/movement';
+import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
+import { resupply, resupplyBlocked } from '../sim/combat';
+import { attackTargets, moveToward, reachableTiles, routeTo, tryStep } from '../sim/movement';
 import { researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
@@ -68,7 +72,22 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     // Seven and eight are one game apart over thirty and cannot be told apart
     // at this sample size; seven is chosen because it levels the city counts
     // rather than tipping them, and because it is the smaller move.
-    targetCities: 7,
+    //
+    // **Back to six**, and everything above is the record of a game that no
+    // longer exists. That measurement was taken when a stack bought damage and
+    // health together and the AI reached for the biggest one it could afford;
+    // six then meant being beaten to the land and losing 77% of the time.
+    // Since sections 33 and 34 the Horde fields dragons and ogres instead of
+    // fifty goblins, and seven cities became an advantage rather than a
+    // rescue. Re-measured over three seed sets, 54 games:
+    //
+    //   6   25-24  cities 7.5/8.1   148 turns   -- level
+    //   7   32-16  cities 9.4/7.7   157 turns   -- Horde ahead
+    //
+    // Worth noting how far the individual sets swing: six returns 7-11, 11-5
+    // and 7-8 on the three sets. Any one of them alone would have argued
+    // something different, which is the argument for all three.
+    targetCities: 6,
     // See the note on the Kingdom's copy of this field: one defender per city
     // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
@@ -103,6 +122,11 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'axes-crazy',
       'beyond-stupid',
       'my-little-friend',
+      // The clubs sit behind this, and without it here the advance is only ever
+      // picked up by the cheapest-thing fallback -- so the whole of section 11's
+      // ogre line was reachable in principle and researched almost never. Clubs
+      // were taken 0.2 times a game on one seed set. See DESIGN_QUEUE 44.
+      'club-improvement',
       'not-just-stupid',
       'dead-messed-up',
       'stupidity-for-all',
@@ -275,6 +299,147 @@ function nearestFrontier(
 
 // ------------------------------------------------------------- production
 
+/**
+ * What a fighting unit is worth, per shield spent.
+ *
+ * The chooser used to sort candidates by raw `attack` and take the dearest it
+ * could afford, which was defensible only while health scaled with the group:
+ * attack alone then stood in for everything. It no longer does. Ten Orcs have
+ * attack 30 and twelve hit points for two hundred shields, and sorting on
+ * attack puts that at the top of the list -- so the AI was not merely failing
+ * to notice the dragons, it was actively buying the worst thing available.
+ *
+ * Strength multiplied by health is what a fight is actually decided on: how
+ * hard the blows land and how many of them the unit stays up for. Divided by
+ * price, it is what a shield buys. See DESIGN_QUEUE sections 31 to 34.
+ */
+/**
+ * What reach is worth, on top of the raw numbers.
+ *
+ * A ranged attacker strikes without being struck back, which no figure built
+ * out of attack, health and price can see. Leaving it out had a precise cost:
+ * the Horde's only ranged unit is its *worst* combat buy at 1.60 against an
+ * ogre's 2.26, so it was never built once in eighteen games, while the
+ * Kingdom's ballista tops its list and gets built ten times a game. Teaching
+ * the AI to shoot therefore handed the Kingdom eighty-seven free attacks a game
+ * and the Horde nothing at all. See DESIGN_QUEUE section 38.
+ *
+ * Switched off once, and back on now, for a reason worth recording. On its own
+ * it was poison: it never produced the axethrower it was added for -- zero at
+ * 1.05, 1.15 and 1.4 alike -- and it took the Kingdom from ten ballistas a game
+ * to a hundred and eleven, because nothing in the formula pushed back against a
+ * unit that could hit without being hit and keep doing it forever.
+ *
+ * Ammunition is that push-back. Reach is worth something real, and now that a
+ * ballista runs dry after three shots the two can be priced against each other
+ * rather than one of them being left out. See DESIGN_QUEUE section 40.
+ */
+
+/**
+ * What a free opening blow is worth, per strike.
+ *
+ * Shipped in the same commit as the mechanic on purpose. A mechanic the chooser
+ * cannot see is a mechanic that never happens -- sections 30, 31, 34, 37 and 38
+ * are all the same finding in different clothes.
+ *
+ * A fight runs a handful of rounds, so one free round is worth something like a
+ * sixth of it. Deliberately modest, for the reason directly above.
+ */
+const FIRST_STRIKE_EDGE = 0.16;
+
+/**
+ * Turns a reload costs somebody, for pricing a magazine.
+ *
+ * A piece fires its whole magazine, then a neighbour spends a turn handing over
+ * one missile -- or it walks back to a city. So what a shooter is worth is the
+ * share of its turns it spends shooting: `ammo / (ammo + this)`. A ballista
+ * with three bolts is therefore three quarters of an unlimited one, which is
+ * roughly what turned a hundred and eleven of them into a sane number.
+ */
+const RELOAD_COST = 1;
+const RANGED_EDGE = 1.15;
+
+function worth(u: UnitTypeDef, defending: boolean): number {
+  const strength = defending ? u.defense : u.attack;
+  // Only on the attack: reach does nothing for you when something has already
+  // closed and is swinging at you, which is exactly a ranged unit's problem.
+  const reach = !defending && u.range > 1 ? RANGED_EDGE : 1;
+  // First strikes count on both attack and defence: the free blow lands
+  // whichever side of the fight this unit is standing on.
+  const opener = 1 + u.firstStrikes * FIRST_STRIKE_EDGE;
+  // A magazine is a duty cycle. Without this the chooser sees only that a
+  // ballista hits hard and cannot be hit back, which is how it came to build a
+  // hundred and eleven of them and keep none of them loaded.
+  const supply = u.ammo > 0 ? u.ammo / (u.ammo + RELOAD_COST) : 1;
+  return (strength * reach * opener * supply * u.hp) / Math.max(1, u.cost);
+}
+
+/**
+ * Ranks candidates by value, preferring the bigger of two equals.
+ *
+ * The counting ladder now scales every stat linearly, so a rung is worth
+ * exactly what its members are worth and one orc ties with ten. The tie is
+ * broken towards the group on purpose: upkeep is charged per *unit* rather
+ * than per orc, and a group also holds one tile and spends one movement point.
+ * That efficiency is the whole reason the ladder exists, and it is real even
+ * though it does not show up in the value figure.
+ */
+function byWorth(defending: boolean) {
+  return (a: UnitTypeDef, b: UnitTypeDef): number => {
+    const wa = worth(a, defending);
+    const wb = worth(b, defending);
+    if (Math.abs(wa - wb) > Math.max(wa, wb) * 0.05) return wb - wa;
+    return b.cost - a.cost;
+  };
+}
+
+/**
+ * How sharply the chooser prefers the better unit.
+ *
+ * Weights are `worth ** this`, so 1 buys almost at random and a large number
+ * reproduces the old behaviour of always taking the best. Four keeps a good
+ * unit several times likelier than a mediocre one -- on the Kingdom's list a
+ * paladin comes out about eight times as often as a footman -- while still
+ * fielding a mixture.
+ */
+const MIX_SHARPNESS = 4;
+
+/**
+ * Buy in proportion to worth rather than always buying the best.
+ *
+ * Step 4 used to sort by value and take the single best affordable unit, which
+ * meant a unit's value never mattered -- only whether it *crossed* another unit
+ * in the ranking. Measured: moving a ballista's value by 17% moved production
+ * from half a ballista a game to ninety-three, because it stepped over a knight
+ * and then a paladin. Every constant in DESIGN_QUEUE was a cliff edge rather
+ * than a dial, and much of the tuning recorded there was really an attempt to
+ * land a number in the gap between two other numbers. See section 40.
+ *
+ * It also produces an army worth having. A hundred ballistas and nothing to
+ * storm a city with is not a strategy, and section 38 measured exactly that.
+ *
+ * Uses the seeded RNG, so a game stays reproducible from its seed.
+ */
+function pickWeighted(
+  state: GameState,
+  candidates: UnitTypeDef[],
+  defending: boolean,
+): UnitTypeDef {
+  if (candidates.length <= 1) return candidates[0];
+  const weights = candidates.map((u) =>
+    Math.pow(Math.max(0.01, worth(u, defending)), MIX_SHARPNESS),
+  );
+  const total = weights.reduce((a, b) => a + b, 0);
+  return withRng(state, (rng) => {
+    let roll = rng.float() * total;
+    for (let i = 0; i < candidates.length; i++) {
+      roll -= weights[i];
+      if (roll <= 0) return candidates[i];
+    }
+    return candidates[candidates.length - 1];
+  });
+}
+
 function chooseProduction(
   state: GameState,
   city: City,
@@ -296,7 +461,7 @@ function chooseProduction(
   if (garrison < personality.garrisonPerCity) {
     const defender = [...options.units]
       .filter((u) => u.attack > 0)
-      .sort((a, b) => b.defense / b.cost - a.defense / a.cost)[0];
+      .sort(byWorth(true))[0];
     if (defender) return { kind: 'unit', id: defender.id };
   }
 
@@ -372,9 +537,19 @@ function chooseProduction(
   // 4. Otherwise: the biggest stick currently affordable in reasonable time.
   const attackers = [...options.units]
     .filter((u) => u.attack > 0 && !u.settler)
-    .sort((a, b) => b.attack - a.attack);
-  const affordable = attackers.find((u) => u.cost <= 40 + city.size * 22) ?? attackers.at(-1);
-  if (affordable) return { kind: 'unit', id: affordable.id };
+    .sort(byWorth(false));
+  const budget = 40 + city.size * 22;
+  const affordable = attackers.filter((u) => u.cost <= budget);
+  // Weighted among everything this city could actually finish, rather than
+  // always the single best -- see pickWeighted. Falls back to whatever is
+  // cheapest when nothing is affordable, rather than to the bottom of the value
+  // ranking, which is the worst unit on the list and not the one a small city
+  // can finish.
+  const pick =
+    affordable.length > 0
+      ? pickWeighted(state, affordable, false)
+      : [...attackers].sort((a, b) => a.cost - b.cost)[0];
+  if (pick) return { kind: 'unit', id: pick.id };
   void owner;
   return { kind: 'coin' };
 }
@@ -475,12 +650,118 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
   if (here.ok && cities === 0) foundCity(state, unit);
 }
 
+/**
+ * Go and get another axe.
+ *
+ * A thrower that has thrown its axe fights at a quarter strength until it
+ * restocks, and `resupply` was called from the interface and nowhere else --
+ * so the moment the AI learned to shoot, the Horde's only ranged unit became a
+ * quarter of a unit permanently. The Kingdom's three ranged units all keep
+ * their weapons, so this asymmetry cost the Horde the war rather than a fight:
+ * 18-16 became 12-20 on the same seeds. See DESIGN_QUEUE section 38.
+ *
+ * Capped on distance. Walking eight tiles home is a fair price for getting a
+ * unit back; walking twenty is worse than fighting on with a rock.
+ */
+const RESTOCK_RANGE = 8;
+
+function restockIfNeeded(state: GameState, unit: Unit): boolean {
+  const type = unitType(unit.type);
+  const wantsAxe = unit.disarmed && type.throwsWeapon;
+  // Only when it is completely dry. A piece with one bolt left should spend it,
+  // not walk across the map to make the number tidy.
+  const wantsMissiles = type.ammo > 0 && ammoLeft(unit) <= 0;
+  if (!wantsAxe && !wantsMissiles) return false;
+  if (resupplyBlocked(state, unit) === null) return resupply(state, unit);
+
+  const cities = playerCities(state, unit.owner);
+  if (cities.length === 0) return false;
+  const nearest = cities.reduce((a, b) =>
+    distance(unit.x, unit.y, b.x, b.y) < distance(unit.x, unit.y, a.x, a.y) ? b : a,
+  );
+  if (distance(unit.x, unit.y, nearest.x, nearest.y) > RESTOCK_RANGE) return false;
+  return moveToward(state, unit, nearest.x, nearest.y).kind !== 'blocked';
+}
+
+/**
+ * Shoot something, if anything is standing at exactly the right distance.
+ *
+ * The AI has never once used an ability -- `useAbility` was called from the
+ * interface and nowhere else -- so every archer, axethrower, ballista and mage
+ * it has ever built walked into melee and swung. That is the worst possible use
+ * of them: a ballista has a defence of one and twelve hit points, and the
+ * production chooser rates it the Kingdom's best buy off an attack of eight.
+ * See DESIGN_QUEUE section 38.
+ *
+ * Targets are ranked by worth over remaining health, which prefers finishing
+ * something valuable and wounded to scratching something fresh.
+ */
+function fireIfPossible(state: GameState, unit: Unit): boolean {
+  if (abilityReady(unit, 'ranged') !== null) return false;
+  const targets = abilityTargets(state, unit, 'ranged');
+  if (targets.length === 0) return false;
+  const rank = (t: Unit) => worth(unitType(t.type), false) / Math.max(1, t.hp);
+  const best = targets.reduce((a, b) => (rank(b) > rank(a) ? b : a));
+  useAbility(state, unit, 'ranged', best);
+  return true;
+}
+
+/**
+ * Step to somewhere a shot is actually possible.
+ *
+ * Reach is *exactly* one distance -- a ranged unit cannot lob one at somebody
+ * standing next to it -- so a unit that simply marches at the enemy walks
+ * straight through its own firing position and ends up in a brawl. This looks
+ * for a reachable tile at exactly that distance from something, and with
+ * nothing closer, which also walks a unit that is already in a brawl back out
+ * of one.
+ */
+function takeAim(state: GameState, unit: Unit): boolean {
+  const reach = unitType(unit.type).range;
+  if (reach <= 1) return false;
+  const seen = state.players[unit.owner].visible;
+  const w = state.width;
+  const enemies = state.units.filter(
+    (u) => u.owner !== unit.owner && seen[u.y * w + u.x],
+  );
+  if (enemies.length === 0) return false;
+
+  let bestIdx: number | null = null;
+  let bestCost = Infinity;
+  for (const [idx, cost] of reachableTiles(state, unit)) {
+    const x = idx % w;
+    const y = Math.floor(idx / w);
+    const nearest = Math.min(...enemies.map((e) => distance(x, y, e.x, e.y)));
+    // Exactly at reach, and nothing has closed inside it.
+    if (nearest !== reach) continue;
+    if (cost < bestCost) {
+      bestCost = cost;
+      bestIdx = idx;
+    }
+  }
+  if (bestIdx === null) return false;
+  const outcome = moveToward(state, unit, bestIdx % w, Math.floor(bestIdx / w));
+  return outcome.kind !== 'blocked';
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
   personality: AiPersonality,
   frontier: Array<[number, number]>,
 ): void {
+  // An empty-handed thrower is a quarter of a unit; getting it an axe back is
+  // worth more than anything else it could do with the turn.
+  if (restockIfNeeded(state, unit)) return;
+
+  // Reach first. A unit that can shoot should shoot, and one that cannot shoot
+  // from where it stands should go and stand somewhere it can.
+  if (fireIfPossible(state, unit)) return;
+  if (unitType(unit.type).range > 1 && takeAim(state, unit)) {
+    fireIfPossible(state, unit);
+    return;
+  }
+
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);
   let bestTarget: { x: number; y: number; odds: number } | null = null;
@@ -514,6 +795,17 @@ function actSoldier(
     // Not enough of us yet. Dig in where we stand and wait for the rest.
     unit.order = 'fortified';
     return;
+  }
+
+  // Nothing better to do? Feed the gun next door. Deliberately this late: it
+  // costs the helper its whole turn, so it should be what a unit does when it
+  // was not going to fight anyway.
+  if (abilityReady(unit, 'reload') === null) {
+    const dry = abilityTargets(state, unit, 'reload').filter((t) => ammoLeft(t) <= 0);
+    if (dry.length > 0) {
+      useAbility(state, unit, 'reload', dry[0]);
+      return;
+    }
   }
 
   // Hold undefended home cities.
@@ -651,10 +943,25 @@ function takePromotions(state: GameState, player: Player): void {
   const taste = PERK_TASTE[player.faction] ?? PERK_TASTE.orc;
   for (const unit of playerUnits(state, player.id)) {
     while (owedPerks(unit) > 0) {
-      const options = perkChoices(unit);
+      const options = perkChoices(unit, flagsOf(player));
       if (options.length === 0) break;
-      // First thing on the list that is still going.
-      const pick = taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
+      // A club first, whenever one is going.
+      //
+      // Without this the clubs would never be taken at all: the taste list
+      // holds all six general perks and rank stops at three, so the fallback
+      // below is never reached. That is the same trap as sections 37 and 38 --
+      // a mechanic the AI has no route to is a mechanic that does not happen --
+      // and this time it was spotted before it was measured rather than after.
+      //
+      // Chosen at random among the three rather than in a fixed order, so an
+      // army has some of each. A list would give every ogre in the game the
+      // same club, which is the promotion equivalent of buying a hundred
+      // ballistas.
+      const clubs = options.filter((o) => o.only?.includes('ogre'));
+      const pick =
+        clubs.length > 0
+          ? withRng(state, (rng) => clubs[Math.floor(rng.float() * clubs.length)])
+          : taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
       unit.perks = [...(unit.perks ?? []), pick.id];
     }
   }

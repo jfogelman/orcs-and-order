@@ -1,3 +1,4 @@
+import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
@@ -33,7 +34,7 @@ import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } fro
 import { openCityPanel } from './ui/cityPanel';
 import { resupply, resupplyBlocked } from './sim/combat';
 import { openHordeReport } from './ui/hordeReport';
-import { closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
+import { afterModalCloses, closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
@@ -81,6 +82,10 @@ class App {
   /** How much of the log has already been turned into noise. */
   /** True once End Turn has been pressed with units still waiting. */
   private endTurnArmed = false;
+  /** Cities already asked what to build this turn, so none is asked twice. */
+  private readonly askedCities = new Set<number>();
+  /** Whether research has been offered this turn. */
+  private askedResearch = false;
   private soundedLogEntries = 0;
 
   constructor() {
@@ -490,9 +495,39 @@ class App {
     audio.play('turn', 0);
     // Promotions first: they are about something that already happened, and
     // the other two are about what to do next.
+    this.askedCities.clear();
+    this.askedResearch = false;
+    this.promptPending();
+  }
+
+  /**
+   * Ask the end-of-turn questions in order, one modal at a time.
+   *
+   * They used to be three calls in a row, and every one of them declines to
+   * open while another modal is up -- so only the first was ever asked. A
+   * player with a promotion waiting was never asked what to build, and the city
+   * banked its shields as Coin instead, which reads as the "ask me" setting
+   * being broken.
+   *
+   * Each question now hands on to the next when its modal closes. A question
+   * closed without an answer is not asked again this turn, or closing the panel
+   * would immediately reopen it.
+   */
+  private promptPending(): void {
+    if (isModalOpen() || isOver(this.state)) return;
+    const chain = () => afterModalCloses(() => this.promptPending());
+
     this.promptPerkIfOwed();
-    this.promptResearchIfIdle();
+    if (isModalOpen()) return chain();
+
+    if (!this.askedResearch) {
+      this.askedResearch = true;
+      this.promptResearchIfIdle();
+      if (isModalOpen()) return chain();
+    }
+
     this.promptBuildIfIdle();
+    if (isModalOpen()) chain();
   }
 
   /**
@@ -514,7 +549,7 @@ class App {
     if (isModalOpen() || isOver(this.state)) return;
     const unit = playerUnits(this.state, this.viewerId).find((u) => owedPerks(u) > 0);
     if (!unit) return;
-    const options = perkChoices(unit);
+    const options = perkChoices(unit, flagsOf(this.state.players[this.viewerId]));
     if (options.length === 0) return;
     openPerkMenu(unitType(unit.type).name, this.state.players[this.viewerId].faction, options, (id) => {
       unit.perks = [...(unit.perks ?? []), id];
@@ -540,9 +575,16 @@ class App {
   private promptBuildIfIdle(): void {
     if (isModalOpen() || isOver(this.state)) return;
     const city = playerCities(this.state, this.viewerId).find(
-      (c) => c.size > 0 && c.producing.kind === 'coin' && autoBuildOf(c) === 'ask',
+      (c) =>
+        c.size > 0 &&
+        c.producing.kind === 'coin' &&
+        autoBuildOf(c) === 'ask' &&
+        !this.askedCities.has(c.id),
     );
     if (!city) return;
+    // Remembered whether or not anything is chosen, so that closing the panel
+    // moves on to the next city rather than reopening this one for ever.
+    this.askedCities.add(city.id);
     openCityPanel(this.state, city, () => this.refreshHud(), (u) => this.select(u));
   }
 
@@ -1361,9 +1403,15 @@ class App {
  */
 const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
   archer: { effect: 'arrow', sound: 'arrow' },
-  axethrower: { effect: 'axe', sound: 'axe-throw' },
   ballista: { effect: 'bolt', sound: 'siege' },
+  goblincatapult: { effect: 'goblin-toss', sound: 'siege' },
   mage: { effect: 'magic', sound: 'magic' },
+  // The axethrower used to be here. It is not artillery any more -- it closes
+  // and throws the axe as its opening blow -- and this table is only read for
+  // the `ranged` ability, so the entry was dead. The axe animation and its
+  // sound are both still in the game and want re-homing onto the first strike;
+  // that needs the effect to fire from `resolveCombat` rather than from an
+  // ability, which nothing does yet. See DESIGN_QUEUE section 43.
 };
 
 /**
@@ -1398,6 +1446,11 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
       return 'demolish';
     case 'holy':
       return 'heal';
+    // The axethrower's opening blow. It stopped being artillery in section 39,
+    // so this no longer comes from the ranged ability -- it comes from the
+    // first strike, and the sim says so with this cue.
+    case 'axe-throw':
+      return 'axe';
     default:
       return entry.kind === 'combat' ? 'clash' : null;
   }

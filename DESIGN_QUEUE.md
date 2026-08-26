@@ -2212,3 +2212,868 @@ Worth deciding rather than defaulting:
 A tie screen is prompted in ART_PROMPTS. It is deliberately **one picture rather
 than one per faction**: conquest and points have a side that is winning them,
 and a draw is the only ending where both sides have to be in the frame.
+
+## 30. Section 11, first slice: built, and unmeasurable
+
+Magical resistance, and two advances off the back of the tree that make magical
+damage leave something behind -- **Setting Things Alight** (burning) and **The
+Cold Shoulder** (slowed). Both `faction: 'both'`, both requiring Insanity, which
+is where section 11 wanted them.
+
+Also, section 11's own warning about freezing taken seriously: it said a unit
+that cannot act is *"strictly better than damage and historically the thing that
+breaks a strategy game"*. The groundwork had implemented frozen as `moves = 0`,
+so it now halves movement with a floor of one -- otherwise a one-move unit is
+frozen in place for the duration, which is exactly the failure being warned
+about.
+
+### It cannot be measured, and the reason is a defect
+
+Both arms came out **identical to two decimal places** on turns, cities and
+wins. The cause:
+
+| | orc | human |
+|---|---|---|
+| magic units ever built, per game | **0.00** | **0.00** |
+| magic units alive at the end | 0.00 | 0.00 |
+| advances that unlock them, held | 0.94 | 1.22 |
+
+**The AI never builds a death knight, a dragon or a mage.** Not rarely -- never,
+in eighteen games, while holding the advances that unlock them. So resistance
+protects nobody, magical damage never happens, and neither spell can fire.
+
+That is the third time a mechanic has been explained before checking that it
+occurs -- after the walls in section 24 and the caution in section 26. The rule
+written down after the second time was *check that a mechanic occurs before
+explaining anything with it*, and it should have been applied **before building
+this**, not after.
+
+The feature itself is correct and tested: eleven tests cover the advances, the
+resistance, and that an axe carries no spell. A human player who builds a dragon
+will get all of it. What cannot be claimed is that it does anything to a game
+between two AIs.
+
+### The defect is worth more than the feature
+
+The dragon is the strongest unit in the game -- attack 10, defence 6, four
+movement, and it flies -- and the AI has never once built one. Production step 4
+sorts the attackers by attack and takes the first it can afford, so a dragon
+should be the obvious pick the moment `full-of-fire` lands. Something between
+those two facts is wrong, and until it is fixed:
+
+- the back half of the tree buys the AI nothing, which is the whole complaint
+  section 11 exists to answer;
+- every remaining item in section 11 that touches a magical unit is equally
+  unmeasurable, so **this wants fixing before the rest of the section is built**;
+- and the AI is fighting every war with goblins and footmen while holding the
+  advances for better.
+
+Worth checking first: whether step 4 is ever reached at all, given steps 1 and 2
+now return a defender or a settler far more often with `targetCities` at seven.
+
+## 31. The joke ate the game
+
+Section 30 asked why the AI never builds a dragon. It is not a bug in the
+chooser. The chooser is right.
+
+| | attack | defence | hp | cost | attack per shield |
+|---|---|---|---|---|---|
+| Four Orcs | 12 | 8 | 48 | 80 | 0.15 |
+| **Dragon** | **10** | **6** | **25** | **90** | **0.11** |
+| Three Trolls | 15 | 9 | 45 | 105 | 0.14 |
+| **Two Death Knights** | **12** | **6** | **30** | **110** | **0.11** |
+| Ten Orcs | 30 | 20 | 120 | 200 | 0.15 |
+
+A dragon is weaker than four orcs, frailer than four orcs, and costs more than
+four orcs. There is no situation in which building one is correct. The same is
+true of every mage, death knight and ogre on the list -- the counting ladder
+sits at 0.14-0.15 attack per shield and the specials sit at 0.11.
+
+### Why it is worse than the table looks
+
+The ladder multiplies **attack and health together**. Ten Orcs is ten times the
+damage *and* ten times the hit points for ten times the price, and two
+quantities multiplied is a square: a stack twice the size wins roughly four
+times as hard, not twice. Cost is linear, effectiveness is quadratic.
+
+Nothing priced linearly can ever compete with that, which means the specials
+were never going to be built no matter what was hung off them. **This is why
+section 11 measured as inert, and it would have made every later item in
+section 11 inert too.**
+
+The gag -- that N orcs on one tile is strictly efficient -- turns out to be
+*too* true. It is the correct answer to every question in the game, and it has
+quietly turned the entire right-hand half of the tech tree into scenery.
+
+### The proposal on the table
+
+From the design conversation: attacks are answered -- **a defender strikes
+back** -- **advanced units may strike more than once**, and **ranged attackers
+are not struck back at all**. Plus the sanity check that gives it its shape: an
+ogre should not lose to a footman, nor a knight to a goblin, unless it was
+nearly dead already.
+
+That is not decoration, it is the counter to the square law, for a reason worth
+writing down:
+
+- **Extra attacks multiply damage without multiplying health.** This is the
+  only shape of bonus the ladder cannot copy, because the ladder buys both at
+  once and this buys one.
+- **Ranged units taking no answering blow removes their health from the
+  equation entirely.** Their worth stops depending on the quantity the ladder is
+  good at, so an axethrower becomes a different thing rather than a worse orc.
+- **A tough unit shrugging off a weak one** means defence has to stop trading
+  proportionally somewhere -- some floor or threshold -- and a threshold is
+  exactly what a linear ladder cannot buy its way past.
+
+Each of the three attacks the same weakness from a different side, which is
+promising, and is also three separate mechanics that want measuring one at a
+time rather than as a bundle.
+
+**Nothing else in section 11 should be built until this is settled.** Clubs and
+perks hung on units that are never built are three more inert features, and the
+lesson from sections 24, 26 and 30 is that this gets checked first.
+
+## 32. Losses, and what Civilization actually does
+
+Two changes, and then the reason neither is enough on its own.
+
+**A count unit fights with what it has left.** `aliveCount` reads the health bar
+and reports survivors: Ten Orcs at half health is Five Orcs, swings like five,
+holds like five, and the badge on the map shows `5` in red rather than the `10`
+that set out. **A singleton never degrades** -- a dragon on its last legs
+breathes the same fire, because there is only ever one of it.
+
+**Odds are recomputed every round.** They were computed once before the fight
+and reused, so losses could not bite inside a battle -- a stack fought at full
+strength down to its last hit point. That single line is what made the first
+version of this measure as nothing at all.
+
+### What it bought
+
+Duels, 400 runs each, attacker's win rate:
+
+| | before | after |
+|---|---|---|
+| Dragon attacks Four Orcs | 1% | **20%** |
+| Four Orcs attacks Dragon | 97% | **81%** |
+| Two Ogres attacks Three Footmen | 62% | 72% |
+| Dragon attacks Ten Orcs | 0% | 0% |
+
+Real movement, right direction, nowhere near enough -- and across full games it
+is close to inert, because **the AI buys on the type's paper stats** and on
+paper a dragon is still worse than four orcs at a higher price. Wins went 6-9
+to 5-10 and specials built stayed at 0.00.
+
+### What Civilization does, and why it cannot have our problem
+
+From Civ4's combat rules and the Civ3 probability derivation:
+
+- **Strength is multiplied by current HP over maximum.** Civ4 has done exactly
+  the losses idea since 2005, and applies it to every unit rather than only to
+  stacks.
+- **Per round, the attacker wins with `R/(1+R)` where `R = A/D`** -- which is
+  `A/(A+D)`, algebraically the same as ours. That part already matched.
+- **Damage per round is `floor(20*(3A+D)/(3D+A))`, floored at 6 and capped at
+  60.** Ours is a function of *maximum health* and ignores strength entirely.
+  This is the real gap: in Civ4 a stronger unit hits harder *and* takes less,
+  which compounds, so quality kills quickly instead of grinding.
+- **First strikes** are free rounds in which only one side does damage -- which
+  is the "ranged attackers are not struck back" idea, already in the game it
+  came from.
+- **Withdrawal** lets a losing *attacker* retreat at its pre-final-round health.
+  That is "Better Part of Valour" from section 11, near enough exactly.
+
+Three of the four things proposed in this conversation turn out to be things
+Civ4 already does. That is a good sign for all three.
+
+**And the fourth thing is the one that matters most: every Civ4 unit has 100
+hit points.** Strength is the only axis that varies. Civ3 is the same within a
+narrow veteran band. The Civ3 derivation shows why that is not an accident --
+win probability compounds over *both* the strength ratio and the hit point
+counts, so a system where one number raises both is exponential in that number.
+
+Our ladder raises both. Ten Orcs is ten times the damage and ten times the
+health for ten times the price, and the two multiply. **That is the root, and
+nothing bolted on beside it will fix it.**
+
+### The fork
+
+- **(a) Flatten health.** Count scales attack and defence; health stays at the
+  base creature's. Kills the square law at the root and makes the original joke
+  *sharper* -- a ten-stack is terrifying and no harder to kill than one orc, so
+  losing it is the catastrophe the design document always said it was. Biggest
+  change to the feel of the game.
+- **(b) Health scales as the square root of count.** Ten Orcs gets 3.2x health
+  and 10x attack. Keeps a stack meaningfully tough while dropping the exponent
+  from 2 to about 1.5.
+- **(c) Price the count superlinearly** and leave the stats alone. Honest, but
+  it makes the top of the ladder unaffordable, which retires the joke rather
+  than fixing it.
+- **(d) Adopt Civ4's damage formula** so strength decides how hard blows land.
+  Wanted regardless, and helps quality -- but on its own it does not remove the
+  exponent.
+
+**(a) or (b), plus (d), plus the specials repriced against whichever is chosen.**
+Then first strikes and withdrawal, measured one at a time.
+
+## 33. Flat health: the duels are fixed, the game is not
+
+Health no longer scales with the count. Ten Orcs have ten orcs' attack, ten
+orcs' defence, ten orcs' price, and **one orc's health**. Two supporting
+changes fell out of it:
+
+- **Execution is measured in shields.** `canExecute` used health as a stand-in
+  for how big a thing was, which only worked while health scaled. Without the
+  change a Death Knight could delete Ten Orcs, which is the exact case the
+  guard exists to prevent.
+- **The paladin heal still scales with the count**, deliberately. It is a share
+  of the *patient's* health bar, and "one paladin patches you up halfway, two
+  finish the job" is a designed mechanic that never had anything to do with how
+  tough the healer was.
+
+Four tests had to be rewritten rather than repaired. One of them required
+`bigHits > smallHits * 4` -- it was pinning the bug down as though it were a
+rule, and had been passing happily for months.
+
+### Duels, 300 runs each
+
+| attacker vs defender | health scaled | flat health |
+|---|---|---|
+| Dragon vs Four Orcs | 23% | **98%** |
+| Dragon vs Ten Orcs | 0% | **64%** |
+| Four Orcs vs Dragon | 84% | **2%** |
+| Ten Orcs vs Dragon | 100% | **37%** |
+| Death Knight vs Four Orcs | 0% | 44% |
+| Ogre vs Three Footmen | 1% | 69% |
+
+That is the target hit almost exactly: a dragon beats four orcs comfortably, and
+ten orcs against a dragon is a real fight rather than a formality.
+
+### And in a real game it made things worse
+
+| | health scaled | flat health |
+|---|---|---|
+| cities, orc/human | 7.61 / 9.72 | **6.00 / 10.78** |
+| wins, orc/human | 5 / 10 | **3 / 10** |
+| specials built | 0.00 | **0.00** |
+
+**Still zero specials.** The reason is the same one section 30 found and it has
+not been addressed yet: production step 4 sorts the available attackers by raw
+`attack` and takes the dearest it can afford. Ten Orcs has attack 30 and a
+dragon has attack 10, so the AI still reaches for the stack -- except a stack is
+now a 200-shield unit with twelve hit points, which is terrible value. **The
+chooser is not merely missing the specials, it is now actively buying the worst
+thing on the list.**
+
+And the Horde suffers most, because the Horde is the side whose personality
+leans on the counting ladder hardest.
+
+So flat health is correct and insufficient. The next piece is not another combat
+mechanic -- it is **teaching the AI what a unit is worth**, on some measure that
+accounts for health and price rather than reading `attack` alone. Nothing else
+in sections 11 or 32 can be measured until the AI will buy the units involved.
+
+## 34. Teaching the AI what a unit is worth
+
+One sort key. Production step 4 ranked candidates by raw `attack` and took the
+dearest it could afford; it now ranks by **`attack * hp / cost`**, and step 1
+ranks defenders by `defense * hp / cost` in place of `defense / cost`.
+
+Sorting on attack was defensible only while health scaled with the group, when
+attack stood in for everything. After section 33 it was actively harmful: Ten
+Orcs is attack 30 with twelve hit points for two hundred shields, and it still
+topped an attack-ordered list. The AI was not merely failing to notice the
+dragons, it was buying the worst thing available.
+
+Ties break towards the larger group on purpose. Every stat now scales linearly,
+so one orc and Ten Orcs are worth exactly the same per shield -- but upkeep is
+charged per *unit* rather than per orc, and a group holds one tile and spends
+one movement point. That efficiency is the whole reason the ladder exists and
+it never shows up in the value figure.
+
+### Measured, 18 seeds
+
+| | sorted by attack | valued |
+|---|---|---|
+| **specials built per game** | **0.00** | **48.11** |
+| units built per game | 386.00 | 231.89 |
+| x4+ ladder units | 15.28 | 6.33 |
+| games decided | 13/18 | **18/18** |
+| turns | 171.89 | 146.22 |
+| cities, orc/human | 6.00 / 10.78 | 11.56 / 5.06 |
+| wins, orc/human | 3 / 10 | **17 / 1** |
+
+Most built, before: goblin 172.8, footman 114.6, peon 25.1, orc 20.7.
+Most built, after: **troll 34.9, goblin 27.2, ogre 25.3, dragon 22.8, knight 19.0.**
+
+**The back half of the tech tree is in the game for the first time.** Dragons,
+ogres and trolls are built by the dozen where the count was previously zero, the
+army is a third smaller and considerably better, and every single game now
+reaches a decision instead of five in eighteen timing out.
+
+### And the balance has flipped violently
+
+17-1 to the Horde, from 3-10 against. This is a *different* problem and a much
+better one: it is no longer a broken mechanism, it is an uncalibrated roster.
+
+The Horde's specials are simply better buys than the Kingdom's -- a troll
+regenerates, and an ogre and a dragon both return about 2.8 attack-health per
+shield against a knight's 1.75. Nobody ever noticed, because until this commit
+not one of them had ever been built and every fight in the game's history was
+goblins against footmen.
+
+**Next: reprice both rosters against the value measure**, now that there is
+finally a measure to price them against, and re-check on a fresh seed set.
+
+## 35. Repricing both rosters
+
+Section 34 left the mechanism working and the rosters uncalibrated: the Horde
+won 17-1 because its specials were simply the better buys, and nobody had ever
+noticed because until that commit none of them had ever been built.
+
+Six changes, aimed at the top of each roster rather than spread across it:
+
+| unit | change | value before | after |
+|---|---|---|---|
+| Ogre | cost 50 → 62 | 2.80 | 2.26 |
+| Dragon | cost 90 → 110 | 2.78 | 2.27 |
+| Troll | cost 35 → 42 | 2.14 | 1.79 |
+| Death Knight | cost 55 → 48 | 1.64 | 1.88 |
+| Knight | hp 14 → 16 | 1.75 | 2.00 |
+| Mage | cost 55 → 45 | 1.31 | 1.60 |
+
+Value is `attack * hp / cost`, the same measure the AI now buys on. The troll is
+deliberately below the band because it heals at twice the rate and that never
+shows up in the figure; the death knight and the mage went *down* in price
+because both were priced as heavyweights and fought like middleweights, so
+neither was ever picked even after the AI learned to value units properly.
+
+### Result, tuned on one seed set and judged on another
+
+| | tuning set | fresh set |
+|---|---|---|
+| wins before, orc/human | 17 / 1 | 13 / 2 |
+| **wins after, orc/human** | **9 / 6** | **10 / 5** |
+| cities before | 11.56 / 5.06 | 10.78 / 5.78 |
+| cities after | 8.72 / 8.11 | 10.06 / 8.17 |
+| turns | 146 → 164 | 151 → 165 |
+| games decided | 18/18 → 15/18 | 15/18 → 15/18 |
+
+The fresh set moved the same way as the tuning set, which is the check that
+matters -- this is a real effect and not a fit to eighteen maps. The Kingdom now
+fields its best unit in numbers (paladins 21-23 a game, up from nothing) and the
+city counts are within a city of each other on the tuning set.
+
+**Two things it did not fix.**
+
+- **The Horde still wins about 63% across the 36 games.** Better than 88%, not
+  parity.
+- **Decisiveness slipped**, from 18/18 to 15/18 on the tuning set, because games
+  now run about 18 turns longer. Section 23 worked hard for that number and it
+  should not be quietly given back.
+
+The next lever is probably not more unit pricing. `targetCities` was set to 7
+for the Horde in section 25, to rescue a Horde that was *losing* -- under a
+combat model that no longer exists. The city counts say expansion, not combat,
+is now carrying the remaining gap.
+
+## 36. The Horde no longer needs rescuing
+
+`targetCities` was set to 7 for the Horde in section 25, when six cities meant
+being beaten to the land and losing 77% of its games. That number was measured
+against a game where a stack bought damage and health together and the AI
+reached for the biggest one it could afford. Sections 33 and 34 removed both.
+
+Re-measured across three seed sets, 54 games:
+
+| orc `targetCities` | wins, orc-human | cities | turns | decided |
+|---|---|---|---|---|
+| **6** | **25 - 24** | 7.5 / 8.1 | 148 | 49/54 |
+| 7 | 32 - 16 | 9.4 / 7.7 | 157 | 48/54 |
+
+Six is level -- one game apart over fifty-four -- and its games run about nine
+turns shorter for the same decisiveness. Seven is now a 67% advantage. **The
+rescue became a handicap on the other side the moment the Horde could field a
+dragon instead of fifty goblins.**
+
+### Two notes on method
+
+The individual seed sets returned **7-11, 11-5 and 7-8** for the same setting.
+Any one of them on its own would have argued something different -- one says the
+Kingdom is comfortably ahead, the next says the Horde is. Eighteen seeds is not
+enough to read a four-game swing, and this is the clearest illustration of it so
+far in this file.
+
+Second: three separate runs of this sweep were thrown away before this one,
+because concurrent processes appended to the same output file and `npm test`
+picked the diagnostic up and ran it a second time in parallel. The arms
+interleaved and rows could not be attributed to seed sets. **A measurement you
+cannot attribute is not a weak measurement, it is not one at all**, and the only
+safe thing to do with it is delete it.
+
+### Where that leaves the balance
+
+Across sections 30 to 36 the Horde has gone 3-10, then 17-1, then 9-6, and now
+25-24 over 54 games. The mechanism is sound and the rosters are calibrated. What
+is *not* yet established is whether any of it holds up against a human, since
+every one of these numbers comes from two AIs playing each other -- and the AI
+buys on a formula that a person will happily ignore.
+
+## 37. The magic block, re-measured: live, and marginal
+
+Section 30 recorded the magic block as **unmeasurable** -- both arms byte-identical,
+because no mage, death knight or dragon had ever been built. Sections 33 and 34
+changed that, so the measurement was redone: two arms, two seed sets, 72 games,
+with the control neutering `applySpellEffects` and zeroing the three
+`magicResist` values.
+
+| | magic on | control |
+|---|---|---|
+| magic units built (6000 / 31337) | 7.00 / 15.94 | 7.61 / 15.28 |
+| spell advances held, of 4 | 2.44 / 3.00 | 2.44 / 3.00 |
+| **burns per game** | **1.50 / 5.17** | 0.00 / 0.00 |
+| **freezes per game** | **0.56 / 2.94** | 0.00 / 0.00 |
+| wins, orc-human | 7-11 / 11-5 | 8-10 / 10-5 |
+| turns | 135.89 / 163.78 | 137.00 / 163.11 |
+| cities | 6.61/8.39, 9.17/7.78 | 6.67/8.39, 9.17/7.83 |
+
+**It is no longer inert. It is marginal.** The spells fire -- the control's flat
+zeroes confirm the arm is isolating the right thing -- but a game contains
+roughly three burns and under two freezes across 150 turns and several hundred
+combats, and nothing downstream moves. Wins differ by one game per set, which
+section 36 established is well inside the swing of an eighteen-seed set.
+
+That is a *better* result than section 30's, because it is a real number rather
+than an absence. It is not a good one.
+
+### Why it is rare, and what that implies for the rest of section 11
+
+A spell needs three things to coincide: a magical attacker (7-16 of the ~230
+units built), its owner holding one of two advances that cost 165 and 180 and
+sit behind Insanity, and a fight happening. The advances land late, and the
+units are a small minority even now that they get built at all.
+
+**Any enhancement gated on a late advance and a rare unit will measure the same
+way.** That is worth knowing before building confuse, three ogre clubs and three
+perks: on this evidence they will each fire a handful of times a game and change
+nothing measurable. They may still be worth building as texture -- a game is not
+only its win rate -- but they should not be sold as a fix for anything.
+
+### And the premise has partly expired
+
+Section 11 exists because *"a game that has not been won by turn 200 has nothing
+left to do but walk units at each other."* That was true when it was written.
+Games now finish at 136-164 turns with 33 of 36 decided, and the fix came from
+sections 23, 33 and 34 rather than from giving the tree somewhere to go.
+
+So the anti-stalemate argument for section 11 is largely spent. The flavour
+argument is not, and the confuse mechanic in particular is interesting on its
+own terms. Worth deciding which of those is being bought before building it.
+
+## 38. The AI had never used an ability
+
+`useAbility` was called from `main.ts` and nowhere else. Not rarely -- **never**.
+Every archer, axethrower, ballista and mage the AI has ever built walked up and
+swung, and since section 34 taught it to value units properly it was buying
+ballistas enthusiastically: attack 8 makes one the Kingdom's best purchase on
+paper, and it is a twelve-health unit with a defence of one.
+
+Ranged units already could not be struck back -- that was built, and
+`fireAtRange` says so. The gap was entirely on the AI's side.
+
+### Three attempts, and two wrong theories
+
+**`fireIfPossible` and `takeAim`.** Shoot whatever is at reach, ranked by worth
+over remaining health; otherwise step to a tile at exactly reach with nothing
+closer, since reach is an *exact* distance and a unit that simply marches at the
+enemy walks through its own firing position. Result: **18-16 became 12-20.**
+
+**Wrong theory 1: the disarm asymmetry.** The Horde's only ranged unit throws
+its axe and drops to a quarter strength; the Kingdom's three keep theirs; and
+`resupply` had no AI caller either. All true, all verified in the source, and
+all irrelevant -- adding a restock produced an arm **byte-identical to the
+previous run**, because the code path never executed. That is the fourth time in
+this file a result has been explained by a mechanism nobody checked *occurs*.
+
+**What was actually happening**, once instrumented:
+
+| | Horde | Kingdom |
+|---|---|---|
+| ranged units built | **0.00** | 19.6 |
+| ranged attacks fired | **0.00** | **87.4** |
+
+The Horde never builds an axethrower, because at 1.60 it is the worst combat buy
+it has -- behind ogre 2.26, dragon 2.27, death knight 1.88 and a plain orc 1.80.
+So teaching both sides to shoot handed the Kingdom eighty-seven free attacks a
+game and the Horde nothing. **Same shape as sections 31 and 34: a mechanic is
+inert because the units carrying it are never bought.**
+
+**Wrong theory 2: `RANGED_EDGE = 1.4`.** `worth` is built from attack, health
+and price and none of those can see "strikes without being struck back", so
+reach was folded in. At 1.4 it put a ballista at 2.99 and every other ranged
+unit level with the best melee in the game:
+
+| | control | edge 1.4 |
+|---|---|---|
+| ranged built | 18 / 20 | **161 / 134** |
+| melee built | 133 / 186 | 100 / 104 |
+| decided | 18/18 | 13/18 |
+
+An eighth of the army became two thirds. `worth` can see reach now but still
+cannot see *fragility*, so nothing pushed back.
+
+### Where it landed
+
+`RANGED_EDGE` at 1.15, and **the axe is retrievable** -- a thrower that spends a
+turn not throwing wanders over and picks it up, so it throws every other turn
+rather than once per game. A single throw was priced for a unit with three times
+the health this one has; flat health and the one-way disarm landed on the same
+creature in the same week.
+
+| | control | reach 1.15 + retrievable axe |
+|---|---|---|
+| wins, both sets | 18-16 | **15-15** |
+| ranged survival | 31% / 19% | **45% / 32%** |
+| ranged built | 18 / 20 | 93 / 105 |
+| **games decided** | **34/36** | **30/36** |
+| turns | 136 / 164 | 156 / 168 |
+
+Ranged units are finally used and they survive, and the win split is level. **It
+costs decisiveness**: 34/36 down to 30/36, with games about fifteen turns
+longer, and section 23 worked hard for that number.
+
+**Untested hypothesis for why:** `fireAtRange` deliberately cannot take a city,
+so an army that is 44% ranged is worse at finishing a war than one that is 8%.
+That is a guess with a plausible mechanism and nothing more -- which, given the
+two wrong theories above, is exactly the point at which this file should stop
+and go and measure rather than carry on reasoning.
+
+## 39. Skirmishers, artillery, and three designs waiting on a decision
+
+Sections 30, 31, 34, 37 and 38 all found the same thing in different clothes: a
+mechanic is inert when the units carrying it are never bought. So this section
+records the designs *and* what each one needs from `worth` before it can work.
+
+### Built: first strike
+
+Archers and axethrowers are no longer artillery. They close like anything else
+and land free rounds at the start of a fight -- Civ4's first strikes, netted, so
+two units that both strike first simply fight. Reach is now only on the mage and
+the ballista, which is what stops an army half made of units that cannot enter a
+city, and section 38 measured a third of all sieges being exactly that.
+
+**The axe leaves the hand during the first strike**, which is both the joke and
+now the mechanic: it fights the rest of the exchange bare-handed and fetches the
+axe back a couple of turns later.
+
+And a rule nothing in the suite had ever stated: **a ballista sees one tile and
+shoots two.** A lone one is blind to everything it is allowed to hit and needs a
+unit standing forward to spot for it. Found by accident, pinned by test.
+
+### Measured, and it did not work
+
+| | built per game |
+|---|---|
+| Horde axethrower | **0.00** |
+| Kingdom ballista | **111.39** |
+
+First strike did not get the axethrower bought. It sits at 1.86 against an ogre
+at 2.26 and a dragon at 2.27, and it cannot win the garrison slot either, where
+it is ranked on a defence of one. **`RANGED_EDGE` has now failed its stated
+purpose twice** -- it never produced a single axethrower at any value -- while
+taking the Kingdom from ten ballistas a game to a hundred and eleven.
+
+The Horde's problem is not the multiplier. It is that its roster has two
+excellent heavy units and the chooser takes the best it can afford.
+
+### Three designs on the table
+
+**Ammunition, for both artillery pieces.** The Goblin Catapult carries a fixed
+number of goblins and throws them; goblins or orcs, singly or in groups, can be
+*informed of their new job* to reload it. The ballista carries a fixed number of
+missiles, and an archer can spend two turns making one, or it returns to a city
+to restock.
+
+This is worth building as **one mechanic, not three**: the axethrower's single
+axe is already `ammo: 1` with a self-fetch, and the two artillery pieces are the
+same idea with a different count and a different way of reloading. It also fixes
+the ballista problem structurally rather than by tuning -- a hundred and eleven
+ballistas cannot all be kept in missiles.
+
+**Note for `worth`:** finite ammunition makes a unit *worse*, and the chooser
+cannot see it. Without a term for it the AI will keep buying ballistas it cannot
+feed. This is the same trap as reach and first strike, and it is now predictable
+enough to write down in advance.
+
+**The death knight takes health rather than giving it.** Choose one unit, take
+half its health, restore twice that to another. The donor must be above half or
+it dies -- buyer beware.
+
+**Note on scale:** this idea is worth less than it was a week ago. Health used to
+scale with the group, so a Ten Orcs was a 120-point battery. Flat health
+compressed every creature in the game into a range of 8 to 25, so the difference
+between draining a goblin and draining a dragon is 10 against 25, not 10 against
+120. Still a real choice, but not the dramatic one it would have been, and worth
+knowing before it is priced.
+
+**A Goblin Catapult for the Horde.** Note `catapult` is already a *building* id
+-- the Broken Catapult -- so the unit needs its own.
+
+## 40. Ammunition, and the reason every number in this file is a cliff
+
+Artillery is the only thing in the game that hits without being hit back and can
+keep doing it forever, and the chooser rated a ballista the Kingdom's best
+purchase on exactly that basis: a hundred and eleven a game. **Ammunition is the
+structural answer** -- a hundred and eleven ballistas cannot all be kept in
+missiles -- rather than another constant to tune.
+
+Five bolts, then a reload. In the field the archery line hands one over at the
+cost of its whole turn; a battery needs a tail, and the tail is paid in turns. A
+city fills the magazine outright. `worth` prices it as a duty cycle,
+`ammo / (ammo + reload)`, shipped in the same commit as the mechanic.
+
+It also let `RANGED_EDGE` come back on. On its own reach was poison because
+nothing pushed back against a unit that could shoot forever; a magazine is that
+push-back, so the two can finally be priced against each other.
+
+### And then the actual finding
+
+Sweeping the magazine, on two seed sets:
+
+| magazine | ballista `worth` | built per game |
+|---|---|---|
+| 3 | 1.84 | **0.5** |
+| 5 | 2.04 | **5.3** |
+| 8 | 2.15 | **93.7** |
+
+**A 17% change in value moves production by two orders of magnitude.** The
+Kingdom's list runs paladin 2.06, knight 2.00, archer 1.86 -- so at 1.84 the
+ballista is fourth and never built, at 2.04 it is second and built five times, at
+2.15 it is first and built ninety-three times.
+
+**Production step 4 is winner-take-all.** It sorts by value and takes the single
+best thing it can afford, so what matters is never a unit's value -- only
+whether it *crosses* another unit in the ranking. Which explains, at last, every
+strange result in sections 38 to 40:
+
+- `RANGED_EDGE` at 1.05 and 1.15 producing byte-identical games. No crossing.
+- 1.4 taking ranged from an eighth of the army to two thirds. One crossing.
+- Adding ammunition taking ballistas from eleven to 0.7. One crossing, downward.
+- The Horde never building an axethrower at any value, because an ogre and a
+  dragon sit permanently above it.
+
+**Every constant in this file is a cliff edge rather than a dial**, and a good
+deal of the tuning recorded here was really an attempt to land a value in a gap
+between two other values. That is why the numbers kept coming out as 0 or 111
+and never as something in between.
+
+### What to do about it
+
+The fix is not a better constant, it is a chooser that builds a **mixture**.
+Options, roughly in order of how principled they are:
+
+- **Role quotas.** An army wants some of each thing; build whatever it is
+  shortest of. Most like a real 4X, most work.
+- **Weighted choice.** Pick among the affordable candidates in proportion to
+  worth rather than taking the maximum. Cheap, and turns every cliff into a
+  slope immediately.
+- **A cap per type**, as a share of the army. Crude, but it would have stopped
+  a hundred and eleven ballistas on its own.
+
+An army of one unit type is also simply worse -- it is why the Kingdom fielded
+a hundred ballistas and had nothing left to storm a city with. **This should be
+fixed before any further unit is priced**, because until it is, every price is
+being chosen against a ranking rather than against the game.
+
+## 41. Weighted choice: the cliff becomes a slope, and a shortlist that was noise
+
+Section 40 found that production was winner-take-all -- it sorted by value and
+took the single best affordable unit, so a unit's value never mattered, only
+whether it *crossed* another unit in the ranking. Candidates are now drawn in
+proportion to `worth ** 4` instead.
+
+### It worked, and the proof is the same sweep
+
+Ballistas built, sweeping the magazine over the same seeds:
+
+| magazine | winner-take-all | weighted |
+|---|---|---|
+| 3 | 0.5 | **7.7** |
+| 5 | 5.3 | **10.5** |
+| 8 | 93.7 | **18.4** |
+
+Two orders of magnitude of step function became a smooth, proportionate climb.
+**Every constant in this file is now a dial rather than a cliff edge.**
+
+And the finding that came free: **the axethrower is built at last**, 17 to 26 a
+game, having been 0.00 at every value of every multiplier tried in sections 38
+to 40. It never needed to beat the ogre and the dragon. It needed the chooser to
+stop giving everything to first place. The whole `RANGED_EDGE` saga was solving
+a problem that did not exist.
+
+Both sides now field seven or eight kinds of fighter, against effectively two to
+four before.
+
+### The shortlist: proposed, measured, and dropped
+
+Weighting across everything affordable taxes whoever has the worse floor, and
+the Horde's is worse -- a goblin at 1.0 and a sapper at 1.2 against a Kingdom
+footman at 1.2 and an archer at 1.86. On the tuning seeds the Horde lost 9-24.
+So candidates were restricted to the best few, which is what a person does
+anyway.
+
+On the tuning seeds a shortlist of six looked like the answer: **16-14**, near
+level, against 9-24 without.
+
+On two seed sets that had never been used, it **inverted**:
+
+| | 6000 / 31337 | 77000 / 91234 |
+|---|---|---|
+| no shortlist | 9-24 | **13-16** |
+| shortlist 6 | **16-14** | 11-21 |
+
+The shortlist was a fit to two seed sets, chosen against numbers that swing by
+five wins per set. **Dropped.** Plain weighted choice ships; the extra concept
+does not.
+
+Two process notes worth as much as the result:
+
+- The confirmation run existed only because section 36 established the ±5 swing,
+  and it killed a change that was one commit from shipping. This is the first
+  time in this file that a held-out seed set has actually vetoed something.
+- The control arm in that run was **mislabelled**. `git stash` removed only the
+  uncommitted shortlist, so what ran as "winner-take-all" was really "weighted,
+  no shortlist". It was caught by noticing the Horde fielding eight kinds and
+  twenty axethrowers -- numbers winner-take-all cannot produce. **Reading the
+  composition, not just the win column, is what caught it.**
+
+## 42. The Goblin Catapult: it works, and it does not matter
+
+The Horde's answer to the ballista, off Underground Smarts. Five goblins in the
+hopper, attack 7, and like all artillery it cannot take a city. The reload is the
+whole difference between the two pieces: the Kingdom's is fed by people who make
+missiles, and this one is fed by the missiles.
+
+**A sacrifice loads the whole group**, so Three Goblins is three shots. That is
+the first use the counting ladder has ever had other than fighting, and it is
+the part of this worth keeping.
+
+Only creatures marked `expendable` go in -- goblins and orcs. A rule rather than
+a price threshold, so nothing can ever work out that a dragon is cheap enough to
+fire at a wall.
+
+### Measured
+
+| | catapults/game | artillery alive | of those dry | wins orc-human | decided |
+|---|---|---|---|---|---|
+| no catapult | 0.0 | 3.8 | 0.03 | 11-19 | 30/36 |
+| hopper 3 | 3.0 | 6.2 | 0.12 | 10-19 | 29/36 |
+| hopper 5 | **4.7** | 6.0 | 0.14 | 10-18 | 28/36 |
+
+**It is built, it stays loaded, and it changes nothing.** Dry catapults run at
+0.1 a game, so the goblins reliably volunteer -- the sacrifice reload works
+exactly as intended. The win split does not move at any setting.
+
+That is a fine outcome and it should be reported as what it is: **a texture
+feature**. It gives the Horde a siege train, gives the ladder a second purpose,
+and tells a good joke. It is not a balance fix and should not be recorded as
+one.
+
+The hopper went from three to five as a **parity correction rather than a buff**.
+Three was picked out of the air and quietly made the Horde's artillery the
+weaker piece -- 1.81 against the ballista's 2.04, which under weighted choice is
+the difference between fifth on the list and near the top. Matching the
+magazines removes an asymmetry that was never intended.
+
+### The outstanding question is elsewhere
+
+Across every recent measurement the Kingdom leads: 10-18 here, and base 6000 in
+particular returns 3-12, 4-12 and 4-9 across three separate arms while base
+77000 returns 7-7 and 6-9. That is a persistent lean plus a large per-map
+effect, and no unit added in sections 38 to 42 has touched it.
+
+**Worth attacking directly rather than through another unit.** The Kingdom's
+roster is deeper in the useful middle -- archer, knight, footman, ballista all
+land between 1.8 and 2.1 -- while the Horde's splits into two excellent heavies
+and a weak floor. Weighted choice buys across the whole list, so depth in the
+middle is now worth more than a good top end, and the Horde has the wrong shape.
+
+## 43. Art that has arrived ahead of the code
+
+Processed and live:
+
+- **The three standing orders** -- coin, beakers, calm. The build list has had
+  slots held open for these since section 39; they now fill.
+- **The Goblin Catapult** -- sprite, attack animation and hurt sheet. It needed
+  adding to `CREATURES` in the pipeline, which is a hardcoded list, exactly like
+  the tech and building lists were in section 39. **Third time.** Anything added
+  to `src/model/units.ts` needs adding there too or its art is silently skipped.
+- **`goblin-toss`**, a six-frame effect strip, now wired as the catapult's
+  projectile.
+
+### Two things waiting on code
+
+**The three ogre clubs.** `ogre-fiery_attack`, `ogre-exploding_attack` and
+`ogre-quake_attack` are processed and sitting in `public/units/`. The units do
+not exist -- they are section 11's club variants, still unbuilt. The art is
+ready whenever they are.
+
+**The axe throw has nowhere to play.** `PROJECTILES` is only read for the
+`ranged` ability, and the axethrower stopped being artillery in section 39 -- it
+closes and throws the axe as its opening blow. So its entry was dead code and
+has been removed. The animation and the sound are both still in the game and
+still good; re-homing them needs an effect to fire from `resolveCombat` when a
+first strike lands, which nothing currently does. Worth doing: it is the most
+visible mechanic in the game with no visual at all.
+
+## 44. The clubs, and a correction to section 37
+
+Section 11's three clubs, built as promotion choices gated on an advance. They
+differ in *who* they catch rather than how hard they hit, which is what makes
+choosing between them a decision rather than a ranking.
+
+### Measured, and the gate that nearly made them pointless
+
+| | clubs taken/game | spread |
+|---|---|---|
+| advance unlisted | 2.1 / **0.2** | uneven; exploding never taken on one set |
+| **advance prioritised** | **4.3 / 3.1** | fiery 1.4/0.9, exploding 1.6/1.0, quake 1.3/1.2 |
+
+`club-improvement` was not on the Horde's research list, so it was only ever
+picked up by the cheapest-thing fallback -- late, and on one seed set
+essentially never. **The whole ogre line was reachable in principle and reached
+almost never**, which is section 37's prediction landing exactly: an enhancement
+gated on a late advance and a rare unit fires a handful of times a game.
+
+With the advance on the list the clubs are taken three to four times a game and
+all three appear in roughly equal numbers. The win split does not move -- 10-19
+against 9-20 -- so like the Goblin Catapult this is **texture rather than
+balance**, and should be recorded as such.
+
+Two things were caught by inspection rather than measurement, which is a change
+from most of this file:
+
+- The AI would never have taken a club at all. Its taste list holds all six
+  general perks and rank stops at three, so the fallback that reaches a club is
+  never reached. Spotted before the first measurement rather than after it.
+- A fixed preference order would have given every ogre in the game the same
+  club. The choice is drawn at random among the three instead -- the promotion
+  equivalent of section 40's winner-take-all problem.
+
+### Section 37 is superseded
+
+Section 37 concluded the magic block was **live but marginal**: burns at 1.50
+and 5.17 a game, "roughly three burns and under two freezes across 150 turns",
+and nothing downstream moving.
+
+**Burns now run 24 to 47 a game.** Nothing was done to the magic block. What
+changed is section 41: weighted choice means mages, death knights and dragons
+are actually built, so the spells that were waiting on them now fire five to ten
+times as often.
+
+That verdict should not be trusted as written. It was correct about the game it
+was measured in, and that game no longer exists -- which is worth noting as a
+general hazard of this file, since **every conclusion here is conditional on the
+version of the AI that produced it.** Section 36's `targetCities` finding was
+overturned the same way, by the combat model changing underneath it.

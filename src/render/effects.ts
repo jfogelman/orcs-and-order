@@ -36,6 +36,8 @@ export type EffectId =
   | 'demolish'
   | 'dragonfire'
   | 'explosion'
+  // A goblin, mid-career.
+  | 'goblin-toss'
   | 'heal'
   | 'magic'
   // A troll spending nine tenths of itself to make another one.

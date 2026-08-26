@@ -1,7 +1,8 @@
 import { fatCrossIndices, idx } from '../engine/grid';
+import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
-import { unitType } from '../model/units';
+import { aliveCount, unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
@@ -69,6 +70,20 @@ const VOID_COLOR = '#0a0806';
  * battered at a glance, without counting bars.
  */
 const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
+
+/**
+ * Which club an ogre is swinging, as an art suffix.
+ *
+ * The three sheets are `ogre-fiery_attack`, `ogre-exploding_attack` and
+ * `ogre-quake_attack`. Nothing else in the game has a variant chosen by perk,
+ * so this stays a small named function rather than a system.
+ */
+function clubVariant(u: Unit): string {
+  if (hasPerk(u, 'fiery-club')) return '-fiery';
+  if (hasPerk(u, 'exploding-club')) return '-exploding';
+  if (hasPerk(u, 'quake-club')) return '-quake';
+  return '';
+}
 
 export class MapRenderer {
   private tiles: TerrainTileSet;
@@ -446,7 +461,7 @@ export class MapRenderer {
           : playing.kind === 'regen'
             ? this.sprites.regenFrames(u.type)
             : // A thrower that has thrown swings with nothing in its hand.
-              this.sprites.attackFrames(u.type, u.disarmed);
+              this.sprites.attackFrames(u.type, u.disarmed, clubVariant(u));
       if (frames && frames[playing.frame]) return frames[playing.frame];
     }
     // Standing still, health decides how it looks. Checked before the
@@ -721,19 +736,22 @@ export class MapRenderer {
     }
 
     if (size >= 28) {
-      // Count badge: the sprite already shows the crowd, this confirms it.
+      // Count badge: how many are still standing, not how many set out. A
+      // wounded Ten Orcs fights as the number shown here, so the number has to
+      // be the live one or the badge would be quietly lying about the odds.
       if (type.count > 1) {
+        const alive = aliveCount(u);
         const bw = size * 0.3;
         ctx.fillStyle = 'rgba(12,10,8,0.85)';
         ctx.fillRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
-        ctx.strokeStyle = owner.color;
+        ctx.strokeStyle = alive < type.count ? '#c8503c' : owner.color;
         ctx.lineWidth = 1;
         ctx.strokeRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
-        ctx.fillStyle = '#f2e6c8';
+        ctx.fillStyle = alive < type.count ? '#f0b8a8' : '#f2e6c8';
         ctx.font = `bold ${Math.round(bw * 0.78)}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(type.count), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
+        ctx.fillText(String(alive), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
       }
       // Rank badge, in place of the drawn asterisk this used to be. Sits at
       // the bottom-left so it does not collide with the count badge on the

@@ -125,11 +125,18 @@ export class SpriteCache {
    * Frame count comes from the strip's own proportions, exactly as it does for
    * the effect layer: square frames, so width over height is the count.
    */
-  attackFrames(typeId: UnitTypeId, disarmed = false): CanvasImageSource[] | null {
+  attackFrames(
+    typeId: UnitTypeId,
+    disarmed = false,
+    variant = '',
+  ): CanvasImageSource[] | null {
     // A thrower that has thrown swings at nothing, and has its own animation
     // for it. Falls back to the armed one, so a creature with only the single
     // sheet still animates rather than freezing.
     if (disarmed) return this.variantFrames(typeId, '-disarmed') ?? this.variantFrames(typeId, '');
+    // An ogre holding a particular club swings it, and there is a sheet per
+    // club. Same fallback: a club with no art yet still animates.
+    if (variant) return this.variantFrames(typeId, variant) ?? this.variantFrames(typeId, '');
     return this.variantFrames(typeId, '');
   }
 

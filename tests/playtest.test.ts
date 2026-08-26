@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { unitType } from '../src/model/units';
 import type { City, GameState } from '../src/model/types';
 import { resupply, resupplyBlocked } from '../src/sim/combat';
+import { REARM_TURNS } from '../src/sim/abilities';
 import { SETTLER, buildOptions, capitalOf, foundCity, productionCostIn } from '../src/sim/city';
 import { createGame, playerCities, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
@@ -68,6 +69,53 @@ describe('resupply', () => {
 
     const orc = spawnUnit(state, 0, 'orc', 10, 11, false);
     expect(resupplyBlocked(state, orc)).toMatch(/nothing to restock/);
+  });
+
+  /**
+   * A single throw per game was priced for a unit with three times the health
+   * this one now has -- flat health and the one-way disarm landed on the same
+   * creature in the same week, and the AI never built one again. The axe was
+   * always lying over there; now it gets fetched. See DESIGN_QUEUE section 38.
+   */
+  it('fetches its own axe back after a couple of turns', () => {
+    const state = arena();
+    city(state, 0, 10, 10);
+    const thrower = spawnUnit(state, 0, 'axethrower', 20, 20, false);
+    thrower.disarmed = true;
+    thrower.rearmIn = REARM_TURNS;
+
+    for (let i = 0; i < REARM_TURNS - 1; i++) {
+      beginPlayerTurn(state, 0);
+      expect(thrower.disarmed, 'rearmed too early').toBe(true);
+    }
+    beginPlayerTurn(state, 0);
+
+    // Nowhere near a city of ours: this is the slow way, and it has to work
+    // out in the field or it does not solve anything.
+    expect(thrower.disarmed).toBe(false);
+    expect(thrower.rearmIn).toBeUndefined();
+  });
+
+  it('does not fetch one for a unit that never threw anything', () => {
+    const state = arena();
+    const orc = spawnUnit(state, 0, 'orc', 10, 11, false);
+    beginPlayerTurn(state, 0);
+    expect(orc.rearmIn).toBeUndefined();
+    expect(orc.disarmed).toBe(false);
+  });
+
+  it('drops the pending fetch when it restocks at a city instead', () => {
+    const state = arena();
+    city(state, 0, 10, 10);
+    const thrower = spawnUnit(state, 0, 'axethrower', 11, 10, false);
+    thrower.disarmed = true;
+    thrower.rearmIn = REARM_TURNS;
+
+    expect(resupply(state, thrower)).toBe(true);
+    expect(thrower.disarmed).toBe(false);
+    // Left behind, this would rearm a unit that is already armed and log a
+    // second message for the same axe.
+    expect(thrower.rearmIn).toBeUndefined();
   });
 
   it('will not restock from somebody else city', () => {

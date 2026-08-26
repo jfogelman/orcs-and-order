@@ -401,7 +401,9 @@ button.small {
 
 .build-option {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Portrait, name, price, and the little help circle. The blurb spans the
+     lot on the row beneath. */
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   /* Same reason as .choice-card: this one carries a blurb too. */
   white-space: normal;
   gap: 2px 10px;
@@ -417,6 +419,32 @@ button.small {
 
 .build-name {
   font-weight: 600;
+  align-self: center;
+}
+
+/* Big enough to tell a dragon from a goblin at a glance, small enough that a
+   list of fifteen still fits the panel. */
+.build-icon {
+  width: 26px;
+  height: 26px;
+  align-self: center;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+
+
+.garrison-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.garrison-unit .unit-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .build-cost {

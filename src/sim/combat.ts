@@ -2,11 +2,12 @@ import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN } from '../model/terrain';
-import { unitType } from '../model/units';
+import { headcount, needsAmmo, unitType } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, SUPPLY } from './city';
 import { hasFlag } from './rules';
+import { SPELL_TURNS, applyStatus } from './status';
 
 /**
  * Civ2-flavoured combat: two strengths, repeated coin flips, one survivor.
@@ -114,6 +115,16 @@ export interface StrengthBreakdown {
  */
 export const DISARMED_ATTACK = 0.25;
 
+/**
+ * Turns before a thrower has fetched its own axe back.
+ *
+ * Two, so it throws every other fight rather than once and then never again.
+ * Lives here rather than in `abilities` because the axe now leaves the hand
+ * during a first strike, and `abilities` already imports from this module --
+ * the other direction would be a cycle.
+ */
+export const REARM_TURNS = 2;
+
 /** Extra magical resistance per rank, on top of a creature's own. */
 export const RESIST_PER_RANK = 0.08;
 
@@ -155,6 +166,24 @@ export function damageKindOf(unit: Unit): DamageKind {
   return unitType(unit.type).damageKind ?? 'physical';
 }
 
+/**
+ * Magic that leaves something behind.
+ *
+ * Only magical damage carries a spell, which is what makes the two advances
+ * worth reaching for a side that has magical units and worth nothing at all to
+ * a side that has none. An axe stays an axe.
+ *
+ * Applied to a target that survived: setting a corpse alight teaches nobody
+ * anything, and a status on a unit about to be removed is a wasted lookup.
+ */
+export function applySpellEffects(state: GameState, attacker: Unit, target: Unit): void {
+  if (target.hp <= 0) return;
+  if (damageKindOf(attacker) !== 'magic') return;
+  const owner = state.players[attacker.owner];
+  if (hasFlag(owner, 'pyromancy')) applyStatus(target, 'burning', SPELL_TURNS.burning);
+  if (hasFlag(owner, 'cryomancy')) applyStatus(target, 'frozen', SPELL_TURNS.frozen);
+}
+
 /** What a dragon's breath does to whatever is standing behind its target. */
 export const BREATH_CARRY = 0.6;
 
@@ -173,8 +202,13 @@ export const BREATH_CARRY = 0.6;
  * an absurd way to lose a unit's usefulness for the rest of a war.
  */
 export function resupplyBlocked(state: GameState, unit: Unit): string | null {
-  if (!unitType(unit.type).throwsWeapon) return 'This unit has nothing to restock.';
-  if (!unit.disarmed) return 'It already has its axe.';
+  const type = unitType(unit.type);
+  const wantsAxe = type.throwsWeapon && unit.disarmed;
+  const wantsMissiles = needsAmmo(unit);
+  if (!type.throwsWeapon && type.ammo <= 0) return 'This unit has nothing to restock.';
+  if (!wantsAxe && !wantsMissiles) {
+    return type.throwsWeapon ? 'It already has its axe.' : 'It is already loaded.';
+  }
   if (unit.moves <= 0) return 'No movement left this turn.';
   const near = state.cities.some(
     (c) => c.owner === unit.owner && distance(c.x, c.y, unit.x, unit.y) <= 1,
@@ -192,6 +226,13 @@ export function resupplyBlocked(state: GameState, unit: Unit): string | null {
  */
 export function resupply(state: GameState, unit: Unit): boolean {
   if (resupplyBlocked(state, unit) !== null) return false;
+  const type = unitType(unit.type);
+  // A city has a whole armoury in it, so this fills the magazine rather than
+  // handing over one missile the way a neighbour in the field does.
+  if (type.ammo > 0 && needsAmmo(unit)) {
+    unit.ammo = type.ammo;
+    log(state, `${type.name} loads up from the city stores.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
+  }
   rearm(state, unit, 'draws a fresh axe from the stores');
   unit.moves = 0;
   return true;
@@ -200,6 +241,8 @@ export function resupply(state: GameState, unit: Unit): boolean {
 export function rearm(state: GameState, unit: Unit, how: string): void {
   if (!unit.disarmed) return;
   unit.disarmed = false;
+  // Whichever way the axe came back, the slow way is no longer pending.
+  delete unit.rearmIn;
   log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
 }
 
@@ -256,6 +299,10 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
       : 1;
 
   let total = type.attack;
+  // Losses. Ten Orcs that have taken half the damage they can take are Five
+  // Orcs, and swing like five, which is what stops a big enough stack being
+  // the answer to every question in the game. A singleton is unaffected.
+  total *= headcount(attacker);
   // Nothing left to fight with but hands and regret.
   if (attacker.disarmed) total *= DISARMED_ATTACK;
   // Hungry, lost, and a long way from anyone who knows the way home. Graded
@@ -316,6 +363,8 @@ export function defenseStrength(
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   let total = type.defense;
+  // The same losses, on the other foot: fewer of them left to hold the line.
+  total *= headcount(defender);
   total *= rankBonus(defender);
   if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   total *= terrain.defense;
@@ -371,8 +420,84 @@ export function canExecute(attacker: Unit, defender: Unit): boolean {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   if (a.executeChance <= 0) return false;
-  if (d.hp > a.hp) return false;
+  // Measured in shields rather than health. Health used to stand in for how
+  // big a thing was, because it scaled with the count; now that it does not,
+  // price is the honest measure -- and without this a Death Knight could once
+  // again delete Ten Orcs, which is the exact thing the guard exists to stop.
+  if (d.cost > a.cost) return false;
   return defender.hp < d.hp * 0.5;
+}
+
+/** Share of a neighbour's health an exploding club takes off. */
+export const CLUB_BLAST = 0.15;
+/** What the ogre keeps of its own blast. It minds, but less. */
+export const CLUB_SELF = 0.4;
+/** Share of health the ground taking sides costs everyone nearby. */
+export const CLUB_QUAKE = 0.12;
+
+/**
+ * What an ogre's club does after the swing has landed.
+ *
+ * DESIGN_QUEUE section 11 asked for three, and they differ in *who* they catch
+ * rather than in how hard they hit:
+ *
+ * - **Fiery** sets the target alight and nothing else. The only one that is
+ *   safe to swing next to your own line.
+ * - **Exploding** goes off at the target, catching everything around it, friend
+ *   and enemy alike, and the ogre takes a share of its own blast.
+ * - **Quake** shakes the ground under everything next to the *ogre*, which is a
+ *   different shape entirely: it is a way out of being surrounded.
+ *
+ * All three run after the fight resolves, so a dead ogre swings no club and a
+ * dead target still burns nobody.
+ */
+function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
+  if (attacker.hp <= 0) return;
+  if (unitType(attacker.type).base !== 'ogre') return;
+
+  if (hasPerk(attacker, 'fiery-club') && target.hp > 0) {
+    applyStatus(target, 'burning', SPELL_TURNS.burning);
+    log(state, `${unitType(target.type).name} is set alight.`, 'combat', attacker.owner,
+        undefined, [target.x, target.y], target.id);
+  }
+
+  const sweep = (centre: Unit, share: number, hostileOnly: boolean, cue: string, how: string) => {
+    const caught = state.units.filter(
+      (u) =>
+        u.id !== attacker.id &&
+        u.hp > 0 &&
+        distance(u.x, u.y, centre.x, centre.y) <= 1 &&
+        (!hostileOnly || u.owner !== attacker.owner),
+    );
+    if (caught.length === 0 && !hostileOnly) return;
+    const killed: Unit[] = [];
+    for (const victim of caught) {
+      // A blast is a blast: nothing magical resists being stood next to one.
+      applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * share)), 'physical');
+      if (victim.hp <= 0) killed.push(victim);
+    }
+    if (caught.length > 0) {
+      log(state, `${unitType(attacker.type).name} ${how}, catching ${caught.length} unit(s).`,
+          'combat', attacker.owner, cue as never, [centre.x, centre.y], attacker.id);
+    }
+    for (const victim of killed) {
+      const i = state.units.indexOf(victim);
+      if (i >= 0) state.units.splice(i, 1);
+      log(state, `${unitType(victim.type).name} does not get up.`, 'bad', victim.owner);
+    }
+  };
+
+  if (hasPerk(attacker, 'exploding-club')) {
+    sweep(target, CLUB_BLAST, false, 'explosion', 'brings the club down and it goes off');
+    // Its own blast, at a discount. Never enough to kill it outright, because a
+    // unit that explodes itself on a win is a perk nobody would ever choose.
+    const self = Math.max(1, Math.round(unitType(attacker.type).hp * CLUB_BLAST * CLUB_SELF));
+    attacker.hp = Math.max(1, attacker.hp - self);
+  }
+
+  if (hasPerk(attacker, 'quake-club')) {
+    sweep(attacker, CLUB_QUAKE, true, 'explosion', 'hits the ground rather than the ogre in front');
+  }
 }
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
@@ -400,13 +525,55 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const atkMax = unitType(attacker.type).hp;
   const defMax = unitType(defender.type).hp;
   const dmg = damagePerRound(atkMax, defMax);
-  // A defence of zero would make the fight a certainty; keep it a contest.
-  const pAttack = atk.total / Math.max(0.0001, atk.total + def.total);
+  // The strengths above already count the losses each side arrived with, so
+  // divide those out to get the part that does not change during the fight.
+  // Everything else -- terrain, walls, rank, supply -- is fixed for the
+  // duration; only the headcount moves, and it moves every round.
+  const atkStatic = atk.total / Math.max(0.0001, headcount(attacker));
+  const defStatic = def.total / Math.max(0.0001, headcount(defender));
+
+  // Free rounds before the fight proper, to whoever strikes first and by how
+  // much more than the other. Netting them is what stops two archers giving
+  // each other a free hit and calling it even.
+  const edge = unitType(attacker.type).firstStrikes - unitType(defender.type).firstStrikes;
+  if (edge !== 0) {
+    const striker = edge > 0 ? attacker : defender;
+    const struck = edge > 0 ? defender : attacker;
+    for (let i = 0; i < Math.abs(edge) && struck.hp > 0; i++) {
+      applyDamage(struck, dmg, damageKindOf(striker));
+    }
+    // And for a thrower, the free blow *is* the axe leaving its hand. It gets
+    // the rest of the fight without one, and fetches it back afterwards.
+    if (unitType(striker.type).throwsWeapon && !striker.disarmed) {
+      striker.disarmed = true;
+      striker.rearmIn = REARM_TURNS;
+      // Says so out loud, which is also what puts the axe on the screen: the
+      // interface reads this cue and throws the animation along the same line.
+      // Without it the one throw in the game had no picture at all.
+      log(
+        state,
+        `${unitType(striker.type).name} throws its axe at ${unitType(struck.type).name}.`,
+        'combat',
+        striker.owner,
+        'axe-throw',
+        [struck.x, struck.y],
+        striker.id,
+      );
+    }
+  }
 
   let rounds = 0;
   const result = withRng(state, (rng) => {
     while (attacker.hp > 0 && defender.hp > 0) {
       rounds++;
+      // Recomputed per round rather than fixed at the start. A stack that is
+      // being cut down swings weaker with every exchange, which is the whole
+      // of DESIGN_QUEUE section 31: fixed odds plus health that scales with
+      // the count is what made a big enough stack unbeatable by anything.
+      const a = atkStatic * headcount(attacker);
+      const d = defStatic * headcount(defender);
+      // A defence of zero would make the fight a certainty; keep it a contest.
+      const pAttack = a / Math.max(0.0001, a + d);
       if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
       else applyDamage(attacker, dmg, damageKindOf(defender));
       // Runaway guard: an unwinnable matchup should not spin forever.
@@ -423,6 +590,12 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
 
   attacker.hp = Math.max(0, attacker.hp);
   defender.hp = Math.max(0, defender.hp);
+
+  // Whatever the magical one did, it leaves behind. Both directions: a mage
+  // that fought off an orc has still set it alight.
+  applySpellEffects(state, attacker, defender);
+  applySpellEffects(state, defender, attacker);
+  clubEffects(state, attacker, defender);
 
   return {
     attackerId: attacker.id,

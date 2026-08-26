@@ -9,6 +9,8 @@ import {
   RANGED_ROUNDS,
   useAbility,
 } from '../src/sim/abilities';
+import { resolveCombat, resupply, resupplyBlocked } from '../src/sim/combat';
+import { REARM_TURNS, ammoLeft } from '../src/sim/abilities';
 import { createGame, recomputeVisibility, spawnUnit } from '../src/sim/gamestate';
 import { runAiTurn } from '../src/ai/ai';
 import { SFX_FILES } from '../src/audio/audio';
@@ -53,16 +55,31 @@ function revealAll(state: GameState, playerId: number): void {
 }
 
 describe('which units have a targeted ability', () => {
-  it('gives reach to the four ranged creatures and nobody else', () => {
+  it('gives reach to the artillery, and an opening blow to the skirmishers', () => {
     const state = board();
-    const ranged = ['archer', 'mage', 'ballista', 'axethrower'];
-    for (const id of ranged) {
+    // Archers and axethrowers used to be artillery too, and an army half made
+    // of units that cannot enter a city turned out to be very bad at finishing
+    // a war -- a third of all sieges were besiegers who could not walk in. They
+    // are ordinary fighters now with a free blow as they close. See
+    // DESIGN_QUEUE sections 38 and 39.
+    for (const id of ['mage', 'ballista']) {
       expect(unitType(id).range, `${id} should strike at range`).toBe(2);
     }
-    for (const id of ['orc', 'footman', 'knight', 'troll', 'peon']) {
+    for (const id of ['archer', 'axethrower']) {
       expect(unitType(id).range, `${id} should have to close`).toBe(1);
-      expect(abilitiesOf(spawnUnit(state, 0, id, 1, 1))).toEqual([]);
+      expect(unitType(id).firstStrikes, `${id} should open the fight`).toBeGreaterThan(0);
     }
+    for (const id of ['orc', 'footman', 'knight', 'troll']) {
+      expect(unitType(id).range, `${id} should have to close`).toBe(1);
+      expect(unitType(id).firstStrikes, `${id} should not strike first`).toBe(0);
+      // Everything that is not itself a gun can in principle carry ammunition
+      // to one; whether it may feed a *particular* gun is a question for the
+      // target list, since a ballista is loaded by the archery line and the
+      // Horde's artillery is loaded with whoever is standing nearest.
+      expect(abilitiesOf(spawnUnit(state, 0, id, 1, 1))).toEqual(['reload']);
+    }
+    // A settler has other things to be doing.
+    expect(abilitiesOf(spawnUnit(state, 0, 'peon', 1, 1))).toEqual([]);
   });
 
   it('scales the paladin heal with the size of the group', () => {
@@ -76,7 +93,7 @@ describe('legal targets', () => {
   it('is exactly two tiles for a ranged attack, not one and not three', () => {
     const state = board();
     revealAll(state, 1);
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'ballista', 10, 10);
     const adjacent = spawnUnit(state, 0, 'orc', 11, 10);
     const atReach = spawnUnit(state, 0, 'orc', 12, 10);
     const tooFar = spawnUnit(state, 0, 'orc', 13, 10);
@@ -90,14 +107,14 @@ describe('legal targets', () => {
   it('measures reach diagonally, the same way movement does', () => {
     const state = board();
     revealAll(state, 1);
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'ballista', 10, 10);
     const diagonal = spawnUnit(state, 0, 'orc', 12, 12);
     expect(abilityTargets(state, archer, 'ranged').map((u) => u.id)).toContain(diagonal.id);
   });
 
   it('never offers a target the acting player cannot see', () => {
     const state = board();
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'ballista', 10, 10);
     const hidden = spawnUnit(state, 0, 'orc', 12, 10);
     // Nothing revealed: the archer has no idea anyone is there.
     state.players[1].visible.fill(0);
@@ -112,7 +129,7 @@ describe('legal targets', () => {
   it('will not let a ranged unit shoot its own side', () => {
     const state = board();
     revealAll(state, 1);
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'ballista', 10, 10);
     spawnUnit(state, 1, 'footman', 12, 10);
     expect(abilityTargets(state, archer, 'ranged')).toEqual([]);
   });
@@ -147,7 +164,7 @@ describe('legal targets', () => {
   it('offers nothing once the unit has spent its turn', () => {
     const state = board();
     revealAll(state, 1);
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'ballista', 10, 10);
     spawnUnit(state, 0, 'orc', 12, 10);
     expect(abilityTargets(state, archer, 'ranged')).toHaveLength(1);
 
@@ -160,10 +177,14 @@ describe('legal targets', () => {
 describe('firing at range', () => {
   /** An archer and a target two tiles apart, both fully visible. */
   function range2(targetType = 'orc'): { state: GameState; archer: Unit; target: Unit } {
+    // A mage rather than an archer: the archer closes and strikes first now,
+    // and of the two units that still fire, the mage is the one that can see
+    // as far as it shoots. A ballista has sight 1 and range 2 -- see the
+    // spotter test below.
     const state = board();
     revealAll(state, 0);
     revealAll(state, 1);
-    const archer = spawnUnit(state, 1, 'archer', 10, 10);
+    const archer = spawnUnit(state, 1, 'mage', 10, 10);
     const target = spawnUnit(state, 0, targetType, 12, 10);
     recomputeVisibility(state, 1);
     return { state, archer, target };
@@ -302,13 +323,185 @@ describe('every sound the simulation asks for actually exists', () => {
     const medic = spawnUnit(state, 1, 'paladin', 10, 10);
     const patient = spawnUnit(state, 1, 'footman', 11, 10);
     patient.hp = 1;
-    const archer = spawnUnit(state, 1, 'archer', 5, 5);
+    const archer = spawnUnit(state, 1, 'ballista', 5, 5);
     const foe = spawnUnit(state, 0, 'orc', 7, 5);
     useAbility(state, medic, 'heal', patient);
     useAbility(state, archer, 'ranged', foe);
     for (const entry of state.log) {
       if (entry.cue) expect(known.has(entry.cue), `no sound named ${entry.cue}`).toBe(true);
     }
+  });
+});
+
+/**
+ * A ballista shoots two tiles and sees one. On its own it is blind to
+ * everything it is allowed to hit, and needs somebody standing forward to spot
+ * for it -- which is why a lone one never fires and a ballista behind a line
+ * does. Found while moving these tests off the archer, and pinned here because
+ * nothing else in the suite said it.
+ */
+describe('a ballista needs someone to spot for it', () => {
+  it('cannot fire at what it cannot see by itself', () => {
+    const state = board();
+    const ballista = spawnUnit(state, 1, 'ballista', 10, 10);
+    spawnUnit(state, 0, 'orc', 12, 10);
+    recomputeVisibility(state, 1);
+
+    expect(unitType('ballista').range).toBe(2);
+    expect(unitType('ballista').sight).toBeLessThan(unitType('ballista').range);
+    expect(abilityTargets(state, ballista, 'ranged')).toEqual([]);
+  });
+
+  it('fires once something of ours is far enough forward to see', () => {
+    const state = board();
+    const ballista = spawnUnit(state, 1, 'ballista', 10, 10);
+    const target = spawnUnit(state, 0, 'orc', 12, 10);
+    // A footman standing next to the target is all the spotting it needs.
+    spawnUnit(state, 1, 'footman', 11, 10);
+    recomputeVisibility(state, 1);
+
+    expect(abilityTargets(state, ballista, 'ranged').map((u) => u.id)).toContain(target.id);
+  });
+});
+
+/**
+ * Artillery is the only thing in the game that hits without being hit back and
+ * can keep doing it, and the chooser rated a ballista the Kingdom's best buy on
+ * exactly that basis -- it built a hundred and eleven a game. A magazine is the
+ * structural answer rather than another constant to tune: a hundred and eleven
+ * ballistas cannot all be kept in missiles. See DESIGN_QUEUE section 40.
+ */
+describe('a ballista carries a finite number of bolts', () => {
+  function battery() {
+    const state = board();
+    revealAll(state, 1);
+    const gun = spawnUnit(state, 1, 'ballista', 10, 10);
+    const spotter = spawnUnit(state, 1, 'footman', 11, 10);
+    const foe = spawnUnit(state, 0, 'orc', 12, 10);
+    recomputeVisibility(state, 1);
+    return { state, gun, spotter, foe };
+  }
+
+  it('starts loaded and spends a bolt a shot', () => {
+    const { state, gun, foe } = battery();
+    const max = unitType('ballista').ammo;
+    expect(max).toBeGreaterThan(0);
+    // Absent on a fresh unit rather than written out, so old saves read as full.
+    expect(gun.ammo).toBeUndefined();
+    expect(ammoLeft(gun)).toBe(max);
+
+    useAbility(state, gun, 'ranged', foe);
+    expect(ammoLeft(gun)).toBe(max - 1);
+  });
+
+  it('stops firing when it runs dry, and says so', () => {
+    const { state, gun, foe } = battery();
+    gun.ammo = 0;
+    gun.moves = 2;
+    expect(abilityReady(gun, 'ranged')).toMatch(/missile/i);
+    const out = useAbility(state, gun, 'ranged', foe);
+    expect(out.ok).toBe(false);
+    expect(foe.hp).toBe(unitType(foe.type).hp);
+  });
+
+  it('is fed by the archery line and not by just anyone', () => {
+    const { state, gun, spotter } = battery();
+    gun.ammo = 0;
+    const archer = spawnUnit(state, 1, 'archer', 10, 11);
+
+    expect(abilityTargets(state, archer, 'reload').map((u) => u.id)).toContain(gun.id);
+    // A footman has no idea how to make a ballista bolt.
+    expect(abilityTargets(state, spotter, 'reload')).toEqual([]);
+  });
+
+  it('costs the helper its whole turn for one bolt', () => {
+    const { state, gun } = battery();
+    gun.ammo = 0;
+    const archer = spawnUnit(state, 1, 'archer', 10, 11);
+    archer.moves = 2;
+
+    useAbility(state, archer, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(1);
+    expect(archer.moves, 'a battery needs a tail, and the tail costs turns').toBe(0);
+    expect(state.units, 'labour reloading must not eat the helper').toContain(archer);
+  });
+
+  it('fills right up from a city instead', () => {
+    const { state, gun } = battery();
+    gun.ammo = 0;
+    state.cities.push({
+      id: 99, owner: 1, name: 'Armoury', x: 10, y: 11, size: 3, food: 0, shields: 0,
+      buildings: [], producing: { kind: 'coin' }, workedTiles: [], disorder: false, foundedTurn: 1,
+    });
+
+    expect(resupplyBlocked(state, gun)).toBeNull();
+    expect(resupply(state, gun)).toBe(true);
+    // A city has an armoury in it; a neighbour in the field has one bolt.
+    expect(ammoLeft(gun)).toBe(unitType('ballista').ammo);
+  });
+});
+
+/**
+ * The Horde's answer to the ballista. Where the Kingdom's artillery is fed by
+ * people who make missiles, this one is fed by the missiles themselves, who
+ * have been told it is a promotion.
+ */
+describe('the Goblin Catapult is loaded with goblins', () => {
+  function battery() {
+    const state = board();
+    revealAll(state, 0);
+    const gun = spawnUnit(state, 0, 'goblincatapult', 10, 10);
+    gun.ammo = 0;
+    return { state, gun };
+  }
+
+  it('eats the goblin it is loaded with', () => {
+    const { state, gun } = battery();
+    const volunteer = spawnUnit(state, 0, 'goblin', 11, 10);
+
+    expect(abilityTargets(state, volunteer, 'reload').map((u) => u.id)).toContain(gun.id);
+    useAbility(state, volunteer, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(1);
+    // The whole difference between the two artillery pieces: the Kingdom's
+    // helper walks away, and this one does not.
+    expect(state.units, 'the volunteer should be in the hopper').not.toContain(volunteer);
+  });
+
+  it('loads a whole group at once', () => {
+    const { state, gun } = battery();
+    const three = spawnUnit(state, 0, 'goblin_x3', 11, 10);
+
+    useAbility(state, three, 'reload', gun);
+
+    // Three Goblins is three shots, which is what makes the counting ladder
+    // worth something to a siege train.
+    expect(ammoLeft(gun)).toBe(3);
+    expect(state.units).not.toContain(three);
+  });
+
+  it('will not fire anything the Horde actually values', () => {
+    const { state, gun } = battery();
+    const troll = spawnUnit(state, 0, 'troll', 11, 10);
+    const ogre = spawnUnit(state, 0, 'ogre', 10, 11);
+
+    // A rule rather than a price threshold, so nothing ever works out that a
+    // dragon is cheap enough to fire at a wall.
+    expect(abilityTargets(state, troll, 'reload')).toEqual([]);
+    expect(abilityTargets(state, ogre, 'reload')).toEqual([]);
+    expect(ammoLeft(gun)).toBe(0);
+  });
+
+  it('never overfills, however many volunteers there are', () => {
+    const { state, gun } = battery();
+    const max = unitType('goblincatapult').ammo;
+    // Five goblins into a hopper that holds three.
+    const crowd = spawnUnit(state, 0, 'goblin_x5', 11, 10);
+
+    useAbility(state, crowd, 'reload', gun);
+
+    expect(ammoLeft(gun)).toBe(max);
   });
 });
 
@@ -321,19 +514,47 @@ describe('the axethrower has exactly one axe', () => {
     return { state, axe, foe };
   }
 
-  it('starts armed, and is disarmed by throwing', () => {
+  it('starts armed, and throws the axe as its opening blow', () => {
     const { state, axe, foe } = thrower();
     expect(axe.disarmed).toBe(false);
-    useAbility(state, axe, 'ranged', foe);
+    expect(unitType(axe.type).firstStrikes).toBeGreaterThan(0);
+
+    resolveCombat(state, axe, foe);
+
+    // The free blow *is* the axe leaving its hand, which is the whole joke and
+    // now also the whole mechanic: it fights the rest of the exchange without
+    // one, and fetches it back a couple of turns later.
     expect(axe.disarmed).toBe(true);
+    expect(axe.rearmIn).toBe(REARM_TURNS);
   });
 
-  it('cannot throw again once it has thrown', () => {
+  it('says so, which is what puts the axe on the screen', () => {
     const { state, axe, foe } = thrower();
-    useAbility(state, axe, 'ranged', foe);
-    axe.moves = 2;
-    expect(abilityReady(axe, 'ranged')).toMatch(/thrown its axe/i);
-    expect(abilityTargets(state, axe, 'ranged')).toEqual([]);
+    state.log.length = 0;
+
+    resolveCombat(state, axe, foe);
+
+    // The interface reads this cue to throw the animation. The axethrower
+    // stopped being artillery in section 39, so the effect no longer comes
+    // from the ranged ability -- and for a while it came from nowhere at all,
+    // leaving the one throw in the game with no picture. See section 43.
+    const thrown = state.log.find((e) => e.cue === 'axe-throw');
+    expect(thrown, 'no cue, so no animation').toBeDefined();
+    expect(thrown?.at).toEqual([foe.x, foe.y]);
+  });
+
+  it('does not throw a second axe it has not got', () => {
+    const { state, axe, foe } = thrower();
+    resolveCombat(state, axe, foe);
+    const pending = axe.rearmIn;
+
+    const again = spawnUnit(state, 1, 'ogre', 11, 10);
+    if (axe.hp > 0) resolveCombat(state, axe, again);
+
+    // Still the one axe, and the fetch already under way is not restarted --
+    // which would leave a thrower permanently two turns from having one.
+    expect(axe.disarmed).toBe(true);
+    expect(axe.rearmIn).toBe(pending);
   });
 
   it('fights at a quarter strength while disarmed', () => {

@@ -105,11 +105,17 @@ describe('damage pacing', () => {
     expect(UNIT_TYPES.orc_x10.hp / large).toBeLessThan(20);
   });
 
-  it('preserves the health advantage as a ratio of hits survived', () => {
+  it('gives a big group no extra hits to survive', () => {
+    // This test used to require the opposite -- that Ten Orcs survived more
+    // than four times the hits one orc did -- and in doing so it pinned down
+    // the bug rather than a rule. A group that bought both damage and staying
+    // power for a linear price was worth its size squared, and nothing else in
+    // the game could compete. What a group buys now is strength, one tile, and
+    // one movement point; what it costs is losing all ten at once.
     const dmg = damagePerRound(UNIT_TYPES.orc_x10.hp, UNIT_TYPES.orc.hp);
-    const bigHits = Math.ceil(UNIT_TYPES.orc_x10.hp / dmg);
-    const smallHits = Math.ceil(UNIT_TYPES.orc.hp / dmg);
-    expect(bigHits).toBeGreaterThan(smallHits * 4);
+    expect(Math.ceil(UNIT_TYPES.orc_x10.hp / dmg)).toBe(
+      Math.ceil(UNIT_TYPES.orc.hp / dmg),
+    );
   });
 
   it('never deals zero damage', () => {

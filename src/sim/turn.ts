@@ -11,8 +11,8 @@ import {
   nextProduction,
   processCity,
 } from './city';
-import { destroyUnit } from './combat';
-import { hasStatus, tickStatuses } from './status';
+import { destroyUnit, rearm } from './combat';
+import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { resumeGotoOrders } from './movement';
 import { addBeakers } from './research';
@@ -88,9 +88,21 @@ function healUnits(state: GameState, playerId: number): void {
 function refreshUnits(state: GameState, player: Player): void {
   for (const unit of state.units) {
     if (unit.owner !== player.id) continue;
-    // Frozen solid is the one condition that takes the turn away outright.
-    unit.moves = hasStatus(unit, 'frozen') ? 0 : effectiveMove(player, unit.type);
+    // Frozen slows rather than stops. A unit that cannot act at all is a unit
+    // removed from the game for the duration, which is strictly better than
+    // damage; halving is a real cost that leaves it playing. Never below one,
+    // so a one-move unit is slowed rather than frozen in place forever.
+    const full = effectiveMove(player, unit.type);
+    unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
     if (unit.order === 'skip') unit.order = 'none';
+    // The axe was thrown, not destroyed. Given a moment, it is fetched back.
+    if (unit.disarmed && unit.rearmIn !== undefined) {
+      unit.rearmIn -= 1;
+      if (unit.rearmIn <= 0) {
+        delete unit.rearmIn;
+        rearm(state, unit, 'wanders over and picks its axe back up');
+      }
+    }
   }
 }
 
