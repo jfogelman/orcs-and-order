@@ -850,7 +850,7 @@ class App {
     el<HTMLButtonElement>('btn-new').addEventListener('click', () => this.openNewGame());
     el<HTMLButtonElement>('btn-save').addEventListener('click', () => this.openSaves());
     el<HTMLButtonElement>('btn-report').addEventListener('click', () =>
-      openHordeReport(this.state, this.viewerId, (c) => this.openCity(c)),
+      openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud()),
     );
     el<HTMLButtonElement>('btn-pedia').addEventListener('click', () =>
       openPedia(this.state.players[this.viewerId], this.selected?.type),
@@ -1133,7 +1133,7 @@ class App {
         openPedia(this.state.players[this.viewerId], this.selected?.type);
         break;
       case 'i':
-        openHordeReport(this.state, this.viewerId, (c) => this.openCity(c));
+        openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud());
         break;
       case 'u':
         this.orderResupply();

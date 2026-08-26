@@ -1,6 +1,6 @@
 import { TECHS_BY_ID } from '../model/techs';
 import { unitType } from '../model/units';
-import type { City, GameState, Unit } from '../model/types';
+import type { City, GameState, TradeRates, Unit } from '../model/types';
 import {
   buildingUpkeep,
   capitalOf,
@@ -15,6 +15,7 @@ import {
   supplyQuality,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
+import { TRADE_STEPS, tradeRates } from '../sim/research';
 import { techCost } from '../sim/research';
 import { escapeHtml, openModal } from './dom';
 
@@ -128,16 +129,73 @@ function armyRows(state: GameState, units: Unit[]): string {
     .join('');
 }
 
+/** The three things trade divides into, in the order they are shown. */
+const RATE_ROWS: Array<{ key: keyof TradeRates; label: string; blurb: string }> = [
+  { key: 'coin', label: 'Coin', blurb: 'Treasury, and buying things outright.' },
+  { key: 'beakers', label: 'Study', blurb: 'Advances.' },
+  { key: 'calm', label: 'Calm', blurb: 'Keeps cities out of disorder, including ones already in it.' },
+];
+
+function rateRow(
+  row: { key: keyof TradeRates; label: string; blurb: string },
+  rates: TradeRates,
+): string {
+  const value = rates[row.key];
+  // A bar rather than a number alone: the split is a shape, and three numbers
+  // out of twelve is a sum somebody has to do in their head.
+  const pips = Array.from({ length: TRADE_STEPS }, (_, i) =>
+    `<span class="pip${i < value ? ' on' : ''}"></span>`,
+  ).join('');
+  return `
+    <div class="rate-row">
+      <span class="rate-name">${escapeHtml(row.label)}</span>
+      <button class="small" data-rate="${row.key}" data-delta="-1"
+              title="Less on ${escapeHtml(row.label.toLowerCase())}">&minus;</button>
+      <span class="rate-pips">${pips}</span>
+      <button class="small" data-rate="${row.key}" data-delta="1"
+              title="More on ${escapeHtml(row.label.toLowerCase())}">+</button>
+      <span class="rate-value">${value}/${TRADE_STEPS}</span>
+      <span class="rate-blurb muted">${escapeHtml(row.blurb)}</span>
+    </div>`;
+}
+
+/**
+ * Move one part from one heading to another.
+ *
+ * The total never changes, which is the whole point of the setting: an empire
+ * that could raise everything would simply raise everything. Taking from the
+ * largest and giving to the smallest keeps a single click predictable without
+ * making the player choose a counterpart every time.
+ */
+function shiftRate(rates: TradeRates, key: keyof TradeRates, delta: number): TradeRates {
+  const others = RATE_ROWS.map((r) => r.key).filter((k) => k !== key);
+  const next = { ...rates };
+  if (delta > 0) {
+    const from = others.filter((k) => next[k] > 0).sort((a, b) => next[b] - next[a])[0];
+    if (from === undefined) return rates;
+    next[key] += 1;
+    next[from] -= 1;
+  } else {
+    if (next[key] <= 0) return rates;
+    const to = others.sort((a, b) => next[a] - next[b])[0];
+    next[key] -= 1;
+    next[to] += 1;
+  }
+  return next;
+}
+
 export function openHordeReport(
   state: GameState,
   playerId: number,
   onOpenCity?: (city: City) => void,
+  onChanged?: () => void,
 ): void {
   const player = state.players[playerId];
   const cities = playerCities(state, playerId);
   const units = playerUnits(state, playerId);
   const capital = capitalOf(state, playerId);
   const { gold, beakers, upkeep } = economy(state, playerId);
+  const rates = tradeRates(player);
   const eta = researchEta(state, playerId, beakers);
   const researching = player.researching ? TECHS_BY_ID[player.researching] : null;
 
@@ -165,6 +223,13 @@ export function openHordeReport(
         <div><span class="label">Beakers</span><span class="value">${beakers}/turn</span></div>
       </div>
 
+      <div class="panel-title">Where the money goes</div>
+      <div class="panel-body">
+        <div class="muted rates-note">Twelve parts, split however you like. To give one
+          more, another gets less.</div>
+        <div class="rates">${RATE_ROWS.map((row) => rateRow(row, rates)).join('')}</div>
+      </div>
+
       <div class="panel-title">Cities</div>
       <div class="report-scroll">
         <table class="report-table">
@@ -187,6 +252,18 @@ export function openHordeReport(
         </table>
       </div>`,
     onMount: (root, close) => {
+      // Reopened rather than patched in place: the gold and beakers per turn
+      // shown above are computed from these rates, so redrawing only the pips
+      // would leave the summary quietly disagreeing with the setting.
+      root.querySelectorAll<HTMLButtonElement>('[data-rate]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.rate as keyof TradeRates;
+          player.rates = shiftRate(tradeRates(player), key, Number(btn.dataset.delta));
+          onChanged?.();
+          close();
+          openHordeReport(state, playerId, onOpenCity, onChanged);
+        });
+      });
       // A report you can act on beats one you have to read and then go
       // hunting through the map for.
       root.querySelectorAll<HTMLTableRowElement>('[data-city]').forEach((row) => {
