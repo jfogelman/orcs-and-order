@@ -11,6 +11,7 @@ import {
 } from '../src/sim/city';
 import { EVEN_RATES, TRADE_STEPS, splitTrade, tradeRates } from '../src/sim/research';
 import { createGame } from '../src/sim/gamestate';
+import { runAiTurn } from '../src/ai/ai';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
 function withCity(): { state: GameState; city: NonNullable<ReturnType<typeof foundCity>> } {
@@ -124,5 +125,57 @@ describe('rushing a build in a city that is rioting', () => {
     endPlayerTurn(state);
 
     expect(state.units.length, 'the thing paid for never arrived').toBeGreaterThan(before);
+  });
+});
+
+/**
+ * The even default is the right place for a *human* to start, because they can
+ * move off it. The AI never did, and a default nobody adjusts is not a default,
+ * it is a rule -- measured, an even split cost the AI a fifth of its research
+ * and took the Horde from 10-19 to 4-29. See DESIGN_QUEUE section 47.
+ */
+describe('the AI sets its own trade split', () => {
+  function aiEmpire() {
+    const state = createGame({ seed: 20260826, width: 40, height: 30 });
+    for (const p of state.players) p.controller = 'ai';
+    const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
+    const city = foundCity(state, settler)!;
+    return { state, city };
+  }
+
+  it('moves off the even default rather than sitting on it', () => {
+    const { state } = aiEmpire();
+    runAiTurn(state, 0);
+    expect(state.players[0].rates).not.toEqual(EVEN_RATES);
+  });
+
+  it('always divides the whole twelve, whatever it decides', () => {
+    const { state, city } = aiEmpire();
+    for (const size of [1, 5, 9, 20]) {
+      city.size = size;
+      city.disorder = size > 8;
+      runAiTurn(state, 0);
+      const r = state.players[0].rates!;
+      expect(r.coin + r.beakers + r.calm, `size ${size}`).toBe(TRADE_STEPS);
+      expect(Math.min(r.coin, r.beakers, r.calm)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('buys calm when a city riots, and study when none does', () => {
+    const { state, city } = aiEmpire();
+
+    city.disorder = false;
+    city.size = 1;
+    runAiTurn(state, 0);
+    const settled = state.players[0].rates!;
+
+    city.disorder = true;
+    runAiTurn(state, 0);
+    const troubled = state.players[0].rates!;
+
+    // Exactly as much calm as the cities are asking for, and the rest into
+    // study, which is what wins games that are not already won.
+    expect(troubled.calm).toBeGreaterThan(settled.calm);
+    expect(settled.beakers).toBeGreaterThan(settled.coin);
   });
 });

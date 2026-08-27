@@ -1084,3 +1084,61 @@ than the other, at least one plank that clearly came off something else.
 It shares the `engine` silhouette with the ballista, so the placeholder already
 reads as artillery until the art lands. If a group version is ever wanted there
 is none to draw -- it is `counts: [1]`, one machine at a time.
+
+---
+
+## House style for unit attack animations
+
+The prompt below is the one these have actually been generated with, and it
+works. Keep it, and read the notes under it before changing a word.
+
+> pixel art animation, a horizontal strip of exactly 4 frames left to right
+> showing the attack starting, in progress and completing, each frame square and
+> the same size, plain solid magenta background (#FF00FF) behind every frame,
+> mid-1990s fantasy strategy game style, bright saturated colours, thick
+> readable shapes, no characters, no text, no frame borders or dividing lines,
+> no background scenery.
+>
+> Leverage the attached `<unit name>.jpg` image as animating their attack of
+> their weapon, with still showing their full figure size — only one weapon held
+> the whole time.
+
+### The parts the pipeline actually depends on
+
+- **Horizontal, four frames, left to right.** `slice_strip` divides the keyed
+  strip's own width. A vertical strip is not a strip as far as the tool is
+  concerned -- which is exactly the problem section 46 of DESIGN_QUEUE runs
+  into, because the advisor talking cycles came back 512x2064 rather than
+  2064x512.
+- **Every frame square and identical in size.** Frames are never trimmed or
+  re-centred on their own content, deliberately: doing so would re-centre a
+  swing on itself each frame and the weapon would appear to stand still while
+  changing shape.
+- **No frame borders or dividing lines.** A drawn divider becomes a column of
+  real pixels down the middle of a frame once the strip is cut.
+- **Full figure at the same size in every frame.** The unit is composited over
+  the map at a fixed footprint; a figure that grows across the strip reads as
+  the creature lurching toward the camera.
+- **One weapon, held throughout.** A second weapon appearing mid-swing is the
+  single most common failure, and it is not fixable in post.
+
+### The green alternative
+
+**Use `#00FF00` instead of magenta for anything violet or purple.** Magenta
+keying eats a mage's robes, a death knight's trim and the fel glow on anything
+undead. The pipeline's background removal floods inward from the border, so it
+only needs the *background* to be a colour the subject does not contain — green
+serves that just as well for those, and badly for anything green, which is why
+neither is the default for everything.
+
+`remove_background` reports `BACKGROUND NOT REMOVED, needs a re-roll` when it
+cannot key an image cleanly. That message is the signal to switch key colour
+rather than to redraw the art.
+
+### On "no characters"
+
+Kept verbatim because the prompt is working, but it reads oddly for art whose
+subject is a character. In practice generators take it as *no lettering* and *no
+extra figures*, both of which are wanted. If a generator ever returns an empty
+frame, that phrase is the first thing to try replacing with "no text, no other
+figures".
