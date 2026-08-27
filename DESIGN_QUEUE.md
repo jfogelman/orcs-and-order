@@ -3371,3 +3371,71 @@ The stalled games sit at 56% of cities against a 60% threshold -- 10/8, 8/9,
 7/7, 6/6. Genuinely deadlocked, evenly matched empires. Lowering the threshold
 would convert them, but 55% is a thin claim to the word dominance, and the
 points ending exists for exactly this case.
+
+## 50. Nobody is ever conquered
+
+Two games in fifty-four end with a side wiped out. Every other decisive game is
+a dominance win, and a quarter go to points. **Conquest is effectively not a
+route to victory**, and nothing in this file has examined why.
+
+### It is not that the fighting is gentle
+
+| | |
+|---|---|
+| captures | 12.6 a game |
+| peak cities per side | 9.72 |
+| lowest after turn 100 | 6.29 |
+| **average fall from peak** | **37%** |
+| sides driven to one city or fewer | **3 of 108** |
+| sides wiped out | **1 of 108** |
+
+Cities change hands constantly and empires lose a *third* of their territory.
+Then it stops. The troughs cluster hard at five, six and seven cities: almost
+nobody reaches the last stretch, and the three that do are exceptions rather
+than the tail of a distribution.
+
+So the question is not "why is there no fighting" -- there is plenty of it. It
+is **why the last third of an empire is unreachable**.
+
+### Candidates, none of them checked
+
+- **Supply, most likely.** Section 4h made units fight weakly far from their own
+  cities, and it was the first lever in this file that worked. An offensive
+  pushing into enemy territory therefore gets weaker exactly as it goes deeper,
+  which is a self-limiting war by construction. If this is the cause, conquest
+  being unreachable is a *designed* consequence rather than a fault.
+- **Re-expansion.** 2.8 cities founded after turn 100 a game. Real, but far too
+  small on its own to explain a floor at six.
+- **The defender concentrates.** A shrinking empire has shorter lines and more
+  units per city, so it gets harder to beat as it loses -- the mirror image of
+  the attacker's problem above.
+
+**Check supply first, and check it by measuring.** Does attacker strength at the
+moment of capture fall with distance from the attacker's nearest city, across
+those 680 captures? That is a question the existing data can answer, and the
+answer decides whether there is anything here to fix at all.
+
+### And it may not be a fault
+
+Section 23 added the dominance rule *because* conquest almost never happened.
+Two in fifty-four is that fix working as designed, and a game that ends when one
+side is clearly winning is better than one that grinds on to a wipe-out.
+
+The open question is whether this game wants conquest **reachable but rare** or
+**absent**. Right now it is absent, and that was never decided -- it was
+inherited from supply doing its job. Worth deciding on purpose rather than by
+accident.
+
+### A note on measuring it
+
+The first two attempts both answered the wrong question. A plain minimum city
+count reads nought for everybody on turn one, and one for everybody the moment
+they found their first city. Both produced a figure identical across all
+fifty-four games -- and **a metric that returns the same constant for every seed
+is a broken measurement, not a finding.**
+
+The first was caught only because it contradicted the ending counts already in
+section 49; the second should have been caught faster for the same reason.
+Keeping a known-good number beside a new one is the cheapest error check
+available here, and it has now caught three separate mistakes -- this, the
+mislabelled control arm in section 41, and the default that moved in section 47.
