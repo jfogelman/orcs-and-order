@@ -3305,3 +3305,69 @@ Worth noting how it was found. Sections 30 to 47 are almost entirely things
 measurement caught. This one, the build prompt and the camera were all found by
 somebody playing the game for a few minutes, and none of the 350 tests would
 ever have caught any of them.
+
+## 49. The Kingdom lean, measured: there is not one
+
+Section 42 recorded a persistent Kingdom lead and diagnosed it as roster shape --
+the Kingdom deep in the useful middle, the Horde two excellent heavies over a
+weak floor, with weighted choice rewarding depth.
+
+**That diagnosis has expired.** Measured now:
+
+| | top | units at or above 1.80 | floor |
+|---|---|---|---|
+| Horde | **2.27** | **6 of 9** | 1.00 |
+| Kingdom | 2.06 | 5 of 7 | 0.53 |
+
+The Goblin Catapult landed at 2.01 and the three perks filled in behind it. The
+Horde now has the higher top *and* more units in the good band, and the
+Kingdom's floor is the worse of the two.
+
+### And the lead itself is noise
+
+Fifty-four games, three seed sets, each game run to the game's own ending:
+
+| | orc-human | decided before the limit |
+|---|---|---|
+| base 6000 | 10-8 | 15/18 |
+| base 31337 | 9-9 | 13/18 |
+| base 77000 | 5-13 | 13/18 |
+| **total** | **24-30 (44%)** | **41/54 (76%)** |
+
+Forty-four per cent across fifty-four games, with per-set results of 10-8, 9-9
+and 5-13 -- three different stories from one build. That is the +/-5 swing
+section 36 measured, not a lean. **Nothing here needs fixing, and repricing the
+Horde would have shifted a balance that is currently fine.**
+
+### Two corrections to this file
+
+**Every diagnostic written in sections 30 to 48 capped games at turn 260.** The
+game's limit is 300 and it has a points ending at that boundary, so a dominance
+win at turn 280 was being counted as a stall. Section 23's figure means *decided
+before the limit*, which is a different question from the one those diagnostics
+were answering.
+
+In the event it barely mattered -- 74% capped against 76% uncapped -- so the
+error was real and the conclusions drawn from it were roughly right anyway.
+Worth recording precisely because that is the least useful kind of mistake:
+one that would have gone on producing plausible numbers indefinitely.
+
+**Section 23 achieved 31/36, which is 86%, not 94%.** Quoted wrongly earlier in
+this session. The real comparison is 86% then against 76% now -- a modest
+decline rather than the collapse it was described as.
+
+### What the endings actually look like
+
+conquest **2**, dominance **39**, points **13**, out of fifty-four.
+
+**Conquest is all but extinct**: two games in fifty-four end by one side being
+wiped out. Almost every decisive game is a dominance win, and a quarter go to
+points. Whether that is a problem is a design question rather than a balance one
+-- the dominance rule was added in section 23 precisely because conquest almost
+never happened, so this is that fix working. But a 4X where nobody is ever
+actually conquered is worth noticing, and nothing in this file has looked at it.
+
+The stalled games sit at 56% of cities against a 60% threshold -- 10/8, 8/9,
+7/7, 6/6. Genuinely deadlocked, evenly matched empires. Lowering the threshold
+would convert them, but 55% is a thin claim to the word dominance, and the
+points ending exists for exactly this case.
