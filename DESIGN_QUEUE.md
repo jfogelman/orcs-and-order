@@ -3493,3 +3493,56 @@ If it is true, the fix is a design decision rather than a number: should taking
 a city give you a supply point immediately, or should conquest stay expensive
 and slow? The first makes conquest reachable; the second is the game as it
 stands, and section 23 already built dominance to work around it.
+
+## 52. What supplyChain actually says, and the guess it disproves
+
+Section 51 guessed that section 4j's ruin was stopping captured cities joining
+the supply chain. **Wrong. `supplyChain` never looks at `isRuined` at all.**
+Ruin is innocent, and acting on that guess would have changed a mechanic that
+had nothing to do with it.
+
+What the function actually does is stronger than anything assumed here:
+
+```
+chain = the capital, plus cities holding an outpost or depot
+supply = full within 4 tiles of a chain city, fading to zero at 8
+```
+
+**Ordinary cities supply nothing.** Not the ones you founded, not the ones you
+captured. Taking a city genuinely does not extend your reach, which is precisely
+why conquest cannot compound -- and it matches section 51's measured curve to
+the tile: full near home, 0.06 at seven to nine, zero beyond ten. The fade
+reaching nothing at eight is this formula, not a coincidence.
+
+### How severe, measured
+
+| | |
+|---|---|
+| cities owned per side | **8.18** |
+| of those, in the supply chain | **2.46** |
+| sides whose chain is the capital and nothing else | **40 of 106** |
+
+**Seventy per cent of an empire's cities contribute nothing to its supply**, and
+thirty-eight per cent of sides fight the entire game out of a single eight-tile
+bubble around one city. An empire's size is very nearly irrelevant to its reach.
+
+That is the whole explanation for section 50. Not that deep attacks are weak --
+they are, but only 73% to 45%. It is that an army cannot *get* anywhere: eighty
+five per cent of attacks on cities happen within four tiles of home because four
+tiles is where supply is, and supply does not move when the border does.
+
+### The decision, which is a design one rather than a number
+
+- **All owned cities supply.** What most of the genre does. Conquest compounds
+  naturally: take a city, your reach extends, the front rolls forward. Biggest
+  change, and it would make section 4h's rule much weaker -- that rule was the
+  first lever in this file that worked, so weakening it deserves care.
+- **Captured cities join once the ruin clears.** Keeps conquest expensive and
+  slow but makes it possible, and gives the fifteen-turn sack an actual
+  strategic meaning rather than only an economic one.
+- **Leave it.** Conquest stays absent, which is the game as it stands and what
+  section 23 built dominance to work around.
+
+Worth noting the middle option is the only one that uses a mechanic already in
+the game to solve a problem in another, and the only one whose cost is paid by
+the attacker rather than by section 4h.
