@@ -787,6 +787,42 @@ function takeAim(state: GameState, unit: Unit): boolean {
   return outcome.kind !== 'blocked';
 }
 
+/**
+ * A tile beside the target that can actually be walked to.
+ *
+ * The pathfinder refuses to enter enemy ground -- "entered by attacking or
+ * capturing, never by pathing" -- and `nearestEnemyTarget` returns exactly
+ * that: an enemy city or an enemy unit. So asking for a route *to* the target
+ * returned null every single time, and the march on the enemy has never once
+ * moved a unit. Instrumented over six games: the branch was reached 31,826
+ * times, found a target 31,576 times, and moved somebody on none of them.
+ *
+ * That is why wars stayed on the border. Units only ever travelled by the
+ * explore branch or the jam-breaking shuffle below, so they drifted rather than
+ * marched, and fought whatever they happened to bump into. See DESIGN_QUEUE 55.
+ *
+ * Neighbours are tried nearest-first and the first reachable one wins, so this
+ * is usually a single path search rather than eight.
+ */
+function approachTile(
+  state: GameState,
+  unit: Unit,
+  tx: number,
+  ty: number,
+): { x: number; y: number } | null {
+  const spots = DIRS8.map(([dx, dy]) => ({ x: tx + dx, y: ty + dy }))
+    .filter((p) => p.x >= 0 && p.y >= 0 && p.x < state.width && p.y < state.height)
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y),
+    );
+  for (const spot of spots) {
+    if (unit.x === spot.x && unit.y === spot.y) return spot;
+    if (routeTo(state, unit, spot.x, spot.y)) return spot;
+  }
+  return null;
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
@@ -877,9 +913,16 @@ function actSoldier(
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);
-  if (target && routeTo(state, unit, target.x, target.y)) {
-    moveToward(state, unit, target.x, target.y);
-    return;
+  if (target) {
+    // The doorstep, not the door. Routing to the target itself asks the
+    // pathfinder for a tile it treats as impassable, which is why this never
+    // worked; arriving next door is enough, because the attack branch at the
+    // top of this function takes it from there next turn.
+    const spot = approachTile(state, unit, target.x, target.y);
+    if (spot && (spot.x !== unit.x || spot.y !== unit.y)) {
+      moveToward(state, unit, spot.x, spot.y);
+      return;
+    }
   }
 
   // Nothing known: go and look.
