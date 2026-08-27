@@ -3546,3 +3546,53 @@ tiles is where supply is, and supply does not move when the border does.
 Worth noting the middle option is the only one that uses a mechanic already in
 the game to solve a problem in another, and the only one whose cost is paid by
 the attacker rather than by section 4h.
+
+## 53. Forward bases: the rule fires, and it does not deliver
+
+Captured cities now join the supply chain once their sack is over. Measured
+against a control on the same seeds and the same harness:
+
+| | control | captured cities supply |
+|---|---|---|
+| supply chain | 2.46 of 8.18 | **3.15 of 8.16** |
+| **captures** | **12.6/game** | **12.6/game** |
+| conquest endings | 2 | 4 |
+| decided before the limit | 41/54 | 39/54 |
+| avg turns | 188 | 197 |
+| wins, orc-human | 24-30 (44%) | 25-29 (46%) |
+
+**The rule works and the theory was wrong.** The chain grew by 28%, so captured
+cities are genuinely becoming bases. And captures are *identical to one decimal
+place*. The front is not advancing. Conquest two to four out of fifty-four is
+not distinguishable at those counts, and it cost nine turns of game length and
+two games of decisiveness.
+
+### Supply was never the binding constraint
+
+Section 51 found two effects and said so: deep attacks are weaker (73% down to
+45%) and deep attacks barely happen (6,294 within two tiles against 542 beyond
+ten). It then chased the first, because that was the hypothesis on the table.
+
+The second was always the larger one, and it has a different cause entirely.
+`nearestEnemyTarget` picks the **closest** enemy city or unit by distance, so an
+army always engages whatever is on its own border and never bypasses anything to
+strike deep. Take the border city and the next-nearest target is the next border
+city -- meanwhile the defender retakes the first. The front oscillates rather
+than advancing, and no amount of supply changes that, because supply was not
+what was stopping it.
+
+Eighty-five per cent of attacks on cities happen within four tiles of home
+because **that is where the AI chooses to attack**, not because that is as far
+as it can reach.
+
+### What to do with the change
+
+It is conceptually right -- taking a city ought to extend your reach -- it is
+tested, and its costs are small. It also does nothing measurable for the problem
+it was built for.
+
+Section 41 dropped a shortlist that looked right and did not hold up. The same
+standard applies here: **a change with measured costs and no measured benefit
+should not ship on the grounds that it makes sense.** Recorded either way, since
+the finding underneath it -- that AI target selection, not supply, is what keeps
+wars on the border -- is worth more than the rule was.
