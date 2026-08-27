@@ -3129,14 +3129,11 @@ a person immediately. Nineteen lines went through it.
 
 ### What this does not do
 
-Nothing here touches balance, and it is not meant to. The advisors are read-only
-and the AI does not consult them. The trade split is a lever a *human* can pull;
-the AI still leaves it on even, so every measurement in sections 30 to 44 stands
-unchanged.
+The advisors are read-only and the AI does not consult them, so they touch
+nothing.
 
-Worth noting for later: **the AI never adjusts its rates**, which means a human
-who spends on calm has a tool the AI does not use. That is a real advantage and
-it is unmeasured.
+**The trade split did, and this section originally claimed otherwise. See
+section 47 for the correction and the measurement.**
 
 ## 46. Advisors that move while they talk
 
@@ -3190,3 +3187,60 @@ this worth building rather than a hover effect:
 That means a GUI change, so it is deliberately **not** an immediate piece of
 work. The stills are wired and the cycles are drawn; this is the design they are
 waiting on rather than a blocker for anything already shipped.
+
+## 47. A default nobody adjusts is not a default, it is a rule
+
+Section 45 said of the three-way trade split: *"the AI still leaves it on even,
+so every measurement in sections 30 to 44 stands unchanged."*
+
+That was wrong, and it is the most expensive thing written in this file.
+
+The reasoning was "the AI does not touch the new control, therefore nothing
+changed". But **the default moved**. Before the split there was no calm heading
+at all and `taxRate: 4` meant 40% coin and 60% study. After it, every player --
+the AI included -- sat permanently on 33/33/33, and `contentLimit` began
+granting luxury contentment to every city in the game.
+
+| | `taxRate 4`, no calm | even split, AI stuck on it |
+|---|---|---|
+| wins, orc-human | 10-19 | **4-29** |
+| advances held, both sides | 52.5 / 53.1 | **44.4 / 40.5** |
+| turns | 163 / 172 | 138 / 144 |
+
+**The Horde went from 34% of games to 12%**, the largest single balance swing
+recorded here, in a commit whose own message said it touched nothing.
+
+### The fix, and what it restores
+
+The AI now sets its own split each turn. The policy is deliberately dull: two
+parts calm per rioting city and one per restless one, capped, with everything
+else going to study at roughly the two-to-one study/coin ratio the game had
+before there was a third heading.
+
+| | AI stuck on even | **AI manages rates** | `taxRate 4` |
+|---|---|---|---|
+| wins, orc-human | 4-29 | **8-20** | 10-19 |
+| advances held | 44.4 / 40.5 | **53.1 / 52.9** | 52.5 / 53.1 |
+| rioting city-turns | 6.4% / 9.9% | **8.1% / 9.8%** | 10.1% / 9.4% |
+
+Research is back to baseline and the win split is back inside the +/-5 per-set
+swing section 36 established. Rioting sits *below* where it was before any of
+this, so the calm heading earns its place rather than merely paying for itself.
+
+### The lesson, which is not the one it looks like
+
+The obvious reading is "measure everything". The sharper one is about **what
+counts as a change**.
+
+A new setting whose default differs from the old fixed behaviour is a balance
+change *even when nobody touches the setting* -- and it is the most dangerous
+kind, because the commit adding it is naturally written as though it added a
+choice rather than as though it moved a number. Every previous mistake in this
+file was explaining a result with a mechanism nobody checked occurred. This one
+was the reverse: **a mechanism that occurred, in a commit that said it would
+not**.
+
+The check that would have caught it is small: whenever a default is introduced,
+ask what the behaviour was *before* there was anything to default, and whether
+those two are the same. Here they were not, and nothing in the change made that
+visible.

@@ -5,22 +5,27 @@ import type { UnitTypeDef } from '../model/units';
 import { ammoLeft, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
-import { buildOptions, canFoundCity, contentLimit, foundCity, tileYield,
+import {
+  SUPPLY,
+  buildOptions,
+  canFoundCity,
+  capitalOf,
+  contentLimit,
+  foundCity,
   rushBlocked,
   rushBuy,
   rushCost,
-  capitalOf,
   suppliesArmy,
-  SUPPLY,
   supplyChain,
-  supplyQuality
+  supplyQuality,
+  tileYield,
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
 import { attackTargets, moveToward, reachableTiles, routeTo, tryStep } from '../sim/movement';
-import { researchableTechs, setResearch, techCost } from '../sim/research';
+import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
  * The opposition.
@@ -939,6 +944,39 @@ const PERK_TASTE: Record<string, string[]> = {
   human: ['dug-in', 'quartermaster', 'field-repairs', 'bloodied', 'reputation', 'butcher'],
 };
 
+/**
+ * Set the empire's trade split the way a player would.
+ *
+ * The three-way split arrives with an even default, which is the right place
+ * for a *human* to start from because they can move off it. The AI never moved
+ * off it, and an even split is a poor permanent setting: measured against the
+ * old fixed rate it cost the AI a fifth of its research and took the Horde from
+ * 10-19 to 4-29. A default nobody adjusts is not a default, it is a rule. See
+ * DESIGN_QUEUE section 47.
+ *
+ * The policy is deliberately dull: buy exactly as much calm as the cities are
+ * actually asking for, and put the rest into study, which is what wins games
+ * that are not already won.
+ */
+function manageRates(state: GameState, player: Player): void {
+  const cities = playerCities(state, player.id);
+  if (cities.length === 0) return;
+
+  let wanted = 0;
+  for (const city of cities) {
+    // A riot is worth more than a city merely getting close to one, and a
+    // riot is also the thing no building can reach in time.
+    if (city.disorder) wanted += 2;
+    else if (city.size >= contentLimit(state, city)) wanted += 1;
+  }
+  const calm = Math.min(TRADE_STEPS - 2, wanted);
+  const rest = TRADE_STEPS - calm;
+  // Roughly the split the game shipped with before there was a third heading:
+  // two parts study to one part coin.
+  const coin = Math.max(1, Math.round(rest / 3));
+  player.rates = { coin, beakers: rest - coin, calm };
+}
+
 function takePromotions(state: GameState, player: Player): void {
   const taste = PERK_TASTE[player.faction] ?? PERK_TASTE.orc;
   for (const unit of playerUnits(state, player.id)) {
@@ -970,6 +1008,7 @@ function takePromotions(state: GameState, player: Player): void {
 export function runAiTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
+  manageRates(state, player);
   const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
 
   chooseResearch(state, player, personality);
