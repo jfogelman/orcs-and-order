@@ -33,7 +33,9 @@ export type TechFlag =
   /** Knights may learn to withdraw from a fight they did not win. */
   | 'valour'
   /** A lone troll on a swamp may make another troll. */
-  | 'swampy';
+  | 'swampy'
+  /** Death knights may take the health of their own side. */
+  | 'bargain';
 
 export interface TechDef {
   id: TechId;
@@ -390,7 +392,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['to-be-an-orc', 'axes-crazy'],
     units: ['deathknight'],
     buildings: [],
-    flags: [],
+    flags: ['bargain'],
     flavor: 'A finding delivered with unusual confidence and no supporting evidence.',
   },
   {

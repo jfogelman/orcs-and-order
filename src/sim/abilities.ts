@@ -27,7 +27,7 @@ import { log, recomputeVisibility, spawnUnit, withRng } from './gamestate';
  * yet, which gives the position away just as surely as drawing the unit would.
  */
 
-export type AbilityId = 'ranged' | 'heal' | 'reload' | 'split';
+export type AbilityId = 'ranged' | 'heal' | 'reload' | 'split' | 'drain';
 
 export interface AbilitySpec {
   id: AbilityId;
@@ -46,7 +46,18 @@ export const ABILITIES: Record<AbilityId, AbilitySpec> = {
   heal: { id: 'heal', label: 'Heal', key: 'h', friendly: true, verb: 'patch anyone up' },
   reload: { id: 'reload', label: 'Reload', key: 'l', friendly: true, verb: 'hand over a missile' },
   split: { id: 'split', label: 'Split', key: 'k', friendly: true, verb: 'make a friend' },
+  drain: { id: 'drain', label: 'Drain', key: 'd', friendly: true, verb: 'take what it needs' },
 };
+
+/**
+ * What a Dark Bargain costs the one being bargained with, and returns.
+ *
+ * Half of what they have left, doubled on the way across -- so a healthy donor
+ * is worth far more than a nearly-dead one, and nobody breeds cheap units as
+ * batteries. Below half they do not survive the transaction, which is the
+ * buyer-beware the design asked for.
+ */
+export const DRAIN = { takesFraction: 0.5, returnsMultiple: 2, survivesAbove: 0.5 };
 
 /**
  * What making a Swampy Friend costs.
@@ -83,6 +94,7 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
   if (type.base === 'troll' && type.count === 1 && hasPerk(unit, 'swampy-friend')) {
     out.push('split');
   }
+  if (type.base === 'deathknight' && hasPerk(unit, 'dark-bargain')) out.push('drain');
   return out;
 }
 
@@ -106,6 +118,9 @@ export function abilityReady(unit: Unit, ability: AbilityId): string | null {
     if (unit.hp < unitType(unit.type).hp * SPLIT.needsFraction) {
       return 'Not enough of it left to share.';
     }
+  }
+  if (ability === 'drain' && unit.hp >= unitType(unit.type).hp) {
+    return 'It wants for nothing at present.';
   }
   return null;
 }
@@ -137,6 +152,12 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // next to it, which is the drawback that makes the range worth having.
       if (other.owner === unit.owner) return false;
       return d === type.range;
+    }
+
+    if (ability === 'drain') {
+      // Anybody of ours standing next to it. They are not consulted.
+      if (other.owner !== unit.owner) return false;
+      return d <= 1;
     }
 
     if (ability === 'reload') {
@@ -365,6 +386,47 @@ function makeSwampyFriend(state: GameState, unit: Unit): AbilityOutcome {
   return { ok: true, amount: 1 };
 }
 
+/**
+ * A death knight takes what it needs from its own side.
+ *
+ * Half of whatever the donor has left, and the death knight gains twice that --
+ * so a healthy unit is worth far more than a wounded one, which is what stops
+ * anybody breeding goblins as batteries. A donor already at or below half does
+ * not survive it.
+ *
+ * Teaches nothing. The experience rule already says damage a unit did not
+ * choose earns nobody anything, and a unit killed by its own side is the purest
+ * case of that.
+ */
+function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
+  if (target.id === unit.id) return { ok: false, reason: 'It cannot bargain with itself.' };
+  const donorMax = unitType(target.type).hp;
+  const taken = Math.max(1, Math.round(target.hp * DRAIN.takesFraction));
+  const fatal = target.hp <= donorMax * DRAIN.survivesAbove;
+
+  const room = unitType(unit.type).hp - unit.hp;
+  const healed = Math.min(room, taken * DRAIN.returnsMultiple);
+  unit.hp += healed;
+  unit.moves = 0;
+
+  log(
+    state,
+    fatal
+      ? `${unitType(target.type).name} is taken apart entirely. ${unitType(unit.type).name} recovers ${healed}.`
+      : `${unitType(target.type).name} gives up ${taken}. ${unitType(unit.type).name} recovers ${healed}.`,
+    'bad',
+    unit.owner,
+    undefined,
+    [target.x, target.y],
+    target.id,
+    'death-touch',
+  );
+
+  if (fatal) destroyUnit(state, target, 'is spent on somebody else');
+  else target.hp -= taken;
+  return { ok: true, amount: healed };
+}
+
 export function useAbility(
   state: GameState,
   unit: Unit,
@@ -379,5 +441,6 @@ export function useAbility(
   if (ability === 'ranged') return fireAtRange(state, unit, target);
   if (ability === 'reload') return handOverMissile(state, unit, target);
   if (ability === 'split') return makeSwampyFriend(state, unit);
+  if (ability === 'drain') return darkBargain(state, unit, target);
   return healFriend(state, unit, target);
 }

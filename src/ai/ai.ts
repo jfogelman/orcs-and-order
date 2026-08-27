@@ -1087,11 +1087,15 @@ function takePromotions(state: GameState, player: Player): void {
       //
       // `only` rather than a list of ids, so a perk added for some future
       // creature is picked up here without anybody remembering to come back.
-      const special = options.filter((o) => o.only);
+      // Skipping anything marked `manual`: the AI has no route to using it, and
+      // taking a perk it will never use spends a promotion on nothing.
+      const special = options.filter((o) => o.only && !o.manual);
+      const usable = options.filter((o) => !o.manual);
       const pick =
         special.length > 0
           ? withRng(state, (rng) => special[Math.floor(rng.float() * special.length)])
-          : taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
+          : taste.map((id) => usable.find((o) => o.id === id)).find(Boolean) ?? usable[0];
+      if (!pick) break;
       unit.perks = [...(unit.perks ?? []), pick.id];
     }
   }

@@ -25,6 +25,16 @@ export interface PerkDef {
    */
   only?: string[];
   /**
+   * Needs a person to decide when to use it, so the AI should not take it.
+   *
+   * Not "the AI cannot use the ability" -- it is that the judgement is the
+   * whole mechanic. Section 13 asked for this to be stated rather than left to
+   * happen: an AI that took the perk and never used it would be spending a
+   * promotion on nothing, and the balance runs would quietly get worse without
+   * anybody knowing why.
+   */
+  manual?: boolean;
+  /**
    * Advance that has to be in hand before this appears on the menu.
    *
    * This is what DESIGN_QUEUE section 11 was actually asking for -- a unit's
@@ -110,6 +120,14 @@ export const PERKS: PerkDef[] = [
     blurb: 'Alone, and standing in a swamp, it can make another of itself. It costs nearly everything.',
     only: ['troll'],
     flag: 'swampy',
+  },
+  {
+    id: 'dark-bargain',
+    name: { orc: 'Dark Bargain', human: 'Dark Bargain' },
+    blurb: 'Takes the strength of somebody standing next to it. They are rarely asked.',
+    only: ['deathknight'],
+    flag: 'bargain',
+    manual: true,
   },
   {
     id: 'reputation',
