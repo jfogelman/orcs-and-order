@@ -2,7 +2,7 @@ import { flagsOf } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { UnitTypeDef } from '../model/units';
-import { ammoLeft, unitType } from '../model/units';
+import { ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
@@ -229,6 +229,34 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   return atk / Math.max(0.0001, atk + def);
 }
 
+/**
+ * How much a well-held city adds to how far away it feels.
+ *
+ * At 0.6 a city nobody is standing in is worth walking up to sixty per cent
+ * further for. Deliberately a preference rather than a rule: a strong city that
+ * is right there is still a better idea than a weak one across the map.
+ */
+const HARD_TARGET = 0.6;
+
+/** Defence at which a city counts as thoroughly held. */
+const GUARD_REFERENCE = 12;
+
+/**
+ * Where to march.
+ *
+ * Used to be the nearest enemy thing, full stop, and that turned out to be the
+ * reason wars never went anywhere. An army always engaged whatever sat on its
+ * own border; take that city and the next-nearest target is the next border
+ * city, while the defender retakes the first. The front oscillated instead of
+ * advancing, and eighty-five per cent of attacks on cities happened within four
+ * tiles of home -- not because supply stopped there, which was the theory, but
+ * because that is where the AI was choosing to go. See DESIGN_QUEUE 53.
+ *
+ * So weakness counts as well as distance. What it does *not* do is read a
+ * garrison it cannot see: a city whose tile is not currently visible is scored
+ * at the midpoint, so the AI is neither drawn to nor warned off a defence it
+ * has no business knowing about.
+ */
 function nearestEnemyTarget(
   state: GameState,
   playerId: number,
@@ -238,19 +266,29 @@ function nearestEnemyTarget(
   let best: { x: number; y: number } | null = null;
   let bestDist = Infinity;
 
-  const consider = (x: number, y: number, weight: number) => {
+  const consider = (x: number, y: number, weight: number, hardness: number) => {
     if (!player.explored[idx(x, y, state.width)]) return;
-    const dist = distance(from.x, from.y, x, y) * weight;
+    const dist = distance(from.x, from.y, x, y) * weight * (1 + hardness * HARD_TARGET);
     if (dist < bestDist) {
       bestDist = dist;
       best = { x, y };
     }
   };
 
-  for (const c of state.cities) if (c.owner !== playerId) consider(c.x, c.y, 1);
+  for (const c of state.cities) {
+    if (c.owner === playerId) continue;
+    const i = idx(c.x, c.y, state.width);
+    let hardness = 0.5;
+    if (player.visible[i]) {
+      const guard = state.units.find((u) => u.x === c.x && u.y === c.y);
+      const held = guard ? unitType(guard.type).defense * headcount(guard) : 0;
+      hardness = Math.min(1, held / GUARD_REFERENCE);
+    }
+    consider(c.x, c.y, 1, hardness);
+  }
   for (const u of state.units) {
     if (u.owner !== playerId && player.visible[idx(u.x, u.y, state.width)]) {
-      consider(u.x, u.y, 1.6);
+      consider(u.x, u.y, 1.6, 0);
     }
   }
   return best;
