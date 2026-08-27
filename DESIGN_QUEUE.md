@@ -3439,3 +3439,57 @@ section 49; the second should have been caught faster for the same reason.
 Keeping a known-good number beside a new one is the cheapest error check
 available here, and it has now caught three separate mistakes -- this, the
 mislabelled control arm in section 41, and the default that moved in section 47.
+
+## 51. Supply is the reason, measured
+
+Section 50 named the test: does attacker strength at the moment of capture fall
+with distance from home? Instrumented across 12,113 attacks in fifty-four games:
+
+| distance from own nearest city | fights | won | supply | attacks on cities | won |
+|---|---|---|---|---|---|
+| 0-2 | 6,294 | **73%** | 0.56 | 403 | 63% |
+| 3-4 | 2,814 | 72% | 0.56 | 273 | 57% |
+| 5-6 | 1,472 | 67% | 0.34 | 56 | 45% |
+| 7-9 | 991 | 60% | **0.06** | 33 | 39% |
+| 10+ | 542 | **45%** | **0.00** | 30 | 47% |
+
+**Confirmed.** Supply quality collapses from 0.56 to nothing across the bands
+and the win rate falls with it, 73% to 45%. Section 4h's rule is doing exactly
+what it was built to do.
+
+### But the sharper number is the one nobody asked for
+
+Look at the fight counts rather than the percentages. **6,294 attacks happen
+within two tiles of home and 542 happen beyond ten.** For attacks on *cities*
+the split is starker still: 676 of 795 -- **eighty-five per cent** -- happen
+within four tiles of the attacker's own nearest city.
+
+So there are two effects and only one of them was predicted:
+
+1. **Deep attacks are weaker.** The predicted one, and real.
+2. **Deep attacks barely happen.** Far larger, and unaccounted for.
+
+An army that will not walk more than four tiles from its own territory cannot
+conquer anybody, whatever its win rate would have been when it got there.
+
+### Which raises the question this should have started with
+
+Capturing a city *should* extend the supply chain -- the captured city becomes
+yours, your nearest-city distance drops, and the front advances. That is the
+mechanism by which a war of conquest is supposed to roll forward.
+
+It plainly is not happening. **The likely culprit is section 4j's ruin:** a
+captured city is sacked for fifteen turns, and if a ruined city does not join
+the supply chain then conquest cannot compound. Every city you take leaves your
+army exactly as unsupplied as it was before taking it, for fifteen turns, by
+which time it has been pushed back.
+
+That is a guess with a plausible mechanism and nothing more. **Check whether
+`supplyChain` includes ruined cities** before believing a word of it -- it is a
+single read of one function, and this file has a long history of explaining
+results with mechanisms nobody checked occurred.
+
+If it is true, the fix is a design decision rather than a number: should taking
+a city give you a supply point immediately, or should conquest stay expensive
+and slow? The first makes conquest reachable; the second is the game as it
+stands, and section 23 already built dominance to work around it.
