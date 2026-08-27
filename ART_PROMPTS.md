@@ -1142,3 +1142,70 @@ subject is a character. In practice generators take it as *no lettering* and *no
 extra figures*, both of which are wanted. If a generator ever returns an empty
 frame, that phrase is the first thing to try replacing with "no text, no other
 figures".
+
+---
+
+## Settlements coming apart
+
+Six sheets: `orc_1 destroyed`, `orc_4 destroyed`, `orc_8 destroyed`, and the
+same three for `human`. The tiers are the same 1/4/8 the city sprites use, so a
+hamlet and a capital fall down differently.
+
+> pixel art animation, a horizontal strip of exactly 4 frames left to right
+> showing a fantasy settlement collapsing into dust — frame one intact with the
+> first cracks showing, frame two roofs and walls giving way, frame three mostly
+> rubble with dust rising, frame four a smoking ruin. Each frame square and the
+> same size, plain solid magenta background (#FF00FF) behind every frame,
+> mid-1990s fantasy strategy game style, bright saturated colours, thick
+> readable shapes, no text, no frame borders or dividing lines, no background
+> scenery. Leverage the attached image as the settlement that is coming apart,
+> and keep it the same size and in the same place in all four frames.
+
+**The frame count is read from the shape of the image, not from the prompt.**
+`frames = round(width / height)`, so a four-frame strip has to be **4:1** — 2048
+by 512, say. A strip that comes back 3.4:1 is silently cut into three frames and
+the animation plays wrong rather than failing.
+
+Four *distinct* stages matter, and the original wording of this prompt asked for
+"collapsing, in progress and completing", which is three things for four frames.
+Generators fill the gap by repeating one, and a repeated frame reads as a stutter.
+
+**Same footprint in every frame.** Frames are never trimmed or re-centred, so a
+settlement that shrinks toward the middle of the strip looks like it is falling
+away from the viewer rather than falling down.
+
+## Weakened stances
+
+One sheet per creature, `<creature> weakened.jpg` — `archer weakened.jpg`,
+`ogre weakened.jpg`. The axethrower has a second, `axethrower (no axe)
+weakened.jpg`, because one that is both hurt and out of axes wants its own
+picture.
+
+> pixel art, a horizontal strip of exactly 2 frames left to right showing the
+> same creature in two states: frame one battered and clearly worried but still
+> on its feet, frame two badly beaten and down on one knee, barely still in the
+> fight. Each frame square and the same size, the creature drawn at the same
+> size and in the same place in both, plain solid magenta background (#FF00FF)
+> behind every frame, mid-1990s fantasy strategy game style, bright saturated
+> colours, thick readable shapes, no text, no other figures, no frame borders or
+> dividing lines, no background scenery. Leverage the attached image as the
+> creature, showing its full figure.
+
+**Two frames means 2:1**, for the same reason as above.
+
+**Do not say "no characters" in this one.** It is carried over from the icon
+prompts, where it means "no lettering" — but here the subject *is* a character,
+and a generator that takes it literally returns an empty frame. "No other
+figures" is what is actually wanted.
+
+**The two frames are thresholds, not a sequence.** The game shows frame one when
+a unit drops below half health and frame two below a tenth. They are two states
+it can sit in for many turns, not an animation that plays — so the second should
+read as a condition somebody is *in*, not as the moment of being hit.
+
+## The green background, in practice
+
+Both of the above take `#00FF00` instead of magenta for anything violet or
+purple, and `art_src/unit states/` already has `deathknight weakened (green
+bg).png` doing exactly that. The parenthesis is stripped when the file is
+processed, so the tag is free to leave in the name as a note to yourself.
