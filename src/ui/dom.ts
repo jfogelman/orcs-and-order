@@ -113,3 +113,38 @@ export function bar(current: number, total: number): string {
   const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
   return `<div class="bar"><span style="width:${pct}%"></span></div>`;
 }
+
+/**
+ * Ask before doing something that cannot be undone.
+ *
+ * The game has exactly one button that destroys something of the player's on
+ * purpose, and a misclick that quietly deletes a dragon is not a thing anybody
+ * should have to find out about from the log. Escape and the backdrop both
+ * cancel, so the safe answer is the easy one.
+ */
+export function confirmAction(options: {
+  title: string;
+  body: string;
+  confirm: string;
+  onConfirm: () => void;
+}): void {
+  openModal({
+    title: options.title,
+    width: 'min(420px, 92vw)',
+    body: `
+      <div class="panel-body">
+        <p class="confirm-body">${escapeHtml(options.body)}</p>
+        <div class="confirm-row">
+          <button class="small" data-choice="no">Cancel</button>
+          <button class="small danger" data-choice="yes">${escapeHtml(options.confirm)}</button>
+        </div>
+      </div>`,
+    onMount: (root, close) => {
+      root.querySelector('[data-choice="no"]')?.addEventListener('click', () => close());
+      root.querySelector('[data-choice="yes"]')?.addEventListener('click', () => {
+        close();
+        options.onConfirm();
+      });
+    },
+  });
+}

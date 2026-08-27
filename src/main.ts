@@ -32,10 +32,18 @@ import {
 import { researchableTechs, techCost } from './sim/research';
 import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
-import { resupply, resupplyBlocked } from './sim/combat';
+import { disband, disbandRefund, resupply, resupplyBlocked } from './sim/combat';
 import { openAdvisors } from './ui/advisors';
 import { openHordeReport } from './ui/hordeReport';
-import { afterModalCloses, closeModal, el, escapeHtml, isModalOpen, openModal } from './ui/dom';
+import {
+  afterModalCloses,
+  closeModal,
+  confirmAction,
+  el,
+  escapeHtml,
+  isModalOpen,
+  openModal,
+} from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
@@ -355,6 +363,36 @@ class App {
     this.playLogCues();
     this.refreshHud();
     this.refreshOverlays();
+  }
+
+  /**
+   * Break up the selected unit, for half its shields if it is in a city.
+   *
+   * Asked about first, always. It is the only button in the game that destroys
+   * something of yours on purpose, and a misclick that quietly deletes a dragon
+   * is not a thing anybody should have to find out about from the log.
+   */
+  private orderDisband(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refund = disbandRefund(this.state, unit);
+    const name = unitType(unit.type).name;
+    confirmAction({
+      title: `Disband ${name}?`,
+      body:
+        refund > 0
+          ? `It is broken up where it stands and ${refund} shields go into this city's work. It does not come back.`
+          : `It is dismissed. Nothing comes back for it out here -- disband inside a city of yours to recover half its shields.`,
+      confirm: 'Disband',
+      onConfirm: () => {
+        disband(this.state, unit);
+        this.select(null);
+        this.selectNextIdle();
+        this.refreshHud();
+        this.refreshOverlays();
+        this.playLogCues();
+      },
+    });
   }
 
   private orderFortify(): void {
@@ -1292,6 +1330,11 @@ class App {
               ? '<button class="small" data-act="resupply">Resupply (U)</button>'
               : ''
           }
+          <button class="small danger" data-act="disband" title="${
+            disbandRefund(this.state, unit) > 0
+              ? `Break it up here for ${disbandRefund(this.state, unit)} shields`
+              : 'Dismiss it. Nothing comes back outside a city.'
+          }">Disband</button>
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
@@ -1317,6 +1360,9 @@ class App {
               break;
             case 'resupply':
               this.orderResupply();
+              break;
+            case 'disband':
+              this.orderDisband();
               break;
             case 'fortify':
               this.orderFortify();
