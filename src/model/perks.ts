@@ -86,6 +86,31 @@ export const PERKS: PerkDef[] = [
     only: ['ogre'],
     flag: 'clubs',
   },
+  /*
+   * The last three from DESIGN_QUEUE section 11, each hung off an advance that
+   * was previously a dead end -- which is the whole point of the section.
+   */
+  {
+    id: 'mostly-volatile',
+    name: { orc: 'Mostly Volatile', human: 'Mostly Volatile' },
+    blurb: 'Survives one killing blow. One. It does not go off that time either.',
+    only: ['sapper'],
+    flag: 'volatile',
+  },
+  {
+    id: 'better-part-of-valour',
+    name: { orc: 'Better Part of Valour', human: 'Better Part of Valour' },
+    blurb: 'Falls back a step when it attacks something and fails to finish it.',
+    only: ['knight'],
+    flag: 'valour',
+  },
+  {
+    id: 'swampy-friend',
+    name: { orc: 'Swampy Friend', human: 'Swampy Friend' },
+    blurb: 'Alone, and standing in a swamp, it can make another of itself. It costs nearly everything.',
+    only: ['troll'],
+    flag: 'swampy',
+  },
   {
     id: 'reputation',
     name: { orc: 'Preceded By Rumour', human: 'Reputation' },

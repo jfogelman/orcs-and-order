@@ -154,10 +154,33 @@ export function resistance(unit: Unit, kind: DamageKind): number {
  * the caller usually wants that figure for the log rather than the number it
  * passed in.
  */
+/**
+ * The one killing blow a Mostly Volatile sapper walks away from.
+ *
+ * Section 11 left a question open: does the saved sapper detonate on the blow
+ * it survived, or does the blast wait for the second? It waits, and it does so
+ * *by falling out of the rules already there* rather than by a special case --
+ * a sapper only detonates when it dies, and this one did not die. Surviving
+ * and going off would have been a lot of value out of one perk.
+ *
+ * Intercepted here rather than in the combat loop so it covers every way a
+ * unit can be killed: an exchange, somebody else's blast, or a fire.
+ */
+function survivesOnce(unit: Unit, wouldBeFatal: boolean): boolean {
+  if (!wouldBeFatal) return false;
+  if (!hasPerk(unit, 'mostly-volatile')) return false;
+  if (unit.reprieved) return false;
+  unit.reprieved = true;
+  return true;
+}
+
 export function applyDamage(unit: Unit, amount: number, kind: DamageKind): number {
   if (amount <= 0) return 0;
   const dealt = Math.round(amount * (1 - resistance(unit, kind)));
   unit.hp -= dealt;
+  // Left standing on one hit point, the once. Reported as the full damage
+  // dealt regardless, so nothing downstream has to know it was interrupted.
+  if (survivesOnce(unit, unit.hp <= 0)) unit.hp = 1;
   return dealt;
 }
 
@@ -180,8 +203,22 @@ export function applySpellEffects(state: GameState, attacker: Unit, target: Unit
   if (target.hp <= 0) return;
   if (damageKindOf(attacker) !== 'magic') return;
   const owner = state.players[attacker.owner];
-  if (hasFlag(owner, 'pyromancy')) applyStatus(target, 'burning', SPELL_TURNS.burning);
-  if (hasFlag(owner, 'cryomancy')) applyStatus(target, 'frozen', SPELL_TURNS.frozen);
+  const fire = hasFlag(owner, 'pyromancy');
+  const ice = hasFlag(owner, 'cryomancy');
+  if (!fire && !ice) return;
+
+  // One spell per blow. Casting both left a target burning *and* frozen, which
+  // is not a thing that happens to anybody; and simply letting the second
+  // overwrite the first would have quietly made whichever advance ran first
+  // worthless to anyone holding both, which is a worse bug for being invisible.
+  //
+  // Alternated on the turn rather than rolled for, deliberately: this runs on
+  // every blow in the game, and drawing from the seeded stream here would shift
+  // everything downstream of it to answer a question that does not need
+  // randomness.
+  const casts: 'burning' | 'frozen' =
+    fire && ice ? (state.turn % 2 === 0 ? 'burning' : 'frozen') : fire ? 'burning' : 'frozen';
+  applyStatus(target, casts, SPELL_TURNS[casts]);
 }
 
 /** What a dragon's breath does to whatever is standing behind its target. */
@@ -407,6 +444,12 @@ export interface CombatResult {
   promoted: boolean;
   /** The defender was finished off outright rather than fought. */
   executed: boolean;
+  /**
+   * The attacker broke off rather than dying, and is owed a step backwards.
+   * The caller must move it or finish it: it is standing on one hit point in
+   * front of the thing that nearly killed it.
+   */
+  withdrew?: boolean;
 }
 
 /**
@@ -563,6 +606,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   }
 
   let rounds = 0;
+  let withdrew = false;
   const result = withRng(state, (rng) => {
     while (attacker.hp > 0 && defender.hp > 0) {
       rounds++;
@@ -575,7 +619,19 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
       // A defence of zero would make the fight a certainty; keep it a contest.
       const pAttack = a / Math.max(0.0001, a + d);
       if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
-      else applyDamage(attacker, dmg, damageKindOf(defender));
+      else {
+        applyDamage(attacker, dmg, damageKindOf(defender));
+        // Knowing when to stop. A fight here runs until somebody dies, so
+        // "fails to kill what it attacked" can only ever mean *losing* -- this
+        // is Civ4's withdrawal, and it is the only reading of section 11's
+        // brief that can actually happen. The caller does the stepping back,
+        // and kills it after all if there is nowhere to go.
+        if (attacker.hp <= 0 && hasPerk(attacker, 'better-part-of-valour')) {
+          attacker.hp = 1;
+          withdrew = true;
+          break;
+        }
+      }
       // Runaway guard: an unwinnable matchup should not spin forever.
       if (rounds > 500) break;
     }
@@ -608,6 +664,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     defenseStrength: def.total,
     promoted: result.promoted,
     executed: false,
+    withdrew,
   };
 }
 

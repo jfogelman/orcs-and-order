@@ -261,6 +261,59 @@ describe('magic that leaves something behind', () => {
     expect(hasStatus(orc, 'burning')).toBe(false);
   });
 
+  it('never leaves anything on fire and frozen at once', () => {
+    const state = arena();
+    const mage = spawnUnit(state, 0, 'mage', 6, 6, false);
+    const orc = spawnUnit(state, 1, 'orc', 7, 6, false);
+    state.players[0].techs.push('pyromancy', 'cryomancy');
+
+    // Reported from an actual game: a mage that knew both left its target
+    // burning *and* frozen. It is magic, but that is not a thing that happens
+    // to anybody.
+    for (let turn = 0; turn < 6; turn++) {
+      state.turn = turn;
+      applySpellEffects(state, mage, orc);
+      const both = hasStatus(orc, 'burning') && hasStatus(orc, 'frozen');
+      expect(both, `turn ${turn}: on fire and frozen together`).toBe(false);
+    }
+  });
+
+  it('casts both over time rather than letting one advance win outright', () => {
+    const state = arena();
+    const mage = spawnUnit(state, 0, 'mage', 6, 6, false);
+    const orc = spawnUnit(state, 1, 'orc', 7, 6, false);
+    state.players[0].techs.push('pyromancy', 'cryomancy');
+
+    const seen = new Set<string>();
+    for (let turn = 0; turn < 6; turn++) {
+      state.turn = turn;
+      applySpellEffects(state, mage, orc);
+      if (hasStatus(orc, 'burning')) seen.add('burning');
+      if (hasStatus(orc, 'frozen')) seen.add('frozen');
+    }
+    // Letting the second simply overwrite the first would have made whichever
+    // ran first worthless to anybody holding both -- a worse bug for being
+    // invisible.
+    expect([...seen].sort()).toEqual(['burning', 'frozen']);
+  });
+
+  it('puts a fire out when the cold lands on it', () => {
+    const state = arena();
+    const orc = spawnUnit(state, 0, 'orc', 6, 6, false);
+
+    applyStatus(orc, 'burning', 3);
+    applyStatus(orc, 'frozen', 2);
+
+    expect(hasStatus(orc, 'frozen')).toBe(true);
+    expect(hasStatus(orc, 'burning'), 'still alight under the ice').toBe(false);
+
+    // And the other way about, since the rule is about opposites rather than
+    // about which spell is stronger.
+    applyStatus(orc, 'burning', 3);
+    expect(hasStatus(orc, 'frozen')).toBe(false);
+    expect(hasStatus(orc, 'burning')).toBe(true);
+  });
+
   it('is carried by magic and not by an axe', () => {
     const { state, orc } = duel('pyromancy');
     const swinger = spawnUnit(state, 0, 'orc', 5, 6, false);

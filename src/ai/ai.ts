@@ -802,6 +802,14 @@ function actSoldier(
     return;
   }
 
+  // A lone troll standing in a swamp, with a friend to make and the health to
+  // spare. Before feeding the guns, because it is the rarer opportunity and it
+  // costs the same turn.
+  if (abilityReady(unit, 'split') === null) {
+    const self = abilityTargets(state, unit, 'split');
+    if (self.length > 0 && useAbility(state, unit, 'split', self[0]).ok) return;
+  }
+
   // Nothing better to do? Feed the gun next door. Deliberately this late: it
   // costs the helper its whole turn, so it should be what a unit does when it
   // was not going to fight anyway.
@@ -983,7 +991,7 @@ function takePromotions(state: GameState, player: Player): void {
     while (owedPerks(unit) > 0) {
       const options = perkChoices(unit, flagsOf(player));
       if (options.length === 0) break;
-      // A club first, whenever one is going.
+      // A unit-specific perk first, whenever one is going.
       //
       // Without this the clubs would never be taken at all: the taste list
       // holds all six general perks and rank stops at three, so the fallback
@@ -991,14 +999,17 @@ function takePromotions(state: GameState, player: Player): void {
       // a mechanic the AI has no route to is a mechanic that does not happen --
       // and this time it was spotted before it was measured rather than after.
       //
-      // Chosen at random among the three rather than in a fixed order, so an
-      // army has some of each. A list would give every ogre in the game the
-      // same club, which is the promotion equivalent of buying a hundred
-      // ballistas.
-      const clubs = options.filter((o) => o.only?.includes('ogre'));
+      // Chosen at random among whatever is on offer rather than in a fixed
+      // order, so an army has some of each. A list would give every ogre in the
+      // game the same club, which is the promotion equivalent of buying a
+      // hundred ballistas.
+      //
+      // `only` rather than a list of ids, so a perk added for some future
+      // creature is picked up here without anybody remembering to come back.
+      const special = options.filter((o) => o.only);
       const pick =
-        clubs.length > 0
-          ? withRng(state, (rng) => clubs[Math.floor(rng.float() * clubs.length)])
+        special.length > 0
+          ? withRng(state, (rng) => special[Math.floor(rng.float() * special.length)])
           : taste.map((id) => options.find((o) => o.id === id)).find(Boolean) ?? options[0];
       unit.perks = [...(unit.perks ?? []), pick.id];
     }

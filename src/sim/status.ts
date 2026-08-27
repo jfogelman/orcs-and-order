@@ -79,8 +79,25 @@ export function statusTurns(unit: Unit, kind: StatusKind): number {
  * intensity is how a status effect turns into a one-shot kill, and the longest
  * of the two durations is the answer that cannot run away.
  */
+/**
+ * Conditions that cannot both be true of the same unit at the same time.
+ *
+ * It is magic, but a thing that is on fire is not also frozen. Whichever
+ * arrives last wins and puts the other out -- cold douses a fire, fire thaws
+ * ice -- which is what somebody watching expects to happen.
+ *
+ * Kept here rather than in the spell that causes it, so that anything applying
+ * either condition later gets the behaviour without having to know about it.
+ */
+const OPPOSITE: Partial<Record<StatusKind, StatusKind>> = {
+  burning: 'frozen',
+  frozen: 'burning',
+};
+
 export function applyStatus(unit: Unit, kind: StatusKind, turns: number): void {
   if (turns <= 0) return;
+  const opposite = OPPOSITE[kind];
+  if (opposite) clearStatus(unit, opposite);
   const existing = statusesOf(unit).find((s) => s.kind === kind);
   if (existing) {
     existing.turns = Math.max(existing.turns, turns);
