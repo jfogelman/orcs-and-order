@@ -3596,3 +3596,59 @@ standard applies here: **a change with measured costs and no measured benefit
 should not ship on the grounds that it makes sense.** Recorded either way, since
 the finding underneath it -- that AI target selection, not supply, is what keeps
 wars on the border -- is worth more than the rule was.
+
+## 54. More than one unit in a city, capped by its size
+
+Requested. A city of size N could hold up to N units, rather than the one that
+any tile holds today.
+
+### What it collides with
+
+**One unit per tile is not a detail here, it is the joke's foundation.** From
+`movement.ts`: *"the only way to get more soldiers onto a tile is to research
+your way to a unit type that already has more soldiers on it."* The entire
+counting ladder -- and therefore the entire tech tree -- exists because you
+cannot simply put five orcs on a square.
+
+Allowing it **in cities only** keeps that intact where it matters, since the
+ladder's advantage is in the field: N creatures marching as one unit, spending
+one movement point, arriving together. A garrison is the one place stacking
+costs nothing to the joke. So the shape of the request is right.
+
+### What it would actually take
+
+- **`unitAt` returns one unit and is called in thirteen places.** That is the
+  real work: every one of them has to decide whether it means "the defender
+  here", "anything here", or "everything here". Movement blocking, targeting,
+  the click handler and combat all read it, and they do not all mean the same
+  thing.
+- **`garrisonOf` already returns a list**, and section 14 already draws a
+  garrison as a number on the city rather than a sprite on the tile. Half the
+  interface for this exists.
+- **`freeSupport` is already `max(2, city.size)`** -- the game already ties how
+  many units a city can carry to its size, in shields. A stacking cap by size
+  would be the same idea expressed twice, and the two should probably be one
+  number rather than two that can disagree.
+
+### The question that decides whether it is fun
+
+**What happens when the defender loses?** Civ1 and Civ2 killed the entire stack,
+which is famous for being the least popular rule either game ever shipped. The
+alternatives are: only the defender dies and the attacker must come back; or the
+defender dies and the rest are captured with the city.
+
+This is the whole design, not a detail. A stack-kill makes cities lethal traps
+and makes the sapper's blast an instant win. One-at-a-time makes a size-eight
+city effectively unconquerable and would undo section 53's work on the front
+before it has landed.
+
+**Worth settling before any of the thirteen call sites are touched**, because
+the answer changes what the code needs to do rather than merely what it says.
+
+### And it interacts with two things measured recently
+
+- **Section 50's conquest problem.** Making cities harder to take pushes the
+  wrong way on a game where conquest is already all but extinct.
+- **The sapper.** `detonate` catches everything adjacent, friend and enemy. A
+  stacked city beside a dying sapper is a very different proposition, and the
+  Goblin Catapult's blast has the same shape.
