@@ -3821,3 +3821,10 @@ will make it symmetric.
 The third is the one worth trying first, because it is the only one that does
 not trade the thing that was just confirmed working by somebody playing the
 game.
+
+**PARKED, to come back to.** Shipping 0.035 unchanged. The open task is to
+measure raising beakers per point of trade -- the channel already exists in the
+three-way split and the AI already manages it, so it is a small change with a
+known shape. Judge it on the same two numbers as above: whether `insanity` and
+the dragon count move, and whether the win split stays where a human said it
+felt right.
