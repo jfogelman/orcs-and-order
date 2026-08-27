@@ -3244,3 +3244,64 @@ The check that would have caught it is small: whenever a default is introduced,
 ask what the behaviour was *before* there was anything to default, and whether
 those two are the same. Here they were not, and nothing in the change made that
 visible.
+
+## 48. The last three perks, and a mage doing two things at once
+
+Mostly Volatile, Better Part of Valour and Swampy Friend, each hung off an
+advance that was previously a dead end -- which is what section 11 exists for.
+
+### Both of section 11's open questions, settled
+
+**Does a saved sapper detonate on the blow it survived?** No, and not by a
+special case: a sapper only goes off when it *dies*, and this one did not. The
+reprieve sits in `applyDamage` rather than the combat loop, so it covers every
+way a unit can be killed -- an exchange, somebody else's blast, or a fire.
+
+**Better Part of Valour could never have fired as written.** "Retreats when it
+fails to kill what it attacked" has no case: `resolveCombat` runs until one side
+is dead, so an attacker either wins or dies. The only reading that can happen is
+Civ4's withdrawal, which section 32 had already recorded -- a *losing* attacker
+breaks off instead of dying. Caught by a test rather than by a measurement three
+arms later, which is the first time in this file that has happened.
+
+Rebuilding it exposed an assumption baked into the losing branch: it destroyed
+the attacker **unconditionally**, because until now losing was dying. A unit
+that gets away is the first exception in the game and was being buried on its
+way out.
+
+### Measured as a block, which is what section 11 asked for
+
+| | control | three perks |
+|---|---|---|
+| perks held at end | 0.00 | **2.72 / 3.72** |
+| **lone trolls alive** | 2.17 / 2.56 | **3.94 / 3.67** |
+| wins, orc-human | 8-20 | 9-18 |
+| decided | 28/36 | 27/36 |
+
+They are taken, Swampy Friend visibly works -- lone trolls up about 60% -- and
+**nothing measurable changes**. Texture, exactly as section 37 predicted for
+anything gated on a late advance and a rare unit. Recorded as such rather than
+dressed up.
+
+### And a bug found by playing, not by measuring
+
+A mage holding both Setting Things Alight and The Cold Shoulder left its target
+**burning and frozen at the same time**. It is magic, but that is not a thing
+that happens to anybody.
+
+Two fixes, and the second matters more than the first:
+
+- **Opposites cancel**, in `applyStatus` rather than in the spell that causes
+  it, so anything applying either condition later gets it for free. Cold douses
+  a fire; fire thaws ice; whichever lands last wins.
+- **One spell per blow.** Left to mutual exclusion alone, whichever line ran
+  second would always win, and the other advance would become worthless to
+  anyone holding both -- a worse bug than the reported one for being invisible.
+  Alternated on the turn rather than rolled for, deliberately: this runs on
+  every blow in the game, and drawing from the seeded stream would shift
+  everything downstream to answer a question that does not need randomness.
+
+Worth noting how it was found. Sections 30 to 47 are almost entirely things
+measurement caught. This one, the build prompt and the camera were all found by
+somebody playing the game for a few minutes, and none of the 350 tests would
+ever have caught any of them.

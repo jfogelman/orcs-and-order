@@ -203,8 +203,22 @@ export function applySpellEffects(state: GameState, attacker: Unit, target: Unit
   if (target.hp <= 0) return;
   if (damageKindOf(attacker) !== 'magic') return;
   const owner = state.players[attacker.owner];
-  if (hasFlag(owner, 'pyromancy')) applyStatus(target, 'burning', SPELL_TURNS.burning);
-  if (hasFlag(owner, 'cryomancy')) applyStatus(target, 'frozen', SPELL_TURNS.frozen);
+  const fire = hasFlag(owner, 'pyromancy');
+  const ice = hasFlag(owner, 'cryomancy');
+  if (!fire && !ice) return;
+
+  // One spell per blow. Casting both left a target burning *and* frozen, which
+  // is not a thing that happens to anybody; and simply letting the second
+  // overwrite the first would have quietly made whichever advance ran first
+  // worthless to anyone holding both, which is a worse bug for being invisible.
+  //
+  // Alternated on the turn rather than rolled for, deliberately: this runs on
+  // every blow in the game, and drawing from the seeded stream here would shift
+  // everything downstream of it to answer a question that does not need
+  // randomness.
+  const casts: 'burning' | 'frozen' =
+    fire && ice ? (state.turn % 2 === 0 ? 'burning' : 'frozen') : fire ? 'burning' : 'frozen';
+  applyStatus(target, casts, SPELL_TURNS[casts]);
 }
 
 /** What a dragon's breath does to whatever is standing behind its target. */
