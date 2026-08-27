@@ -56,12 +56,20 @@ export function unlockedBuildings(player: Player): BuildingDef[] {
  * Research gets more expensive as an empire accumulates advances, so the
  * last rungs of the counting ladder stay a real commitment.
  */
+/**
+ * How much dearer each advance gets for every one already held.
+ *
+ * Kept gentle on purpose. At 6% the top of the counting ladder cost over 400
+ * beakers and no game ever reached Ten Orcs, which rather defeats the object of
+ * the exercise. It is the lever on how *deep* a game gets rather than how fast
+ * it starts, since it compounds: at 3.5% a side holding twenty advances pays
+ * 1.7 times list for the next one.
+ */
+export const TECH_ESCALATION = 0.035;
+
 export function techCost(player: Player, t: TechDef): number {
   const known = Math.max(0, player.techs.length - 1);
-  // Kept gentle on purpose. At 6% per known advance the top of the counting
-  // ladder cost over 400 beakers and no game ever reached Ten Orcs, which
-  // rather defeats the object of the exercise.
-  return Math.round(t.cost * (1 + known * 0.035));
+  return Math.round(t.cost * (1 + known * TECH_ESCALATION));
 }
 
 export function setResearch(state: GameState, player: Player, id: TechId | null): void {

@@ -3779,3 +3779,45 @@ most but not all, and winning on numbers. **That was against an AI that could
 not march.** It never came for you. Whether a human game still runs to the limit
 against an opponent that now advances is unknown and unmeasured, and worth one
 played game before anything is tuned on the strength of it.
+
+## 57. Deeper research costs balance, measured
+
+Section 56 named the lever: research pace against war pace, with `techCost`'s
+escalation as the sharpest dial, since it compounds and therefore governs how
+*deep* a game gets rather than how fast it starts. Swept over fifty-four games
+each:
+
+| escalation | advances held | turns | `insanity` | dragons a game | wins orc-human |
+|---|---|---|---|---|---|
+| **0.035** (shipping) | 21.4 | 111 | 37% | **0.5** | 28-26 (**52%**) |
+| 0.02 | 22.3 | 117 | 47% | 1.0 | 31-23 (**57%**) |
+| 0.01 | 22.9 | 118 | **57%** | **2.1** | 33-21 (**61%**) |
+
+**It works, and it is not free.** Dragons go from half a game to two a game and
+`insanity` from a third of sides to well over half -- the section 11 features
+become things you actually see. Total advances barely move (21.4 to 22.9, about
+7%), which is the point: the depth arrives at the far end of the tree, which is
+where it was missing.
+
+The cost is a **monotonic** drift to the Horde, 52% to 57% to 61%. Any one of
+those steps is inside the noise section 36 measured, but three settings moving
+the same way is not noise -- it is the Horde's best units (dragon, ogre, death
+knight) sitting deeper in its tree than the Kingdom's do in theirs. Cheaper deep
+research is therefore *structurally* an orc buff, and no amount of re-running
+will make it symmetric.
+
+### Which leaves a real choice rather than a tuning problem
+
+- **Ship 0.035.** The tree stays half out of reach, most games contain no
+  dragon, and the balance the human player just described as feeling right is
+  left exactly where it is.
+- **Ship 0.02 or 0.01 and reprice the Horde afterwards** to give the balance
+  back. Two changes rather than one, and the second is the sort of roster work
+  sections 34 and 35 already did once.
+- **Find a lever that is not depth-shaped.** More beakers per point of trade
+  raises both sides' research without favouring whoever keeps their good units
+  deepest. Untested, and the obvious next thing to measure.
+
+The third is the one worth trying first, because it is the only one that does
+not trade the thing that was just confirmed working by somebody playing the
+game.
