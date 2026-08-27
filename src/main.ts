@@ -1548,6 +1548,10 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
   // same reason a razed city is: the position alone does not say what to draw,
   // and the art already existed with nothing triggering it.
   if (entry.subject === 'troll-split') return 'troll-split';
+  // A death knight taking what it needs. Section 13 asked for this to be
+  // visible: a unit vanishing from your own line with no explanation reads as
+  // a bug rather than as a bargain.
+  if (entry.subject === 'death-touch') return 'death-touch';
   switch (entry.cue) {
     case 'explosion':
       return 'explosion';
