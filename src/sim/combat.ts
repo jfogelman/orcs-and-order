@@ -748,6 +748,80 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
 }
 
 /** Remove a dead unit and narrate it to both sides. */
+/**
+ * Share of a unit's shields handed back when it is broken up in a city.
+ *
+ * Half is the usual answer and is probably right: any higher and a unit becomes
+ * a better shield store than a shield is, and people would build them to melt
+ * them.
+ */
+export const DISBAND_REFUND = 0.5;
+
+/** Why this unit cannot be disbanded, or null if it can. */
+export function disbandBlocked(state: GameState, unit: Unit): string | null {
+  if (unit.owner !== state.activePlayer) return 'Not yours to dismiss.';
+  return null;
+}
+
+/**
+ * What breaking this unit up would give back, which is nothing outside a city.
+ *
+ * Credited to the city it is standing in rather than the one that built it.
+ * That does let an army walk its value to wherever it is wanted -- but walking
+ * costs turns, which is a real price, and the alternative makes the refund
+ * useless exactly when it is most wanted: finishing something in the city you
+ * are defending, with the obsolete unit that is standing in it.
+ */
+export function disbandRefund(state: GameState, unit: Unit): number {
+  const city = cityAt(state, unit.x, unit.y);
+  if (!city || city.owner !== unit.owner) return 0;
+  return Math.floor(unitType(unit.type).cost * DISBAND_REFUND);
+}
+
+/**
+ * Whether a refund handed to this city would actually be kept.
+ *
+ * The standing orders empty the shield box every turn -- Coin turns it into
+ * gold, Study into beakers, and Placating banks nothing at all by design. So
+ * breaking a unit up in a city set to one of them pays the shields in and
+ * watches them go straight back out, which is correct behaviour and completely
+ * invisible. The interface says so rather than letting somebody find out.
+ */
+export function refundWouldStick(state: GameState, unit: Unit): boolean {
+  const city = cityAt(state, unit.x, unit.y);
+  if (!city || city.owner !== unit.owner) return false;
+  return city.producing.kind === 'unit' || city.producing.kind === 'building';
+}
+
+/**
+ * Get rid of a unit on purpose.
+ *
+ * There was previously no way at all: a Peon that had founded everything worth
+ * founding, or a Goblin left over from an advance three tiers ago, cost upkeep
+ * for ever and could only be disposed of by walking it into something.
+ */
+export function disband(state: GameState, unit: Unit): number {
+  if (disbandBlocked(state, unit) !== null) return 0;
+  const refund = disbandRefund(state, unit);
+  if (refund > 0) {
+    const city = cityAt(state, unit.x, unit.y)!;
+    city.shields += refund;
+    log(
+      state,
+      `${unitType(unit.type).name} is broken up in ${city.name} for ${refund} shields.`,
+      'info',
+      unit.owner,
+      undefined,
+      [city.x, city.y],
+    );
+  } else {
+    log(state, `${unitType(unit.type).name} is dismissed.`, 'info', unit.owner, undefined, [unit.x, unit.y]);
+  }
+  const i = state.units.indexOf(unit);
+  if (i >= 0) state.units.splice(i, 1);
+  return refund;
+}
+
 export function destroyUnit(state: GameState, unit: Unit, cause: string): void {
   const i = state.units.indexOf(unit);
   if (i >= 0) state.units.splice(i, 1);

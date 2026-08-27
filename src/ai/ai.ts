@@ -2,7 +2,7 @@ import { flagsOf } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { UnitTypeDef } from '../model/units';
-import { ammoLeft, unitType } from '../model/units';
+import { ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
@@ -229,6 +229,34 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   return atk / Math.max(0.0001, atk + def);
 }
 
+/**
+ * How much a well-held city adds to how far away it feels.
+ *
+ * At 0.6 a city nobody is standing in is worth walking up to sixty per cent
+ * further for. Deliberately a preference rather than a rule: a strong city that
+ * is right there is still a better idea than a weak one across the map.
+ */
+const HARD_TARGET = 0.6;
+
+/** Defence at which a city counts as thoroughly held. */
+const GUARD_REFERENCE = 12;
+
+/**
+ * Where to march.
+ *
+ * Used to be the nearest enemy thing, full stop, and that turned out to be the
+ * reason wars never went anywhere. An army always engaged whatever sat on its
+ * own border; take that city and the next-nearest target is the next border
+ * city, while the defender retakes the first. The front oscillated instead of
+ * advancing, and eighty-five per cent of attacks on cities happened within four
+ * tiles of home -- not because supply stopped there, which was the theory, but
+ * because that is where the AI was choosing to go. See DESIGN_QUEUE 53.
+ *
+ * So weakness counts as well as distance. What it does *not* do is read a
+ * garrison it cannot see: a city whose tile is not currently visible is scored
+ * at the midpoint, so the AI is neither drawn to nor warned off a defence it
+ * has no business knowing about.
+ */
 function nearestEnemyTarget(
   state: GameState,
   playerId: number,
@@ -238,19 +266,29 @@ function nearestEnemyTarget(
   let best: { x: number; y: number } | null = null;
   let bestDist = Infinity;
 
-  const consider = (x: number, y: number, weight: number) => {
+  const consider = (x: number, y: number, weight: number, hardness: number) => {
     if (!player.explored[idx(x, y, state.width)]) return;
-    const dist = distance(from.x, from.y, x, y) * weight;
+    const dist = distance(from.x, from.y, x, y) * weight * (1 + hardness * HARD_TARGET);
     if (dist < bestDist) {
       bestDist = dist;
       best = { x, y };
     }
   };
 
-  for (const c of state.cities) if (c.owner !== playerId) consider(c.x, c.y, 1);
+  for (const c of state.cities) {
+    if (c.owner === playerId) continue;
+    const i = idx(c.x, c.y, state.width);
+    let hardness = 0.5;
+    if (player.visible[i]) {
+      const guard = state.units.find((u) => u.x === c.x && u.y === c.y);
+      const held = guard ? unitType(guard.type).defense * headcount(guard) : 0;
+      hardness = Math.min(1, held / GUARD_REFERENCE);
+    }
+    consider(c.x, c.y, 1, hardness);
+  }
   for (const u of state.units) {
     if (u.owner !== playerId && player.visible[idx(u.x, u.y, state.width)]) {
-      consider(u.x, u.y, 1.6);
+      consider(u.x, u.y, 1.6, 0);
     }
   }
   return best;
@@ -749,6 +787,42 @@ function takeAim(state: GameState, unit: Unit): boolean {
   return outcome.kind !== 'blocked';
 }
 
+/**
+ * A tile beside the target that can actually be walked to.
+ *
+ * The pathfinder refuses to enter enemy ground -- "entered by attacking or
+ * capturing, never by pathing" -- and `nearestEnemyTarget` returns exactly
+ * that: an enemy city or an enemy unit. So asking for a route *to* the target
+ * returned null every single time, and the march on the enemy has never once
+ * moved a unit. Instrumented over six games: the branch was reached 31,826
+ * times, found a target 31,576 times, and moved somebody on none of them.
+ *
+ * That is why wars stayed on the border. Units only ever travelled by the
+ * explore branch or the jam-breaking shuffle below, so they drifted rather than
+ * marched, and fought whatever they happened to bump into. See DESIGN_QUEUE 55.
+ *
+ * Neighbours are tried nearest-first and the first reachable one wins, so this
+ * is usually a single path search rather than eight.
+ */
+function approachTile(
+  state: GameState,
+  unit: Unit,
+  tx: number,
+  ty: number,
+): { x: number; y: number } | null {
+  const spots = DIRS8.map(([dx, dy]) => ({ x: tx + dx, y: ty + dy }))
+    .filter((p) => p.x >= 0 && p.y >= 0 && p.x < state.width && p.y < state.height)
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y),
+    );
+  for (const spot of spots) {
+    if (unit.x === spot.x && unit.y === spot.y) return spot;
+    if (routeTo(state, unit, spot.x, spot.y)) return spot;
+  }
+  return null;
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
@@ -839,9 +913,16 @@ function actSoldier(
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);
-  if (target && routeTo(state, unit, target.x, target.y)) {
-    moveToward(state, unit, target.x, target.y);
-    return;
+  if (target) {
+    // The doorstep, not the door. Routing to the target itself asks the
+    // pathfinder for a tile it treats as impassable, which is why this never
+    // worked; arriving next door is enough, because the attack branch at the
+    // top of this function takes it from there next turn.
+    const spot = approachTile(state, unit, target.x, target.y);
+    if (spot && (spot.x !== unit.x || spot.y !== unit.y)) {
+      moveToward(state, unit, spot.x, spot.y);
+      return;
+    }
   }
 
   // Nothing known: go and look.

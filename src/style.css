@@ -1236,3 +1236,26 @@ button.small.rush[disabled] {
   font-size: 12.5px;
   line-height: 1.45;
 }
+
+/* The one button that destroys something of yours on purpose. */
+.small.danger {
+  border-color: #7a3a2c;
+  color: #e6a08c;
+}
+
+.small.danger:hover {
+  border-color: #c8503c;
+  color: #ffd9cc;
+}
+
+.confirm-body {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.confirm-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

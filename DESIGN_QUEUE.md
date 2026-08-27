@@ -3546,3 +3546,285 @@ tiles is where supply is, and supply does not move when the border does.
 Worth noting the middle option is the only one that uses a mechanic already in
 the game to solve a problem in another, and the only one whose cost is paid by
 the attacker rather than by section 4h.
+
+## 53. Forward bases: the rule fires, and it does not deliver
+
+Captured cities now join the supply chain once their sack is over. Measured
+against a control on the same seeds and the same harness:
+
+| | control | captured cities supply |
+|---|---|---|
+| supply chain | 2.46 of 8.18 | **3.15 of 8.16** |
+| **captures** | **12.6/game** | **12.6/game** |
+| conquest endings | 2 | 4 |
+| decided before the limit | 41/54 | 39/54 |
+| avg turns | 188 | 197 |
+| wins, orc-human | 24-30 (44%) | 25-29 (46%) |
+
+**The rule works and the theory was wrong.** The chain grew by 28%, so captured
+cities are genuinely becoming bases. And captures are *identical to one decimal
+place*. The front is not advancing. Conquest two to four out of fifty-four is
+not distinguishable at those counts, and it cost nine turns of game length and
+two games of decisiveness.
+
+### Supply was never the binding constraint
+
+Section 51 found two effects and said so: deep attacks are weaker (73% down to
+45%) and deep attacks barely happen (6,294 within two tiles against 542 beyond
+ten). It then chased the first, because that was the hypothesis on the table.
+
+The second was always the larger one, and it has a different cause entirely.
+`nearestEnemyTarget` picks the **closest** enemy city or unit by distance, so an
+army always engages whatever is on its own border and never bypasses anything to
+strike deep. Take the border city and the next-nearest target is the next border
+city -- meanwhile the defender retakes the first. The front oscillates rather
+than advancing, and no amount of supply changes that, because supply was not
+what was stopping it.
+
+Eighty-five per cent of attacks on cities happen within four tiles of home
+because **that is where the AI chooses to attack**, not because that is as far
+as it can reach.
+
+### What to do with the change
+
+It is conceptually right -- taking a city ought to extend your reach -- it is
+tested, and its costs are small. It also does nothing measurable for the problem
+it was built for.
+
+Section 41 dropped a shortlist that looked right and did not hold up. The same
+standard applies here: **a change with measured costs and no measured benefit
+should not ship on the grounds that it makes sense.** Recorded either way, since
+the finding underneath it -- that AI target selection, not supply, is what keeps
+wars on the border -- is worth more than the rule was.
+
+## 54. More than one unit in a city, capped by its size
+
+Requested. A city of size N could hold up to N units, rather than the one that
+any tile holds today.
+
+### What it collides with
+
+**One unit per tile is not a detail here, it is the joke's foundation.** From
+`movement.ts`: *"the only way to get more soldiers onto a tile is to research
+your way to a unit type that already has more soldiers on it."* The entire
+counting ladder -- and therefore the entire tech tree -- exists because you
+cannot simply put five orcs on a square.
+
+Allowing it **in cities only** keeps that intact where it matters, since the
+ladder's advantage is in the field: N creatures marching as one unit, spending
+one movement point, arriving together. A garrison is the one place stacking
+costs nothing to the joke. So the shape of the request is right.
+
+### What it would actually take
+
+- **`unitAt` returns one unit and is called in thirteen places.** That is the
+  real work: every one of them has to decide whether it means "the defender
+  here", "anything here", or "everything here". Movement blocking, targeting,
+  the click handler and combat all read it, and they do not all mean the same
+  thing.
+- **`garrisonOf` already returns a list**, and section 14 already draws a
+  garrison as a number on the city rather than a sprite on the tile. Half the
+  interface for this exists.
+- **`freeSupport` is already `max(2, city.size)`** -- the game already ties how
+  many units a city can carry to its size, in shields. A stacking cap by size
+  would be the same idea expressed twice, and the two should probably be one
+  number rather than two that can disagree.
+
+### The question that decides whether it is fun
+
+**What happens when the defender loses?** Civ1 and Civ2 killed the entire stack,
+which is famous for being the least popular rule either game ever shipped. The
+alternatives are: only the defender dies and the attacker must come back; or the
+defender dies and the rest are captured with the city.
+
+This is the whole design, not a detail. A stack-kill makes cities lethal traps
+and makes the sapper's blast an instant win. One-at-a-time makes a size-eight
+city effectively unconquerable and would undo section 53's work on the front
+before it has landed.
+
+**Worth settling before any of the thirteen call sites are touched**, because
+the answer changes what the code needs to do rather than merely what it says.
+
+### And it interacts with two things measured recently
+
+- **Section 50's conquest problem.** Making cities harder to take pushes the
+  wrong way on a game where conquest is already all but extinct.
+- **The sapper.** `detonate` catches everything adjacent, friend and enemy. A
+  stacked city beside a dying sapper is a very different proposition, and the
+  Goblin Catapult's blast has the same shape.
+
+## 55. The AI had never marched on anything
+
+Sections 50 to 53 asked why conquest never happened, and answered it three
+times: supply throttles deep offensives (true, and measured, and not the cause),
+captured cities do not extend the chain (true, fixed, changed nothing), and the
+AI attacks the nearest thing rather than the weakest (true, fixed, changed
+*literally* nothing -- three games came out with identical RNG state).
+
+That last result is what cracked it. A change that alters the chosen target
+18.3% of the time cannot leave three games byte-identical. Something downstream
+was discarding the choice.
+
+### The bug
+
+`nearestEnemyTarget` returns an enemy city or an enemy unit. The pathfinder
+refuses to enter enemy ground -- *"entered by attacking or capturing, never by
+pathing"* -- so `routeTo` was being asked for a route to a tile it treats as
+impassable. It returned `null`.
+
+Instrumented over six games:
+
+| | |
+|---|---|
+| march branch reached | **31,826** |
+| a target was found | **31,576** |
+| a unit actually moved | **0** |
+
+**The AI has never marched on anything, in any measurement this project has
+ever recorded.** Units travelled only by the explore branch and the jam-breaking
+shuffle, so they drifted rather than advanced and fought whatever they bumped
+into. Eighty-five per cent of attacks on cities happened within four tiles of
+home because nobody was going anywhere.
+
+### The fix, and what it did
+
+Route to the doorstep rather than the door: the nearest reachable tile beside
+the target, tried nearest-first so it is usually one path search rather than
+eight. Arriving next door is enough, because the attack branch at the top of
+`actSoldier` takes it from there.
+
+| | march dead | march works |
+|---|---|---|
+| **conquest endings** | **4** | **35** |
+| dominance | 35 | 18 |
+| points | 15 | **1** |
+| decided before the limit | 39/54 | **53/54** |
+| avg turns | 197 | **111** |
+| captures a game | 12.6 | 7.5 |
+| wins, orc-human | 25-29 (46%) | 28-26 (52%) |
+
+Conquest goes from four games in fifty-four to thirty-five. Fewer captures
+because games are far shorter, not because less is happening -- the rate per
+turn is higher. Balance holds level.
+
+### What this invalidates
+
+**Every balance figure in this file was measured against armies that drifted.**
+Sections 20 to 54 tuned rosters, prices, valuation and victory conditions
+against an AI that could not advance on anything. Those numbers described a
+game that no longer exists.
+
+Not all of it is worthless -- unit values are still unit values -- but anything
+about pace, decisiveness, city counts or how wars resolve should be treated as
+stale until re-measured. Section 23's dominance rule in particular was built
+because conquest never happened; conquest now happens, and the rule may be
+solving a problem that has gone away.
+
+### And a new worry, unmeasured
+
+**Games now end at 111 turns rather than 197.** The tech tree is the joke, and
+the back half of it was already hard to reach -- section 37 measured the magic
+advances landing late and rarely. At a hundred and eleven turns there may not be
+time to get there at all, which would make the whole of section 11 unreachable
+in practice. That wants measuring before anything else is tuned.
+
+## 56. The tree is now half out of reach
+
+Section 55 asked whether the back half of the tech tree survives games that end
+at a hundred and eleven turns instead of a hundred and ninety-seven. Measured
+across fifty-four games, both arms:
+
+| | march dead (197 turns) | march works (111 turns) |
+|---|---|---|
+| advances held per side, of 45 | 26.6 | **21.4** |
+| `insanity` | 75% | **37%** |
+| `pyromancy` / `cryomancy` | 72% / 69% | 34% / 32% |
+| `full-of-fire` | 35% | **19%** |
+| `club-improvement` | 44% | 29% |
+| **dragons built a game** | 2.6 | **0.5** |
+| mages / ogres / catapults | 11.2 / 11.4 / 7.2 | 3.8 / 4.0 / 1.8 |
+| clubs held at end | 2.00 | 0.85 |
+
+Roughly halved across the board. A side now finishes holding less than half the
+advances that exist, most games contain no dragon at all, and the section 11
+work -- the clubs, the spells, the magic block -- lands in a third of games
+rather than three quarters.
+
+### The turn limit is not the lever
+
+Fifty-three of fifty-four games now end *before* the limit, by conquest. Raising
+the limit changes nothing for a game that never reaches it. This is not a game
+running out of time; it is a war finishing before research can traverse the
+tree.
+
+### What the lever actually is
+
+Research pace against war pace. The old game got 26.6 advances into 197 turns --
+about 0.135 an advance per turn. Reaching the same depth inside 111 turns needs
+roughly **0.24 an advance per turn, or 1.8 times faster**.
+
+Three ways, in rough order of how blunt they are:
+
+- **Cheaper advances**, especially the back half. Direct, and it changes what
+  the tree *is* rather than how fast anyone moves through it.
+- **More beakers.** The three-way split already exists and the AI already
+  manages it -- section 47 -- so this is a dial that is already turning.
+- **Slower conquest.** Undoing part of section 55, which was a bug fix rather
+  than a balance choice, and would be the wrong direction.
+
+### And a caveat about where the question came from
+
+The original observation was from human play: reaching turn 300 having conquered
+most but not all, and winning on numbers. **That was against an AI that could
+not march.** It never came for you. Whether a human game still runs to the limit
+against an opponent that now advances is unknown and unmeasured, and worth one
+played game before anything is tuned on the strength of it.
+
+## 57. Deeper research costs balance, measured
+
+Section 56 named the lever: research pace against war pace, with `techCost`'s
+escalation as the sharpest dial, since it compounds and therefore governs how
+*deep* a game gets rather than how fast it starts. Swept over fifty-four games
+each:
+
+| escalation | advances held | turns | `insanity` | dragons a game | wins orc-human |
+|---|---|---|---|---|---|
+| **0.035** (shipping) | 21.4 | 111 | 37% | **0.5** | 28-26 (**52%**) |
+| 0.02 | 22.3 | 117 | 47% | 1.0 | 31-23 (**57%**) |
+| 0.01 | 22.9 | 118 | **57%** | **2.1** | 33-21 (**61%**) |
+
+**It works, and it is not free.** Dragons go from half a game to two a game and
+`insanity` from a third of sides to well over half -- the section 11 features
+become things you actually see. Total advances barely move (21.4 to 22.9, about
+7%), which is the point: the depth arrives at the far end of the tree, which is
+where it was missing.
+
+The cost is a **monotonic** drift to the Horde, 52% to 57% to 61%. Any one of
+those steps is inside the noise section 36 measured, but three settings moving
+the same way is not noise -- it is the Horde's best units (dragon, ogre, death
+knight) sitting deeper in its tree than the Kingdom's do in theirs. Cheaper deep
+research is therefore *structurally* an orc buff, and no amount of re-running
+will make it symmetric.
+
+### Which leaves a real choice rather than a tuning problem
+
+- **Ship 0.035.** The tree stays half out of reach, most games contain no
+  dragon, and the balance the human player just described as feeling right is
+  left exactly where it is.
+- **Ship 0.02 or 0.01 and reprice the Horde afterwards** to give the balance
+  back. Two changes rather than one, and the second is the sort of roster work
+  sections 34 and 35 already did once.
+- **Find a lever that is not depth-shaped.** More beakers per point of trade
+  raises both sides' research without favouring whoever keeps their good units
+  deepest. Untested, and the obvious next thing to measure.
+
+The third is the one worth trying first, because it is the only one that does
+not trade the thing that was just confirmed working by somebody playing the
+game.
+
+**PARKED, to come back to.** Shipping 0.035 unchanged. The open task is to
+measure raising beakers per point of trade -- the channel already exists in the
+three-way split and the AI already manages it, so it is a small change with a
+known shape. Judge it on the same two numbers as above: whether `insanity` and
+the dragon count move, and whether the win split stays where a human said it
+felt right.
