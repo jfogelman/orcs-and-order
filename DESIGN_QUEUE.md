@@ -3652,3 +3652,78 @@ the answer changes what the code needs to do rather than merely what it says.
 - **The sapper.** `detonate` catches everything adjacent, friend and enemy. A
   stacked city beside a dying sapper is a very different proposition, and the
   Goblin Catapult's blast has the same shape.
+
+## 55. The AI had never marched on anything
+
+Sections 50 to 53 asked why conquest never happened, and answered it three
+times: supply throttles deep offensives (true, and measured, and not the cause),
+captured cities do not extend the chain (true, fixed, changed nothing), and the
+AI attacks the nearest thing rather than the weakest (true, fixed, changed
+*literally* nothing -- three games came out with identical RNG state).
+
+That last result is what cracked it. A change that alters the chosen target
+18.3% of the time cannot leave three games byte-identical. Something downstream
+was discarding the choice.
+
+### The bug
+
+`nearestEnemyTarget` returns an enemy city or an enemy unit. The pathfinder
+refuses to enter enemy ground -- *"entered by attacking or capturing, never by
+pathing"* -- so `routeTo` was being asked for a route to a tile it treats as
+impassable. It returned `null`.
+
+Instrumented over six games:
+
+| | |
+|---|---|
+| march branch reached | **31,826** |
+| a target was found | **31,576** |
+| a unit actually moved | **0** |
+
+**The AI has never marched on anything, in any measurement this project has
+ever recorded.** Units travelled only by the explore branch and the jam-breaking
+shuffle, so they drifted rather than advanced and fought whatever they bumped
+into. Eighty-five per cent of attacks on cities happened within four tiles of
+home because nobody was going anywhere.
+
+### The fix, and what it did
+
+Route to the doorstep rather than the door: the nearest reachable tile beside
+the target, tried nearest-first so it is usually one path search rather than
+eight. Arriving next door is enough, because the attack branch at the top of
+`actSoldier` takes it from there.
+
+| | march dead | march works |
+|---|---|---|
+| **conquest endings** | **4** | **35** |
+| dominance | 35 | 18 |
+| points | 15 | **1** |
+| decided before the limit | 39/54 | **53/54** |
+| avg turns | 197 | **111** |
+| captures a game | 12.6 | 7.5 |
+| wins, orc-human | 25-29 (46%) | 28-26 (52%) |
+
+Conquest goes from four games in fifty-four to thirty-five. Fewer captures
+because games are far shorter, not because less is happening -- the rate per
+turn is higher. Balance holds level.
+
+### What this invalidates
+
+**Every balance figure in this file was measured against armies that drifted.**
+Sections 20 to 54 tuned rosters, prices, valuation and victory conditions
+against an AI that could not advance on anything. Those numbers described a
+game that no longer exists.
+
+Not all of it is worthless -- unit values are still unit values -- but anything
+about pace, decisiveness, city counts or how wars resolve should be treated as
+stale until re-measured. Section 23's dominance rule in particular was built
+because conquest never happened; conquest now happens, and the rule may be
+solving a problem that has gone away.
+
+### And a new worry, unmeasured
+
+**Games now end at 111 turns rather than 197.** The tech tree is the joke, and
+the back half of it was already hard to reach -- section 37 measured the magic
+advances landing late and rarely. At a hundred and eleven turns there may not be
+time to get there at all, which would make the whole of section 11 unreachable
+in practice. That wants measuring before anything else is tuned.
