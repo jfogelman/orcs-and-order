@@ -1483,6 +1483,10 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
   // A subject names its own picture, which is how a razed city shows the
   // settlement that was actually standing there rather than a generic puff.
   if (entry.subject?.startsWith('razed-')) return entry.subject as EffectId;
+  // A troll pulling another troll out of the swamp. Named by subject for the
+  // same reason a razed city is: the position alone does not say what to draw,
+  // and the art already existed with nothing triggering it.
+  if (entry.subject === 'troll-split') return 'troll-split';
   switch (entry.cue) {
     case 'explosion':
       return 'explosion';

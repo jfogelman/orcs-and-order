@@ -27,7 +27,13 @@ export type TechFlag =
   /** Magical damage leaves its target slow for a few turns. */
   | 'cryomancy'
   /** Ogres may choose a club when they are promoted. */
-  | 'clubs';
+  | 'clubs'
+  /** Sappers may learn to survive one killing blow. */
+  | 'volatile'
+  /** Knights may learn to withdraw from a fight they did not win. */
+  | 'valour'
+  /** A lone troll on a swamp may make another troll. */
+  | 'swampy';
 
 export interface TechDef {
   id: TechId;
@@ -229,7 +235,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['suicidal-goblins'],
     units: ['sapper_x2', 'goblincatapult'],
     buildings: ['biggerRock'],
-    flags: [],
+    flags: ['volatile'],
     flavor: 'Everything is better underground, where nobody can see how it is going.',
   },
   {
@@ -339,7 +345,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['axes'],
     units: ['troll_x2', 'troll_x3'],
     buildings: [],
-    flags: [],
+    flags: ['swampy'],
     flavor: 'Correlation is established. Causation is declared uninteresting.',
   },
   {
@@ -529,7 +535,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['let-us-ride', 'join-army'],
     units: ['knight_x3', 'paladin'],
     buildings: [],
-    flags: [],
+    flags: ['valour'],
     flavor: 'Shouted in advance, as courtesy demands.',
   },
   {

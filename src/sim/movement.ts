@@ -1,4 +1,4 @@
-import { distance, idx } from '../engine/grid';
+import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
@@ -330,6 +330,48 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
  * Attempt a single step onto an adjacent tile. Moving into an enemy is an
  * attack; moving into an undefended enemy city captures it.
  */
+/**
+ * The step back a knight takes when it attacks something and fails to finish it.
+ *
+ * The first thing in this game that moves a unit outside its owner's turn, so
+ * it is deliberately narrow. Section 11 named the two traps and both are
+ * handled here rather than discovered later:
+ *
+ * - **Nowhere to go.** Surrounded, or backed onto water, it simply stays and
+ *   takes what comes. Withdrawal is a chance, not a guarantee.
+ * - **Not into a city.** Any city, including its own. A retreat that garrisons
+ *   a settlement for free would make attacking-and-failing a *better* way to
+ *   defend than walking there.
+ *
+ * Prefers the tile furthest from what it just attacked, so falling back is
+ * actually falling back rather than sidestepping into the same trouble.
+ */
+function stepBack(state: GameState, unit: Unit, fromX: number, fromY: number): boolean {
+  const cost = costFnFor(state, unit);
+  let best: { x: number; y: number; away: number } | null = null;
+
+  for (const [dx, dy] of DIRS8) {
+    const x = unit.x + dx;
+    const y = unit.y + dy;
+    if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
+    // The cost function answers "may this unit step here from there", and
+    // null is its way of saying no -- so an impassable tile and one it simply
+    // cannot afford are the same answer here.
+    const step = cost(x, y, unit.x, unit.y);
+    if (step === null || !Number.isFinite(step)) continue;
+    if (unitAt(state, x, y)) continue;
+    if (cityAt(state, x, y)) continue;
+    const away = distance(x, y, fromX, fromY);
+    if (!best || away > best.away) best = { x, y, away };
+  }
+  if (!best) return false;
+
+  unit.x = best.x;
+  unit.y = best.y;
+  recomputeVisibility(state, unit.owner);
+  return true;
+}
+
 export function tryStep(state: GameState, unit: Unit, x: number, y: number): MoveOutcome {
   if (x < 0 || y < 0 || x >= state.width || y >= state.height) {
     return { kind: 'blocked', reason: 'Off the edge of the world.', retryable: false };
@@ -416,6 +458,25 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         return { kind: 'combat', result, defenderDied: true, attackerDied: true };
       }
     } else {
+      // It broke off rather than dying, and is standing on one hit point in
+      // front of the thing that nearly killed it. Either it gets a step back or
+      // the withdrawal was never really available -- section 11 asked for a
+      // rule for having nowhere to go, and this is it: a cornered knight dies
+      // like anybody else.
+      const withdrawn = result.withdrew === true && stepBack(state, unit, occupant.x, occupant.y);
+      if (result.withdrew && !withdrawn) unit.hp = 0;
+
+      if (withdrawn) {
+        log(
+          state,
+          `${type.name} thinks better of it and falls back.`,
+          'combat',
+          unit.owner,
+          undefined,
+          [unit.x, unit.y],
+          unit.id,
+        );
+      }
       log(
         state,
         `${defenderType.name} holds against ${type.name}.`,
@@ -426,8 +487,14 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         // The swinger, not the one who held: it is the attacker that moves.
         unit.id,
       );
-      destroyUnit(state, unit, 'is destroyed attacking');
-      awardXp(state, occupant, XP.kill);
+      // Losing used to mean dying, so this was unconditional. A unit that got
+      // away is the first exception, and it must not be buried on its way out.
+      if (!withdrawn) {
+        destroyUnit(state, unit, result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking');
+        awardXp(state, occupant, XP.kill);
+      } else {
+        awardXp(state, occupant, XP.survive);
+      }
     }
     if (result.promoted) {
       const winner = result.attackerWon ? type.name : defenderType.name;

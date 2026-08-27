@@ -118,6 +118,13 @@ export interface Unit {
    */
   rearmIn?: number;
   /**
+   * Whether this unit has already used its one reprieve.
+   *
+   * Only ever set on a sapper that took Mostly Volatile. Absent means it still
+   * has it, so nothing needs writing out for the units that never will.
+   */
+  reprieved?: boolean;
+  /**
    * Shots left, for a creature that carries a finite number.
    *
    * Absent means "as its type says" -- a fresh piece is loaded, and old saves

@@ -1,4 +1,7 @@
-import { distance } from '../engine/grid';
+import { DIRS8, distance, idx } from '../engine/grid';
+import { TERRAIN } from '../model/terrain';
+import { applyStatus } from './status';
+import { hasPerk } from '../model/perks';
 import { ammoLeft, needsAmmo, unitType } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import {
@@ -13,7 +16,7 @@ import {
   awardXp,
   XP
 } from './combat';
-import { log, recomputeVisibility, withRng } from './gamestate';
+import { log, recomputeVisibility, spawnUnit, withRng } from './gamestate';
 
 /**
  * Actions that pick a *target* rather than a destination.
@@ -24,7 +27,7 @@ import { log, recomputeVisibility, withRng } from './gamestate';
  * yet, which gives the position away just as surely as drawing the unit would.
  */
 
-export type AbilityId = 'ranged' | 'heal' | 'reload';
+export type AbilityId = 'ranged' | 'heal' | 'reload' | 'split';
 
 export interface AbilitySpec {
   id: AbilityId;
@@ -42,7 +45,16 @@ export const ABILITIES: Record<AbilityId, AbilitySpec> = {
   ranged: { id: 'ranged', label: 'Ranged', key: 'r', friendly: false, verb: 'strike at range' },
   heal: { id: 'heal', label: 'Heal', key: 'h', friendly: true, verb: 'patch anyone up' },
   reload: { id: 'reload', label: 'Reload', key: 'l', friendly: true, verb: 'hand over a missile' },
+  split: { id: 'split', label: 'Split', key: 'k', friendly: true, verb: 'make a friend' },
 };
+
+/**
+ * What making a Swampy Friend costs.
+ *
+ * Nearly everything, and then no healing for a while -- which for a troll,
+ * whose whole character is healing twice as fast as anyone, is the real price.
+ */
+export const SPLIT = { keepsFraction: 0.1, spentTurns: 3, needsFraction: 0.5 };
 
 /** Re-exported: they live in the model, so `combat` can use them too. */
 export { ammoLeft, needsAmmo } from '../model/units';
@@ -64,6 +76,13 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
   if (type.healsTo > 0) out.push('heal');
   // Anything that is not itself a piece of artillery can pass one a missile.
   if (type.ammo <= 0 && !type.settler) out.push('reload');
+  // Only a troll, only a lone one, and only one that learned how. Section 11
+  // settled the "lone" part deliberately: a group splitting into another group
+  // is an exponent, and this is instead the first thing in the game that gives
+  // anyone a reason to build the *small* unit.
+  if (type.base === 'troll' && type.count === 1 && hasPerk(unit, 'swampy-friend')) {
+    out.push('split');
+  }
   return out;
 }
 
@@ -83,6 +102,11 @@ export function abilityReady(unit: Unit, ability: AbilityId): string | null {
   if (ability === 'ranged' && ammoLeft(unit) <= 0) {
     return 'Out of missiles. Reload it, or take it back to a city.';
   }
+  if (ability === 'split') {
+    if (unit.hp < unitType(unit.type).hp * SPLIT.needsFraction) {
+      return 'Not enough of it left to share.';
+    }
+  }
   return null;
 }
 
@@ -97,6 +121,11 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
   const type = unitType(unit.type);
   const seen = state.players[unit.owner].visible;
   const w = state.width;
+
+  // The only ability whose target is the unit itself, so it is answered before
+  // the rule that everything else relies on -- you cannot heal or shoot
+  // yourself, but you can certainly split.
+  if (ability === 'split') return [unit];
 
   return state.units.filter((other) => {
     if (other.id === unit.id) return false;
@@ -284,6 +313,58 @@ function handOverMissile(state: GameState, unit: Unit, target: Unit): AbilityOut
   return { ok: true, amount: 1 };
 }
 
+/**
+ * A lone troll on a swamp spends nearly all of itself to make another troll.
+ *
+ * The new one arrives in the same state as the one that made it rather than at
+ * full health, so nothing is conjured: a split turns one healthy troll into two
+ * nearly-dead ones. The parent also cannot heal for a few turns, which for the
+ * creature whose entire character is healing twice as fast as anybody is the
+ * part that actually costs something.
+ *
+ * Requires swamp underfoot -- checked here rather than in `abilityReady`, which
+ * knows nothing about the map.
+ */
+function makeSwampyFriend(state: GameState, unit: Unit): AbilityOutcome {
+  if (TERRAIN[state.terrain[idx(unit.x, unit.y, state.width)]].id !== 'swamp') {
+    return { ok: false, reason: 'It only works in a swamp. Nobody has asked why.' };
+  }
+  const spot = DIRS8.map(([dx, dy]) => ({ x: unit.x + dx, y: unit.y + dy })).find(
+    (p) =>
+      p.x >= 0 &&
+      p.y >= 0 &&
+      p.x < state.width &&
+      p.y < state.height &&
+      !TERRAIN[state.terrain[idx(p.x, p.y, state.width)]].water &&
+      !state.units.some((u) => u.x === p.x && u.y === p.y) &&
+      !state.cities.some((c) => c.x === p.x && c.y === p.y),
+  );
+  if (!spot) return { ok: false, reason: 'Nowhere for it to stand.' };
+
+  const left = Math.max(1, Math.round(unit.hp * SPLIT.keepsFraction));
+  unit.hp = left;
+  applyStatus(unit, 'spent', SPLIT.spentTurns);
+  unit.moves = 0;
+
+  const friend = spawnUnit(state, unit.owner, unit.type, spot.x, spot.y, false);
+  friend.hp = left;
+  friend.moves = 0;
+  friend.homeCity = unit.homeCity;
+
+  log(
+    state,
+    `${unitType(unit.type).name} pulls a friend out of the swamp. Both look unwell.`,
+    'good',
+    unit.owner,
+    undefined,
+    [spot.x, spot.y],
+    friend.id,
+    'troll-split',
+  );
+  recomputeVisibility(state, unit.owner);
+  return { ok: true, amount: 1 };
+}
+
 export function useAbility(
   state: GameState,
   unit: Unit,
@@ -297,5 +378,6 @@ export function useAbility(
   }
   if (ability === 'ranged') return fireAtRange(state, unit, target);
   if (ability === 'reload') return handOverMissile(state, unit, target);
+  if (ability === 'split') return makeSwampyFriend(state, unit);
   return healFriend(state, unit, target);
 }
