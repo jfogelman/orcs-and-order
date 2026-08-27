@@ -427,13 +427,44 @@ export function suppliesArmy(state: GameState, city: City): boolean {
  * planted deep in somebody else's country carries nothing, because there is
  * nothing behind it.
  */
+/**
+ * A city this player took from somebody else and has since finished sacking.
+ *
+ * `foundedBy` is absent on saves written before it existed, and the rest of
+ * this file reads that as "the holder founded it" -- so it is read the same way
+ * here rather than treating every old city as captured.
+ */
+function isCapturedBase(state: GameState, city: City): boolean {
+  if (city.foundedBy === undefined || city.foundedBy === city.owner) return false;
+  return !isRuined(state, city);
+}
+
 export function supplyChain(state: GameState, playerId: number): Map<number, number> {
   const hops = new Map<number, number>();
   const seat = capitalOf(state, playerId);
   if (!seat) return hops;
 
   const posts = state.cities.filter(
-    (c) => c.owner === playerId && c.buildings.some((b) => BUILDINGS[b]?.suppliesArmy),
+    (c) =>
+      c.owner === playerId &&
+      (c.buildings.some((b) => BUILDINGS[b]?.suppliesArmy) ||
+        // A city taken by force, and then held long enough for the rubble to be
+        // cleared, becomes a forward base.
+        //
+        // Without this, conquest could not compound: the chain was the capital
+        // and whatever depots had been built, so taking a city extended your
+        // reach not at all and the front could never advance. Measured, sides
+        // owned 8.18 cities with 2.46 of them supplying, and a third of them
+        // fought the whole game out of one eight-tile bubble -- which is why
+        // eighty-five per cent of attacks on cities happened within four tiles
+        // of home. See DESIGN_QUEUE sections 50 to 53.
+        //
+        // Only captured cities, and only after the sack. One you founded is
+        // normally raised inside your own territory and already in supply; one
+        // you took is at the front, which is where reach is actually wanted.
+        // The fifteen turns are what keeps conquest expensive: the reward for
+        // taking a city arrives long after the fight for it.
+        isCapturedBase(state, c)),
   );
   hops.set(seat.id, 0);
   const frontier: City[] = [seat];

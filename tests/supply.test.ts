@@ -3,13 +3,14 @@ import { BUILDINGS } from '../src/model/buildings';
 import type { City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
 import {
+  RUIN,
+  SUPPLY,
   capitalOf,
   inSupply,
   productionCostIn,
+  suppliesArmy,
   supplyChain,
   supplyQuality,
-  SUPPLY,
-  suppliesArmy,
 } from '../src/sim/city';
 import { attackStrength } from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
@@ -282,5 +283,80 @@ describe('supply as a chain rather than a switch', () => {
     far.foundedTurn = 50;
     const granary = { kind: 'building', id: 'granary' } as const;
     expect(productionCostIn(state, far, granary)).toBe(BUILDINGS.granary.cost);
+  });
+});
+
+/**
+ * The chain was the capital plus whatever depots had been built, so taking a
+ * city extended your reach not at all and the front could never advance --
+ * which is why conquest had all but vanished. See DESIGN_QUEUE sections 50-53.
+ */
+describe('a captured city becomes a forward base', () => {
+  function board(): GameState {
+    const state = createGame({ seed: 20260827, width: 30, height: 24 });
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.terrain.fill('grass');
+    return state;
+  }
+
+  function city(state: GameState, owner: number, x: number, y: number, foundedBy: number): City {
+    const c: City = {
+      id: state.cities.length + 1, owner, name: 'Hold', x, y, size: 3,
+      food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+      workedTiles: [], disorder: false, foundedTurn: 1, foundedBy,
+    };
+    state.cities.push(c);
+    return c;
+  }
+
+  it('supplies once the rubble is cleared, and not before', () => {
+    const state = board();
+    city(state, 0, 5, 5, 0);
+    // Taken from the other side, still being sacked.
+    const taken = city(state, 0, 5, 12, 1);
+    taken.ruinedUntil = state.turn + RUIN.turns;
+
+    expect(supplyChain(state, 0).has(taken.id), 'supplied while still smoking').toBe(false);
+
+    state.turn += RUIN.turns;
+    expect(supplyChain(state, 0).has(taken.id)).toBe(true);
+  });
+
+  it('leaves a city you founded yourself out of it', () => {
+    const state = board();
+    city(state, 0, 5, 5, 0);
+    const ours = city(state, 0, 5, 12, 0);
+
+    // Only captured cities become bases. One you founded is normally raised
+    // inside your own territory and already in supply; letting every city
+    // supply is a different and much larger change.
+    expect(supplyChain(state, 0).has(ours.id)).toBe(false);
+  });
+
+  it('extends how far an army can fight from home', () => {
+    const state = board();
+    city(state, 0, 5, 5, 0);
+    const far = spawnUnit(state, 0, 'orc', 5, 14, false);
+
+    // Nine tiles out: past the fade entirely, so nothing at all.
+    expect(supplyQuality(state, far)).toBe(0);
+
+    const taken = city(state, 0, 5, 12, 1);
+    taken.ruinedUntil = state.turn - 1;
+
+    // The same unit, unmoved, now two tiles from a base it captured.
+    expect(supplyQuality(state, far)).toBe(1);
+  });
+
+  it('treats an old save with no founder as the holder having founded it', () => {
+    const state = board();
+    city(state, 0, 5, 5, 0);
+    const legacy = city(state, 0, 5, 12, 0);
+    delete legacy.foundedBy;
+
+    // The rest of the file reads a missing founder that way, and reading it
+    // any other way here would turn every city in an old save into a base.
+    expect(supplyChain(state, 0).has(legacy.id)).toBe(false);
   });
 });
