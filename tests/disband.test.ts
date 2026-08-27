@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
-import { DISBAND_REFUND, disband, disbandBlocked, disbandRefund } from '../src/sim/combat';
+import {
+  DISBAND_REFUND,
+  disband,
+  disbandBlocked,
+  disbandRefund,
+  refundWouldStick,
+} from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 
 function arena(): GameState {
@@ -96,5 +102,44 @@ describe('disbanding', () => {
     // Ten Orcs cost ten orcs' shields, so breaking them up returns ten orcs'
     // worth. Anything else would make the ladder a shield laundering scheme.
     expect(disbandRefund(state, many)).toBeGreaterThan(oneRefund * 5);
+  });
+});
+
+/**
+ * The standing orders empty the shield box every turn, so paying a refund into
+ * a city set to one of them is the rules working correctly and looking exactly
+ * like a bug. The interface says so; these pin down what it says it about.
+ */
+describe('whether a refund would actually be kept', () => {
+  it('sticks when the city is building something', () => {
+    const state = arena();
+    const hold = city(state, 0, 5, 5);
+    const ogre = spawnUnit(state, 0, 'ogre', 5, 5, false);
+
+    hold.producing = { kind: 'unit', id: 'goblin' };
+    expect(refundWouldStick(state, ogre)).toBe(true);
+
+    hold.producing = { kind: 'building', id: 'barracks' };
+    expect(refundWouldStick(state, ogre)).toBe(true);
+  });
+
+  it('does not stick on any of the standing orders', () => {
+    const state = arena();
+    const hold = city(state, 0, 5, 5);
+    const ogre = spawnUnit(state, 0, 'ogre', 5, 5, false);
+
+    for (const kind of ['coin', 'beakers', 'calm'] as const) {
+      hold.producing = { kind };
+      expect(refundWouldStick(state, ogre), kind).toBe(false);
+      // The shields are still paid in -- it is the city that spends them.
+      expect(disbandRefund(state, ogre)).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not stick out in the open, where there is nothing to keep', () => {
+    const state = arena();
+    city(state, 0, 5, 5);
+    const ogre = spawnUnit(state, 0, 'ogre', 12, 12, false);
+    expect(refundWouldStick(state, ogre)).toBe(false);
   });
 });

@@ -779,6 +779,21 @@ export function disbandRefund(state: GameState, unit: Unit): number {
 }
 
 /**
+ * Whether a refund handed to this city would actually be kept.
+ *
+ * The standing orders empty the shield box every turn -- Coin turns it into
+ * gold, Study into beakers, and Placating banks nothing at all by design. So
+ * breaking a unit up in a city set to one of them pays the shields in and
+ * watches them go straight back out, which is correct behaviour and completely
+ * invisible. The interface says so rather than letting somebody find out.
+ */
+export function refundWouldStick(state: GameState, unit: Unit): boolean {
+  const city = cityAt(state, unit.x, unit.y);
+  if (!city || city.owner !== unit.owner) return false;
+  return city.producing.kind === 'unit' || city.producing.kind === 'building';
+}
+
+/**
  * Get rid of a unit on purpose.
  *
  * There was previously no way at all: a Peon that had founded everything worth

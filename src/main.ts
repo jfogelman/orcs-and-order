@@ -32,7 +32,13 @@ import {
 import { researchableTechs, techCost } from './sim/research';
 import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
-import { disband, disbandRefund, resupply, resupplyBlocked } from './sim/combat';
+import {
+  disband,
+  disbandRefund,
+  refundWouldStick,
+  resupply,
+  resupplyBlocked,
+} from './sim/combat';
 import { openAdvisors } from './ui/advisors';
 import { openHordeReport } from './ui/hordeReport';
 import {
@@ -376,13 +382,20 @@ class App {
     const unit = this.selected;
     if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
     const refund = disbandRefund(this.state, unit);
+    const sticks = refundWouldStick(this.state, unit);
     const name = unitType(unit.type).name;
     confirmAction({
       title: `Disband ${name}?`,
       body:
-        refund > 0
+        refund <= 0
+          ? `It is dismissed. Nothing comes back for it out here -- disband inside a city of yours to recover half its shields.`
+          : sticks
           ? `It is broken up where it stands and ${refund} shields go into this city's work. It does not come back.`
-          : `It is dismissed. Nothing comes back for it out here -- disband inside a city of yours to recover half its shields.`,
+          : // Paying shields into a city that empties its box every turn is the
+            // rules working correctly and looking exactly like a bug.
+            `It is broken up where it stands, but this city is not building anything to put ` +
+            `the ${refund} shields into -- they will be spent on its standing orders and lost. ` +
+            `Set it building something first if you want them kept.`,
       confirm: 'Disband',
       onConfirm: () => {
         disband(this.state, unit);
@@ -1331,9 +1344,11 @@ class App {
               : ''
           }
           <button class="small danger" data-act="disband" title="${
-            disbandRefund(this.state, unit) > 0
+            disbandRefund(this.state, unit) <= 0
+              ? 'Dismiss it. Nothing comes back outside a city.'
+              : refundWouldStick(this.state, unit)
               ? `Break it up here for ${disbandRefund(this.state, unit)} shields`
-              : 'Dismiss it. Nothing comes back outside a city.'
+              : 'Break it up here — but this city is banking its shields, so they would be lost'
           }">Disband</button>
           <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
           <button class="small" data-act="sentry">Sentry (S)</button>
