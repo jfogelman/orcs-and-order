@@ -3727,3 +3727,55 @@ the back half of it was already hard to reach -- section 37 measured the magic
 advances landing late and rarely. At a hundred and eleven turns there may not be
 time to get there at all, which would make the whole of section 11 unreachable
 in practice. That wants measuring before anything else is tuned.
+
+## 56. The tree is now half out of reach
+
+Section 55 asked whether the back half of the tech tree survives games that end
+at a hundred and eleven turns instead of a hundred and ninety-seven. Measured
+across fifty-four games, both arms:
+
+| | march dead (197 turns) | march works (111 turns) |
+|---|---|---|
+| advances held per side, of 45 | 26.6 | **21.4** |
+| `insanity` | 75% | **37%** |
+| `pyromancy` / `cryomancy` | 72% / 69% | 34% / 32% |
+| `full-of-fire` | 35% | **19%** |
+| `club-improvement` | 44% | 29% |
+| **dragons built a game** | 2.6 | **0.5** |
+| mages / ogres / catapults | 11.2 / 11.4 / 7.2 | 3.8 / 4.0 / 1.8 |
+| clubs held at end | 2.00 | 0.85 |
+
+Roughly halved across the board. A side now finishes holding less than half the
+advances that exist, most games contain no dragon at all, and the section 11
+work -- the clubs, the spells, the magic block -- lands in a third of games
+rather than three quarters.
+
+### The turn limit is not the lever
+
+Fifty-three of fifty-four games now end *before* the limit, by conquest. Raising
+the limit changes nothing for a game that never reaches it. This is not a game
+running out of time; it is a war finishing before research can traverse the
+tree.
+
+### What the lever actually is
+
+Research pace against war pace. The old game got 26.6 advances into 197 turns --
+about 0.135 an advance per turn. Reaching the same depth inside 111 turns needs
+roughly **0.24 an advance per turn, or 1.8 times faster**.
+
+Three ways, in rough order of how blunt they are:
+
+- **Cheaper advances**, especially the back half. Direct, and it changes what
+  the tree *is* rather than how fast anyone moves through it.
+- **More beakers.** The three-way split already exists and the AI already
+  manages it -- section 47 -- so this is a dial that is already turning.
+- **Slower conquest.** Undoing part of section 55, which was a bug fix rather
+  than a balance choice, and would be the wrong direction.
+
+### And a caveat about where the question came from
+
+The original observation was from human play: reaching turn 300 having conquered
+most but not all, and winning on numbers. **That was against an AI that could
+not march.** It never came for you. Whether a human game still runs to the limit
+against an opponent that now advances is unknown and unmeasured, and worth one
+played game before anything is tuned on the strength of it.
