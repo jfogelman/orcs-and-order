@@ -4290,3 +4290,63 @@ Six was chosen deliberately as the level setting when the Horde was the weaker
 side. It is now at parity, so raising it would be a Horde buff and not a fix --
 it would paper over the founding gap rather than explain it, and the explanation
 is still incomplete.
+
+## 62. A unit dying alone moved the camera nowhere
+
+Reported from play at turn 98: a sentried unit was killed off-screen and the
+view stayed where it was.
+
+The interface decides what to look at by reading the turn's log entries, and it
+needs two things from one: that the entry concerns the viewer, and a position.
+A death had the first and not the second. `destroyUnit` logged `"Two Orcs is cut
+down."` addressed to the owner but with **no `at`**, and `worthWatching` opens
+with `if (!entry.at) return false`.
+
+The attacker's own line does carry a position, but it is addressed to the
+attacker, so the interface asks whether the viewer has a unit or city beside
+that tile instead -- and the only one that was there has just been spliced out
+of `state.units` by the death itself. **Both routes fail on exactly the case
+where a unit is somewhere alone, which is what a sentry is for.** Fixed by
+logging where it happened, in `destroyUnit` and in the two blast deaths that had
+the same omission.
+
+Worth noting for anything similar: `resolveCombat` works out an outcome and sets
+health to zero but removes nobody and logs nothing. The death, and its log line,
+happen a level up in `tryStep`. A test that drives `resolveCombat` directly will
+never see the entry it is looking for.
+
+## 63. Played at turn 98: the Horde felt weaker, and the rates were the default
+
+One game, so it settles nothing on its own -- but it points the opposite way to
+the measurement, which is worth recording rather than explaining away. Section
+57's beakers change measured about four games *toward* the Horde; the human
+playing the Horde reported it feeling weaker.
+
+The save says, at turn 98:
+
+| | player (Horde) | AI (Kingdom) |
+|---|---|---|
+| cities | 4 | 6 |
+| population | 25 | 36 |
+| **units** | **1** | **40** |
+| advances | 9 | 10 |
+| trade split | **4/4/4, the default** | 2/3/7 |
+
+Two things stand out and neither is the roster.
+
+**The player is on the even default and the AI is not.** Section 47 measured
+exactly this: an even split is the right place for a *human* to start because
+they can move off it, and it cost the AI a fifth of its research when it could
+not. The AI now manages its own and has moved to 2/3/7. Nothing tells the player
+that dial matters, so the game ships a default that the opponent is
+automatically better than. That is an interface problem wearing a balance
+problem's clothes, and it is cheap to test: measure a side pinned at 4/4/4
+against one running `manageRates`.
+
+**One unit against forty** is not a roster gap, it is an army that was lost and
+not rebuilt. Whether that is the Horde being weak or one game going badly cannot
+be told from a single save.
+
+Before anything is repriced on the strength of this, the thing to measure is the
+default rates, because it is specific, it is cheap, and it would affect every
+human game regardless of faction.

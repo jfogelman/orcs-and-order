@@ -526,7 +526,8 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     for (const victim of killed) {
       const i = state.units.indexOf(victim);
       if (i >= 0) state.units.splice(i, 1);
-      log(state, `${unitType(victim.type).name} does not get up.`, 'bad', victim.owner);
+      log(state, `${unitType(victim.type).name} does not get up.`, 'bad', victim.owner,
+        undefined, [victim.x, victim.y]);
     }
   };
 
@@ -742,7 +743,8 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
   for (const victim of killed) {
     const i = state.units.indexOf(victim);
     if (i >= 0) state.units.splice(i, 1);
-    log(state, `${unitType(victim.type).name} is caught in the blast.`, 'bad', victim.owner);
+    log(state, `${unitType(victim.type).name} is caught in the blast.`, 'bad', victim.owner,
+      undefined, [victim.x, victim.y]);
   }
   return killed;
 }
@@ -827,13 +829,24 @@ export function destroyUnit(state: GameState, unit: Unit, cause: string): void {
   if (i >= 0) state.units.splice(i, 1);
   const type = unitType(unit.type);
   const owner = state.players[unit.owner];
-  log(state, `${type.name} ${cause}.`, 'bad', unit.owner);
+  // Where it happened, which is the whole of what the camera has to go on.
+  //
+  // The attacker's own "defeats" line carries a position, but it is addressed
+  // to the attacker, so the interface works out whether it concerns the viewer
+  // by looking for one of their units beside the tile -- and the only one that
+  // was there has just been spliced out of the list above. A unit dying alone
+  // somewhere nobody was looking, which is exactly what a sentry is for,
+  // therefore moved the camera nowhere at all.
+  const where = [unit.x, unit.y] as const;
+  log(state, `${type.name} ${cause}.`, 'bad', unit.owner, undefined, where);
   if (type.count > 1) {
     log(
       state,
       `All ${type.count} of them, at once. ${owner.name} takes it about as well as expected.`,
       'bad',
       unit.owner,
+      undefined,
+      where,
     );
   }
 }
