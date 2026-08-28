@@ -8,7 +8,7 @@ import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
 import type { City, GameState, ProductionItem, Unit, AutoBuild, Player } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
-import { TRADE_STEPS, splitTrade, tradeRates } from './research';
+import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 
 /**
@@ -194,7 +194,9 @@ export function cityIncome(
   const split = splitTrade(player, cityYield(state, city).trade);
   return {
     gold: Math.round(split.gold * (1 + cityGoldBonus(state, city))),
-    beakers: Math.round(split.beakers * (1 + cityScienceBonus(state, city))),
+    beakers: Math.round(
+      split.beakers * BEAKERS_PER_TRADE.multiplier * (1 + cityScienceBonus(state, city)),
+    ),
   };
 }
 

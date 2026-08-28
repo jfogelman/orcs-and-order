@@ -67,6 +67,36 @@ export function unlockedBuildings(player: Player): BuildingDef[] {
  */
 export const TECH_ESCALATION = 0.035;
 
+/**
+ * Beakers earned per point of trade sent to study.
+ *
+ * Section 57's parked lever. Section 56 measured the back half of the tree
+ * falling out of reach when games shortened, and section 57 found that making
+ * deep advances cheaper works but is *structurally* an orc buff -- the Horde's
+ * best units sit deeper in its tree, so anything depth-shaped favours it.
+ *
+ * This dial is not depth-shaped: it raises both sides' research at every point
+ * in the tree at once, which is the whole reason section 57 preferred it. That
+ * turned out to be only half true -- more research still gets you deeper, and
+ * the Horde's best units live deeper, so it inherits a weaker version of the
+ * same bias. Measured over two seed sets, 108 games:
+ *
+ *            advances  insanity  dragons  wins orc-human
+ *   x1.0     20.7/22.3  40%/45%  1.2/1.4  29-25, 27-27
+ *   x1.25    23.2/23.5  56%/56%  2.2/2.7  26-28, 34-20
+ *   x1.5     24.9       61%      2.5      33-21
+ *
+ * The reachability effect replicates exactly -- insanity lands on 56% on both
+ * sets. The balance effect does not: minus three on one set and plus seven on
+ * the other, pooling to about four games toward the Horde. x1.5 was rejected
+ * for tipping it to 61%, which is the same number section 57 got from the
+ * cheapest depth setting it had already declined to ship.
+ *
+ * A mutable object in the style of MILITIA and RESETTLE so the arms can be
+ * swept.
+ */
+export const BEAKERS_PER_TRADE = { multiplier: 1.25 };
+
 export function techCost(player: Player, t: TechDef): number {
   const known = Math.max(0, player.techs.length - 1);
   return Math.round(t.cost * (1 + known * TECH_ESCALATION));
