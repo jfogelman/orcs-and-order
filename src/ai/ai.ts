@@ -823,6 +823,62 @@ function approachTile(
   return null;
 }
 
+/** How far a soldier will go out of its way to walk beside a settler. */
+const ESCORT_RANGE = 6;
+
+/**
+ * Walk with a settler that has nobody with it.
+ *
+ * `guardedAt` was the only escort-shaped code here, and all it asked was
+ * whether something of ours *happened* to be next to a settler at the moment of
+ * founding. Nothing arranged a guard and nothing walked one alongside; settlers
+ * travelled alone, every time. See DESIGN_QUEUE section 18.
+ *
+ * Deliberately placed after fighting and after holding a bare city, so this is
+ * what a soldier does when it has nothing more urgent on -- an army that
+ * abandoned a siege to chaperone a peon would be a worse bug than the one being
+ * fixed. Bounded by `ESCORT_RANGE` for the same reason: a soldier on the far
+ * side of the map is not the right escort even if it is the only volunteer.
+ *
+ * A settler counts as escorted the moment anything of ours that can fight is
+ * beside it, so once one soldier arrives the rest stop volunteering.
+ */
+function escortDuty(state: GameState, unit: Unit): boolean {
+  if (unitType(unit.type).settler || unitType(unit.type).attack <= 0) return false;
+
+  let best: Unit | null = null;
+  let bestDist = ESCORT_RANGE + 1;
+  for (const settler of playerUnits(state, unit.owner)) {
+    if (!unitType(settler.type).settler) continue;
+    // Only ones actually going somewhere. A settler parked on sentry once the
+    // empire has enough cities would otherwise hold a guard beside it for the
+    // rest of the game, and an army slowly evaporates into chaperones.
+    if (settler.order === 'sentry' || settler.order === 'fortified') continue;
+    const guarded = state.units.some(
+      (u) =>
+        u.owner === unit.owner &&
+        u.id !== settler.id &&
+        !unitType(u.type).settler &&
+        unitType(u.type).attack > 0 &&
+        distance(u.x, u.y, settler.x, settler.y) <= 1,
+    );
+    if (guarded) continue;
+    const d = distance(unit.x, unit.y, settler.x, settler.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = settler;
+    }
+  }
+  if (!best) return false;
+
+  // Already alongside: hold, rather than shuffling, so the pair travels together
+  // instead of the guard orbiting it. Movement is left unspent so the escort
+  // can still be pulled into a fight next to it -- burning the turn here froze
+  // guards in place and thinned the army enough to show up in the variety test.
+  if (bestDist <= 1) return true;
+  return moveToward(state, unit, best.x, best.y).kind !== 'blocked';
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
@@ -894,6 +950,9 @@ function actSoldier(
       return;
     }
   }
+
+  // Somebody has to walk with the settlers.
+  if (escortDuty(state, unit)) return;
 
   // Hold undefended home cities.
   const ownCities = playerCities(state, unit.owner);

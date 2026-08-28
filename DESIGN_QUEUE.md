@@ -1608,7 +1608,8 @@ reasons this file has not identified yet. Worth attacking that directly:
 size-one city producing settlers forever without being much of a brake at all,
 and leave the balance question to the growth work above.
 
-## 18. The AI should escort its settlers
+## 18. The AI should escort its settlers -- DONE, and the last point of defence stays
+
 
 It does not. `guardedAt` is the only escort-shaped code in `ai.ts`, and all it
 asks is whether something of ours *happens* to be adjacent at the moment of
@@ -1631,6 +1632,36 @@ Two more things to settle before that rule, separate from the AI:
 
 So: escort first, measure, and only then consider taking the last point of
 defence away.
+
+**Escorting landed.** `escortDuty` in `ai.ts` sends any soldier within
+`ESCORT_RANGE` to walk beside the nearest settler that has nobody with it,
+before it considers holding a city or marching. Settlers parked on sentry are
+skipped -- an empire that has finished expanding keeps its idle peons at home,
+and chaperoning those would slowly turn an army into an honour guard.
+
+Measured over 54 games against a control with the change stashed:
+
+| | settlers alone | escorted |
+|---|---|---|
+| settlers that never founded | 8.4 | **7.0** |
+| cities founded | 19.9 | **20.6** |
+| cities at end | 12.3 | 11.8 |
+| wins orc-human | 28-26 | 30-24 |
+| decided / mean turns | 53/54, 111 | 53/54, 110 |
+
+A sixth fewer settlers thrown away, slightly more cities founded, and the win
+split unmoved. Modest, and in the right direction, which is what the change
+claimed it would do.
+
+**The prerequisite is now met, and the answer is still no.** The whole reason to
+escort first was to find out whether `defense: 0` on settlers could be made fair.
+It cannot, and the measurement is why: escorting saves 1.4 settlers a game out of
+8.4 lost. The other seven still travel alone at some point, because the soldier
+has to be within six tiles and not already needed somewhere. A rule that deletes
+an unescorted settler outright would land on those seven, and a human -- who
+escorts by habit and by looking at the map -- would lose far fewer. It is the
+same asymmetry the section warned about, now with a number on it. Leave settlers
+their one point of defence.
 
 ## 19. Resettlement: a captured city takes time to become yours
 
@@ -3828,3 +3859,19 @@ three-way split and the AI already manages it, so it is a small change with a
 known shape. Judge it on the same two numbers as above: whether `insanity` and
 the dragon count move, and whether the win split stays where a human said it
 felt right.
+
+## 58. A soldier will not cross the map to babysit
+
+`ESCORT_RANGE` is six tiles, picked because it is roughly two turns' walk for
+most things and because a guard that ranges further stops being available for
+anything else. It was never measured against other values -- the arms compared
+escorting at six against not escorting at all.
+
+Worth an afternoon at some point: three and nine, on the same numbers as section
+18 (settlers that never founded, cities founded, the win split). The shape to
+watch for is that a longer leash saves more settlers while costing cities,
+because the soldiers walking out to meet them are the same soldiers that would
+otherwise be taking somebody else's.
+
+Low priority. The gain from escorting at all was modest, so the gain from tuning
+the radius is smaller still, and there are unstarted sections above this one.
