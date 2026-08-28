@@ -4315,12 +4315,22 @@ health to zero but removes nobody and logs nothing. The death, and its log line,
 happen a level up in `tryStep`. A test that drives `resolveCombat` directly will
 never see the entry it is looking for.
 
-## 63. Played at turn 98: the Horde felt weaker, and the rates were the default
+## 63. Played at turn 98: one bad game, and a default worth checking
 
-One game, so it settles nothing on its own -- but it points the opposite way to
-the measurement, which is worth recording rather than explaining away. Section
-57's beakers change measured about four games *toward* the Horde; the human
-playing the Horde reported it feeling weaker.
+**Read the whole account before acting on the save.** The first report was that
+the Horde felt a little weaker. Asked about it across more games, the player's
+actual experience is *"wrecking the AI, and sometimes caught flatfooted"* --
+which is what balance is supposed to feel like from the inside. So the save
+below is one game that went badly, not evidence of a faction problem, and
+**nothing should be repriced on it**.
+
+That is worth writing down as a habit rather than a one-off. A single save
+arrives with a story already attached, and the story is usually about the game
+the player just lost. It took one question to find that the sample was wider and
+pointed somewhere else entirely.
+
+The measurement and the play agree, then: section 57's beakers change moved
+about four games toward the Horde, and the game feels roughly even to play.
 
 The save says, at turn 98:
 
@@ -4344,9 +4354,88 @@ problem's clothes, and it is cheap to test: measure a side pinned at 4/4/4
 against one running `manageRates`.
 
 **One unit against forty** is not a roster gap, it is an army that was lost and
-not rebuilt. Whether that is the Horde being weak or one game going badly cannot
-be told from a single save.
+not rebuilt -- and the player's wider account says that is a game going badly
+rather than the Horde being weak.
 
-Before anything is repriced on the strength of this, the thing to measure is the
-default rates, because it is specific, it is cheap, and it would affect every
-human game regardless of faction.
+The rates observation survives independently of any of that, because it is not
+a balance question. Whatever the factions are worth, the game ships a default
+that the opponent improves on and the player is never told about. That is worth
+measuring on its own terms.
+
+## 64. The default trade split costs about seven games, and nobody is told
+
+Section 63 noticed the played save sitting on the even 4/4/4 default while the
+AI had moved itself to 2/3/7. Measured: one side held at the shipping default
+every turn, the other running `manageRates`, two seed sets, 108 games.
+
+| | control (both manage) | Horde pinned | Kingdom pinned |
+|---|---|---|---|
+| set A wins, orc-human | 26-28 | 26-28 | 26-28 |
+| **set B wins, orc-human** | **34-20** | **27-27** | -- |
+| orc advances | 24.1 / 24.6 | 20.2 / 21.0 | 24.3 |
+| orc population | 30.6 / 40.2 | 27.8 / 30.6 | 32.4 |
+| orc cities | 5.20 / 6.63 | 4.44 / 5.13 | 5.37 |
+| orc units | 21.8 / 28.9 | 22.4 / 22.0 | 20.6 |
+| gold banked by the pinned side | -- | 988 / 979 | **1449** |
+
+**Pooled, pinning the Horde costs it seven games in 108** -- 60-48 becomes
+53-55 -- along with a quarter of its population, a fifth of its army, one and a
+half cities and three advances. The Kingdom pinned loses the same shape of
+things.
+
+**Set A alone would have said the opposite.** All three of its arms returned
+26-28 exactly, which read as a null result and looked enough like this session's
+two broken sweeps to be worth checking rather than reporting. It was a
+coincidence: the other metrics had moved in set A the whole time -- advances 24.1
+to 20.2 -- and only the win count happened to land identically three times.
+A metric that does not move is not evidence that nothing moved.
+
+### What the gold says, which is the more interesting half
+
+The pinned side **banks the gold and never spends it**: 1449 against a control's
+836 for the Kingdom, 979 against 553 for the Horde. The even default sends more
+trade to coin than `manageRates` would, and it then sits there. So the default
+is not costing a player nothing -- it is converting research into a currency the
+AI does not convert back into anything.
+
+Whether *gold itself* is doing enough work in this game is now a fair question,
+and a separate one from this section. Rush-buying exists, section 48 gave it to
+rioting cities, and a side can still finish a game on top of fifteen hundred
+unspent coins.
+
+### What to do about it
+
+This is an interface problem, not a balance one. Section 47 measured the even
+split costing the AI a fifth of its research and **fixed it for the AI** by
+giving it `manageRates`. The human got nothing, so the game now ships a default
+the opponent automatically improves on and never mentions.
+
+**Done: both trade advisors now notice.** `ratesUntouched` is shared between the
+councils so they agree on what untouched means, and each says it in its own
+voice -- the Ledger-Thane appalled at a nation's trade being divided like a cake
+among children, the Ogre Quartermaster's left head pointing at the empire report
+while the right head fails to help. Both name the screen, because an advisor who
+grumbles without saying where to go has taught nobody anything.
+
+Three deliberate edges:
+
+- **Not before turn twelve.** An opening where nothing has been built yet is not
+  a state anybody has failed to manage, and an advisor who says this from turn
+  one is one people learn to close.
+- **Tested by equality, not against the literal four**, so a deliberate even
+  split reads the same as an untouched one. Somebody who chose even has heard
+  the advice and can ignore it; from here the two are indistinguishable, and the
+  alternative is tracking whether a screen was opened.
+- **It yields to actually running out of money.** The order of a list of
+  concerns is the character, and a treasury that is draining comes first however
+  untidy the split is.
+
+No numbers changed. The split a player leaves alone is worth what it was worth;
+they are now told it is there.
+
+### One limit on this measurement
+
+Both sides are the AI. Pinning happens after `runAiTurn`, so the AI still makes
+every other decision as though its preferred split were in force. This measures
+**what the dial is worth**, not how a person plays with it -- a human choosing
+production and research around an even split is a game this cannot simulate.

@@ -5,6 +5,7 @@ import {
   advisorLine,
   advisorsFor,
   count,
+  ratesUntouched,
   spell,
 } from '../src/model/advisors';
 import { situationOf } from '../src/ui/advisors';
@@ -187,5 +188,65 @@ describe('the situation it all reads from', () => {
     expect(s.rioting).toBeLessThanOrEqual(s.cities);
     expect(s.undefended).toBeLessThanOrEqual(s.cities);
     expect(s.walled).toBeLessThanOrEqual(s.cities);
+  });
+});
+
+/**
+ * DESIGN_QUEUE section 64. A side left on the even default loses about seven
+ * games in a hundred and eight, a quarter of its population and a fifth of its
+ * army. Section 47 taught the AI to manage its own split and told the player
+ * nothing, so the game shipped a default its opponent automatically improves
+ * on. The advisors are where the game explains itself, so they explain this.
+ */
+describe('nobody has touched the trade split', () => {
+  function untouched(faction: 'orc' | 'human'): Situation {
+    return { ...calm(), faction, turn: 30, rates: { coin: 4, beakers: 4, calm: 4 } };
+  }
+
+  it('is noticed by whoever handles the money, on both sides', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      const line = advisorLine(trade, untouched(faction));
+      // Says where to go and does not merely grumble about it.
+      expect(line, `${trade.id} said nothing useful: ${line}`).toMatch(/empire report/i);
+    }
+  });
+
+  it('says nothing while the empire is still being founded', () => {
+    // An opening where nothing has been built yet is not a state anybody has
+    // failed to manage, and an advisor who says it every turn from turn one is
+    // an advisor people learn to close.
+    for (const faction of ['orc', 'human'] as const) {
+      const early = { ...untouched(faction), turn: 3 };
+      expect(ratesUntouched(early)).toBe(false);
+      const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      expect(advisorLine(trade, early)).not.toMatch(/empire report/i);
+    }
+  });
+
+  it('stops once the split has been set to anything at all', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const moved = { ...untouched(faction), rates: { coin: 3, beakers: 6, calm: 3 } };
+      expect(ratesUntouched(moved)).toBe(false);
+      const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      expect(advisorLine(trade, moved)).not.toMatch(/empire report/i);
+    }
+  });
+
+  it('gives way to actually running out of money', () => {
+    // The order of a list of concerns is the character. Somebody whose treasury
+    // is draining should mention that first, however untidy the split is.
+    for (const faction of ['orc', 'human'] as const) {
+      const broke = { ...untouched(faction), goldPerTurn: -9 };
+      const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      expect(advisorLine(trade, broke)).not.toMatch(/empire report/i);
+    }
+  });
+
+  it('keeps its digits spelled out like everybody else', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      expect(advisorLine(trade, untouched(faction))).not.toMatch(/\d/);
+    }
   });
 });
