@@ -114,6 +114,34 @@ const NUMBER_WORDS = [
  * the difference between an advisor and a status bar. Zero is "no" rather than
  * "nought", because "no cities rioting" is what somebody would actually say.
  */
+/**
+ * Has nobody touched the trade split?
+ *
+ * Perfectly even is what the game ships and what a player who never opens the
+ * empire report keeps. Measured, that costs about seven games in a hundred and
+ * eight, a quarter of a side's population and a fifth of its army -- see
+ * DESIGN_QUEUE section 64. The AI was taught to manage its own split in section
+ * 47 and the human was told nothing, so the game shipped a default its opponent
+ * automatically improves on.
+ *
+ * Tested by equality rather than against the literal four, so a deliberate even
+ * split reads the same as an untouched one. Somebody who has chosen an even
+ * split has heard the advice and can stop listening to it; somebody who has not
+ * is exactly who this is for, and the two are indistinguishable from here.
+ *
+ * Not before `SETTLED_BY`, because an opening where nothing has been built yet
+ * is not a state anybody has failed to manage.
+ */
+const SETTLED_BY = 12;
+
+export function ratesUntouched(s: Situation): boolean {
+  return (
+    s.turn >= SETTLED_BY &&
+    s.rates.coin === s.rates.beakers &&
+    s.rates.beakers === s.rates.calm
+  );
+}
+
 export function spell(n: number): string {
   return n >= 0 && n <= 20 ? NUMBER_WORDS[n] : String(n);
 }
@@ -267,6 +295,13 @@ const KINGDOM: AdvisorDef[] = [
         say: (s) =>
           `We are losing ${spell(Math.abs(s.goldPerTurn))} a turn. Losing. I have written it down ` +
           `in the ledger, in a colour I do not enjoy using.`,
+      },
+      {
+        when: ratesUntouched,
+        say: () =>
+          `Four parts, four parts, four parts. Somebody has divided the trade of a nation the way ` +
+          `one divides a cake among children who are watching. It is on the empire report. It can ` +
+          `be *changed*. I shall raise this again.`,
       },
       {
         when: (s) => s.rates.coin < 3,
@@ -575,6 +610,13 @@ const HORDE: AdvisorDef[] = [
         say: (s) =>
           `${spell(s.gold)} coin. Both heads counted. Both heads got ${spell(s.gold)}. Left head is ` +
           `worried, right head is hungry, nobody is happy.`,
+      },
+      {
+        when: ratesUntouched,
+        say: () =>
+          `Four, four, four. Left head says that is a very tidy way to split the trade and asks who ` +
+          `decided it. Right head says nobody decided it, it came like that. Left head would like ` +
+          `you to decide it. Empire report. Left head is pointing.`,
       },
       {
         when: (s) => s.rates.coin < 3,
