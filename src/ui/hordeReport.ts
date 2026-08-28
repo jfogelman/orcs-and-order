@@ -47,7 +47,7 @@ function economy(state: GameState, playerId: number) {
     const income = cityIncome(state, city, player);
     gold += income.gold;
     beakers += income.beakers;
-    upkeep += buildingUpkeep(city);
+    upkeep += buildingUpkeep(state, city);
   }
   return { gold: gold - upkeep, beakers, upkeep };
 }
@@ -67,7 +67,7 @@ function cityFlags(state: GameState, city: City, capitalId: number | null): stri
   const flags: string[] = [];
   if (city.id === capitalId) flags.push('capital');
   if (city.disorder) flags.push('in disorder');
-  if (isRuined(state, city)) flags.push('sacked');
+  if (isRuined(state, city)) flags.push('resettling');
   if (city.size > contentLimit(state, city)) flags.push('unhappy');
   return flags.join(', ');
 }

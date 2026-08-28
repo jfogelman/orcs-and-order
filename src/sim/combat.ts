@@ -5,7 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import { headcount, needsAmmo, unitType } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
-import { militiaStrength, supplyQuality, SUPPLY } from './city';
+import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
 import { hasFlag } from './rules';
 import { SPELL_TURNS, applyStatus } from './status';
 
@@ -332,7 +332,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   const homeCity = cityAt(state, attacker.x, attacker.y);
   const sallyMult =
     homeCity && homeCity.owner === attacker.owner
-      ? 1 + homeCity.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.sallyBonus ?? 0), 0)
+      ? 1 + workingBuildings(state, homeCity).reduce((sum, b) => sum + (BUILDINGS[b]?.sallyBonus ?? 0), 0)
       : 1;
 
   let total = type.attack;
@@ -390,7 +390,7 @@ export function defenseStrength(
   // siege engine cannot simply knock over still counts.
   const siegeAttacker = attacker !== undefined && unitType(attacker.type).siegeBonus > 1;
   const wallsMult = city
-    ? city.buildings.reduce((mult, id) => {
+    ? workingBuildings(state, city).reduce((mult, id) => {
         const def = BUILDINGS[id];
         if (!def?.defenseMult) return mult;
         if (siegeAttacker && def.negatedBySiege) return mult;

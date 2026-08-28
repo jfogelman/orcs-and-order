@@ -7,7 +7,7 @@ import {
   contentLimit,
   foundCity,
   isRuined,
-  RUIN,
+  RESETTLE,
   rushBlocked,
 } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
@@ -147,7 +147,7 @@ describe('a city still being resettled', () => {
 
   it('can be taken once the resettling is over', () => {
     const { state, city, retaker } = taken();
-    state.turn += RUIN.turns + 1;
+    state.turn += RESETTLE.cap + 1;
     retaker.moves = 2;
 
     tryStep(state, retaker, 10, 10);

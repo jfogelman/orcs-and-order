@@ -1663,7 +1663,7 @@ escorts by habit and by looking at the map -- would lose far fewer. It is the
 same asymmetry the section warned about, now with a number on it. Leave settlers
 their one point of defence.
 
-## 19. Resettlement: a captured city takes time to become yours
+## 19. Resettlement: a captured city takes time to become yours -- DONE
 
 Thematically an orc cannot simply move into a human town and carry on. There
 should be a period after capture where the old population is leaving and the new
@@ -1694,6 +1694,69 @@ Three things in the code this has to reckon with:
 human settler. It only makes sense in a game where both sides can be the same
 kind -- the multiple-factions idea in section 15 -- so it belongs there rather
 than here, if anywhere.
+
+**Built, and it steadies the game rather than costing anybody.**
+
+`RESETTLE` is `6 + 1` per citizen, capped at fifteen, read off the size the city
+was *sacked down to*. It replaces the flat fifteen rather than running beside it,
+so there is still exactly one clock. While it runs: no units at all, buildings
+limited to the two shared ones, and the buildings already standing there stop
+working -- `workingBuildings` is the new chokepoint, threaded through content,
+gold, science, granary, veteran rank, sally bonus, barracks healing and depot
+supply. Masonry is the exception, since a wall does not need staffing to be in
+the way. Shut buildings charge no upkeep: paying for a building that does nothing
+would be a third penalty on one event.
+
+The first numbers I picked were wrong and the sweep is why. `6 + 2` per citizen
+capped at twenty *reads* like a reshaping of a flat fifteen and is actually a
+lengthening -- a typical captured city runs 14 to 20 turns. Measured in parts:
+
+| arm | orc-human | conquest | turns | retaken |
+|---|---|---|---|---|
+| control, flat fifteen | 30-24 | 38 | 110 | 1.2 |
+| scaled clock only, 6+2 cap 20 | 27-27 | 36 | 115 | 1.3 |
+| + build restriction | 24-30 | 30 | 114 | 1.4 |
+| + buildings shut | 23-31 | 30 | 114 | 1.4 |
+| full rules, 4+1 cap 12 | 26-28 | 38 | 121 | 2.2 |
+| **full rules, 6+1 cap 15** | **27-27** | 35 | 111 | 1.7 |
+
+The clock and the build restriction cost about three games each; shutting the
+buildings costs one, inside noise -- the thematically nicest part is the cheap
+one. `4+1 cap 12` looked close on wins but is structurally worse: turns to 121,
+points endings quadrupled, recaptures nearly doubled. That is section 4i's
+see-saw coming back, because a short protection window lets cities flip.
+
+**On a held-out seed set the ranking reversed, which is the actual result.**
+
+| | flat fifteen | resettlement |
+|---|---|---|
+| tuned seeds | 30-24 | 27-27 |
+| held-out seeds | 20-34 | 27-27 |
+| combined, 108 games | 50-58 (46%) | **54-54 (50%)** |
+
+Resettlement reads 27-27 on both sets while the flat timer swings from 30-24 to
+20-34. It is not costing the Horde three games; it is removing a dependence on
+the map draw that the flat timer had. Judging this on the tuned set alone would
+have got the sign wrong.
+
+**The one cost to watch.** On the held-out set turns rose 107 to 122, captures
+7.9 to 9.5, and recaptures 1.2 to 2.1. Protection is the resettlement window, so
+shortening it for small cities brings back some of the see-saw section 4i fixed.
+It is nowhere near the old symptom -- late captures are 1.2 of 9.5, and no game
+approaches the turn limit -- but if it worsens, the move is to decouple the two:
+protection is a benefit to the holder rather than a penalty, so a flat protection
+window beside a scaled resettlement clock would not be the double penalty this
+section warns about.
+
+**Reported from play, and fixed here.** A dragon at turn 238 stood beside an
+undefended Duke's Rest and would not go in. The rule was right -- the Kingdom had
+retaken the place nine turns earlier and section 4i's protection was doing its
+job -- but the refusal did not say for how long, so it read as the game declining
+a legal move. It now says: "changed hands too recently -- the new lot are still
+moving in, with six turns to go." Under the new clock that same size-2 city waits
+eight turns rather than fifteen.
+
+**Settler capture stays out**, as the section said, and for its own reason.
 
 ## 20. Why the Horde loses: measured
 
@@ -3875,3 +3938,28 @@ otherwise be taking somebody else's.
 
 Low priority. The gain from escorting at all was modest, so the gain from tuning
 the radius is smaller still, and there are unstarted sections above this one.
+
+## 59. Emulate a control with flags, do not stash the source
+
+Two measurements this session were invalid in ways that looked like results.
+
+`git stash push -- <paths>` rejects the **entire** pathspec if any one path is
+untracked, so a sweep whose control arm stashes `src/` alongside a newly written
+test file stashes nothing and runs the new code twice. The output was two arms
+identical to the decimal -- which is the tell, and the same trap that produced
+the byte-identical arms behind section 45.
+
+Stashing `src/` on its own then failed the other way: the diagnostic imports
+`RESETTLE`, which does not exist on `HEAD`, so the control arm died on import and
+silently appended nothing at all.
+
+The fix is not to be more careful with git. Every constant a sweep wants to vary
+is already a mutable object in the style of `MILITIA`, `SUPPLY` and now
+`RESETTLE`, so the old behaviour can be **emulated through the flags** -- for
+this one, `base 15, perCitizen 0, restrictsBuilds off, shutsBuildings off`. No
+stash, nothing to restore, and the arm cannot silently run the wrong code.
+
+It is also checkable, which is the real argument: the emulated control
+reproduced the stash-based control on the same seeds to every digit. Run that
+sanity arm whenever a control is emulated, because it costs three minutes and it
+is the only thing standing between a sweep and a confidently reported artifact.

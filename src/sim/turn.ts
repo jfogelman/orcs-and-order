@@ -4,6 +4,7 @@ import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
+  workingBuildings,
   cityIncome,
   supplyQuality,
   autoBuildOf,
@@ -49,7 +50,7 @@ function regenRateFor(state: GameState, unit: Unit): number {
   const city = state.cities.find(
     (c) => c.x === unit.x && c.y === unit.y && c.owner === unit.owner,
   );
-  if (city) return city.buildings.includes('barracks') ? REGEN.barracks : REGEN.inCity;
+  if (city) return workingBuildings(state, city).includes('barracks') ? REGEN.barracks : REGEN.inCity;
 
   // In the field, two things decide it: what the unit is doing, and whether
   // anyone can reach it with bandages. Beyond the supply line that second
@@ -157,7 +158,7 @@ function runEconomy(state: GameState, player: Player): void {
     const income = cityIncome(state, city, player);
     goldIncome += income.gold;
     beakerIncome += income.beakers;
-    upkeep += buildingUpkeep(city);
+    upkeep += buildingUpkeep(state, city);
 
     if (events.grew) {
       log(state, `${city.name} grows to ${city.size}.`, 'growth', player.id, 'growth');

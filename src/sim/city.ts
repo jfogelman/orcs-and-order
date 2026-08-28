@@ -149,7 +149,7 @@ export function baseTrade(state: GameState, city: City): number {
 export function contentLimit(state: GameState, city: City): number {
   const owner = state.players[city.owner];
   let limit = BASE_CONTENT;
-  for (const b of city.buildings) limit += BUILDINGS[b]?.contentBonus ?? 0;
+  for (const b of workingBuildings(state, city)) limit += BUILDINGS[b]?.contentBonus ?? 0;
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
   // What the empire spends on keeping this particular city calm.
@@ -188,8 +188,15 @@ export function cityIncome(
   };
 }
 
-export function buildingUpkeep(city: City): number {
-  return city.buildings.reduce((sum, b) => sum + (BUILDINGS[b]?.upkeep ?? 0), 0);
+/**
+ * Gold per turn to keep this city's buildings standing.
+ *
+ * A building shut for resettlement costs nothing, because there is nobody in it
+ * to pay. Charging for one that is doing nothing would be a third penalty on
+ * the same event, on top of the wait and the shut door.
+ */
+export function buildingUpkeep(state: GameState, city: City): number {
+  return workingBuildings(state, city).reduce((sum, b) => sum + (BUILDINGS[b]?.upkeep ?? 0), 0);
 }
 
 /** Extra share of this city's gold income from its buildings. */
@@ -220,7 +227,7 @@ function sumBonus(
 ): number {
   let garrisoned: boolean | null = null;
   let total = 0;
-  for (const id of city.buildings) {
+  for (const id of workingBuildings(state, city)) {
     const def = BUILDINGS[id];
     const value = def ? pick(def) : undefined;
     if (!def || !value) continue;
@@ -409,7 +416,7 @@ export function capitalOf(state: GameState, playerId: number): City | null {
 
 /** Does this city feed an army standing near it? */
 export function suppliesArmy(state: GameState, city: City): boolean {
-  if (city.buildings.some((b) => BUILDINGS[b]?.suppliesArmy)) return true;
+  if (workingBuildings(state, city).some((b) => BUILDINGS[b]?.suppliesArmy)) return true;
   return capitalOf(state, city.owner)?.id === city.id;
 }
 
@@ -562,11 +569,55 @@ export function syncCitizens(state: GameState, city: City): string[] {
  * A mutable object so a sweep can run the arm without it, in the style of
  * MILITIA and SUPPLY.
  */
-export const RUIN = { turns: 15, protects: true };
+export const RUIN = { protects: true };
 
-/** Is this place still clearing the rubble? */
+/**
+ * How long resettlement takes, by the size of the place after it was sacked.
+ *
+ * The timer this replaced was flat: fifteen turns whether the army had taken a
+ * hamlet or a capital. Thematically the wait is people moving -- the old
+ * population leaving and the new one arriving -- and there are more of them to
+ * move in a large city, so it scales. The cap is there because a very large
+ * city would otherwise be worth less than the ground it stands on.
+ *
+ * Mutable in the style of MILITIA and SUPPLY, so a sweep can run an arm with
+ * different numbers without editing the call sites.
+ */
+export const RESETTLE = {
+  base: 6,
+  perCitizen: 1,
+  cap: 15,
+  /** Whether it may only build Coin and shared infrastructure meanwhile. */
+  restrictsBuilds: true,
+  /** Whether the buildings already standing here stop working meanwhile. */
+  shutsBuildings: true,
+};
+
+export function resettleTurns(size: number): number {
+  return Math.min(RESETTLE.cap, RESETTLE.base + size * RESETTLE.perCitizen);
+}
+
+/** Is this place still being resettled? */
 export function isRuined(state: GameState, city: City): boolean {
   return city.ruinedUntil !== undefined && state.turn < city.ruinedUntil;
+}
+
+/**
+ * The buildings whose effects actually apply right now.
+ *
+ * During resettlement almost nothing here works. The people who ran the market
+ * have gone and the people who will run it have not arrived, so it is a
+ * building full of nobody. Masonry is the exception: a wall does not need to be
+ * staffed to be in the way, and it is the one thing that plainly does not care
+ * who is living behind it.
+ *
+ * They are not destroyed and they are not sold -- the effects come back on
+ * their own when the place is somebody's again, which is the version of this
+ * rule that is easiest to explain to whoever just captured the city.
+ */
+export function workingBuildings(state: GameState, city: City): City['buildings'] {
+  if (!RESETTLE.shutsBuildings || !isRuined(state, city)) return city.buildings;
+  return city.buildings.filter((id) => BUILDINGS[id]?.defenseMult);
 }
 
 /** Units a city supports for free before shields start going to rations. */
@@ -669,6 +720,10 @@ export function buildOptions(
   // allowed to queue one it can never finish.
   const units =
     city.size >= SETTLER.minCitySize ? allUnits : allUnits.filter((u) => !u.settler);
+  // A place still being resettled raises nobody. There is no population here
+  // yet that thinks of itself as yours, and conscripting the people who are
+  // in the middle of leaving is not a thing an army can do.
+  const resettling = RESETTLE.restrictsBuilds && isRuined(state, city);
   const buildings = unlockedBuildings(owner)
     .filter((b) => !already.has(b.id))
     // A second tier needs its first standing here. Without this the cheap one
@@ -678,8 +733,12 @@ export function buildOptions(
     .filter((b) => buildingsForFaction(owner.faction).some((f) => f.id === b.id))
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
-    .filter((b) => !b.suppliesArmy || seat?.id !== city.id);
-  return { units, buildings };
+    .filter((b) => !b.suppliesArmy || seat?.id !== city.id)
+    // Shared infrastructure only while resettling: a granary is a shed for
+    // food and does not care whose food it is, but nobody is raising a totem
+    // to the new owner's gods in a town that is still half the old owner's.
+    .filter((b) => !resettling || b.faction === 'both');
+  return { units: resettling ? [] : units, buildings };
 }
 
 /**
@@ -760,7 +819,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
       events.starved = true;
     }
   } else if (city.food >= foodToGrow(city.size)) {
-    const granary = city.buildings.includes('granary');
+    const granary = workingBuildings(state, city).includes('granary');
     const kept = granary ? Math.floor(foodToGrow(city.size) * (BUILDINGS.granary.foodKept ?? 0)) : 0;
     city.size += 1;
     city.food = kept;
@@ -806,7 +865,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
         } else {
           // Best of everything standing here, so a drill ground does not have
           // to care whether the barracks beneath it still exists.
-          const rank = city.buildings.reduce((best, id) => {
+          const rank = workingBuildings(state, city).reduce((best, id) => {
             const b = BUILDINGS[id];
             if (!b) return best;
             return Math.max(best, b.startingRank ?? (b.veteranUnits ? 1 : 0));

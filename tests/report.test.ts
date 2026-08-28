@@ -24,7 +24,7 @@ describe('reported income', () => {
 
     const player = state.players[0];
     const expected = playerCities(state, 0).reduce(
-      (sum, c) => sum + cityIncome(state, c, player).gold - buildingUpkeep(c),
+      (sum, c) => sum + cityIncome(state, c, player).gold - buildingUpkeep(state, c),
       0,
     );
     const before = player.gold;
