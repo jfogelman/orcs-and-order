@@ -2027,6 +2027,49 @@ because a fair fight between two healthy empires is exactly the fight nobody
 wins. Whatever is done about it has to make *finishing* easier rather than
 making the sides more equal, and the two goals genuinely pull against each other.
 
+### Re-checked: the fix matters more, and every conclusion drawn from it is void
+
+Four arms, two seed sets, the fix switched off through the new `DISORDER`
+constant rather than by editing the rule.
+
+| | fix on (A/B) | fix off (A/B) |
+|---|---|---|
+| orc wins | 29 / 27 | 28 / 22 |
+| human wins | 25 / 27 | 26 / 32 |
+| orc units | 19.9 / 19.7 | **13.4 / 12.7** |
+| human units | 20.7 / 25.6 | 20.0 / 22.9 |
+| orc population | 28.0 / 32.3 | 25.4 / 21.8 |
+| orc disorder | 13.7% / 14.9% | 20.8% / 19.0% |
+| **orc riots lasting 20+ turns** | **0.9% / 0.7%** | **6.6% / 5.1%** |
+| human riots lasting 20+ turns | 0.3% / 0.6% | 3.2% / 3.7% |
+
+**The fix is still load-bearing, and by a wider margin than the headline rate
+suggests.** Disorder as a share of city-turns only rises by about half without
+it, but riots that run past twenty turns -- the trap, as opposed to a setback --
+go up **six or seven times**. It is worth about a third of the Horde's army.
+
+**But "it changed nothing about who wins" has reversed.** That was the finding
+this section leaned on hardest: twelve wins in thirty-six before and after, seed
+for seed. Pooled over 108 games it is now **56-52 with the fix and 50-58
+without** -- six games, and the direction held on both seed sets.
+
+The reason is worth stating, because it explains the whole shape of section 55.
+When this was measured, thirty-five games in thirty-six ran to turn 300 and were
+decided on points, so an economic advantage had nowhere to cash out. Games are
+now decided by conquest, where an army a third larger decides fights. **The fix
+did not change; what a bigger army is worth changed.**
+
+**So the inference this section is famous for is void, on both of its premises.**
+"The Horde now has the material to fight with and still loses, so the combat
+asymmetry is the whole of it" required the Horde to lose, and it no longer does
+-- 56-52 across 108 games. Section 20's re-check separately found the asymmetry
+itself unchanged at 25/33 while the capture exchange went level. A correctly
+measured mechanism stopped producing the effect it was blamed for.
+
+**And the urgency is gone.** "35 games in 36 reach turn 300" is now two in
+fifty-four. Games without the fix are *shorter*, not longer, because the Horde
+collapses faster.
+
 ## 22. Section 4i, candidate 1: measured and rejected
 
 "A captured city cannot change hands again for N turns" was the candidate 4i
@@ -3941,10 +3984,18 @@ cities are smaller -- lost its premise when section 20's re-check found Horde
 cities are now the larger ones, and the effect went with it: a halving of the
 Horde's wins became four games in 108. Nothing about the brakes changed.
 
-The pattern across all three: a section's **measurements** age better than its
+**Section 21 makes four, and it fails the other way round.** Its measurement of
+the fix understated it -- the fix is worth six games and a third of the Horde's
+army now, where it measured as changing nothing at all. Nothing about the fix
+changed; games stopped being decided on points, so an economic advantage
+acquired somewhere to cash out.
+
+The pattern across all four: a section's **measurements** age better than its
 **explanations**. A mechanism can be correctly identified, correctly evidenced,
-and then quietly stop applying because something underneath it moved. Three of
-20-54 checked; the rest of the warning stands.
+and then quietly stop applying -- or start applying -- because something
+underneath it moved. Note that section 21 moved *toward* mattering: a stale
+conclusion is not reliably a conclusion that overstated its case. Four of 20-54
+checked; the rest of the warning stands.
 
 ### And a new worry, unmeasured
 

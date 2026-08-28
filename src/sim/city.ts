@@ -107,10 +107,20 @@ export function cityYield(state: GameState, city: City): Yield {
     // Deliberately narrow. Units, walls, treasuries and the rest still stop
     // dead, and trade is still nothing, so a riot is no cheaper than it was.
     // The city can work on its own way out and on nothing else.
-    return { food: total.food, shields: calmingBuild(city) ? total.shields : 0, trade: 0 };
+    const canWorkItsWayOut = DISORDER.canBuildItsWayOut && calmingBuild(city);
+    return { food: total.food, shields: canWorkItsWayOut ? total.shields : 0, trade: 0 };
   }
   return total;
 }
+
+/**
+ * Whether a rioting city may work on its own way out.
+ *
+ * A mutable object in the style of MILITIA, SUPPLY and RESETTLE, so the arm
+ * without the section 21 fix can be run without editing the rule -- see section
+ * 59 on why a control is emulated rather than stashed.
+ */
+export const DISORDER = { canBuildItsWayOut: true };
 
 /** True when this city is building something that would raise its own limit. */
 export function calmingBuild(city: City): boolean {
