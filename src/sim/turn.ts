@@ -280,8 +280,31 @@ export function isOver(state: GameState): boolean {
 }
 
 export const DOMINANCE = {
-  /** Share of every city on the map. */
-  share: 0.6,
+  /**
+   * Share of every city on the map.
+   *
+   * Three quarters, not the three fifths this started at. Section 23 set the
+   * lower figure when conquest ended three games in thirty-six and something
+   * had to end the other thirty-three. That is no longer the game: since the AI
+   * learned to march, conquest ends thirty-five of fifty-four on its own, and
+   * turning dominance off entirely costs exactly one game of decisiveness --
+   * 53/54 becomes 52/54, because the games it was ending were about to be won
+   * outright anyway.
+   *
+   * So it stops being a routine ending and becomes a backstop. Measured across
+   * 108 games, three fifths against three quarters against off:
+   *
+   *   share 0.6   54-54, 117 turns, a third of games end this way
+   *   share 0.75  56-52, 125 turns, one game in six
+   *   off         56-52, 126 turns
+   *
+   * Three quarters matches *off* on pace and on balance while still catching a
+   * game that stalls, which is the only part of section 23 that still earns its
+   * place. The two games it hands back to the Horde are section 23's own
+   * warning coming true: a mechanic denominated in X favours whoever is better
+   * at X, and section 20 measured that the Kingdom holds cities better.
+   */
+  share: 0.75,
   /** Consecutive turns it must be held. */
   turns: 10,
   /**

@@ -3814,6 +3814,12 @@ stale until re-measured. Section 23's dominance rule in particular was built
 because conquest never happened; conquest now happens, and the rule may be
 solving a problem that has gone away.
 
+**Re-measured, and it was.** Section 23 now carries the numbers: the rule bought
+one game of decisiveness in fifty-four rather than the twenty-eight in
+thirty-six it was written for, and cost the Horde two games in 108. It is raised
+to a backstop rather than deleted. That is one section of 20-54 checked; the
+rest of the warning above still stands.
+
 ### And a new worry, unmeasured
 
 **Games now end at 111 turns rather than 197.** The tech tree is the joke, and
@@ -3821,6 +3827,39 @@ the back half of it was already hard to reach -- section 37 measured the magic
 advances landing late and rarely. At a hundred and eleven turns there may not be
 time to get there at all, which would make the whole of section 11 unreachable
 in practice. That wants measuring before anything else is tuned.
+
+### Re-measured, and it is now a backstop
+
+Section 55 named this rule the prime suspect for solving a vanished problem, and
+it was right. Re-run against an AI that can march, on two seed sets, 108 games:
+
+| | share 0.6 | share 0.75 | off |
+|---|---|---|---|
+| decided | 53/54, 52/54 | 52/54, 52/54 | 52/54, 52/54 |
+| endings by dominance | 18, 16 | 7, 11 | -- |
+| avg turns | 111, 122 | 119, 131 | 120, 132 |
+| late captures | 1.1, 1.2 | 2.2, 2.2 | 2.3, 2.4 |
+| wins, orc-human | 54-54 | **56-52** | 56-52 |
+
+**The justification is gone.** Turning the rule off costs one game of
+decisiveness in fifty-four, because the games it was ending were about to be won
+by conquest anyway -- 3/36 became 31/36 when it was written, and it is 52/54
+against 53/54 now.
+
+What it still did was cost the Horde two games in 108, which is this section's
+own warning arriving: a mechanic denominated in X favours whoever is better at
+X, and section 20 measured the Kingdom holds cities better.
+
+Raised to three quarters, it matches *off* on pace, on balance and on churn
+while still ending one game in six. That is a backstop rather than an ending:
+if a later change brings back the section 4i grind, it is caught, and the cost
+of keeping it is now nothing measurable. Deleting it outright was the other
+sound answer and would have read the same in the table; it was kept because the
+net is worth more than the rule costs.
+
+**It also helps section 56.** Games run 117 turns at three fifths and 125 at
+three quarters. The tech tree being out of reach at 111 turns is that section's
+whole complaint, so the two want the same change from opposite ends.
 
 ## 56. The tree is now half out of reach
 
