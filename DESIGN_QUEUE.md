@@ -1859,6 +1859,74 @@ Its whole reachable tree is 2190 beakers against 1801.
    last two sweeps ended up unreadable.
 3. **Only then** consider Walls, the orc's stat line, or the ladder cost.
 
+### Re-measured against an AI that can march
+
+Section 55 warned that everything here was measured against armies that drifted.
+Re-run on two seed sets, 108 games, current code. The **structural** claims are
+arithmetic over the data tables and were checked directly rather than simulated.
+
+**The combat asymmetry is exactly as recorded, to two decimal places.**
+
+| | section 20 | now |
+|---|---|---|
+| Kingdom city, fortified defence | 9.00 | 9.00 |
+| Horde city, fortified defence | 4.05 | 4.05 |
+| orc attacking a Kingdom city | 25% | 25.0% |
+| footman attacking a Horde city | 33% | 33.1% |
+
+A bare city is 40% both ways, so the whole of it is Walls at x2 against the
+Broken Catapult at x1.35, exactly as diagnosed.
+
+**The research gap has widened, and nothing in this file records why.** The
+counting spine was 550 against 301 beakers; it is now **590 against 301**, the
+Horde having picked up an `orc_x2` rung the original list does not mention.
+Across the whole reachable tree the drift is larger: 2190 against 1801 then,
+**1575 against 1036** now -- from 1.22x to 1.52x.
+
+**But almost every consequence this section drew has gone.**
+
+| | orc then | orc now | human then | human now |
+|---|---|---|---|---|
+| cities founded | 11.94 / 11.28 | **9.76 / 10.81** | 11.94 / 12.50 | 12.39 / 12.17 |
+| taken from enemy | 5.67 / 6.11 | 4.48 / 5.02 | 7.89 / 7.28 | 4.74 / 5.57 |
+| lost to capture | 7.89 / 7.28 | 4.74 / 5.57 | 5.67 / 6.11 | 4.48 / 5.02 |
+| avg city size | 4.54 / 5.51 | **5.27 / 5.72** | 6.43 / 6.47 | 4.96 / 5.26 |
+| % turns in disorder | 30.9 / 33.3 | **13.7 / 14.9** | 20.2 / 20.3 | 6.2 / 7.8 |
+| units alive | 26.2 / 32.2 | **19.9 / 19.7** | 57.9 / 46.6 | 20.7 / 25.6 |
+
+- **The army gap is gone.** Twenty-six against fifty-eight was this section's
+  most dramatic number. It is now twenty against twenty-one, and twenty against
+  twenty-six.
+- **The city-size gap has reversed.** Horde cities are now the larger ones.
+- **The capture asymmetry has nearly vanished.** The Horde was down 2.22 cities
+  a game on the exchange and is now down 0.26 and 0.55. Section 21 and the work
+  after it did what this section asked for.
+- **Disorder is less than half what it was** on both sides, though the *ratio*
+  is worse: 2.2x the Kingdom's rate where it used to be 1.5x.
+
+**And one claim has inverted.** "Both sides found the same number of cities --
+the Horde is not slower to settle and never was" was the headline here, and it
+is no longer true: 9.76 against 12.39, and 10.81 against 12.17. Both
+personalities target six cities, so this is **not** an AI setting and the
+mechanism is unidentified. It is recorded as an observation, not explained --
+this file has twice explained a number with a mechanism that turned out not to
+be running.
+
+### What this does to the sections that cite it
+
+Section 23, section 55 and the dominance change all lean on "the Kingdom is
+better at taking and holding cities". **Half of that is now wrong.** Taking is
+level. *Holding* is not: totals work out at 12.65 cities against 9.50, a third
+more, and that gap is now made almost entirely of **founding** rather than
+capturing.
+
+The dominance rule is denominated in cities held, so it still favours the
+Kingdom and the two games it cost the Horde still stand. But the fix this
+section recommends "at source" -- Walls, the orc stat line, the ladder price --
+**would not touch it**, because the skew no longer comes from combat. Anyone
+reaching for the combat asymmetry to explain a city-count result should check
+that first.
+
 ## 21. The disorder fix, measured
 
 A rioting city may now work on a building that would calm it, and Placating is
@@ -3817,8 +3885,19 @@ solving a problem that has gone away.
 **Re-measured, and it was.** Section 23 now carries the numbers: the rule bought
 one game of decisiveness in fifty-four rather than the twenty-eight in
 thirty-six it was written for, and cost the Horde two games in 108. It is raised
-to a backstop rather than deleted. That is one section of 20-54 checked; the
-rest of the warning above still stands.
+to a backstop rather than deleted.
+
+**Section 20 is checked too, and it came apart differently.** Its structural
+arithmetic -- the 9.00 against 4.05 defence, the 25/33 round odds -- is exactly
+as recorded. What has gone is nearly every *consequence* it drew: the army gap,
+the city-size gap and the capture asymmetry are level or reversed, because
+section 21 and the work after it fixed the disorder trap underneath them. One
+headline inverted outright. See section 20 for what that does to the sections
+citing it.
+
+The pattern across both: a section's **measurements** age better than its
+**explanations**, and a mechanism that is still true can stop producing the
+effect it was blamed for. Two of 20-54 checked; the rest of the warning stands.
 
 ### And a new worry, unmeasured
 
