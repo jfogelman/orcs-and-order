@@ -1956,11 +1956,21 @@ be running.
 
 Section 23, section 55 and the dominance change all lean on "the Kingdom is
 better at taking and holding cities". **Half of that is now wrong.** Taking is
-level. *Holding* is not: totals work out at 12.65 cities against 9.50, a third
-more, and that gap is now made almost entirely of **founding** rather than
-capturing.
+level. Founding is not -- 9.76 against 12.39 -- and that is where the difference
+between the sides now lives.
 
-The dominance rule is denominated in cities held, so it still favours the
+**Correction, and it was mine.** An earlier draft of this re-check said the
+Kingdom holds "12.65 cities against 9.50, a third more". That figure was
+`founded + taken - lost` accumulated over a whole game, which is not holdings at
+all: it counts churn, so a side that founds and loses the same city repeatedly
+scores higher without ever holding more. Measured properly, **mean cities held
+through a game is 5.81 against 5.87** -- level. The Kingdom founds a quarter
+more cities and ends up holding the same number, because it loses them again.
+Where it is genuinely ahead is at the *end*: 5.56 against 5.81 on one seed set
+and 5.28 against 6.48 on the other.
+
+The dominance rule is denominated in cities held and fires late, so the
+end-of-game figures above are the ones that matter to it: it still favours the
 Kingdom and the two games it cost the Horde still stand. But the fix this
 section recommends "at source" -- Walls, the orc stat line, the ladder price --
 **would not touch it**, because the skew no longer comes from combat. Anyone
@@ -4213,3 +4223,42 @@ identical seed counts, purely because the games did not stop.
 Before the march fix, games ran 197 turns rather than 111, so the arms behind
 sections 20 to 54 cost roughly twice what the same sweep costs now. That is the
 one respect in which the stale-measurement problem got cheaper to fix.
+
+## 61. The founding gap: the Horde builds fewer settlers, not worse ones
+
+Section 20's re-check found its own headline inverted -- "both sides found the
+same number of cities" became 9.76 against 12.39 -- and left the mechanism
+unidentified rather than guessed at. Instrumented over 108 games:
+
+| | orc (A/B) | human (A/B) |
+|---|---|---|
+| settlers built | 12.83 / 13.94 | **16.59 / 16.85** |
+| settlers lost | 3.85 / 3.96 | 4.00 / 4.44 |
+| cities founded | 9.76 / 10.81 | 12.39 / 12.17 |
+| mean cities held | 5.81 / 5.90 | 5.87 / 5.99 |
+| settlers afoot | 0.52 / 0.54 | 0.63 / 0.69 |
+| turns at or over the expansion target | 81.6% / 82.3% | 78.1% / 78.4% |
+
+**It is a production gap, not a survival gap.** The Horde builds about a quarter
+fewer settlers and loses almost exactly as many as the Kingdom does. Escorting
+them better, or making them tougher, would not close any of it.
+
+The visible driver is the gate in `chooseProduction`: settlers are only built
+while `cities + settlers < targetCities`, and the Horde sits at or over that
+line about three and a half points more of the time. That is most of the
+difference and **not all of it** -- a 3.5 point difference in opportunity
+against a 25% difference in output. The remainder is production priority when
+below target, where a defender for an undefended city is chosen first, and that
+has not been isolated. Recorded as unfinished rather than explained.
+
+**And it does not matter as much as it looks.** Mean cities held is 5.81 against
+5.87: the Kingdom founds a quarter more cities and holds the same number,
+because it loses them again. The gap only shows up at the end of a game, which
+is what the dominance rule reads.
+
+**`targetCities` is the dial if one is ever wanted**, and it is already
+characterised in `ai.ts`: six gives 25-24 and seven gives 32-16 to the Horde.
+Six was chosen deliberately as the level setting when the Horde was the weaker
+side. It is now at parity, so raising it would be a Horde buff and not a fix --
+it would paper over the founding gap rather than explain it, and the explanation
+is still incomplete.
