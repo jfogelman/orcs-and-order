@@ -3,7 +3,7 @@ import type { BuildingId, City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
 import { MILITIA, militiaStrength } from '../src/sim/city';
 import { stormEmptyCity } from '../src/sim/combat';
-import { isRuined, processCity, RUIN } from '../src/sim/city';
+import { isRuined, processCity, RESETTLE, resettleTurns } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { sackSeverity, tryStep } from '../src/sim/movement';
 
@@ -173,7 +173,7 @@ describe('a city sacked to nothing', () => {
       // visits have to be spread out. That is the rule from section 4i doing
       // its job -- what is being tested here is that three sackings erase the
       // town, not that they can all happen on the same afternoon.
-      state.turn += RUIN.turns + 1;
+      state.turn += RESETTLE.cap + 1;
       const raider = spawnUnit(state, round % 2 === 0 ? 0 : 1, 'goblin', 11, 10);
       raider.moves = 2;
       tryStep(state, raider, 10, 10);
@@ -217,7 +217,9 @@ describe('a sacked city stays a ruin', () => {
     horde.moves = 2;
     tryStep(state, horde, 10, 10);
     expect(isRuined(state, city)).toBe(true);
-    expect(city.ruinedUntil).toBe(state.turn + RUIN.turns);
+    // Scaled to what is left of the place, not a flat fifteen: there are
+    // fewer people to move out of a hamlet than out of a capital.
+    expect(city.ruinedUntil).toBe(state.turn + resettleTurns(city.size));
   });
 
   it('does not grow while it is one', () => {
@@ -229,7 +231,7 @@ describe('a sacked city stays a ruin', () => {
     horde.moves = 2;
     tryStep(state, horde, 10, 10);
     const sackedTo = city.size;
-    age(state, city, RUIN.turns - 2);
+    age(state, city, resettleTurns(city.size) - 2);
     expect(city.size, 'a smoking ruin grew anyway').toBe(sackedTo);
   });
 
@@ -240,7 +242,7 @@ describe('a sacked city stays a ruin', () => {
     horde.moves = 2;
     tryStep(state, horde, 10, 10);
     const sackedTo = city.size;
-    age(state, city, RUIN.turns + 40);
+    age(state, city, RESETTLE.cap + 40);
     expect(isRuined(state, city)).toBe(false);
     expect(city.size, 'a recovered city never grew back').toBeGreaterThan(sackedTo);
   });

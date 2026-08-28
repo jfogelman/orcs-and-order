@@ -3,7 +3,7 @@ import { BUILDINGS } from '../src/model/buildings';
 import type { City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
 import {
-  RUIN,
+  RESETTLE,
   SUPPLY,
   capitalOf,
   inSupply,
@@ -315,11 +315,11 @@ describe('a captured city becomes a forward base', () => {
     city(state, 0, 5, 5, 0);
     // Taken from the other side, still being sacked.
     const taken = city(state, 0, 5, 12, 1);
-    taken.ruinedUntil = state.turn + RUIN.turns;
+    taken.ruinedUntil = state.turn + RESETTLE.cap;
 
     expect(supplyChain(state, 0).has(taken.id), 'supplied while still smoking').toBe(false);
 
-    state.turn += RUIN.turns;
+    state.turn += RESETTLE.cap;
     expect(supplyChain(state, 0).has(taken.id)).toBe(true);
   });
 

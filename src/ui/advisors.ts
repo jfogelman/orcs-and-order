@@ -60,7 +60,7 @@ export function situationOf(state: GameState, playerId: number): Situation {
 
   for (const city of cities) {
     const income = cityIncome(state, city, player);
-    goldPerTurn += income.gold - buildingUpkeep(city);
+    goldPerTurn += income.gold - buildingUpkeep(state, city);
     beakersPerTurn += income.beakers;
 
     if (city.disorder) rioting++;

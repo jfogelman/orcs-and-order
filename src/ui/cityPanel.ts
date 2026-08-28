@@ -213,7 +213,7 @@ export function openCityPanel(
           <div class="stat-row"><span class="label">Food</span><span class="value">${yields.food} (${surplus >= 0 ? '+' : ''}${surplus})</span></div>
           ${
             isRuined(state, city)
-              ? `<div class="stat-row"><span class="label k-bad">Sacked</span><span class="value k-bad">still clearing the rubble &middot; nothing grows here for ${(city.ruinedUntil ?? 0) - state.turn} more turns</span></div>`
+              ? `<div class="stat-row"><span class="label k-bad">Resettling</span><span class="value k-bad">the old lot are still leaving &middot; ${(city.ruinedUntil ?? 0) - state.turn} more turns before anyone grows, builds, or opens up</span></div>`
               : ''
           }
           ${bar(city.food, foodToGrow(city.size))}

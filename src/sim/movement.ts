@@ -5,7 +5,8 @@ import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
-import { RUIN, isRuined } from './city';
+import { RUIN, isRuined, resettleTurns } from './city';
+import { count } from '../model/advisors';
 import type { CombatResult } from './combat';
 import {
   breatheThrough,
@@ -300,9 +301,10 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
   city.disorder = false;
   city.workedTiles = [];
   city.size = city.size - severity;
-  // Nothing grows here for a while. Without this the place is back to full
-  // size before anyone returns, and no amount of sacking ever adds up.
-  city.ruinedUntil = state.turn + RUIN.turns;
+  // Nothing grows here for a while, and how long depends on how much of a
+  // place it still is. Without this the city is back to full size before
+  // anyone returns, and no amount of sacking ever adds up.
+  city.ruinedUntil = state.turn + resettleTurns(city.size);
 
   // The walls, however, stay standing and change hands with the city.
   //
@@ -552,9 +554,14 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // overlapping timers for one event is how a captured city stops being worth
   // capturing.
   if (capturing && city && RUIN.protects && isRuined(state, city)) {
+    // Says how long, because the old wording did not. Standing a dragon next
+    // to an undefended city and being told only that it "cannot be taken yet"
+    // reads as the game refusing a legal move for no reason -- reported from a
+    // real save at turn 238, where the wait had six turns left on it.
+    const left = (city.ruinedUntil ?? state.turn) - state.turn;
     return {
       kind: 'blocked',
-      reason: `${city.name} is still being resettled and cannot be taken yet.`,
+      reason: `${city.name} changed hands too recently -- the new lot are still moving in, with ${count(left, 'turn')} to go.`,
       retryable: true,
     };
   }
