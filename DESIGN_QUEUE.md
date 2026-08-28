@@ -4142,12 +4142,40 @@ The third is the one worth trying first, because it is the only one that does
 not trade the thing that was just confirmed working by somebody playing the
 game.
 
-**PARKED, to come back to.** Shipping 0.035 unchanged. The open task is to
-measure raising beakers per point of trade -- the channel already exists in the
-three-way split and the AI already manages it, so it is a small change with a
-known shape. Judge it on the same two numbers as above: whether `insanity` and
-the dragon count move, and whether the win split stays where a human said it
-felt right.
+**Measured, and shipped at x1.25.** `BEAKERS_PER_TRADE` multiplies beakers in
+`cityIncome`, beside the science bonuses -- not in `splitTrade`, which has to go
+on adding up to exactly the trade it was given. Two seed sets, 108 games:
+
+| | advances of 45 | `insanity` | dragons a game | wins orc-human |
+|---|---|---|---|---|
+| x1.0 | 20.7 / 22.3 | 40% / 45% | 1.2 / 1.4 | 29-25, 27-27 |
+| **x1.25** | **23.2 / 23.5** | **56% / 56%** | **2.2 / 2.7** | 26-28, 34-20 |
+| x1.5 | 24.9 | 61% | 2.5 | 33-21 |
+
+**The reachability effect replicates exactly** -- `insanity` lands on 56% on
+both sets, dragons roughly double on both, advances rise by two to three. That
+is the section 11 work becoming something a player sees rather than reads about.
+
+**The hope that it would be balance-neutral was half wrong.** This section
+preferred it because it is not depth-shaped, and that reasoning holds as far as
+it goes -- but more research still gets you deeper, and the Horde's best units
+live deeper, so it inherits a weaker version of the same bias. The win effect
+does not replicate in sign: minus three on one set, plus seven on the other,
+pooling to about four games toward the Horde. x1.5 was rejected for reaching
+61%, which is exactly the number the cheapest escalation setting produced above.
+
+**And section 56 had already partly self-corrected.** It recorded dragons at 0.5
+a game and `insanity` at 37%. The baseline measured here is 1.2--1.4 and
+40--45%, with nothing aimed at research at all: games run 119--131 turns instead
+of 111 since the dominance backstop and resettlement landed. "Half out of reach"
+overstated where the game actually was by the time anybody came back to it,
+which is the section 55 pattern applied to a section written to warn about
+section 55.
+
+**Left undone deliberately.** Four games of drift toward the Horde is real and
+is not repriced. These are AI-against-AI numbers, and the criterion this section
+set was whether the split stays where a human said it felt right -- which wants
+a played game, not another sweep.
 
 ## 58. A soldier will not cross the map to babysit
 
