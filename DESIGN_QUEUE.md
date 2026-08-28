@@ -1608,6 +1608,46 @@ reasons this file has not identified yet. Worth attacking that directly:
 size-one city producing settlers forever without being much of a brake at all,
 and leave the balance question to the growth work above.
 
+### Re-checked, and the mechanism went when its premise did
+
+This section's central claim was that both brakes are **denominated in city
+size**, and that Horde cities are smaller, so either one binds harder on the
+Horde. Two different interventions landing on exactly 6 wins in 36 was treated
+as evidence the mechanism was real rather than a coincidence, which was a fair
+reading of the numbers at the time.
+
+Section 20's re-check removed the premise: **Horde cities are now the larger
+ones.** So the prediction is that the effect should weaken or reverse. Re-run
+the same way -- three arms, two seed sets, 108 games each:
+
+| arm | orc wins | vs control | held across both sets | ran to the limit |
+|---|---|---|---|---|
+| control, size 2, no charge | 56/108 | -- | -- | 2/54, 2/54 |
+| size-3 gate | 52/108 | -4 | yes (-1, -3) | 3/54, 2/54 |
+| citizen charge | 60/108 | +4 | **no** (-1, +5) | **8/54, 8/54** |
+
+**The halving is gone.** Twelve-to-six became fifty-six-to-fifty-two for the
+gate, and the citizen charge does not move the Horde in a consistent direction
+at all -- minus one on one seed set, plus five on the other, which is the same
+failure to replicate this section originally caught in its own first table.
+
+Horde cities were larger than Kingdom ones in all six arms, 5.27--5.76 against
+4.82--5.26. The mechanism was real when it was measured and stopped being real
+when the size relationship inverted; nothing about either brake changed.
+
+**What did replicate, and harder.** The citizen charge drags on the turn limit.
+This section called that "small, but consistent" at 13/18 to 15/18. It is now
+**eight games in fifty-four running to the limit against the control's two**,
+with games at 149 turns against 119. That is a serious pull against section 4i,
+and it is the reason to leave the charge off -- not the faction balance it was
+originally rejected for.
+
+**`minCitySize: 2` stands, for a different reason than it was chosen.** It was
+picked as a compromise because the stronger brakes were thought to tax the
+losing side. They mostly no longer do -- but they also do not buy anything: the
+gate moves peak cities 8.69 to 8.48 and 8.83 to 8.39, which is not a brake worth
+four games. The conclusion survives; the argument behind it does not.
+
 ## 18. The AI should escort its settlers -- DONE, and the last point of defence stays
 
 
@@ -3895,9 +3935,16 @@ section 21 and the work after it fixed the disorder trap underneath them. One
 headline inverted outright. See section 20 for what that does to the sections
 citing it.
 
-The pattern across both: a section's **measurements** age better than its
-**explanations**, and a mechanism that is still true can stop producing the
-effect it was blamed for. Two of 20-54 checked; the rest of the warning stands.
+**Section 17 makes three, and it is the cleanest case of the pattern.** Its
+mechanism -- brakes denominated in city size bind harder on the Horde, whose
+cities are smaller -- lost its premise when section 20's re-check found Horde
+cities are now the larger ones, and the effect went with it: a halving of the
+Horde's wins became four games in 108. Nothing about the brakes changed.
+
+The pattern across all three: a section's **measurements** age better than its
+**explanations**. A mechanism can be correctly identified, correctly evidenced,
+and then quietly stop applying because something underneath it moved. Three of
+20-54 checked; the rest of the warning stands.
 
 ### And a new worry, unmeasured
 
@@ -4081,3 +4128,37 @@ It is also checkable, which is the real argument: the emulated control
 reproduced the stash-based control on the same seeds to every digit. Run that
 sanity arm whenever a control is emulated, because it costs three minutes and it
 is the only thing standing between a sweep and a confidently reported artifact.
+
+## 60. What a sweep costs, so it can be said up front
+
+Measured runtimes on this machine, so any future run can be quoted before it
+starts rather than after it finishes.
+
+| what | games | mean turns | minutes |
+|---|---|---|---|
+| escort arm | 54 | 110 | 2.6 |
+| dominance, rule on | 54 | 111 | 2.7 |
+| resettlement arms | 54 | 111--122 | 2.9--3.7 |
+| dominance, rule off | 54 | 120 | 3.3 |
+| section 20 dynamic, set A | 54 | 119 | 3.6 |
+| resettlement, held-out | 54 | 132 | 4.5 |
+| section 20 dynamic, set B | 54 | 131 | 4.7 |
+
+**Rules of thumb:**
+
+- **A 54-game arm is three to five minutes.** Quote four.
+- **A two-arm A/B is eight to ten minutes**; a three-arm comparison on two seed
+  sets -- the treatment section 17 established and section 19 needed -- is
+  **twenty-five to thirty**.
+- The full test suite is about **1m15s** locally and one to one and a half
+  minutes in CI.
+
+**The cost is total simulated turns, not games**, which has a consequence worth
+knowing before it surprises somebody: anything that makes games *longer* makes
+every future arm slower. Removing an ending condition is the obvious case --
+the dominance-off arms ran 4.3 minutes against the rule-on arm's 2.7 for
+identical seed counts, purely because the games did not stop.
+
+Before the march fix, games ran 197 turns rather than 111, so the arms behind
+sections 20 to 54 cost roughly twice what the same sweep costs now. That is the
+one respect in which the stale-measurement problem got cheaper to fix.
