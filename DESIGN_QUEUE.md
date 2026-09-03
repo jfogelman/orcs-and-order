@@ -4439,3 +4439,62 @@ Both sides are the AI. Pinning happens after `runAiTurn`, so the AI still makes
 every other decision as though its preferred split were in force. This measures
 **what the dial is worth**, not how a person plays with it -- a human choosing
 production and research around an even split is a game this cannot simulate.
+
+## 65. The gold pile is deliberate, and the reason given for it was wrong
+
+Section 64 noticed a side finishing on 1449 unspent gold and asked whether gold
+does enough work. It turns out the AI is forbidden from spending it:
+`rushBuying` is off, measured off, with a comment explaining that rush-buying
+scales with how many cities you can spend in and so amplifies a city-count lead.
+The mechanic was kept for human players, which is why gold exists at all.
+
+That comment ends: *"Flip this back on to re-measure if the city gap ever
+closes."* Section 61 closed it -- mean cities held 5.81 against 5.87. So a
+condition earlier work had pre-registered was met, which is a better reason to
+spend eighteen minutes than a large number catching the eye.
+
+| | set A control | set A rush on | set B control | set B rush on |
+|---|---|---|---|---|
+| orc wins | 26 | 24 | **34** | **26** |
+| human wins | 28 | 30 | 20 | 28 |
+| orc gold left | 533 | 65 | 553 | 70 |
+| human gold left | 836 | 64 | 930 | 69 |
+| orc units | 21.8 | 19.5 | 28.9 | **18.3** |
+| human units | 21.3 | **25.8** | 18.5 | **26.5** |
+| orc cities | 5.20 | 4.94 | **6.63** | 5.13 |
+| human cities | 6.39 | 6.94 | 4.93 | 6.98 |
+
+**The old finding replicates.** Rush-buying costs the Horde ten games in 108 --
+60-48 becomes 50-58. The mechanic works: gold drains from the five-hundreds and
+eight-hundreds down to about sixty, and the Kingdom turns it into units and
+cities while the Horde goes backwards.
+
+**The stated trigger was the wrong trigger.** In set B the Horde held *more*
+cities in the control arm -- 6.63 against 4.93 -- and still lost ground when
+spending was switched on. City count cannot be the mechanism if the side with
+more cities is the one that suffers.
+
+What the control arms show plainly is that **the Kingdom banks 55 to 70 per cent
+more gold**: 836 and 930 against 533 and 553. Allowing anybody to spend hands
+the Kingdom proportionally more to spend. The condition for re-opening this is
+the **gold** gap closing, and nothing has closed it -- so the comment in
+`ai.ts` now says that instead.
+
+### What this means for gold
+
+Gold is not dead. It is **human-only**, deliberately, and a player can still buy
+things with it. The 1449 pile shows what an AI forbidden to spend looks like
+from the outside, which is not the same as a currency that does nothing.
+
+Whether that is a satisfying design is a separate question this does not answer.
+An opponent that never rush-buys is one a human can reliably out-tempo by doing
+so, and nobody has measured what that is worth in a played game -- every number
+here is AI against AI, where neither side spends in the control and both spend
+in the arm.
+
+**A note on re-opening a closed question.** This one carried its own condition
+for being re-opened, which is why it got measured instead of argued about. The
+condition turned out to be wrong, but having *a* condition is what made the
+wrongness visible: the arm that met it produced a result contradicting its own
+reasoning. That is a great deal more useful than a comment saying only
+"measured, do not change".
