@@ -77,6 +77,26 @@ TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water",
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
+# Badges a settlement wears on the map, keyed by the state they mean rather
+# than by the filename they arrived under. Drawn as small markers in a corner
+# of the tile, so they go through at icon size rather than city size.
+#
+# All nine are processed even though the renderer only has a state for six of
+# them: art that exists and is not wired is invisible work, and the three
+# without a state are noted in DESIGN_QUEUE section 72 rather than left to be
+# rediscovered in the folder.
+CITY_OVERLAYS = {
+    "overlay_capital": "city capital overlay",
+    "overlay_unrest": "city unrest overlay",
+    "overlay_starving": "city starving overlay",
+    "overlay_besieged": "city beseiged overlay",
+    "overlay_ruined": "city ruined overlay",
+    "overlay_supplied": "city supplied overlay",
+    "overlay_celebration": "city celebration overlay",
+    "overlay_idle": "city idle overlay",
+    "overlay_damaged": "damaged city overlay",
+}
+
 # Advance icons, keyed by tech id from src/model/techs.ts. Optional: the tech
 # tree hides the icon and reads fine without it.
 TECH_ICONS = [
@@ -1572,6 +1592,13 @@ def main() -> int:
     units, missing_units, failed_units = process_cutouts("units", CREATURES, force)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    print("City overlays:")
+    covl, missing_covl, failed_covl = process_aliased(
+        "cities", CITY_OVERLAYS, force, ICON_SIZE
+    )
+    cities += covl
+    missing_cities.extend(missing_covl)
+    failed_cities.extend(failed_covl)
     print("Advance icons:")
     icons, missing_icons, failed_icons = process_cutouts(
         "tech", TECH_ICONS, force, size=ICON_SIZE, quiet_missing=True

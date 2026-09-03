@@ -4860,9 +4860,92 @@ were beaten* looks like an ending that means *time ran out and they had more
 stuff*. The flavour line says the right thing and the numbers under it argue
 with it. Worth separating the two endings visually.
 
-### The capital still looks like every other city
+### The capital still looks like every other city -- DONE
 
-Confirmed: city art has three tiers per faction and the capital is marked only
-by a small crown badge. There is no capital-specific art wired. That is section
-67 -- the palace modules and their thirty-four images are drawn and waiting on a
-compositing renderer, which is the real work.
+First read as section 67, the palace modules, which was the wrong thing: the
+art meant here was already sitting in `art_src/cities/` as **nine settlement
+overlays**, drawn and never processed. The pipeline only knew about the six size
+tiers, so `city capital overlay.jpg` and eight others had never been converted
+at all.
+
+Now processed and wired. The capital wears its banner instead of the drawn
+crown -- which stays as the fallback, since every other piece of art in this
+game is optional and this one should be too. A second badge in the free
+bottom-left corner says what the place is currently suffering.
+
+**Every state is read from something the rules already track**, rather than
+invented to justify a picture: `disorder` is the riot flag, starvation is a food
+deficit, a siege is somebody else's fighter standing adjacent, resettling is the
+timer capture sets, supplied is `suppliesArmy`. No new game state.
+
+**One badge at a time, worst news first**: besieged, then rioting, then
+starving, then resettling, then supplied. A city can be three of those at once
+and three markers stacked at twelve pixels is a smudge rather than information,
+so the order is the judgement -- about to be lost beats producing nothing, which
+beats shrinking, which beats a temporary state, which beats good news.
+
+**Only on cities the viewer owns.** A starving or besieged marker on somebody
+else's city would report the inside of a place the player has only looked at
+from the outside, which is a fog-of-war leak with a picture on it.
+
+## 72. Three settlement overlays with nothing to attach to
+
+`celebration`, `idle` and `damaged` are drawn, processed and unused, because the
+game has no state that means any of them. Recorded here rather than left in the
+folder to be rediscovered.
+
+- **Celebration** wants a *notably content* city -- comfortably under its
+  content limit, or growing steadily. Nothing tracks that today; `contentLimit`
+  is only ever compared against size to decide disorder. It is the most
+  appealing of the three, because the happiness economy is currently all
+  punishment and no reward, and section 70's note on designing against the
+  complaints says the same thing from the other end.
+- **Idle** presumably means a city with nothing worth building. `autoBuild`
+  means a city always has *something* queued, so this would have to mean
+  something like "on a standing order with no structure available", which is a
+  real state but a thin one.
+- **Damaged** has no home at all: cities have no health. It would need either a
+  siege mechanic that wears a city down, or a re-reading as "recently sacked",
+  which `ruined` already covers.
+
+None of these is worth inventing state for on its own. Celebration is the one to
+take if the happiness work in section 70 happens, since it would then have a
+condition worth drawing.
+
+## 73. Keyboard shortcuts, and the three that were advertised but dead
+
+The game had a reasonable set of keys and two places that disagreed about them.
+The unit panel prints its own -- `Fortify (F)`, and the ability buttons read
+theirs straight out of `ABILITIES` -- while `onKeyDown` had a hand-written
+switch. They drifted: **Reload, Split and Drain each printed a key that did
+nothing**, because only `ranged` and `heal` were ever wired.
+
+Abilities now answer to the key on their own button, looked up in `ABILITIES` at
+the point of use, so adding an ability gives it a working key for free. A unit
+without the ability still ignores the key, which is why pressing `R` at an
+axethrower does nothing -- it stopped being artillery in section 39.
+
+**Added, all of them things that previously needed the mouse:**
+
+| | |
+|---|---|
+| `,` `.` | previous / next city, in founding order |
+| `O` | open the city under the selected unit |
+| `+` `-` `0` | zoom in, out, back to the middle |
+| `?` | the list of keys |
+
+City cycling sorts by id rather than by anything the game changes. Sorting by
+size would mean pressing the same key twice could land you back where you
+started, because the list reshuffled underneath you.
+
+### The list is generated from the table the handler reads
+
+Most of these were undiscoverable. The unit panel prints the five or six on its
+own buttons; the screens, the grid, the zoom and the sound were findable only by
+reading the source. `?` now prints all of them, and the abilities are generated
+from `ABILITIES` rather than retyped, so **a shortcut that is listed is a
+shortcut that works** -- which is exactly what went wrong before.
+
+**Still missing, deliberately.** There is no key for Disband: it destroys a unit
+and the only confirmation is a button that says so. A bare letter for that is
+how somebody loses a Ten Orcs to a typo.

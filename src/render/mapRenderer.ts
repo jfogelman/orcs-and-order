@@ -8,7 +8,14 @@ import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
-import { garrisonOf, capitalOf, inSupply } from '../sim/city';
+import {
+  garrisonOf,
+  capitalOf,
+  inSupply,
+  foodSurplus,
+  isRuined,
+  suppliesArmy,
+} from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
 
@@ -63,6 +70,51 @@ export const EMPTY_OVERLAY: MapOverlay = {
 const VOID_COLOR = '#0a0806';
 
 /**
+ * Which badge a settlement is wearing, or none.
+ *
+ * Every state here is read from something the rules already track, rather than
+ * invented for the picture: `disorder` is the riot flag, starvation is a food
+ * deficit, a siege is somebody else's fighter standing next to the place, and
+ * resettling is the timer capture sets. Nothing here is new game state.
+ */
+function cityCondition(state: GameState, c: City): string {
+  const besieged = state.units.some(
+    (u) =>
+      u.owner !== c.owner &&
+      unitType(u.type).attack > 0 &&
+      Math.abs(u.x - c.x) <= 1 &&
+      Math.abs(u.y - c.y) <= 1,
+  );
+  if (besieged) return 'besieged';
+  if (c.disorder) return 'unrest';
+  if (foodSurplus(state, c) < 0) return 'starving';
+  if (isRuined(state, c)) return 'ruined';
+  if (suppliesArmy(state, c)) return 'supplied';
+  return 'none';
+}
+
+/**
+ * The badges a settlement can wear, worst news first.
+ *
+ * Only one is shown at a time. A city that is besieged *and* rioting *and*
+ * starving is a city with one problem worth naming, and three markers stacked
+ * in a corner at twelve pixels is a smudge rather than information.
+ *
+ * The order is the judgement: about to be lost beats producing nothing, which
+ * beats shrinking, which beats a temporary state, which beats good news. The
+ * art for `celebration`, `idle` and `damaged` exists and is processed, but the
+ * game has no state that means any of them yet -- see DESIGN_QUEUE section 72.
+ */
+const CITY_OVERLAY_STATES = [
+  'capital',
+  'besieged',
+  'unrest',
+  'starving',
+  'ruined',
+  'supplied',
+];
+
+/**
  * Share of maximum health at which a unit starts to look it.
  *
  * Purely cosmetic -- nothing in the rules changes at these numbers. The health
@@ -90,6 +142,8 @@ export class MapRenderer {
   private specialIcon: HTMLCanvasElement;
   /** Real art for the land specials, by terrain. Empty until it loads. */
   private specialArt = new Map<TerrainId, HTMLImageElement>();
+  /** Badges a settlement wears, by state. Empty until the art loads. */
+  private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;
   /** Advances every frame; drives the selection pulse. */
   private clock = 0;
@@ -113,6 +167,9 @@ export class MapRenderer {
     // at which point the pre-rendered map has to be built again.
     this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS, () => this.invalidateLayerSoon());
     this.sprites.installSpecialArt(this.specialArt, TERRAIN_IDS, () => this.invalidateLayerSoon());
+    // Cities are drawn every frame rather than pre-rendered, so these need no
+    // invalidation -- they start appearing as soon as they have loaded.
+    this.sprites.installCityOverlays(this.cityOverlays, CITY_OVERLAY_STATES);
   }
 
   private ctx(): CanvasRenderingContext2D {
@@ -366,7 +423,7 @@ export class MapRenderer {
       const i = idx(c.x, c.y, state.width);
       if (!viewer.explored[i]) continue;
       if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
-      this.drawCity(ctx, state, c, cam);
+      this.drawCity(ctx, state, c, cam, viewerId);
     }
 
     // --- units -----------------------------------------------------------
@@ -571,6 +628,7 @@ export class MapRenderer {
     state: GameState,
     c: City,
     cam: Camera,
+    viewerId: number,
   ): void {
     // The capital wears a small crown. It is the one city whose loss moves
     // the supply network, so it is worth being able to find at a glance.
@@ -620,30 +678,50 @@ export class MapRenderer {
       ctx.fillText(String(garrison), gx, gy + 1);
     }
 
-    // A crown on the capital, opposite the size badge.
+    // The capital's banner, opposite the size badge, with the drawn crown as
+    // the fallback for anybody whose art has not loaded or was never made.
     if (isCapital) {
       const cr = Math.max(5, size * 0.15);
       const cx = s.x + size - cr - 3;
       const cy = s.y + cr + 3;
-      ctx.fillStyle = 'rgba(12,10,8,0.85)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#f0c64a';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      // Three points and a base: legible at a dozen pixels where a glyph is not.
-      ctx.fillStyle = '#f0c64a';
-      ctx.beginPath();
-      ctx.moveTo(cx - cr * 0.55, cy + cr * 0.4);
-      ctx.lineTo(cx - cr * 0.55, cy - cr * 0.35);
-      ctx.lineTo(cx - cr * 0.2, cy + cr * 0.05);
-      ctx.lineTo(cx, cy - cr * 0.5);
-      ctx.lineTo(cx + cr * 0.2, cy + cr * 0.05);
-      ctx.lineTo(cx + cr * 0.55, cy - cr * 0.35);
-      ctx.lineTo(cx + cr * 0.55, cy + cr * 0.4);
-      ctx.closePath();
-      ctx.fill();
+      const banner = this.cityOverlays.get('capital');
+      if (banner) {
+        const b = size * 0.42;
+        ctx.drawImage(banner, Math.round(s.x + size - b), Math.round(s.y - b * 0.12), b, b);
+      } else {
+        ctx.fillStyle = 'rgba(12,10,8,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f0c64a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Three points and a base: legible at a dozen pixels where a glyph is
+        // not.
+        ctx.fillStyle = '#f0c64a';
+        ctx.beginPath();
+        ctx.moveTo(cx - cr * 0.55, cy + cr * 0.4);
+        ctx.lineTo(cx - cr * 0.55, cy - cr * 0.35);
+        ctx.lineTo(cx - cr * 0.2, cy + cr * 0.05);
+        ctx.lineTo(cx, cy - cr * 0.5);
+        ctx.lineTo(cx + cr * 0.2, cy + cr * 0.05);
+        ctx.lineTo(cx + cr * 0.55, cy - cr * 0.35);
+        ctx.lineTo(cx + cr * 0.55, cy + cr * 0.4);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // What this place is currently suffering, bottom-left, where nothing else
+    // sits. Only for cities the viewer owns: a besieged or starving marker on
+    // somebody else's city would report the inside of a place they have only
+    // looked at from outside.
+    if (c.owner === viewerId && size >= 24) {
+      const mark = this.cityOverlays.get(cityCondition(state, c));
+      if (mark) {
+        const m = size * 0.4;
+        ctx.drawImage(mark, Math.round(s.x), Math.round(s.y + size - m), m, m);
+      }
     }
 
     if (size >= 40) {
