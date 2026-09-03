@@ -4498,3 +4498,141 @@ condition turned out to be wrong, but having *a* condition is what made the
 wrongness visible: the arm that met it produced a result contradicting its own
 reasoning. That is a great deal more useful than a comment saying only
 "measured, do not change".
+
+## 66. Land specials should not all be the same kind of thing
+
+Every special today does exactly one thing: it **replaces the tile's food,
+shields and trade**, and always upward. Eight resources, one shape of effect.
+That is a fine first version and it is now visible in the Orcpedia and on the
+map -- but it means the eight are only different in degree, not in kind.
+
+Two directions, and they are independent of each other.
+
+### More than one special per terrain
+
+`TerrainDef.special` is a single object, so grassland can only ever offer
+Suspiciously Good Grass. Making it a list, drawn from when the tile is rolled,
+would let the same terrain surprise somebody twice -- which is most of what
+makes a Civ map worth reading. Cheap in the model: `special: TerrainSpecial[]`,
+a stored index per tile beside the existing `specials: number[]` flag, and the
+map key already rebuilds on seed change.
+
+The costs are honest ones: one art file per special rather than per terrain, and
+the Orcpedia table grows from eight rows to however many.
+
+### Specials that do something other than yields
+
+The bigger idea. A special is currently a yield swap, and nothing stops one
+being a *rule*:
+
+- **Defensive ground.** A tile that raises the defence multiplier of whoever
+  stands on it, rather than what it produces. Reads immediately: the crag
+  everybody fights over.
+- **Movement.** A ford through swamp, a pass through mountains. Section 27's
+  roads are the same family of idea and would share the machinery.
+- **Something only one side wants.** The flavour is already asymmetric --
+  "Smells Like Money" in a swamp is an orc joke -- so a special worth more to
+  the Horde than the Kingdom is a short step, and would be the first terrain
+  feature that is not identical for both players.
+- **Unlocks rather than adds.** A tile whose resource is a prerequisite for
+  building something, which is a different lever from a bigger number.
+
+**Sequencing note.** None of this should land before section 16's tile
+assignment UI. A player who cannot choose which tiles a city works cannot act on
+a defensive tile or a ford, so the interesting specials would be invisible in
+exactly the way the plain ones were until the art landed. Assignment first, then
+this.
+
+**And measure the yield ones first.** Nobody has ever measured what the existing
+eight are worth -- `SPECIAL_CHANCE` is 0.06 and has never been swept, and the AI
+values tiles through `tileScore` at `food*3 + shields*2 + trade`, which is a
+guess. Adding new *kinds* of special on top of an unmeasured baseline is how a
+sweep becomes unreadable, which sections 17 and 21 both learned the hard way.
+
+## 67. Civic Pride: a capital that shows how well it is going
+
+Design and art both drafted already -- see `art_src/palace/capital_building_bible
+(2).md` and the thirty-four images beside it. The idea is Civ2's palace wings:
+the capital is a **base chassis plus five independent modules** (watchtower,
+gate, side wing, grounds, banners), each with its own two or three tiers, and
+the player picks which to invest in. Both factions get the same five categories
+with different materials, so they stay mechanically symmetrical.
+
+The art is deliberately built for **compositing rather than one evolving
+picture**, because image models cannot reliably edit a previous image, and
+generating every combination is combinatorial. Each module is a standalone
+sprite designed to slot onto a fixed attachment point.
+
+**What is actually new work here**, since the art is done:
+
+- **A compositing layer in the renderer.** Nothing in the game currently stacks
+  sprites at named attachment points. `cities` art is one image per size tier.
+  This is the largest part and it is renderer work, not simulation work.
+- **The trigger.** The intent is that this unlocks when the empire is
+  *especially well off and content*, which is a condition nothing currently
+  expresses. `contentLimit` and disorder are per-city; this wants an empire-wide
+  reading, and section 64's advisors already compute something close to it in
+  `Situation`.
+- **What a module is worth.** A palace that is only decorative is a screensaver;
+  one that grants real yields is a per-city multiplier on the capital, which is
+  the class of thing sections 4c and 4e measured as amplifying whoever is
+  already ahead. Worth deciding deliberately, and probably worth being small.
+
+**Sequencing:** this is a reward for doing well, so it should not also be *how*
+you do well. Decorative first, measured second, and only then consider yields.
+
+## 68. Unit upgrade branches: thirty-six advances, and one unsolved problem
+
+Drafted in `art_src/unit upgrades/`, with two bibles and seventy-two images
+(thirty-six upgrades and an attack animation each). Every one of the twelve base
+creatures gets a linear advance and then two branching ones -- Footman into
+Veteran, Sergeant or Shieldwall; Dragon into Elder, Rider or Wyrm.
+
+**The blocker is named in the bible and is real.** Several upgrades are combat
+rule changes -- "ignore the first point of damage", "ignore intervening units"
+-- and the existing `TechFlag` enum is army-wide or global. There is no
+mechanism for a unit-specific rule that arrives from an advance. The bible's own
+suggestion is a per-unit perk list rather than a global flag, and that is almost
+certainly right: `PERKS` already exists, already attaches to individual units,
+already has `only` and `flag` fields, and section 11 built it for exactly this
+shape of effect. **Resolve that in code before wiring any of the thirty-six.**
+
+**And it collides head-on with section 57.** The tree is forty-five advances and
+a side currently finishes holding about twenty-three of them -- half. That was
+measured as a problem in section 56, and beakers per trade were raised to 1.25
+in section 57 to fix it. **Adding thirty-six advances makes the tree eighty-one
+and takes a side straight back to holding under a third**, undoing that work and
+more. Any version of this has to come with a decision about whether upgrades are
+part of the same beaker pool or a separate track -- and if the same pool, the
+reachability measurement in section 57 has to be re-run, not assumed.
+
+Suggested order: perks-not-flags first, then one creature's branch end to end as
+a vertical slice, then measure reachability before the other eleven.
+
+## 69. Barbarians: a third party, and what that does to every measurement here
+
+Drafted in `art_src/barbarians/` -- a bible and twelve sprites across several
+themed bands, each tiered grunt / elite / leader. Faction-neutral aggressors
+with no diplomacy, existing to punish undefended borders and to give both sides
+a common enemy occasionally.
+
+The design is thought through: grunts lose to a single garrisoned unit, elites
+need two or a defended city, leaders are a punishment spike for ignoring a
+threat. Each band has its own palette so the threat type reads at a glance.
+
+**The thing to say out loud before any of it is built.** Every measurement in
+this file is two players. `state.players` is a pair, wins are counted as
+orc-against-human, and every sweep from section 20 to section 65 assumes a game
+with exactly two sides in it. A third actor that takes cities is not a new unit
+type; it is a change to what a game *is*, and it would invalidate the balance
+baseline the same way section 55's march fix did -- except deliberately, and all
+at once.
+
+That is not an argument against it. It is an argument for building it behind a
+setting that defaults to off, so the existing arms stay runnable and barbarians
+can be measured as an arm rather than becoming the new floor under everything.
+
+**Cheapest honest version first:** one band, grunts only, spawning in unowned
+terrain, no cities taken. That answers "does a third party make the game better
+to play" without touching the win conditions, the supply chain, or anything
+section 4i argued about.

@@ -879,6 +879,46 @@ input[type='range']::-moz-range-thumb {
   margin: 0;
 }
 
+/*
+ * The land special a terrain can carry, shown under the terrain it turns up on.
+ *
+ * Indented and rules off to the left, because it is a thing that *happens to*
+ * this terrain rather than a second kind of terrain -- read as a sibling row it
+ * would look like the game had sixteen terrains rather than eight.
+ */
+.pedia-special {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: 20px minmax(120px, 1fr) 60px minmax(140px, 2fr);
+  gap: 8px;
+  align-items: center;
+  margin-top: 5px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(240, 198, 74, 0.35);
+}
+
+.pedia-special-icon {
+  width: 20px;
+  height: 20px;
+  image-rendering: pixelated;
+}
+
+.pedia-special-name {
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.pedia-special-yield {
+  color: var(--gold);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pedia-special-gain {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 /* ------------------------------------------------------------ scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
