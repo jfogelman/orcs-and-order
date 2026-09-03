@@ -312,6 +312,26 @@ export class SpriteCache {
     }
   }
 
+  /**
+   * The badges a settlement wears: capital, rioting, starving, besieged and so
+   * on. Keyed by state name, absent until loaded, and absent for good if the
+   * art was never drawn -- every caller falls back to what it drew before.
+   */
+  installCityOverlays(
+    into: Map<string, HTMLImageElement>,
+    names: string[],
+    onLoaded?: () => void,
+  ): void {
+    for (const name of names) {
+      loadImage(`${this.base}cities/overlay_${name}.png`)
+        .then((img) => {
+          into.set(name, img);
+          onLoaded?.();
+        })
+        .catch(() => {});
+    }
+  }
+
   installTerrainArt(tiles: TerrainTileSet, ids: TerrainId[], onLoaded?: () => void): void {
     for (const id of ids) {
       for (let v = 0; v < TERRAIN_VARIANTS; v++) {
