@@ -4781,3 +4781,71 @@ would not thank anybody for.
 **Not before the balance is watched.** Sections 68 and 69 are parked pending
 played games, and this belongs in the same queue: it is a third change to the
 happiness economy in a file that has already measured the last two.
+
+## 71. Four things reported from a played game at turn 129
+
+### The camera fix in section 62 did not work, and this is why
+
+Section 62 gave death entries a position, because `worthWatching` refuses
+anything without one. That was necessary and not sufficient: the drain loop
+checked for a *picture* first and `continue`d past the camera when there was
+none, and `effectFor` gives `kind: 'bad'` no picture at all. **Deaths reached
+the line that needed the position and were skipped before it.** Reported again
+from play -- a goblin hit off screen, and the view stayed put.
+
+The same coupling dropped the camera during a busy turn. Once `EFFECT_BURST`
+animations were queued, every later entry was skipped whole, so the fight worth
+watching was lost exactly when there was a lot of fighting.
+
+**Now decided separately.** Where to look is worked out for every entry that has
+a position and can be seen, before and independently of what to draw. The lesson
+is the general one: an interface decision that rides along inside another one
+inherits every early return the first has.
+
+### Gridlines over the void
+
+The grid ran the full width and height of the *viewport*. The fog pass repaints
+unexplored **tiles**, so it covered the grid inside the map and never touched
+anything beyond the world's edge -- where the lines survived, drawing a tidy
+grid over nothing. Now bounded by the map rather than the window.
+
+### The retake protection has now confused a player twice
+
+At turn 238 a dragon would not enter an undefended Duke's Rest. At turn 129 an
+ogre could not retake Bonechew, **a city the player founded** and lost two turns
+earlier, with the army standing right beside it. Both are section 4i's
+protection working exactly as designed, and both read as the game refusing a
+legal move.
+
+The move is correctly *not* spent -- a refused move should not cost a turn --
+but that is itself what makes it feel broken: you can try repeatedly and nothing
+happens.
+
+Two reports is a pattern rather than bad luck, and the message alone has not
+fixed it. Worth considering, in order of how little they disturb section 4i:
+
+- **Say it on the map, not only on the refusal.** A city that cannot be taken
+  yet could carry its countdown the way a resettling city does in its own panel.
+  The player would stop trying, which is the actual complaint.
+- **Let the founder back in sooner.** Asymmetric protection -- shorter, or none,
+  for the side that founded the place -- keeps the see-saw fix for conquest
+  while not telling somebody they may not walk back into their own town. This
+  changes section 4i's rule and wants measuring, not assuming.
+- **Leave it.** Defensible: it is load-bearing, and section 23's re-check showed
+  how much of this file rests on games ending rather than see-sawing.
+
+### A dominance win reads as a points win
+
+The game ended at turn 137 by dominance -- the Kingdom held three quarters of
+the world for ten turns, which is section 23's backstop firing as intended. But
+the screen shows the **points table** underneath, so an ending that means *you
+were beaten* looks like an ending that means *time ran out and they had more
+stuff*. The flavour line says the right thing and the numbers under it argue
+with it. Worth separating the two endings visually.
+
+### The capital still looks like every other city
+
+Confirmed: city art has three tiers per faction and the capital is marked only
+by a small crown badge. There is no capital-specific art wired. That is section
+67 -- the palace modules and their thirty-four images are drawn and waiting on a
+compositing renderer, which is the real work.
