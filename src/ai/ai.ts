@@ -1041,8 +1041,21 @@ export const AI_TUNING = {
    * accelerate.
    *
    * The mechanic stays -- a human player can still buy things, which is the
-   * whole reason gold exists now -- but the AI does not use it. Flip this back
-   * on to re-measure if the city gap ever closes.
+   * whole reason gold exists now -- but the AI does not use it.
+   *
+   * **Re-measured once the city gap closed, and the trigger was wrong.** That
+   * condition is now met -- section 61 has mean cities held at 5.81 against
+   * 5.87 -- and switching this on still costs the Horde ten games in a hundred
+   * and eight, 60-48 becoming 50-58 across two seed sets. In one of them the
+   * Horde held *more* cities than the Kingdom and lost ground anyway.
+   *
+   * The driver is not city count and never was. It is that the Kingdom banks
+   * 55 to 70 per cent more gold -- 836 and 930 against 533 and 553 in the
+   * control arms -- so allowing anybody to spend hands it proportionally more
+   * to spend. The condition for re-opening this is therefore **the gold gap
+   * closing, not the city gap**, and nothing has closed it.
+   *
+   * See DESIGN_QUEUE section 65.
    */
   rushBuying: false,
   goldReserve: 60,
