@@ -240,6 +240,16 @@ export interface City {
   lastUnit?: UnitTypeId;
   /** Flat tile indices currently worked by citizens (excludes the centre). */
   workedTiles: number[];
+  /**
+   * Tiles the player picked by hand, which the greedy assignment must not undo.
+   *
+   * Separate from `workedTiles` because that is recomputed from scratch every
+   * time the city grows, starves or loses a tile, and a choice that survives
+   * none of those is not a choice. Absent on a city nobody has touched, which
+   * is most of them and every old save -- so the default stays "the game sorts
+   * it out" and nobody who does not care is made to care.
+   */
+  chosenTiles?: number[];
   /** True while the city is rioting; it produces nothing. */
   disorder: boolean;
   foundedTurn: number;

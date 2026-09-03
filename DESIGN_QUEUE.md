@@ -1446,7 +1446,7 @@ it sees an enemy or a city**, which is the part that makes it useful rather than
 a way to lose a unit unattended. Reuses the standing-order machinery that `goto`
 already has, and wants the same Halt action the march does.
 
-## 16. Choosing which tiles a city works
+## 16. Choosing which tiles a city works -- DONE
 
 Citizens are assigned greedily and the player cannot overrule it. That is
 tolerable while every tile of a kind is worth the same, and stops being
@@ -1468,6 +1468,34 @@ who does not care is made to care. Two things follow from that:
 
 The map border added in section 14 is the other half of this: the border says
 which ground is yours to assign, and this says what to do with it.
+
+**Built.** The city screen draws the twenty-one tiles as they sit on the map,
+each with its yields and its land special, and clicking one puts a citizen on
+it. `chosenTiles` on the city holds the picks; `assignWorkers` lays those down
+first and fills the remainder greedily, so the default for a city nobody has
+touched is unchanged and absent on every old save.
+
+Both survival rules are implemented and tested. **Growth and starvation** leave
+a pick alone, because the picks are re-laid before the greedy fill rather than
+being part of what the fill recomputes. **Losing a tile** -- an enemy standing
+on it, or a neighbour claiming it -- drops it for as long as that lasts and
+*keeps it on the list*, so it comes back when they leave. `tileWorkable` is
+shared between the player's picks and the greedy assignment, because two
+answers to "may a citizen stand here" is how a hand-picked tile silently stops
+working.
+
+Two decisions worth recording:
+
+- **Picking more tiles than there are citizens drops the oldest pick** rather
+  than refusing. Refusing means a player at full assignment has to work out
+  which tile to release before expressing a preference, which is a puzzle about
+  the interface rather than about the city.
+- **The gate this section named was already met.** It said the greedy pick
+  stops being tolerable "the moment the terrain modifiers and land specials
+  land". They landed some time ago, with real yields read by `tileYield` -- but
+  all eight specials rendered as the same diamond until the art was wired, so
+  the choice existed and was invisible. The art had to come first for this to be
+  a fair question to ask a player.
 
 ## 17. The settler cost, measured
 
