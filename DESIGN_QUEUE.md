@@ -4664,3 +4664,79 @@ can be measured as an arm rather than becoming the new floor under everything.
 terrain, no cities taken. That answers "does a third party make the game better
 to play" without touching the win conditions, the supply chain, or anything
 section 4i argued about.
+
+## 70. Soldier Posting: content bought with soldiers rather than coin
+
+A structure that raises what a city will put up with **while somebody is
+standing in it** -- martial law, in the sense Civ2 meant it. Working title
+Orc Posting / Soldier Posting, and the blurb writes itself: *a friendly
+reminder that you are being watched*.
+
+### Why this one is worth trying, in a way the other content levers were not
+
+Every existing way out of a riot is bought with **trade**: a Totem or Chapel
+costs shields and then upkeep, Placating spends the city's whole production, and
+the calm share of the three-way split spends empire-wide trade. Section 21
+measured the disorder trap and fixed it; section 45 added the trade split and
+rush-buying. All of them are the same currency wearing different hats.
+
+This one is bought with **soldiers**, which is a currency the game already
+charges for elsewhere: units cost shields in upkeep beyond `freeSupport`, and a
+soldier standing at home is a soldier not standing on somebody else's city.
+**That opportunity cost is the mechanic** -- it is not a discount on happiness,
+it is a choice between a quiet city and a bigger push.
+
+**And the denominator is the interesting part.** Section 17's rule of thumb is
+that a mechanic denominated in X favours whoever is better at X, which is why
+both settler brakes landed on the Horde -- they were denominated in city size.
+This one is denominated in *soldiers*, and the Horde is the faction whose whole
+identity is having more of them. Section 20's re-check has the Horde still
+rioting at over twice the Kingdom's rate, so it is also the side that needs it
+most. That is the first content lever in this file whose denominator points the
+right way, and it is the reason to prefer it over another building that costs
+gold.
+
+### What the code already says, and one gap it reveals
+
+`needsGarrison` exists and does most of this: a building carrying it pays only
+while somebody is standing in the city, and `isGarrisoned` already ignores
+settlers, so a peon cannot hold a town down by looking stern.
+
+But its comment says it *"only ever gates economic output"*, and that is
+enforced by accident rather than on purpose: `sumBonus` checks the flag for gold
+and science, while `contentLimit` reads `contentBonus` straight off the building
+with no such check. **A building declaring both flags today would hand out its
+content bonus unconditionally.** That is a latent trap for whoever writes this
+building, and it should be fixed in the same change rather than discovered.
+
+### The design questions, in the order they matter
+
+- **In the city, or nearby?** In-city is `isGarrisoned` and is nearly free to
+  build. *Nearby* needs a radius and lets one stack quiet several cities at
+  once, which is the version that amplifies whoever already has the bigger army
+  -- the trap sections 4c and 4e measured. Start in-city.
+- **Flat, or per soldier?** Flat is a switch; per soldier is a dial that a large
+  empire can max out everywhere. Flat, capped, is the safer first version, and
+  it keeps the mechanic legible: one soldier, one quiet city.
+- **Does it stack with a Totem?** Probably yes but with a low ceiling, or the
+  two together make disorder a solved problem and section 21's work stops
+  mattering.
+- **What does it cost when there is nobody in it?** An empty Posting should
+  probably still cost upkeep -- an empty barracks does -- so that garrisoning
+  everywhere is a real decision rather than a free option taken once.
+
+### How to judge it
+
+Same two numbers as everything else in this file, on two seed sets: the win
+split, and **disorder as a share of city-turns per side**, which section 20 and
+section 21 both track and which is currently 13.7--14.9% for the Horde against
+6.2--7.8% for the Kingdom. If this closes that gap without moving the win split
+much, it has done exactly what it was built for. If it moves the win split, the
+thing to check first is whether it is being used as a *military* buff --
+soldiers parked at home are still soldiers, and a rule that pays you to keep
+them there could quietly make both sides less aggressive, which section 4i
+would not thank anybody for.
+
+**Not before the balance is watched.** Sections 68 and 69 are parked pending
+played games, and this belongs in the same queue: it is a third change to the
+happiness economy in a file that has already measured the last two.
