@@ -339,6 +339,12 @@ class App {
       : moveToward(this.state, unit, x, y);
 
     if (outcome.kind === 'blocked') {
+      // Nothing happened, so take the swing back. It was started before the
+      // step resolved so that a unit dying in the attempt is still seen to
+      // try; when the attempt was refused outright there was no attempt, and
+      // a unit swinging at a city that then sits there unharmed is precisely
+      // what made the resettlement rule read as a broken attack.
+      if (attacking) this.renderer.animator.cancel(unit.id);
       this.flash(outcome.reason);
     } else if (outcome.kind === 'moved') {
       audio.play('move');
@@ -484,23 +490,40 @@ class App {
           : this.state.units.find((u) => u.id === entry.actor);
       if (doer && this.canSee(doer.x, doer.y)) this.animateAttack(doer);
 
+      if (!entry.at) continue;
+      const [ex, ey] = entry.at;
+      // Never show an event the viewer cannot see. The effect layer will
+      // happily paint over unexplored black, and an explosion in fog would
+      // give away exactly where an enemy is.
+      if (!this.canSee(ex, ey)) continue;
+
+      // Where to look is decided *before* and independently of what to draw.
+      //
+      // These were one statement, and the camera was the loser: the effect
+      // checks ran first and `continue`d past it. A death is logged as 'bad'
+      // and `effectFor` gives 'bad' no picture at all, so a unit dying off
+      // screen -- the single case most worth turning to look at -- could never
+      // move the camera. Reported twice from play, and the first fix missed it
+      // for exactly this reason: it gave deaths a position, which they needed,
+      // and they still never reached this line.
+      //
+      // The burst cap did the same thing to a busy turn. Once enough
+      // animations had been queued every later entry was skipped whole,
+      // camera included, so the fight worth watching was dropped precisely
+      // when there was a lot of fighting.
+      //
+      // Only the first: a busy AI turn would otherwise drag the camera across
+      // the map once per fight and settle wherever the last one happened.
+      if (!look && this.worthWatching(entry) && !this.onScreen(ex, ey)) look = [ex, ey];
+
       // Animations are not deduplicated the way sounds are -- three separate
       // fights should be three explosions -- but they are staggered and
       // capped, because a whole AI turn drains at once and would otherwise
       // play every one of them on a single frame.
       const effect = effectFor(entry);
-      if (!effect || !entry.at || shown >= EFFECT_BURST) continue;
-      const [ex, ey] = entry.at;
-      // Never draw an event the viewer cannot see. The layer will happily
-      // paint over unexplored black, and an explosion in fog would give away
-      // exactly where an enemy is.
-      if (!this.canSee(ex, ey)) continue;
+      if (!effect || shown >= EFFECT_BURST) continue;
       this.effects.spawn(effect, ex, ey, { delay: shown * EFFECT_STAGGER });
       shown++;
-      // The first thing worth watching that is happening off the edge of the
-      // screen. Only the first: a busy AI turn would otherwise drag the camera
-      // across the map once per fight and settle wherever the last one was.
-      if (!look && this.worthWatching(entry) && !this.onScreen(ex, ey)) look = [ex, ey];
     }
     // Moved after the loop rather than during it, so the choice is made
     // against where the camera actually was when the batch started.

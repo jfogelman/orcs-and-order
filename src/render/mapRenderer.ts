@@ -217,16 +217,28 @@ export class MapRenderer {
       // grid is the only hard edge left and undoes the effect.
       ctx.strokeStyle = 'rgba(0,0,0,0.09)';
       ctx.lineWidth = 1;
+      // Bounded by the map rather than by the window.
+      //
+      // These ran the full height and width of the viewport, which is fine
+      // over ground and wrong over the void beyond the world's edge: the fog
+      // pass repaints unexplored *tiles*, so it covers the grid inside the map
+      // and never touches anything outside it. The lines therefore survived
+      // out there, drawing a neat grid over nothing at all -- reported from
+      // play as gridlines in the unfound tiles.
+      const top = Math.round(cam.tileToScreen(0, y0).y) + 0.5;
+      const bottom = Math.round(cam.tileToScreen(0, y1 + 1).y) + 0.5;
+      const left = Math.round(cam.tileToScreen(x0, 0).x) + 0.5;
+      const right = Math.round(cam.tileToScreen(x1 + 1, 0).x) + 0.5;
       ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) {
         const sx = Math.round(cam.tileToScreen(x, 0).x) + 0.5;
-        ctx.moveTo(sx, 0);
-        ctx.lineTo(sx, cam.viewportH);
+        ctx.moveTo(sx, top);
+        ctx.lineTo(sx, bottom);
       }
       for (let y = y0; y <= y1 + 1; y++) {
         const sy = Math.round(cam.tileToScreen(0, y).y) + 0.5;
-        ctx.moveTo(0, sy);
-        ctx.lineTo(cam.viewportW, sy);
+        ctx.moveTo(left, sy);
+        ctx.lineTo(right, sy);
       }
       ctx.stroke();
     }

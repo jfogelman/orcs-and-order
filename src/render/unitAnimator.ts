@@ -51,6 +51,21 @@ export class UnitAnimator {
   }
 
   /**
+   * Take back an animation that turned out not to have happened.
+   *
+   * The attack swing has to start *before* the fight resolves, so that a unit
+   * which dies attacking is still seen to attack. The cost of starting early is
+   * that a refused move -- out of movement, or a city that cannot be taken yet
+   * -- had already swung by the time anybody knew. A swing with no blow landing
+   * reads as an attack that did nothing, which is worse than no animation and
+   * was reported as a bug twice before anybody worked out that the swing itself
+   * was the misleading part.
+   */
+  cancel(unitId: number): void {
+    this.playing.delete(unitId);
+  }
+
+  /**
    * Hold the pose for getting a weapon back.
    *
    * Usually a single frame, so it is held rather than played -- long enough to

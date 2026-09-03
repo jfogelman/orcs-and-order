@@ -4664,3 +4664,205 @@ can be measured as an arm rather than becoming the new floor under everything.
 terrain, no cities taken. That answers "does a third party make the game better
 to play" without touching the win conditions, the supply chain, or anything
 section 4i argued about.
+
+## 70. Soldier Posting: content bought with soldiers rather than coin
+
+A structure that raises what a city will put up with **while somebody is
+standing in it** -- martial law, in the sense Civ2 meant it. Working title
+Orc Posting / Soldier Posting, and the blurb writes itself: *a friendly
+reminder that you are being watched*.
+
+### Why this one is worth trying, in a way the other content levers were not
+
+Every existing way out of a riot is bought with **trade**: a Totem or Chapel
+costs shields and then upkeep, Placating spends the city's whole production, and
+the calm share of the three-way split spends empire-wide trade. Section 21
+measured the disorder trap and fixed it; section 45 added the trade split and
+rush-buying. All of them are the same currency wearing different hats.
+
+This one is bought with **soldiers**, which is a currency the game already
+charges for elsewhere: units cost shields in upkeep beyond `freeSupport`, and a
+soldier standing at home is a soldier not standing on somebody else's city.
+**That opportunity cost is the mechanic** -- it is not a discount on happiness,
+it is a choice between a quiet city and a bigger push.
+
+**And the denominator is the interesting part.** Section 17's rule of thumb is
+that a mechanic denominated in X favours whoever is better at X, which is why
+both settler brakes landed on the Horde -- they were denominated in city size.
+This one is denominated in *soldiers*, and the Horde is the faction whose whole
+identity is having more of them. Section 20's re-check has the Horde still
+rioting at over twice the Kingdom's rate, so it is also the side that needs it
+most. That is the first content lever in this file whose denominator points the
+right way, and it is the reason to prefer it over another building that costs
+gold.
+
+### What the code already says, and one gap it reveals
+
+`needsGarrison` exists and does most of this: a building carrying it pays only
+while somebody is standing in the city, and `isGarrisoned` already ignores
+settlers, so a peon cannot hold a town down by looking stern.
+
+But its comment says it *"only ever gates economic output"*, and that is
+enforced by accident rather than on purpose: `sumBonus` checks the flag for gold
+and science, while `contentLimit` reads `contentBonus` straight off the building
+with no such check. **A building declaring both flags today would hand out its
+content bonus unconditionally.** That is a latent trap for whoever writes this
+building, and it should be fixed in the same change rather than discovered.
+
+### The design questions, in the order they matter
+
+- **In the city, or nearby?** In-city is `isGarrisoned` and is nearly free to
+  build. *Nearby* needs a radius and lets one stack quiet several cities at
+  once, which is the version that amplifies whoever already has the bigger army
+  -- the trap sections 4c and 4e measured. Start in-city.
+- **Flat, or per soldier?** Flat is a switch; per soldier is a dial that a large
+  empire can max out everywhere. Flat, capped, is the safer first version, and
+  it keeps the mechanic legible: one soldier, one quiet city.
+- **Does it stack with a Totem?** Probably yes but with a low ceiling, or the
+  two together make disorder a solved problem and section 21's work stops
+  mattering.
+- **What does it cost when there is nobody in it?** An empty Posting should
+  probably still cost upkeep -- an empty barracks does -- so that garrisoning
+  everywhere is a real decision rather than a free option taken once.
+
+### Inspired by the complaints, not the mechanisms
+
+The point is not to reimplement a Civ happiness system. Those have been argued
+about for thirty years and the arguments are more useful than the designs.
+
+**The complaint this idea walks straight into.** Martial law in every game that
+has had it produces *parked units* -- soldiers standing in a city doing nothing,
+which is boring to own and worse to look at. In this game it would also make
+both sides less aggressive, which is section 4i's oldest problem and not one to
+reopen for a happiness building.
+
+There is a fix that suits this game specifically: **let the cheapest unit count
+as much as the best one.** The Posting asks for a body, not a hero. Park a
+goblin, keep the ogres for the war -- which is exactly the joke the Horde is
+built on, costs upkeep rather than fighting strength, and means the mechanic
+never competes with the army for anything but shields. If it turns out that a
+Ten Orcs garrison should be worth more than one goblin, that is a dial, but the
+default should be a body.
+
+**The other complaints worth designing against, none of which need copying:**
+
+- **A happiness cap that punishes expansion.** Whole-empire happiness leashes
+  are the most disliked version of this idea in the genre: one bad city taxing
+  everything makes success feel like a penalty. Everything here stays per-city
+  for that reason, and `contentLimit` already is.
+- **Opacity.** The usual complaint is not that a city riots, it is not knowing
+  why. This file is well placed on that -- section 45's advisors already report
+  rioting and restless cities, and section 64 taught them to name the screen a
+  player should go to. A Posting should say what it is doing on the city panel,
+  not just quietly add a number.
+- **Micromanagement as difficulty.** Sliders and specialist-shuffling are busy
+  work rather than decisions. The three-way split in section 45 is one dial for
+  a whole empire, deliberately, and the AI manages its own. A Posting is a
+  build-it-once decision, which is the same shape.
+
+**The genuinely good idea worth stealing** is not a mechanism at all: later
+games in the genre made unhappiness *legible and local* -- you can see which
+city is unhappy, why, and what would fix it. That is a presentation goal for
+whatever this becomes, and it is cheap here because the city panel already shows
+the content limit and the citizen faces.
+
+### How to judge it
+
+Same two numbers as everything else in this file, on two seed sets: the win
+split, and **disorder as a share of city-turns per side**, which section 20 and
+section 21 both track and which is currently 13.7--14.9% for the Horde against
+6.2--7.8% for the Kingdom. If this closes that gap without moving the win split
+much, it has done exactly what it was built for. If it moves the win split, the
+thing to check first is whether it is being used as a *military* buff --
+soldiers parked at home are still soldiers, and a rule that pays you to keep
+them there could quietly make both sides less aggressive, which section 4i
+would not thank anybody for.
+
+**Not before the balance is watched.** Sections 68 and 69 are parked pending
+played games, and this belongs in the same queue: it is a third change to the
+happiness economy in a file that has already measured the last two.
+
+## 71. Four things reported from a played game at turn 129
+
+### The camera fix in section 62 did not work, and this is why
+
+Section 62 gave death entries a position, because `worthWatching` refuses
+anything without one. That was necessary and not sufficient: the drain loop
+checked for a *picture* first and `continue`d past the camera when there was
+none, and `effectFor` gives `kind: 'bad'` no picture at all. **Deaths reached
+the line that needed the position and were skipped before it.** Reported again
+from play -- a goblin hit off screen, and the view stayed put.
+
+The same coupling dropped the camera during a busy turn. Once `EFFECT_BURST`
+animations were queued, every later entry was skipped whole, so the fight worth
+watching was lost exactly when there was a lot of fighting.
+
+**Now decided separately.** Where to look is worked out for every entry that has
+a position and can be seen, before and independently of what to draw. The lesson
+is the general one: an interface decision that rides along inside another one
+inherits every early return the first has.
+
+### Gridlines over the void
+
+The grid ran the full width and height of the *viewport*. The fog pass repaints
+unexplored **tiles**, so it covered the grid inside the map and never touched
+anything beyond the world's edge -- where the lines survived, drawing a tidy
+grid over nothing. Now bounded by the map rather than the window.
+
+### The retake protection has now confused a player twice
+
+At turn 238 a dragon would not enter an undefended Duke's Rest. At turn 129 an
+ogre could not retake Bonechew, **a city the player founded** and lost two turns
+earlier, with the army standing right beside it. Both are section 4i's
+protection working exactly as designed, and both read as the game refusing a
+legal move.
+
+The move is correctly *not* spent -- a refused move should not cost a turn --
+but that is itself what makes it feel broken: you can try repeatedly and nothing
+happens.
+
+**And it swung.** `actOn` starts the attack animation *before* `tryStep`
+resolves, deliberately, so that a unit which dies attacking is still seen to
+attack. The cost of starting early is that a refused move had already swung by
+the time anybody knew it was refused. So the ogre visibly attacked a city that
+then sat there unharmed -- which is not a rule reading oddly, it is the
+interface stating that an attack happened when none did.
+
+That is the actual defect behind both reports, and it was missed twice while
+the message was treated as the problem. Fixed by cancelling the swing when the
+outcome comes back blocked, which keeps the die-attacking case: verified in the
+running game both ways round -- a refused move now leaves the animator idle, and
+a goblin that attacks a footman and loses still plays its swing while dying.
+
+The lesson generalises past this rule: **an animation that starts before its
+outcome is known is a claim the game has not yet checked.** Anything else
+started optimistically wants the same treatment.
+
+Two reports is a pattern rather than bad luck, and the message alone has not
+fixed it. Worth considering, in order of how little they disturb section 4i:
+
+- **Say it on the map, not only on the refusal.** A city that cannot be taken
+  yet could carry its countdown the way a resettling city does in its own panel.
+  The player would stop trying, which is the actual complaint.
+- **Let the founder back in sooner.** Asymmetric protection -- shorter, or none,
+  for the side that founded the place -- keeps the see-saw fix for conquest
+  while not telling somebody they may not walk back into their own town. This
+  changes section 4i's rule and wants measuring, not assuming.
+- **Leave it.** Defensible: it is load-bearing, and section 23's re-check showed
+  how much of this file rests on games ending rather than see-sawing.
+
+### A dominance win reads as a points win
+
+The game ended at turn 137 by dominance -- the Kingdom held three quarters of
+the world for ten turns, which is section 23's backstop firing as intended. But
+the screen shows the **points table** underneath, so an ending that means *you
+were beaten* looks like an ending that means *time ran out and they had more
+stuff*. The flavour line says the right thing and the numbers under it argue
+with it. Worth separating the two endings visually.
+
+### The capital still looks like every other city
+
+Confirmed: city art has three tiers per faction and the capital is marked only
+by a small crown badge. There is no capital-specific art wired. That is section
+67 -- the palace modules and their thirty-four images are drawn and waiting on a
+compositing renderer, which is the real work.
