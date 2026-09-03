@@ -4725,6 +4725,47 @@ building, and it should be fixed in the same change rather than discovered.
   probably still cost upkeep -- an empty barracks does -- so that garrisoning
   everywhere is a real decision rather than a free option taken once.
 
+### Inspired by the complaints, not the mechanisms
+
+The point is not to reimplement a Civ happiness system. Those have been argued
+about for thirty years and the arguments are more useful than the designs.
+
+**The complaint this idea walks straight into.** Martial law in every game that
+has had it produces *parked units* -- soldiers standing in a city doing nothing,
+which is boring to own and worse to look at. In this game it would also make
+both sides less aggressive, which is section 4i's oldest problem and not one to
+reopen for a happiness building.
+
+There is a fix that suits this game specifically: **let the cheapest unit count
+as much as the best one.** The Posting asks for a body, not a hero. Park a
+goblin, keep the ogres for the war -- which is exactly the joke the Horde is
+built on, costs upkeep rather than fighting strength, and means the mechanic
+never competes with the army for anything but shields. If it turns out that a
+Ten Orcs garrison should be worth more than one goblin, that is a dial, but the
+default should be a body.
+
+**The other complaints worth designing against, none of which need copying:**
+
+- **A happiness cap that punishes expansion.** Whole-empire happiness leashes
+  are the most disliked version of this idea in the genre: one bad city taxing
+  everything makes success feel like a penalty. Everything here stays per-city
+  for that reason, and `contentLimit` already is.
+- **Opacity.** The usual complaint is not that a city riots, it is not knowing
+  why. This file is well placed on that -- section 45's advisors already report
+  rioting and restless cities, and section 64 taught them to name the screen a
+  player should go to. A Posting should say what it is doing on the city panel,
+  not just quietly add a number.
+- **Micromanagement as difficulty.** Sliders and specialist-shuffling are busy
+  work rather than decisions. The three-way split in section 45 is one dial for
+  a whole empire, deliberately, and the AI manages its own. A Posting is a
+  build-it-once decision, which is the same shape.
+
+**The genuinely good idea worth stealing** is not a mechanism at all: later
+games in the genre made unhappiness *legible and local* -- you can see which
+city is unhappy, why, and what would fix it. That is a presentation goal for
+whatever this becomes, and it is cheap here because the city panel already shows
+the content limit and the citizen faces.
+
 ### How to judge it
 
 Same two numbers as everything else in this file, on two seed sets: the win
