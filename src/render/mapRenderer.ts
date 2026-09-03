@@ -3,7 +3,7 @@ import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
-import type { City, GameState, Unit } from '../model/types';
+import type { City, GameState, TerrainId, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
@@ -88,6 +88,8 @@ function clubVariant(u: Unit): string {
 export class MapRenderer {
   private tiles: TerrainTileSet;
   private specialIcon: HTMLCanvasElement;
+  /** Real art for the land specials, by terrain. Empty until it loads. */
+  private specialArt = new Map<TerrainId, HTMLImageElement>();
   readonly sprites: SpriteCache;
   /** Advances every frame; drives the selection pulse. */
   private clock = 0;
@@ -110,6 +112,7 @@ export class MapRenderer {
     // Procedural tiles render immediately; real ones replace them as they load,
     // at which point the pre-rendered map has to be built again.
     this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS, () => this.invalidateLayerSoon());
+    this.sprites.installSpecialArt(this.specialArt, TERRAIN_IDS, () => this.invalidateLayerSoon());
   }
 
   private ctx(): CanvasRenderingContext2D {
@@ -122,7 +125,7 @@ export class MapRenderer {
   private ensureLayer(state: GameState): void {
     const key = TerrainLayer.keyFor(state);
     if (this.layer && this.layer.key === key) return;
-    this.layer = TerrainLayer.build(state, this.tiles, this.specialIcon);
+    this.layer = TerrainLayer.build(state, this.tiles, this.specialIcon, this.specialArt);
   }
 
   /**

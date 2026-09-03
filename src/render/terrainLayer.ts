@@ -114,10 +114,23 @@ export class TerrainLayer {
     return `${state.seed}:${state.width}x${state.height}:${state.settings.landRatio}`;
   }
 
+  /**
+   * How much of a tile a special takes up, and how far it sits from the corner.
+   *
+   * Half a tile, top-right, which is where the drawn diamond it replaces always
+   * sat. Exactly half means the 32px source halves cleanly rather than being
+   * resampled to something blurry with smoothing turned off, and it leaves the
+   * terrain underneath readable -- the point of the icon is that a tile is
+   * worth more, not that it stops looking like grass.
+   */
+  private static readonly SPECIAL_SIZE = TILE / 2;
+  private static readonly SPECIAL_INSET = 1;
+
   static build(
     state: GameState,
     tiles: TerrainTileSet,
     specialIcon: HTMLCanvasElement,
+    specialArt?: Map<TerrainId, HTMLImageElement>,
   ): TerrainLayer {
     const { width: w, height: h, terrain } = state;
     const masked = buildMaskedTiles(tiles);
@@ -159,7 +172,16 @@ export class TerrainLayer {
         }
 
         if (state.specials[idx(x, y, w)]) {
-          ctx.drawImage(specialIcon, px, py, TILE, TILE);
+          const art = specialArt?.get(terrain[idx(x, y, w)]);
+          if (art) {
+            const s = TerrainLayer.SPECIAL_SIZE;
+            const inset = TerrainLayer.SPECIAL_INSET;
+            ctx.drawImage(art, px + TILE - s - inset, py + inset, s, s);
+          } else {
+            // No art for this terrain yet: the drawn diamond still says that
+            // something here is worth having, which is the part that matters.
+            ctx.drawImage(specialIcon, px, py, TILE, TILE);
+          }
         }
       }
     }

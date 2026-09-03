@@ -43,6 +43,10 @@ OUT = ROOT / "public"
 UNIT_SIZE = 96
 # Matches TILE in src/render/camera.ts.
 TERRAIN_SIZE = 32
+# Land specials are stamped into a corner of a 32px terrain tile, so they are
+# drawn at half a tile. Kept at full tile resolution here and halved by the
+# renderer, which is an exact 2:1 reduction and stays crisp with smoothing off.
+SPECIAL_SIZE = 32
 # Matches TERRAIN_VARIANTS in src/render/tileArt.ts.
 TERRAIN_VARIANTS = 4
 
@@ -1595,6 +1599,16 @@ def main() -> int:
     composed, missing_composed = compose_icons(force)
     icons += composed
     missing_icons.extend(missing_composed)
+    print("Land specials:")
+    # One per terrain, named for the terrain it turns up on -- see the table in
+    # ART_PROMPTS.md. Missing ones fall back to the drawn diamond, so a partial
+    # set is fine and silent.
+    specials, missing_specials, failed_specials = process_cutouts(
+        "specials", TERRAINS, force, size=SPECIAL_SIZE, quiet_missing=True
+    )
+    icons += specials
+    missing_icons.extend(missing_specials)
+    failed_icons.extend(failed_specials)
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
     print("Effects:")

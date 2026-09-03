@@ -290,6 +290,28 @@ export class SpriteCache {
    * everywhere else. Mutates the set in place so the renderer picks the new
    * tiles up on its next frame without any reload.
    */
+  /**
+   * The eight land specials, one per terrain, keyed by the terrain they sit on.
+   *
+   * Anything missing simply never lands in the map and the caller falls back to
+   * the drawn diamond, so a partial set is fine -- which matters because these
+   * were written up in ART_PROMPTS.md long before all eight existed.
+   */
+  installSpecialArt(
+    into: Map<TerrainId, HTMLImageElement>,
+    ids: TerrainId[],
+    onLoaded?: () => void,
+  ): void {
+    for (const id of ids) {
+      loadImage(`${this.base}specials/${id}.png`)
+        .then((img) => {
+          into.set(id, img);
+          onLoaded?.();
+        })
+        .catch(() => {});
+    }
+  }
+
   installTerrainArt(tiles: TerrainTileSet, ids: TerrainId[], onLoaded?: () => void): void {
     for (const id of ids) {
       for (let v = 0; v < TERRAIN_VARIANTS; v++) {
