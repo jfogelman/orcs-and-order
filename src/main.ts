@@ -339,6 +339,12 @@ class App {
       : moveToward(this.state, unit, x, y);
 
     if (outcome.kind === 'blocked') {
+      // Nothing happened, so take the swing back. It was started before the
+      // step resolved so that a unit dying in the attempt is still seen to
+      // try; when the attempt was refused outright there was no attempt, and
+      // a unit swinging at a city that then sits there unharmed is precisely
+      // what made the resettlement rule read as a broken attack.
+      if (attacking) this.renderer.animator.cancel(unit.id);
       this.flash(outcome.reason);
     } else if (outcome.kind === 'moved') {
       audio.play('move');

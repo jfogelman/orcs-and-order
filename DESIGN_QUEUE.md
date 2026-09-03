@@ -4821,6 +4821,23 @@ The move is correctly *not* spent -- a refused move should not cost a turn --
 but that is itself what makes it feel broken: you can try repeatedly and nothing
 happens.
 
+**And it swung.** `actOn` starts the attack animation *before* `tryStep`
+resolves, deliberately, so that a unit which dies attacking is still seen to
+attack. The cost of starting early is that a refused move had already swung by
+the time anybody knew it was refused. So the ogre visibly attacked a city that
+then sat there unharmed -- which is not a rule reading oddly, it is the
+interface stating that an attack happened when none did.
+
+That is the actual defect behind both reports, and it was missed twice while
+the message was treated as the problem. Fixed by cancelling the swing when the
+outcome comes back blocked, which keeps the die-attacking case: verified in the
+running game both ways round -- a refused move now leaves the animator idle, and
+a goblin that attacks a footman and loses still plays its swing while dying.
+
+The lesson generalises past this rule: **an animation that starts before its
+outcome is known is a claim the game has not yet checked.** Anything else
+started optimistically wants the same treatment.
+
 Two reports is a pattern rather than bad luck, and the message alone has not
 fixed it. Worth considering, in order of how little they disturb section 4i:
 
