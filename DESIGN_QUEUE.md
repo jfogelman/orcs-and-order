@@ -4911,3 +4911,41 @@ folder to be rediscovered.
 None of these is worth inventing state for on its own. Celebration is the one to
 take if the happiness work in section 70 happens, since it would then have a
 condition worth drawing.
+
+## 73. Keyboard shortcuts, and the three that were advertised but dead
+
+The game had a reasonable set of keys and two places that disagreed about them.
+The unit panel prints its own -- `Fortify (F)`, and the ability buttons read
+theirs straight out of `ABILITIES` -- while `onKeyDown` had a hand-written
+switch. They drifted: **Reload, Split and Drain each printed a key that did
+nothing**, because only `ranged` and `heal` were ever wired.
+
+Abilities now answer to the key on their own button, looked up in `ABILITIES` at
+the point of use, so adding an ability gives it a working key for free. A unit
+without the ability still ignores the key, which is why pressing `R` at an
+axethrower does nothing -- it stopped being artillery in section 39.
+
+**Added, all of them things that previously needed the mouse:**
+
+| | |
+|---|---|
+| `,` `.` | previous / next city, in founding order |
+| `O` | open the city under the selected unit |
+| `+` `-` `0` | zoom in, out, back to the middle |
+| `?` | the list of keys |
+
+City cycling sorts by id rather than by anything the game changes. Sorting by
+size would mean pressing the same key twice could land you back where you
+started, because the list reshuffled underneath you.
+
+### The list is generated from the table the handler reads
+
+Most of these were undiscoverable. The unit panel prints the five or six on its
+own buttons; the screens, the grid, the zoom and the sound were findable only by
+reading the source. `?` now prints all of them, and the abilities are generated
+from `ABILITIES` rather than retyped, so **a shortcut that is listed is a
+shortcut that works** -- which is exactly what went wrong before.
+
+**Still missing, deliberately.** There is no key for Disband: it destroys a unit
+and the only confirmation is a button that says so. A bare letter for that is
+how somebody loses a Ten Orcs to a typo.

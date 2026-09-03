@@ -62,6 +62,82 @@ const BATTLE_LINGER_TURNS = 2;
 /** Any of these count as the user gesture browsers require before playback. */
 const AUDIO_UNLOCK_EVENTS = ['pointerdown', 'mousedown', 'touchstart', 'keydown'] as const;
 
+/**
+ * Every keyboard shortcut, in one list, because there were two.
+ *
+ * The buttons in the unit panel print their own key -- `Fortify (F)`, and the
+ * ability buttons read theirs straight out of `ABILITIES` -- while the handler
+ * had its own hand-written switch. They drifted: Reload, Split and Drain each
+ * advertised a key that did nothing at all, because only `ranged` and `heal`
+ * were ever wired. Abilities are now looked up in their own table at the point
+ * of use, and everything else lives here and is printed from here, so a
+ * shortcut that is listed is a shortcut that works.
+ *
+ * Grouped for the help panel: the order is the order somebody reads them in.
+ */
+const SHORTCUTS: Array<{ group: string; keys: string; does: string }> = [
+  { group: 'Units', keys: 'Space', does: 'Skip this one for now' },
+  { group: 'Units', keys: 'N', does: 'Next one with something left to do' },
+  { group: 'Units', keys: 'F', does: 'Fortify, or wake something fortified' },
+  { group: 'Units', keys: 'S', does: 'Sentry: sleep until something happens' },
+  { group: 'Units', keys: 'B', does: 'Found a city' },
+  { group: 'Units', keys: 'X', does: 'Halt a march' },
+  { group: 'Units', keys: 'U', does: 'Resupply' },
+  { group: 'Units', keys: 'C', does: 'Centre the view on it' },
+  { group: 'Units', keys: 'Esc', does: 'Put down an ability, then deselect' },
+  { group: 'Cities', keys: ', / .', does: 'Previous or next city of yours' },
+  { group: 'Cities', keys: 'O', does: 'Open the city under the selected unit' },
+  { group: 'The map', keys: 'Arrows', does: 'Pan' },
+  { group: 'The map', keys: '+ / -', does: 'Zoom in or out' },
+  { group: 'The map', keys: '0', does: 'Back to the middle zoom' },
+  { group: 'The map', keys: 'G', does: 'Show or hide the grid' },
+  { group: 'Screens', keys: 'T', does: 'Advances' },
+  { group: 'Screens', keys: 'A', does: 'Advisors' },
+  { group: 'Screens', keys: 'I', does: 'The empire report' },
+  { group: 'Screens', keys: 'P', does: 'Orcpedia' },
+  { group: 'Screens', keys: 'Ctrl+S', does: 'Saves' },
+  { group: 'Screens', keys: '?', does: 'This list' },
+  { group: 'Everything else', keys: 'Enter', does: 'End the turn' },
+  { group: 'Everything else', keys: 'M', does: 'Sound on or off' },
+];
+
+/**
+ * The list, printed from the same table the handler reads.
+ *
+ * There was no way at all to learn most of these: the unit panel prints the
+ * five or six that sit on its own buttons, and the other dozen -- the screens,
+ * the grid, the zoom, the sound -- were discoverable only by reading the
+ * source.
+ */
+function openShortcuts(): void {
+  // Abilities are generated from the same table the handler and the unit
+  // buttons read, so the three that used to advertise a dead key cannot go
+  // missing from the list either.
+  const listed = [
+    ...SHORTCUTS,
+    ...Object.values(ABILITIES).map((a) => ({
+      group: 'Abilities, when the unit has one',
+      keys: a.key.toUpperCase(),
+      does: `${a.label}: ${a.verb}`,
+    })),
+  ];
+  const groups: string[] = [];
+  for (const group of [...new Set(listed.map((k) => k.group))]) {
+    const rows = listed.filter((k) => k.group === group)
+      .map(
+        (k) =>
+          `<div class="stat-row"><span class="label"><kbd>${escapeHtml(k.keys)}</kbd></span>` +
+          `<span class="value">${escapeHtml(k.does)}</span></div>`,
+      )
+      .join('');
+    groups.push(`<div class="panel-title">${escapeHtml(group)}</div>${rows}`);
+  }
+  openModal({
+    title: 'Keys',
+    body: `<div class="panel-body">${groups.join('')}</div>`,
+  });
+}
+
 const PAN_KEYS: Record<string, [number, number]> = {
   ArrowLeft: [-1, 0],
   ArrowRight: [1, 0],
@@ -97,6 +173,8 @@ class App {
   /** How much of the log has already been turned into noise. */
   /** True once End Turn has been pressed with units still waiting. */
   private endTurnArmed = false;
+  /** Where the city cycle got to, so the next press carries on from it. */
+  private lastCityLooked: number | null = null;
   /** Cities already asked what to build this turn, so none is asked twice. */
   private readonly askedCities = new Set<number>();
   /** Whether research has been offered this turn. */
@@ -303,6 +381,28 @@ class App {
     audio.play('built', 0);
     this.refreshSidebar();
     this.playLogCues();
+  }
+
+  /**
+   * Step through your own cities in a fixed order.
+   *
+   * Sorted by id, which is founding order, so the list does not reshuffle
+   * underneath somebody halfway along it. Sorting by anything the game changes
+   * -- size, say -- would mean pressing the same key twice could land you back
+   * where you started.
+   */
+  private cycleCity(step: number): void {
+    const cities = playerCities(this.state, this.viewerId).sort((a, b) => a.id - b.id);
+    if (cities.length === 0) return;
+    const at =
+      this.lastCityLooked === null
+        ? -1
+        : cities.findIndex((c) => c.id === this.lastCityLooked);
+    const n = cities.length;
+    const next = cities[(((at + step) % n) + n) % n];
+    this.lastCityLooked = next.id;
+    this.select(null);
+    this.camera.centerOnTile(next.x, next.y);
   }
 
   private selectNextIdle(): void {
@@ -1222,11 +1322,32 @@ class App {
       case 'x':
         this.orderHalt();
         break;
-      case 'r':
-        this.arm('ranged');
+      case ',':
+        this.cycleCity(-1);
         break;
-      case 'h':
-        this.arm('heal');
+      case '.':
+        this.cycleCity(1);
+        break;
+      case 'o': {
+        // The city under the selected unit, which is the one the panel is
+        // already offering a button for.
+        const here = unit && cityAt(this.state, unit.x, unit.y);
+        if (here && here.owner === this.viewerId) this.openCity(here);
+        break;
+      }
+      case '+':
+      case '=':
+        this.camera.zoomAt(1, this.canvas.width / 2, this.canvas.height / 2);
+        break;
+      case '-':
+        this.camera.zoomAt(-1, this.canvas.width / 2, this.canvas.height / 2);
+        break;
+      case '0':
+        this.camera.zoomAt(2 - this.camera.zoomIndex, this.canvas.width / 2, this.canvas.height / 2);
+        break;
+      case '?':
+      case '/':
+        openShortcuts();
         break;
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
@@ -1234,8 +1355,16 @@ class App {
         if (this.armed !== null) this.disarm();
         else this.select(null);
         break;
-      default:
+      default: {
+        // Abilities answer to the key printed on their own button, whatever
+        // that key is. Hardcoding two of the five is how Reload, Split and
+        // Drain came to advertise shortcuts that did nothing.
+        if (!unit) break;
+        const pressed = e.key.toLowerCase();
+        const ability = abilitiesOf(unit).find((a) => ABILITIES[a].key === pressed);
+        if (ability) this.arm(ability);
         break;
+      }
     }
   }
 
