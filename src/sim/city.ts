@@ -59,26 +59,90 @@ function tileScore(y: Yield): number {
  * Greedily assign citizens to the best free tiles in the fat cross.
  * Tiles claimed by another city, or standing under an enemy unit, are skipped.
  */
-export function assignWorkers(state: GameState, city: City): void {
-  const center = idx(city.x, city.y, state.width);
-  const claimed = new Set<number>();
+/**
+ * Can a citizen be put on this tile at all?
+ *
+ * The centre is worked for free, somebody else's claim is not ours to take,
+ * and an enemy standing on a tile stops it being farmed. Shared so that the
+ * greedy assignment and the player's own picks agree about what is legal --
+ * two answers to that question is how a hand-picked tile silently stops
+ * working.
+ */
+export function tileWorkable(state: GameState, city: City, i: number): boolean {
+  if (i === idx(city.x, city.y, state.width)) return false;
+  const inRange = fatCrossIndices(city.x, city.y, state.width, state.height).includes(i);
+  if (!inRange) return false;
   for (const other of state.cities) {
     if (other.id === city.id) continue;
-    claimed.add(idx(other.x, other.y, state.width));
-    for (const t of other.workedTiles) claimed.add(t);
+    if (idx(other.x, other.y, state.width) === i) return false;
+    if (other.workedTiles.includes(i)) return false;
   }
+  const blocker = unitAt(state, i % state.width, Math.floor(i / state.width));
+  return !(blocker && blocker.owner !== city.owner);
+}
+
+/**
+ * Tiles the player chose that are still legal to work, in the order chosen.
+ *
+ * Section 16 asked for two things of a hand-picked tile: that growth does not
+ * quietly reshuffle it, and that losing it falls back gracefully rather than
+ * breaking. Both come out of filtering here rather than anywhere clever -- a
+ * choice that cannot be honoured this turn is dropped for this turn and stays
+ * on the list, because an enemy standing on your wheat field is usually
+ * temporary and forgetting the choice would not be.
+ */
+export function honouredChoices(state: GameState, city: City): number[] {
+  if (!city.chosenTiles?.length) return [];
+  return city.chosenTiles.filter((i) => tileWorkable(state, city, i)).slice(0, city.size);
+}
+
+/**
+ * Put a citizen on a tile, or take one off it.
+ *
+ * Returns whether anything changed, so the interface can decline quietly
+ * rather than pretending a click on somebody else's wheat did something.
+ *
+ * Choosing more tiles than there are citizens drops the oldest choice rather
+ * than refusing. Refusing would mean a player at full assignment has to work
+ * out which tile to release before they can pick a new one, which is a puzzle
+ * about the interface rather than about the city.
+ */
+export function toggleChosenTile(state: GameState, city: City, i: number): boolean {
+  const chosen = city.chosenTiles ?? [];
+  const at = chosen.indexOf(i);
+  if (at >= 0) {
+    city.chosenTiles = chosen.filter((t) => t !== i);
+    assignWorkers(state, city);
+    return true;
+  }
+  if (!tileWorkable(state, city, i)) return false;
+  const next = [...chosen, i];
+  while (next.length > city.size) next.shift();
+  city.chosenTiles = next;
+  assignWorkers(state, city);
+  return true;
+}
+
+/** Hand the whole thing back to the greedy assignment. */
+export function clearChosenTiles(state: GameState, city: City): void {
+  delete city.chosenTiles;
+  assignWorkers(state, city);
+}
+
+export function assignWorkers(state: GameState, city: City): void {
+  // The player's picks first, in the order they picked them, then the greedy
+  // fill for whatever is left over.
+  const chosen = honouredChoices(state, city);
+  const taken = new Set(chosen);
 
   const candidates: Array<{ index: number; score: number }> = [];
   for (const i of fatCrossIndices(city.x, city.y, state.width, state.height)) {
-    if (i === center || claimed.has(i)) continue;
-    const x = i % state.width;
-    const y = Math.floor(i / state.width);
-    const blocker = unitAt(state, x, y);
-    if (blocker && blocker.owner !== city.owner) continue;
+    if (taken.has(i) || !tileWorkable(state, city, i)) continue;
     candidates.push({ index: i, score: tileScore(tileYield(state, i, false)) });
   }
   candidates.sort((a, b) => b.score - a.score);
-  city.workedTiles = candidates.slice(0, city.size).map((c) => c.index);
+  const filler = candidates.slice(0, Math.max(0, city.size - chosen.length));
+  city.workedTiles = [...chosen, ...filler.map((c) => c.index)];
 }
 
 export function cityYield(state: GameState, city: City): Yield {

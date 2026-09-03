@@ -1,4 +1,6 @@
+import { idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
+import { TERRAIN } from '../model/terrain';
 import type { AutoBuild, City, GameState, ProductionItem, Unit, UnitTypeId } from '../model/types';
 import {
   CALM_BONUS,
@@ -20,7 +22,11 @@ import {
   rushCost,
   productionCostIn,
   syncCitizens,
-  isRuined
+  isRuined,
+  tileYield,
+  tileWorkable,
+  toggleChosenTile,
+  clearChosenTiles,
 } from '../sim/city';
 import { bar, closeModal, escapeHtml, openModal } from './dom';
 import { splitTrade } from '../sim/research';
@@ -41,6 +47,85 @@ import { unitType } from '../model/units';
  * If the CSS height changes, this changes with it.
  */
 const CITIZEN_FACE = 32;
+
+/** Terrain and land-special art, for the tiles in the fat cross. */
+function terrainIconPath(id: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}terrain/${id}_0.png`;
+}
+
+function specialIconPath(id: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base.endsWith('/') ? base : `${base}/`}specials/${id}.png`;
+}
+
+/**
+ * The twenty-one tiles this city can reach, drawn as they sit on the map.
+ *
+ * Section 16: the greedy assignment was fine while every tile of a kind was
+ * worth the same, and stopped being fine when land specials arrived -- at that
+ * point it is choosing between things the player cannot see, and choosing
+ * wrongly is invisible. So the yields are on the tiles, and the tiles can be
+ * clicked.
+ *
+ * The four corners of the five-by-five are not in the fat cross, so they are
+ * rendered as holes rather than left out, which would collapse the grid.
+ */
+function fatCross(state: GameState, city: City): string {
+  const worked = new Set(city.workedTiles);
+  const chosen = new Set(city.chosenTiles ?? []);
+  const cells: string[] = [];
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const x = city.x + dx;
+      const y = city.y + dy;
+      const corner = Math.abs(dx) === 2 && Math.abs(dy) === 2;
+      if (corner || x < 0 || y < 0 || x >= state.width || y >= state.height) {
+        cells.push('<div class="crop-cell empty"></div>');
+        continue;
+      }
+      const i = idx(x, y, state.width);
+      const t = state.terrain[i];
+      const def = TERRAIN[t];
+      const y2 = tileYield(state, i, dx === 0 && dy === 0);
+      const special = state.specials[i] && def.special ? def.special : null;
+      if (dx === 0 && dy === 0) {
+        cells.push(
+          `<div class="crop-cell centre" title="${escapeHtml(city.name)} itself, worked for free">
+             <img src="${terrainIconPath(t)}" alt="" />
+             <span class="crop-here">&#9733;</span>
+             <span class="crop-yield">${y2.food}/${y2.shields}/${y2.trade}</span>
+           </div>`,
+        );
+        continue;
+      }
+      const canWork = tileWorkable(state, city, i);
+      const isWorked = worked.has(i);
+      const isChosen = chosen.has(i);
+      const classes = [
+        'crop-cell',
+        isWorked ? 'worked' : '',
+        isChosen ? 'chosen' : '',
+        !canWork && !isWorked ? 'blocked' : '',
+      ].filter(Boolean).join(' ');
+      const why = !canWork
+        ? 'Somebody else has this one.'
+        : isChosen
+          ? 'Picked by you. Click to let it go.'
+          : isWorked
+            ? 'Worked by the usual arrangement. Click to keep it that way on purpose.'
+            : 'Click to put somebody on it.';
+      cells.push(
+        `<button class="${classes}" data-tile="${i}" title="${escapeHtml(`${def.name}${special ? ` — ${special.name}` : ''}. ${why}`)}">
+           <img src="${terrainIconPath(t)}" alt="" />
+           ${special ? `<img class="crop-special" src="${specialIconPath(t)}" alt="" />` : ''}
+           <span class="crop-yield">${y2.food}/${y2.shields}/${y2.trade}</span>
+         </button>`,
+      );
+    }
+  }
+  return cells.join('');
+}
 
 /** Where a building's icon lives. Missing icons are removed on error. */
 function buildingIconPath(id: string): string {
@@ -210,6 +295,15 @@ export function openCityPanel(
           <div class="stat-row"><span class="label">Citizens</span><span class="value">${city.size}${city.disorder ? ' <span class="k-bad">(disorder)</span>' : ''}</span></div>
           <div class="stat-row"><span class="label">Content up to</span><span class="value">${limit}</span></div>
           <div class="citizen-row">${citizenFaces(state, city, limit)}</div>
+          <div class="crop-head">
+            <span class="label">Land worked</span>
+            ${
+              city.chosenTiles?.length
+                ? `<button class="small" data-clear-tiles>Let the game decide</button>`
+                : '<span class="muted">Click a tile to work it yourself</span>'
+            }
+          </div>
+          <div class="crop-grid">${fatCross(state, city)}</div>
           <div class="stat-row"><span class="label">Food</span><span class="value">${yields.food} (${surplus >= 0 ? '+' : ''}${surplus})</span></div>
           ${
             isRuined(state, city)
@@ -367,6 +461,26 @@ export function openCityPanel(
           e.stopPropagation();
           openPedia(state.players[city.owner], link.dataset.pedia);
         });
+      });
+      // The fat cross. Redrawn wholesale after a click rather than patched:
+      // one pick can move several citizens, since the greedy fill runs again
+      // over whatever is left.
+      root.querySelectorAll<HTMLButtonElement>('[data-tile]').forEach((cell) => {
+        cell.addEventListener('click', () => {
+          if (!toggleChosenTile(state, city, Number(cell.dataset.tile))) return;
+          onChange();
+          openCityPanel(state, city, onChange, onWake);
+        });
+      });
+      root.querySelector<HTMLButtonElement>('[data-clear-tiles]')?.addEventListener('click', () => {
+        clearChosenTiles(state, city);
+        onChange();
+        openCityPanel(state, city, onChange, onWake);
+      });
+      // Terrain art is optional like everything else; a missing tile picture
+      // leaves the cell showing its yields, which is the part that matters.
+      root.querySelectorAll<HTMLImageElement>('.crop-cell img').forEach((img) => {
+        img.addEventListener('error', () => img.remove());
       });
       root.querySelector<HTMLButtonElement>('[data-rush]')?.addEventListener('click', () => {
         if (!rushBuy(state, city)) return;
