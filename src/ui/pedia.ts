@@ -2,6 +2,7 @@ import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
+import type { TerrainDef } from '../model/terrain';
 import { TECHS, TECHS_BY_ID } from '../model/techs';
 import { CREATURES, CREATURES_BY_ID, UNIT_TYPES, unitType } from '../model/units';
 import type { UnitTypeDef } from '../model/units';
@@ -43,6 +44,30 @@ function placeholderFor(id: UnitTypeId): string {
   if (!sprites) sprites = new SpriteCache();
   const art = sprites.unit(id) as HTMLCanvasElement;
   return typeof art.toDataURL === 'function' ? art.toDataURL() : '';
+}
+
+/**
+ * What a special is actually worth, written as a gain.
+ *
+ * The rule is that a special **replaces** the tile's yields rather than adding
+ * to them, which is not what "bonus" leads anybody to expect -- so the numbers
+ * shown are the ones the tile really produces, and this says what changed. As
+ * it happens every special is a strict improvement, so there is never a minus
+ * sign here, but the sum is done rather than assumed.
+ */
+function specialGain(t: TerrainDef): string {
+  const sp = t.special;
+  if (!sp) return '';
+  const parts: string[] = [];
+  const say = (label: string, from: number, to: number) => {
+    if (to !== from) parts.push(`${to > from ? '+' : ''}${to - from} ${label}`);
+  };
+  say('food', t.food, sp.food);
+  say('shields', t.shields, sp.shields);
+  say('trade', t.trade, sp.trade);
+  // A literal dash, not an entity: this string is escaped on the way out, so
+  // an entity here would reach the player as the characters "&mdash;".
+  return parts.length ? `instead of ${t.food}/${t.shields}/${t.trade} — ${parts.join(', ')}` : '';
 }
 
 /** Which advance makes this unit buildable, if any. */
@@ -231,6 +256,7 @@ export function openPedia(player: Player, focus?: string): void {
 
   const terrainList = TERRAIN_IDS.map((id) => {
     const t = TERRAIN[id];
+    const sp = t.special;
     return `
       <div class="pedia-tech-row">
         <img class="pedia-row-icon terrain" src="${assetPath('terrain', `${id}_0`)}" alt="" />
@@ -240,6 +266,16 @@ export function openPedia(player: Player, focus?: string): void {
         <span class="pedia-flavor">${t.water ? 'Land units cannot enter.' : ''}${
           t.noCity ? ' No cities here.' : ''
         }${t.blocksSight ? ' Blocks line of sight.' : ''}</span>
+        ${
+          sp
+            ? `<div class="pedia-special">
+                 <img class="pedia-special-icon" src="${assetPath('specials', id)}" alt="" />
+                 <span class="pedia-special-name">${escapeHtml(sp.name)}</span>
+                 <span class="pedia-special-yield">${sp.food}/${sp.shields}/${sp.trade}</span>
+                 <span class="pedia-special-gain">${escapeHtml(specialGain(t))}</span>
+               </div>`
+            : ''
+        }
       </div>`;
   }).join('');
 
@@ -295,7 +331,12 @@ export function openPedia(player: Player, focus?: string): void {
         <div class="pedia-rows">${buildingList}</div>
       </div>
       <div class="pedia-pane" data-pane="terrain" hidden>
-        <p class="flavor">Yields are food / shields / trade.</p>
+        <p class="flavor">
+          Yields are food / shields / trade. About one tile in sixteen carries a
+          <em>land special</em> &mdash; the marked ones on the map. A special
+          <strong>replaces</strong> what the tile would otherwise produce rather than
+          adding to it, and every one of them is an improvement on the plain ground.
+        </p>
         <div class="pedia-rows">${terrainList}</div>
       </div>`,
     onMount: (root) => {

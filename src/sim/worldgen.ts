@@ -3,6 +3,15 @@ import { fatCrossIndices, idx, inBounds, distance } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { GameSettings, TerrainId } from '../model/types';
 
+/**
+ * How often a tile that could carry a special actually does.
+ *
+ * Named because the Orcpedia quotes it. A number a player is told about should
+ * not also be a literal buried in the generator, or the two drift apart and the
+ * encyclopedia starts lying quietly.
+ */
+export const SPECIAL_CHANCE = 0.06;
+
 export interface StartPosition {
   x: number;
   y: number;
@@ -346,7 +355,7 @@ function generateAttempt(
 
   const specials: number[] = new Array(w * h).fill(0);
   for (let i = 0; i < specials.length; i++) {
-    if (TERRAIN[terrain[i]].special && rng.chance(0.06)) specials[i] = 1;
+    if (TERRAIN[terrain[i]].special && rng.chance(SPECIAL_CHANCE)) specials[i] = 1;
   }
 
   const { starts, mainlandSize } = pickStarts(terrain, specials, w, h, playerCount);
