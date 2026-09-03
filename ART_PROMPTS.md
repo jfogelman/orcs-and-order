@@ -516,8 +516,10 @@ needs to act on, which is roughly besieged, then starving, then ruined.
 ## Land specials
 
 Eight resources already exist in the rules, one per terrain, each with a name and its
-own yields — and all eight currently share a single generic drawn diamond, which is
-why none of them reads as anything in particular. These give each one a face.
+own yields. They used to share a single generic drawn diamond, which is why none of
+them read as anything in particular. **All eight are now drawn, processed and wired**:
+the art is stamped at half a tile in the top-right corner, where the diamond used to
+sit, and the diamond remains the fallback for any terrain whose file is missing.
 
 Save as `art_src/specials/<terrain id>.<ext>`. They are stamped onto a **32px terrain
 tile**, so they end up smaller than anything else in the game: **one object, no
