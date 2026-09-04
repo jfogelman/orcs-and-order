@@ -244,6 +244,54 @@ describe('a dominance victory', () => {
     run(state, DOMINANCE.turns * 2 + 4);
     expect(state.winner).toBeNull();
   });
+
+  /**
+   * Reported from a played game that ended on turn 137. The condition was met
+   * fairly -- three quarters of the world, held for ten turns -- but the losing
+   * player was never told it was running, so ten turns of being one tick from
+   * defeat arrived as a game that simply stopped. A countdown nobody can see is
+   * indistinguishable from a bug, and was reported as one.
+   */
+  it('tells the other side the moment the clock starts', () => {
+    const state = board(12, 4, DOMINANCE.notBefore + 1);
+    run(state, 1);
+
+    const warned = state.log.filter(
+      (e) => e.player === 1 && /most of the world/i.test(e.text),
+    );
+    expect(warned.length, 'the losing side was told nothing').toBeGreaterThan(0);
+    // And it says what to do about it, not merely that it is happening.
+    expect(warned[0].text).toMatch(/take some of it back/i);
+  });
+
+  it('tells the leader too, so a win does not arrive unannounced', () => {
+    const state = board(12, 4, DOMINANCE.notBefore + 1);
+    run(state, 1);
+    expect(state.log.some((e) => e.player === 0 && /you hold most of the world/i.test(e.text)))
+      .toBe(true);
+  });
+
+  it('says it once, not once per check', () => {
+    const state = board(12, 4, DOMINANCE.notBefore + 1);
+    // `run` takes one player-turn per step, so a game turn costs two of them.
+    run(state, DOMINANCE.turns * 2 + 2);
+
+    // A first draft counted the turns down in the log and repeated itself six
+    // times a turn, because the check runs more often than the turn advances.
+    // The countdown moved to the advisors, who are asked rather than shouting.
+    const shouts = state.log.filter((e) => /most of the world/i.test(e.text));
+    expect(shouts.filter((e) => e.player === 1)).toHaveLength(1);
+    expect(shouts.filter((e) => e.player === 0)).toHaveLength(1);
+  });
+
+  it('says nothing at all while nobody is close', () => {
+    // Level, so neither side is anywhere near three quarters. Twelve against
+    // one would have *the orcs* dominant, which is the warning working rather
+    // than the silence being tested.
+    const state = board(6, 6, DOMINANCE.notBefore + 1);
+    run(state, DOMINANCE.turns * 2 + 2);
+    expect(state.log.some((e) => /most of the world/i.test(e.text))).toBe(false);
+  });
 });
 
 /**

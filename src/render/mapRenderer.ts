@@ -441,14 +441,48 @@ export class MapRenderer {
 
     // --- fog of war ------------------------------------------------------
     // Unexplored ground is painted out solid; explored-but-unseen is dimmed.
+    //
+    // Gathered into two paths and filled once each, rather than a fill per
+    // tile, because per-tile fills leave seams that read as a grid.
+    //
+    // Two tiles that abut exactly still each cover their shared edge pixel only
+    // partially whenever that edge does not land on a whole *device* pixel --
+    // and it usually does not, since the display here reports a ratio of 1.5,
+    // so a whole CSS pixel is one and a half real ones. Two half-covered fills
+    // composite to about three quarters, not to one, and three quarters of
+    // black over bright terrain is a pale line. Twenty of those is a grid.
+    //
+    // Reported twice from play. The first fix stopped the *real* grid drawing
+    // past the edge of the world, which was a genuine and different bug; the
+    // second snapped these rectangles to whole pixels, which cannot help when
+    // the pixels in question are not whole. Filling the union in one operation
+    // removes the interior edges altogether, so there is nothing to seam.
+    const dark = new Path2D();
+    const dimmed = new Path2D();
+    let anyDark = false;
+    let anyDimmed = false;
     for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const i = idx(x, y, state.width);
         if (viewer.visible[i]) continue;
         const s = cam.tileToScreen(x, y);
-        ctx.fillStyle = viewer.explored[i] ? 'rgba(4,6,10,0.5)' : VOID_COLOR;
-        ctx.fillRect(s.x, s.y, Math.ceil(size), Math.ceil(size));
+        const w = Math.ceil(size) + 1;
+        if (viewer.explored[i]) {
+          dimmed.rect(s.x, s.y, w, w);
+          anyDimmed = true;
+        } else {
+          dark.rect(s.x, s.y, w, w);
+          anyDark = true;
+        }
       }
+    }
+    if (anyDark) {
+      ctx.fillStyle = VOID_COLOR;
+      ctx.fill(dark);
+    }
+    if (anyDimmed) {
+      ctx.fillStyle = 'rgba(4,6,10,0.5)';
+      ctx.fill(dimmed);
     }
 
     // --- march orders and path preview -----------------------------------

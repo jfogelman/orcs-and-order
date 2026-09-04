@@ -73,6 +73,16 @@ export interface Situation {
   calmBuildings: number;
   /** Structures that push supply further out. */
   supplyPosts: number;
+  /**
+   * Turns until somebody wins by holding most of the world, and who.
+   *
+   * Null when nobody is close. Reported here rather than shouted into the log
+   * every turn: the game ended on turn 137 in a played game and the losing side
+   * had never been told the clock was running, but a line repeated for ten
+   * turns is one people learn to skip. An advisor says it when asked, which is
+   * what advisors are for.
+   */
+  dominance: { turnsLeft: number; theirs: boolean } | null;
 }
 
 /** One thing an advisor might be exercised about, and what they say about it. */
@@ -290,6 +300,16 @@ const KINGDOM: AdvisorDef[] = [
     faction: 'human',
     blurb: 'Gold-threaded beard. Abacus of carved stone beads.',
     concerns: [
+      {
+        // Before the money, because there shortly may not be a treasury.
+        when: (s) => s.dominance !== null,
+        say: (s) =>
+          s.dominance!.theirs
+            ? `They hold most of the known world. ${sentence(count(s.dominance!.turnsLeft, 'turn'))} ` +
+              `of that and the ledger closes. I do not have a column for this.`
+            : `We hold most of the known world. ${sentence(count(s.dominance!.turnsLeft, 'turn'))} more ` +
+              `and it is settled. I have already ruled the line.`,
+      },
       {
         when: (s) => s.goldPerTurn < 0,
         say: (s) =>
@@ -599,6 +619,15 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Two heads. One does the maths, one eats the samples.',
     concerns: [
+      {
+        when: (s) => s.dominance !== null,
+        say: (s) =>
+          s.dominance!.theirs
+            ? `Both heads counted the world. Both heads say most of it is theirs. ` +
+              `${sentence(count(s.dominance!.turnsLeft, 'turn'))} left and there is nothing to count.`
+            : `Both heads counted the world. Most of it is ours. ` +
+              `${sentence(count(s.dominance!.turnsLeft, 'turn'))} more and we stop counting.`,
+      },
       {
         when: (s) => s.goldPerTurn < 0,
         say: (s) =>
