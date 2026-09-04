@@ -727,8 +727,13 @@ class App {
    * would immediately reopen it.
    */
   private promptPending(): void {
-    if (isModalOpen() || isOver(this.state)) return;
+    if (isOver(this.state)) return;
     const chain = () => afterModalCloses(() => this.promptPending());
+    // Wait rather than give up. Answering one question can open the next
+    // itself -- a unit owed two perks asks again the moment the first is
+    // taken -- and dropping the chain there meant the turn's remaining
+    // questions were never asked at all.
+    if (isModalOpen()) return chain();
 
     this.promptPerkIfOwed();
     if (isModalOpen()) return chain();
@@ -767,8 +772,9 @@ class App {
     openPerkMenu(unitType(unit.type).name, this.state.players[this.viewerId].faction, options, (id) => {
       unit.perks = [...(unit.perks ?? []), id];
       this.refreshSidebar();
-      // There may be more than one waiting.
-      this.promptPerkIfOwed();
+      // There may be more than one waiting -- but the menu that took this
+      // answer is still on screen, and a second one cannot open underneath it.
+      afterModalCloses(() => this.promptPerkIfOwed());
     });
   }
 
