@@ -9,7 +9,7 @@ import { FACTIONS } from './model/factions';
 import { TERRAIN } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
-import type { City, GameState, LogEntry, Player, Unit } from './model/types';
+import type { City, GameState, Player, Unit } from './model/types';
 import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
 import { EffectLayer } from './render/effects';
@@ -53,6 +53,7 @@ import {
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
 import { controlsMarkup } from './ui/controls';
+import { chooseFocus } from './ui/watch';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
@@ -513,7 +514,17 @@ class App {
     this.soundedLogEntries = this.state.log.length;
     const heard = new Set<string>();
     let shown = 0;
-    let look: [number, number] | null = null;
+    // Decided over the whole batch by `chooseFocus`, not inside the loop below.
+    // Where to look is a question about all of the turn's events together --
+    // which of them most deserves the camera -- and answering it one entry at a
+    // time is what made it "whichever came first".
+    const look = chooseFocus(
+      this.state,
+      this.viewerId,
+      entries,
+      (x, y) => this.canSee(x, y),
+      (x, y) => this.onScreen(x, y),
+    );
     for (const entry of entries) {
       // Sound is addressed: you hear about your own empire.
       const addressed = entry.player === null || entry.player === this.viewerId;
@@ -543,25 +554,19 @@ class App {
       // give away exactly where an enemy is.
       if (!this.canSee(ex, ey)) continue;
 
-      // Where to look is decided *before* and independently of what to draw.
+      // Only what to draw is decided here now; the camera was lifted out of
+      // this loop entirely, which is the point.
       //
-      // These were one statement, and the camera was the loser: the effect
-      // checks ran first and `continue`d past it. A death is logged as 'bad'
-      // and `effectFor` gives 'bad' no picture at all, so a unit dying off
-      // screen -- the single case most worth turning to look at -- could never
-      // move the camera. Reported twice from play, and the first fix missed it
-      // for exactly this reason: it gave deaths a position, which they needed,
-      // and they still never reached this line.
+      // The two were one statement once, and the camera was the loser: the
+      // effect checks ran first and `continue`d past it. A death is logged as
+      // 'bad' and `effectFor` gives 'bad' no picture at all, so a unit dying
+      // off screen -- the single case most worth turning to look at -- could
+      // never move the camera. The burst cap did the same thing to a busy turn:
+      // once enough animations were queued, every later entry was skipped
+      // whole, camera included. Both were fixed by ordering, and ordering kept
+      // being the thing that broke. Nothing in this loop can reach the camera
+      // any more.
       //
-      // The burst cap did the same thing to a busy turn. Once enough
-      // animations had been queued every later entry was skipped whole,
-      // camera included, so the fight worth watching was dropped precisely
-      // when there was a lot of fighting.
-      //
-      // Only the first: a busy AI turn would otherwise drag the camera across
-      // the map once per fight and settle wherever the last one happened.
-      if (!look && this.worthWatching(entry) && !this.onScreen(ex, ey)) look = [ex, ey];
-
       // Animations are not deduplicated the way sounds are -- three separate
       // fights should be three explosions -- but they are staggered and
       // capped, because a whole AI turn drains at once and would otherwise
@@ -584,27 +589,6 @@ class App {
     return x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1;
   }
 
-  /**
-   * Is this an event the viewer would want the camera to move for?
-   *
-   * Fighting only, and only their own. Sound and the animation already play
-   * for anything visible, whoever it belongs to -- but hearing a distant
-   * skirmish between two other people is not a reason to be dragged away from
-   * what you were doing. Losing a unit somewhere you were not looking is.
-   */
-  private worthWatching(entry: LogEntry): boolean {
-    if (entry.kind !== 'combat' && entry.kind !== 'bad') return false;
-    if (!entry.at) return false;
-    if (entry.player === this.viewerId) return true;
-    // A message addressed to somebody else can still be about us: an enemy
-    // killing one of our units is written for them. So ask the map instead.
-    const [x, y] = entry.at;
-    const mine = (ux: number, uy: number) => Math.abs(ux - x) <= 1 && Math.abs(uy - y) <= 1;
-    return (
-      this.state.units.some((u) => u.owner === this.viewerId && mine(u.x, u.y)) ||
-      this.state.cities.some((c) => c.owner === this.viewerId && mine(c.x, c.y))
-    );
-  }
 
   /**
    * End the turn, unless somebody is still standing about with moves left.
