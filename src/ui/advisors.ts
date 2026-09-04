@@ -18,6 +18,7 @@ import {
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
 import { DOMINANCE } from '../sim/turn';
+import { TECHS } from '../model/techs';
 import { tradeRates, unlockedBuildings } from '../sim/research';
 import { TECHS_BY_ID } from '../model/techs';
 import { escapeHtml, openModal } from './dom';
@@ -92,6 +93,23 @@ export function situationOf(state: GameState, playerId: number): Situation {
 
   const fighters = units.filter((u) => unitType(u.type).attack > 0);
 
+  // Can this side build anything at all that calms a city, and if not, which
+  // advance would let them? Naming it is the whole point: "your cities riot" is
+  // an observation, and "your cities riot and the answer is called Joy Making"
+  // is advice.
+  const calmingUnlocked = unlockedBuildings(player).some((b) => (b.contentBonus ?? 0) > 0);
+  const calmAdvance = calmingUnlocked
+    ? null
+    : (TECHS.find(
+        // 'both' is a real value here, not an absent one -- Joy Making is
+        // shared. Testing only for a missing faction or an exact match found
+        // nothing at all, which read as "no such advance exists" rather than
+        // as a bug, and quietly turned the advice back into an observation.
+        (t) =>
+          (!t.faction || t.faction === 'both' || t.faction === player.faction) &&
+          t.buildings.some((b) => (BUILDINGS[b]?.contentBonus ?? 0) > 0),
+      )?.name ?? null);
+
   // Who, if anybody, is one clock away from winning outright.
   let dominance: Situation['dominance'] = null;
   for (const p of state.players) {
@@ -124,6 +142,8 @@ export function situationOf(state: GameState, playerId: number): Situation {
     paladins: fighters.filter((u) => unitType(u.type).base === 'paladin').length,
     walled,
     wallsAvailable: unlockedBuildings(player).some((b) => b.id === 'walls'),
+    calmAvailable: calmingUnlocked,
+    calmNeedsAdvance: calmingUnlocked ? null : calmAdvance,
     barracks,
     coinBuildings,
     calmBuildings,
@@ -140,11 +160,31 @@ export function openAdvisors(state: GameState, playerId: number): void {
   const card = (a: (typeof advisors)[number]) => {
     // Only somebody with something to say back is worth clicking, so the ones
     // who would draw nothing out of the room do not pretend otherwise.
-    const contested = objectionsTo(a, advisorConcern(a, situation)).length > 0;
+    const concern = advisorConcern(a, situation);
+    const contested = objectionsTo(a, concern).length > 0;
+    // Two marks, because there are two different things worth knowing and the
+    // cursor changing shape on hover told you neither.
+    //
+    //   speech  -- ask this one and somebody will argue back
+    //   thought -- something they actually care about is happening, but the
+    //              room agrees, so there is nothing to draw out
+    //
+    // No mark at all means they are talking to fill the silence, which is most
+    // of them on most turns and is worth being able to see at a glance.
+    const mark = contested ? 'speech' : concern ? 'thought' : null;
+    const markTitle = contested
+      ? 'Ask them. Somebody will disagree.'
+      : 'Something they mind about is happening.';
     return `
     <div class="advisor${contested ? ' contested' : ''}" data-advisor="${escapeHtml(a.id)}"
          ${contested ? 'role="button" tabindex="0" title="Ask them, and see who objects"' : ''}>
       <img class="advisor-face" src="${portraitPath(a.id)}" alt="" />
+      ${
+        mark
+          ? `<img class="advisor-bubble ${mark}" src="${portraitPath(`bubble_${mark}`)}"
+                  alt="" title="${escapeHtml(markTitle)}" />`
+          : ''
+      }
       <div class="advisor-who">
         <span class="advisor-name">${escapeHtml(a.name)}</span>
         <span class="advisor-role muted">${escapeHtml(ROLE_NAMES[a.role])}</span>

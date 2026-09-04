@@ -5113,3 +5113,71 @@ rather than a UI one.
 dropping by three a turn is not an emergency; the same drop with forty gold left
 is. The alert is about the *runway*, not the slope -- which is also the version
 that cannot fire on turn three and teach everybody to ignore it.
+
+## 77. Why the Kingdom out-produced the Horde at turn 143, and what says so now
+
+Asked from a played save. The answer is not a balance rule, and it is worth
+writing down because the numbers look like one.
+
+| at turn 143 | orc (played) | human (AI) |
+|---|---|---|
+| **advances** | **8** | **26** |
+| cities in disorder | **4 of 8** | 0 of 6 |
+| buildings | 6 | 16 |
+| units | 9 | 50 |
+| gold | 11 | 1145 |
+| trade to calm | 6/12 | **0/12** |
+
+The Horde had *more* cities and *more* population and was losing on every other
+count, which is the shape of a spiral rather than a disadvantage.
+
+**The single decision was `joy-making`**, which unlocks the Totem. It had never
+been researched, so no city could build anything that calms anybody. Riots
+followed; three cities were set to Placating and two to Study, so five of eight
+were producing nothing buildable; that starved both shields and trade; and trade
+is what buys advances, including the one that would have ended it. Meanwhile the
+Kingdom had chapels everywhere and spent **nothing at all** on calm.
+
+Nothing in the game said any of this. The player was spending half the trade
+slider on calm *and* three cities' entire output on placating, and still rioting,
+with no indication that the fix was an advance rather than more of the same.
+
+### What now says it
+
+The domestic advisor on each side leads with it when cities riot and nothing
+that would calm them can be built, **and names the advance**:
+
+> Four cities rioting, boss, and we got nothing to build at dem. Da clever ones
+> say we need *Joy Making*. I do not know what dat is. Dey do.
+
+Checked against the save itself, which is where the wording came from. It is a
+`the-spiral` topic under section 46, so it is contested: the Death Knight offers
+to take a city that already has one instead, and the Archmage points out that
+this is one advance out of a whole tree.
+
+**`calmAvailable` and `calmNeedsAdvance` are new on `Situation`** and are
+deliberately separate from `calmBuildings`, which counts what is standing. A
+player rioting with no Totem may be failing to build one or unable to, and those
+are opposite problems with opposite answers.
+
+One bug found writing it: the advance lookup filtered on `!t.faction ||
+t.faction === player.faction`, and Joy Making is `faction: 'both'` -- a real
+value, not an absent one. The lookup found nothing, reported no such advance,
+and quietly turned the advice back into an observation. It said `needs "null"`
+in the first run against the save, which is the only reason it was caught.
+
+### And you can now see who is worth asking
+
+Section 46 made advisors clickable when somebody would argue back, and the only
+way to tell was hovering and watching the cursor change, which is not a thing
+anybody does to six portraits in turn. Two marks now sit on the portrait corner:
+
+- **a speech bubble** -- ask this one, somebody will disagree
+- **a thought bubble**, quieter and smaller -- something they mind about is
+  happening, but the room agrees
+- **nothing** -- they are talking to fill the silence, which is most of them on
+  most turns and is worth being able to see at a glance
+
+Stock art, dropped in by hand, and processed by the same pipeline as everything
+else -- they arrive with real alpha rather than a magenta background, so the
+background pass reports "not removed" and that is the correct outcome.

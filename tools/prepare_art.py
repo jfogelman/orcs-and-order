@@ -97,6 +97,18 @@ CITY_OVERLAYS = {
     "overlay_damaged": "damaged city overlay",
 }
 
+# The two bubbles that mark an advisor as worth clicking, keyed by what they
+# mean rather than by the stock filenames they arrived under.
+#
+# These are stock art rather than generated, so they come with real alpha and no
+# magenta to key out. `remove_background` leaves them alone and reports as much,
+# which is correct and not a failure -- the trim afterwards works off the alpha
+# they already have.
+ADVISOR_BUBBLES = {
+    "bubble_speech": "maky_orel-comic-book-bubble-2684015_1920",
+    "bubble_thought": "clker-free-vector-images-bubble-296488_1920",
+}
+
 # Advance icons, keyed by tech id from src/model/techs.ts. Optional: the tech
 # tree hides the icon and reads fine without it.
 TECH_ICONS = [
@@ -1592,6 +1604,14 @@ def main() -> int:
     units, missing_units, failed_units = process_cutouts("units", CREATURES, force)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    print("Advisor bubbles:")
+    bubbles, missing_bubbles, _failed_bubbles = process_aliased(
+        "advisors", ADVISOR_BUBBLES, force, ICON_SIZE
+    )
+    # Not added to `failed`: these arrive with alpha rather than a magenta
+    # background, so "background not removed" is the expected outcome.
+    portraits_extra = bubbles
+    missing_cities.extend(missing_bubbles)
     print("City overlays:")
     covl, missing_covl, failed_covl = process_aliased(
         "cities", CITY_OVERLAYS, force, ICON_SIZE
@@ -1618,7 +1638,7 @@ def main() -> int:
     oicons, missing_oicons, failed_oicons = process_cutouts(
         "orders", ORDER_ICONS, force, size=ICON_SIZE, quiet_missing=True
     )
-    icons += portraits + oicons
+    icons += portraits + oicons + portraits_extra
     missing_icons.extend(missing_portraits)
     failed_icons.extend(failed_portraits)
     missing_icons.extend(missing_oicons)
