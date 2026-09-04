@@ -104,12 +104,38 @@ export function techCost(player: Player, t: TechDef): number {
 
 export function setResearch(state: GameState, player: Player, id: TechId | null): void {
   if (id !== null && !researchableTechs(player).some((t) => t.id === id)) return;
-  // Switching targets loses the partial work, which discourages dithering.
-  if (player.researching !== id) player.beakers = 0;
+
+  // Changing your mind costs nothing, and it used to cost everything.
+  //
+  // The old rule zeroed the beakers on any switch, "to discourage dithering".
+  // What it actually discouraged was correcting a mistake: a player forty
+  // turns into a spiral -- rioting everywhere with no Totem, because the
+  // advance that unlocks one was never taken -- had to throw away all their
+  // banked work to go and get it. See section 77 for the played game where
+  // exactly that happened.
+  //
+  // So the work carries over. The one cost is that **surplus does not**: switch
+  // onto something you have already paid for and you learn it at once, and
+  // whatever you had banked above its price is gone. Letting a study finish on
+  // its own keeps the change; reaching sideways for a cheap one does not. That
+  // is a real decision with a real risk, rather than a fine for changing your
+  // mind.
   player.researching = id;
-  if (id) {
-    log(state, `Research begins: ${TECHS_BY_ID[id].name}.`, 'research', player.id);
+  if (!id) return;
+
+  const def = TECHS_BY_ID[id];
+  if (player.beakers >= techCost(player, def)) {
+    player.beakers = 0;
+    log(
+      state,
+      `${def.name} was already paid for. The surplus is not coming back.`,
+      'research',
+      player.id,
+    );
+    learn(state, player, def);
+    return;
   }
+  log(state, `Research begins: ${def.name}.`, 'research', player.id);
 }
 
 /** Pick something sensible when a player has no current project. */
@@ -146,6 +172,19 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
   if (player.beakers < cost) return { completed: null };
 
   player.beakers -= cost;
+  learn(state, player, def);
+  return { completed: def };
+}
+
+/**
+ * Write an advance into the books and say what it opened up.
+ *
+ * Shared, because an advance can now arrive two ways: paid for over several
+ * turns, or already paid for when somebody switches onto it. Both should read
+ * identically in the log -- an advance that turns up silently because it was
+ * reached sideways is one the player does not know they have.
+ */
+function learn(state: GameState, player: Player, def: TechDef): void {
   player.techs.push(def.id);
   player.researching = null;
   log(state, `${def.name} discovered.`, 'research', player.id, 'discovery');
@@ -163,8 +202,6 @@ export function addBeakers(state: GameState, player: Player, amount: number): Re
   if (newBuildings.length > 0) {
     log(state, `Now buildable: ${newBuildings.join(', ')}.`, 'good', player.id);
   }
-
-  return { completed: def };
 }
 
 /** Split a turn's trade between the treasury and the laboratories. */
