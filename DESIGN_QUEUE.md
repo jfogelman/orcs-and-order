@@ -5216,3 +5216,56 @@ switching should not be quieter than one reached by waiting.
 
 **Still refused:** anything whose prerequisites are missing. Free to change your
 mind is not free to skip the tree, and there is a test that says so.
+
+## 79. Troll regeneration is the one ability that compounds with the ladder
+
+Asked directly: does a Three Trolls regenerate like a single troll does? In
+health, exactly. In what the healing is *worth*, not remotely -- and the
+difference is worth writing down, because it looks like a bug and is being kept.
+
+`regenMultiplier: 2` lives on the creature, and `makeVariant` copies it to
+`troll_x2` and `troll_x3` unchanged. Health does not scale with the count
+either -- `hp: c.hp`, a flat 15 whether it is one troll or three, which is
+sections 31 to 33 and the most important number in the game. So all three
+recover the same absolute points per turn.
+
+The interaction is with **section 32**. `aliveCount` is derived from
+`hp / type.hp`, and `headcount()` multiplies attack *and* defence. So healing a
+count unit does not top up a health bar: **it regrows the dead.** Measured,
+fortified and in supply, starting at 1 hp:
+
+| | turn 1 | turn 2 | turn 3 |
+|---|---|---|---|
+| Troll, field | 6 hp, str 1.00 | 11 hp, str 1.00 | 15 hp |
+| Three Trolls, field | 6 hp, **str 0.67** | 11 hp, **str 1.00** | 15 hp |
+| Three Trolls, in a city | 11 hp, **str 1.00** | 15 hp | |
+| Three Trolls, barracks | **15 hp, str 1.00** | | |
+| Ogre, field (regen 1) | 4 hp | 7 hp | 10 hp |
+
+A single troll healing from 1 hp buys survivability only; it was already
+swinging at full strength, because a singleton never degrades. A Three Trolls
+healing the same points goes from a third of its strength to all of it -- two
+turns in the field, one in a barracks. A stack that walks out of a fight on its
+last hit point has permanently lost nothing.
+
+Sections 31 and 32 flattened health precisely so that a rung of the ladder could
+not buy N times the damage *and* N times the health for a linear price. This is
+a version of that returning on a delay, and it is the only ability in the game
+that does.
+
+**Kept, deliberately, and not measured.** Three reasons, in order of weight:
+
+1. **It has not overperformed in real games.** Reported from play, which is the
+   evidence that counts here.
+2. **The cost is already linear** -- 42, 84, 126 -- so a stack pays three times
+   for the ability as well as for the bodies. The creature note has always said
+   the price is dearer than the raw numbers justify because regeneration never
+   appears in a value figure (section 35).
+3. **It only pays out if the unit survives**, and attrition makes that least
+   likely exactly when the unit is most damaged. A Three Trolls at 1 hp fights
+   at a third strength and usually simply dies, which is the natural brake.
+
+Thematically it is also the single most correct thing in the roster: the reason
+to field trolls is that they knit back together. The note exists so that nobody
+-- including a future pass through this file -- reads `aliveCount` against
+`healUnits` and quietly "fixes" it.
