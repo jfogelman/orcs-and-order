@@ -15,6 +15,7 @@ import {
   isGarrisoned,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
+import { DOMINANCE } from '../sim/turn';
 import { tradeRates, unlockedBuildings } from '../sim/research';
 import { TECHS_BY_ID } from '../model/techs';
 import { escapeHtml, openModal } from './dom';
@@ -89,6 +90,15 @@ export function situationOf(state: GameState, playerId: number): Situation {
 
   const fighters = units.filter((u) => unitType(u.type).attack > 0);
 
+  // Who, if anybody, is one clock away from winning outright.
+  let dominance: Situation['dominance'] = null;
+  for (const p of state.players) {
+    if (p.dominantSince === undefined) continue;
+    const left = DOMINANCE.turns - (state.turn - p.dominantSince);
+    if (left <= 0) continue;
+    dominance = { turnsLeft: left, theirs: p.id !== playerId };
+  }
+
   return {
     turn: state.turn,
     faction: player.faction,
@@ -116,6 +126,7 @@ export function situationOf(state: GameState, playerId: number): Situation {
     coinBuildings,
     calmBuildings,
     supplyPosts,
+    dominance,
   };
 }
 

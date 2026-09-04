@@ -4949,3 +4949,47 @@ shortcut that works** -- which is exactly what went wrong before.
 **Still missing, deliberately.** There is no key for Disband: it destroys a unit
 and the only confirmation is a button that says so. A bare letter for that is
 how somebody loses a Ten Orcs to a typo.
+
+## 74. Two things that looked like gridlines, and a countdown nobody could see
+
+### The seams were never the grid
+
+Reported twice. The first fix was real and fixed a different bug: the grid ran
+the full width and height of the *viewport*, and the fog pass repaints
+unexplored **tiles**, so lines survived past the world's edge where nothing
+repainted them. That was worth doing and did nothing about what was actually
+being seen.
+
+The second attempt snapped each fog rectangle to whole pixels, which cannot
+work: this display reports `devicePixelRatio` **1.5**, so a whole CSS pixel is
+one and a half real ones and "snapped" edges still land mid-pixel. Two tiles
+that abut exactly each cover the shared edge partially, and two partial fills
+composite to about three quarters rather than one. Three quarters of black over
+bright terrain is a pale line, and twenty in a row is a grid.
+
+**Fixed by filling the union instead of the tiles.** Unexplored and
+explored-but-unseen are gathered into one `Path2D` each and filled once, so the
+interior edges do not exist to seam. Verified with the grid off -- which is what
+finally proved it was never the grid -- and again with it on.
+
+The lesson worth keeping: **two bugs can look identical**, and fixing one while
+the other survives reads as the fix not working. It took toggling the grid off
+and seeing the lines stay to stop guessing.
+
+### The dominance clock ran in silence
+
+A played game ended on turn 137. The condition was met fairly -- the Kingdom
+held three quarters of the world from turn 127 and held it -- but the losing
+player was told nothing for ten turns and then lost. A countdown nobody can see
+is indistinguishable from the game stopping for no reason, and was reported as a
+bug.
+
+A first attempt logged the countdown every turn and **repeated itself six times
+a turn**, because `checkDominance` runs more often than the turn advances. That
+is a good argument against the log for this: a line that repeats is a line
+people learn to skip.
+
+**It is an advisor's job.** `Situation` now carries `dominance` -- how many turns
+are left and whose side it favours -- and both trade advisors lead with it,
+above their own money, because there shortly may not be a treasury. The log says
+it once, when the clock starts, and then keeps quiet.

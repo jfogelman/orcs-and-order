@@ -307,6 +307,7 @@ export const DOMINANCE = {
   share: 0.75,
   /** Consecutive turns it must be held. */
   turns: 10,
+
   /**
    * Below this many cities in total, the share means nothing.
    *
@@ -344,6 +345,24 @@ function checkDominance(state: GameState): void {
     }
     if (p.dominantSince === undefined) {
       p.dominantSince = state.turn;
+      // Say so, to everybody, the moment the clock starts.
+      //
+      // Reported as a bug: a game ended on turn 137 and the losing player had
+      // spent the previous ten turns one tick from losing without being told
+      // once. The condition was met fairly -- three quarters of the world, held
+      // -- but a countdown nobody can see is indistinguishable from the game
+      // stopping for no reason, which is exactly how it was described.
+      for (const other of state.players) {
+        log(
+          state,
+          other.id === p.id
+            ? `You hold most of the world. Hold it for ${DOMINANCE.turns} turns and that is that.`
+            : `${p.name} holds most of the world. Take some of it back within ` +
+              `${DOMINANCE.turns} turns or the argument is over.`,
+          other.id === p.id ? 'good' : 'bad',
+          other.id,
+        );
+      }
       continue;
     }
     if (state.turn - p.dominantSince >= DOMINANCE.turns) {
