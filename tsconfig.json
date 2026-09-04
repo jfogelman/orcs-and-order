@@ -17,5 +17,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "tests", "tools", "vite.config.ts", "vitest.config.ts", "vitest.sweep.config.ts"]
 }
