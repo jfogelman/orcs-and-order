@@ -88,7 +88,16 @@ export function openModal(options: ModalOptions): void {
     if (replacing) return;
     const waiting = pendingAfterClose;
     pendingAfterClose = [];
-    for (const fn of waiting) fn();
+    // Once the handler that closed us has *finished*, not partway through it.
+    // Buttons here answer with `close(); onPick(id)`, so running the queue
+    // inline asked the next question while the answer was still unrecorded.
+    // A unit built in a barracks arrives already promoted, the end-of-turn
+    // chain asks what it has learned, and the click that answered reopened the
+    // very same menu -- so the player had to pick twice, and the unit quietly
+    // banked two perks for one rank.
+    queueMicrotask(() => {
+      for (const fn of waiting) fn();
+    });
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {

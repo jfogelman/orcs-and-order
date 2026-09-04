@@ -346,8 +346,10 @@ export function openPerkMenu(
     onMount: (root, close) => {
       root.querySelectorAll<HTMLButtonElement>('[data-perk]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          close();
+          // Recorded before the menu goes, so that anything watching for the
+          // close sees a unit that has already chosen.
           onPick(btn.dataset.perk ?? '');
+          close();
         });
       });
     },
