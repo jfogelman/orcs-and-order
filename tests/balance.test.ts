@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { runAiTurn } from '../src/ai/ai';
-import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
-import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
+import type { Outcome } from '../tools/sweep';
+import { playGame } from '../tools/sweep';
 
 /**
  * Balance regression.
@@ -22,86 +21,11 @@ declare const process: { env: Record<string, string | undefined> };
 
 const SEED_COUNT = Number(process.env.BALANCE_SEEDS ?? 6);
 const SEEDS = Array.from({ length: SEED_COUNT }, (_, i) => 1 + i * 7919);
-/** Enough to run past the turn limit, so every game reaches a verdict. */
-const HALF_TURNS = 700;
-
-interface Outcome {
-  seed: number;
-  turns: number;
-  winner: number | null;
-  combats: number;
-  /**
-   * Cities that changed hands, counted by watching ownership rather than by
-   * reading the log: `log()` keeps only the last 400 entries, so anything
-   * counted from it over a 300-turn game is a floor and not a total.
-   */
-  captures: number;
-  cities: [number, number];
-  /** Total citizens. Weighted heavily by the score, so worth watching. */
-  population: [number, number];
-  units: [number, number];
-  techs: [number, number];
-  ladder: [number, number];
-}
-
-function deepestGroup(types: string[]): number {
-  return types.reduce((max, t) => Math.max(max, Number(t.split('_x')[1] ?? 1)), 1);
-}
-
-function play(seed: number): Outcome {
-  const state = createGame({ seed });
-  state.players[0].controller = 'ai';
-  beginPlayerTurn(state, 0);
-
-  const owners = new Map<number, number>();
-  let captures = 0;
-  // Counted as it happens, for the same reason captures are: `log()` keeps only
-  // the last 400 entries, and a game that runs to the turn limit pushes its
-  // early fighting straight out of the window. Read off the tail, a seed with
-  // thirty-seven fights reports none.
-  let combats = 0;
-  let readLog = 0;
-  const countCombat = () => {
-    for (let i = readLog; i < state.log.length; i++) {
-      if (state.log[i].kind === 'combat') combats++;
-    }
-    readLog = state.log.length;
-  };
-  const sweep = () => {
-    for (const c of state.cities) {
-      const was = owners.get(c.id);
-      if (was !== undefined && was !== c.owner) captures++;
-      owners.set(c.id, c.owner);
-    }
-  };
-  sweep();
-  for (let i = 0; i < HALF_TURNS && state.winner === null; i++) {
-    const before = state.log.length;
-    // The window slid if the log was trimmed while the turn ran; start again
-    // from whatever is still there rather than from an index that has moved.
-    if (before < readLog) readLog = 0;
-    runAiTurn(state, state.activePlayer);
-    endPlayerTurn(state);
-    countCombat();
-    sweep();
-  }
-  const per = (p: number) => playerUnits(state, p).map((u) => u.type);
-  return {
-    seed,
-    turns: state.turn,
-    winner: state.winner,
-    combats,
-    captures,
-    cities: [playerCities(state, 0).length, playerCities(state, 1).length],
-    population: [
-      playerCities(state, 0).reduce((n, c) => n + c.size, 0),
-      playerCities(state, 1).reduce((n, c) => n + c.size, 0),
-    ],
-    units: [playerUnits(state, 0).length, playerUnits(state, 1).length],
-    techs: [state.players[0].techs.length, state.players[1].techs.length],
-    ladder: [deepestGroup(per(0)), deepestGroup(per(1))],
-  };
-}
+/**
+ * The game runner lives in `tools/sweep` now, so this regression and every
+ * balance sweep count fights and captures the same way. It was private here,
+ * and each sweep grew its own near-copy that disagreed in small ways.
+ */
 
 describe('faction balance across seeds', () => {
   // Played once in setup rather than at import time, so vitest attributes the
@@ -109,7 +33,7 @@ describe('faction balance across seeds', () => {
   let outcomes: Outcome[] = [];
   beforeAll(
     () => {
-      outcomes = SEEDS.map(play);
+      outcomes = SEEDS.map((seed) => playGame(seed));
     },
     // Scale with the sample rather than hard-coding a number: an explicit
     // timeout here overrides vitest.config.ts entirely, so a fixed value

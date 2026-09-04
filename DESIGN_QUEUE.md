@@ -5349,3 +5349,60 @@ regeneration, so rerunning the suite does not churn them in git.
 Both bugs above were then reproduced *and* the fixes confirmed against these,
 by driving the running game -- including the dev server's `/@fs/` path, which
 loads a fixture into a save slot without going near the file picker.
+
+## 81. The sweep harness: the methodology, as code
+
+Every balance question so far was answered by a script written from scratch for
+that question. The methodology was sound and lived nowhere -- in section 59, in
+section 60, and in whoever last ran one. Two sweeps were invalid in ways that
+looked like results.
+
+`tools/sweep.ts` is that methodology as code. `npm run sweep` runs whatever
+`tools/sweep.run.test.ts` is currently asking; **the runner is the question and
+the harness is not touched.** It is behind its own vitest config rather than a
+skip flag, because it plays hundreds of whole games and has no business in a
+suite that runs in a minute.
+
+### What it refuses
+
+**Two arms that are secretly the same.** Section 59: `git stash push -- <paths>`
+rejects the entire pathspec when any one path is untracked, so a control arm
+that stashed `src/` next to a new file stashed nothing and ran the new code
+twice. The output was two arms identical to the decimal, which reads as "the
+change did nothing".
+
+Every lever a sweep may move is named in `LEVERS`, and each arm is applied and
+read back **before any game runs**. Two arms that leave the settings identical
+throw, and they throw in a second rather than half an hour in. The levers are
+restored afterwards in a `finally`, so a sweep cannot poison whatever runs next.
+
+**A single seed set.** Section 19's resettlement numbers came back "costs the
+Horde three games" on the tuned seeds and reversed on the held-out ones, 54-54
+against 50-58. `TUNED` and `HELD_OUT` are both there by default, 54 games each
+-- eighteen seeds on each of three map bases, because 54 seeds off one base can
+hand both arms the same unusual continent. Wins are reported per set and never
+pooled, since pooling is how a result that exists only on the tuned seeds
+survives into an average that still looks like evidence.
+
+### One game runner
+
+`playGame` was private to the balance regression, so every sweep grew a
+near-copy and the copies disagreed: one of them read fights off the tail of a
+trimmed log and reported none. `tests/balance.test.ts` now imports the same
+function, so the regression and every sweep count fights and captures
+identically.
+
+### What it costs
+
+Quoted before it starts, not after it finishes. Section 60's table says 54 games
+took 2.6 to 4.5 minutes -- 2.9 to 5.0 seconds a game. A run today came in at
+**8.2**, and the reason is in that section: cost tracks total simulated turns,
+not games. Those older runs averaged 110 to 132 turns because somebody won;
+games now reach the 300-turn limit far more often.
+
+`SECONDS_PER_GAME` is 8, and every sweep prints what it actually took against
+that number, so it gets recalibrated from real output rather than guessed at
+again. A full two-arm sweep is 216 games, about half an hour.
+
+`SWEEP_PER_BASE=1` runs the same arms in a minute, which is how you find out
+that an arm throws without finding out half an hour in.

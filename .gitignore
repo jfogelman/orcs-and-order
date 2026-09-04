@@ -44,3 +44,6 @@ __pycache__/
 # CREDITS.md and can be fetched again; every picture has its prompt in
 # ART_PROMPTS.md. The files stay on disk, so `npm run art` still works here.
 art_src/
+
+# Sweep output is a record of a run, not source.
+sweep-results/
