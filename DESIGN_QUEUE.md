@@ -5181,3 +5181,38 @@ anybody does to six portraits in turn. Two marks now sit on the portrait corner:
 Stock art, dropped in by hand, and processed by the same pipeline as everything
 else -- they arrive with real alpha rather than a magenta background, so the
 background pass reports "not removed" and that is the correct outcome.
+
+## 78. Changing your mind about an advance should not cost everything
+
+`setResearch` zeroed the banked beakers on any switch, with a comment saying it
+"discourages dithering". What it actually discouraged was **correcting a
+mistake**. Section 77 is the case: a player forty turns into a spiral, rioting
+everywhere because the advance that unlocks a Totem had never been taken, could
+only go and get it by throwing away all their accumulated work. The rule
+punished the one move that would have saved the game.
+
+**Now the work carries over, and only the surplus is at risk.**
+
+- Switch to something dearer, or something you cannot yet afford: nothing is
+  lost, and the study simply continues toward the new target.
+- Switch onto something you have **already paid for**: you learn it at once, and
+  whatever you had banked above its price is gone.
+
+That asymmetry is the whole design, and it is deliberate: **finishing a study on
+its own keeps the change** -- `addBeakers` subtracts the cost and banks the
+remainder -- while reaching sideways for something cheap forfeits it. So a
+player sitting on a large pile can always pivot, and pivoting onto something
+trivial to escape a mess costs them the pile. A real decision with a real risk,
+rather than a fine for changing your mind.
+
+The log says so when it happens, because an advance that arrives silently
+because it was reached sideways is one the player does not know they have:
+
+> *Joy Making was already paid for. The surplus is not coming back.*
+
+`learn()` was extracted from `addBeakers` so both routes announce an advance
+identically -- what it unlocked, in units and buildings. An advance reached by
+switching should not be quieter than one reached by waiting.
+
+**Still refused:** anything whose prerequisites are missing. Free to change your
+mind is not free to skip the tree, and there is a test that says so.
