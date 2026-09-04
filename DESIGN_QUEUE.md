@@ -5063,3 +5063,53 @@ self-interested recommendations is a better tutorial than one correct arrow.
 
 Section 46's `Topic` and `retorts` machinery is the same shape and could carry
 it: a recommendation is a line with something to disagree about.
+
+**The military advisor always wants a war advance**, and should. That is the
+whole design: he is not a hint system with a helmet on, he is a man who has one
+idea. The Blademaster recommending axes while the Death Mage recommends anything
+at all involving the word *arcane* is the joke and the tutorial at once, and
+neither of them is lying -- both branches do lead somewhere.
+
+The thing that makes it a utility rather than a gag is that **the recommendations
+have to be real**: each one should name an advance that is actually reachable
+now, not a favourite that is four prerequisites away. An advisor who recommends
+something you cannot pick has told you nothing, twice.
+
+## 76. Push and pull: the advisors know things nobody is being told
+
+Everything the council says today is **pull**. It waits in a panel until you
+open it, so the game can be quietly going wrong for twenty turns while six
+people who noticed say nothing.
+
+Section 74 built the first **push** for exactly this reason -- the dominance
+clock now announces itself once and then lives in the advisors -- and that split
+is the pattern worth generalising rather than a one-off.
+
+Two alerts asked for, and they are not the same difficulty.
+
+### High discontent -- mostly already there
+
+`rioting` and `restless` are in `Situation` and four advisors already have lines
+about them. What is missing is only the push: nothing tells you the turn a
+second city starts rioting unless you happen to open the panel. Cheap, and the
+dominance warning is the template -- say it once when it crosses, not every turn
+while it stays true, which is the mistake that first version made.
+
+### Losing money consistently -- needs something the game does not have
+
+This one is a **trend**, and nothing in the game remembers a previous turn.
+`Situation` is built fresh each time it is asked for, `Player` has a `gold`
+figure and no history, and a save has no room for one either. "We are losing
+money this turn" already exists and is not what was asked for -- somebody one
+turn into a bad patch does not need telling.
+
+So this needs a small, honest piece of state: a short ring of recent
+`goldPerTurn`, or simply "the turn our balance last went positive". The second is
+one number and answers the question directly, which is the version to try first.
+Whatever it is, it wants to survive a save, which means it is a schema change
+rather than a UI one.
+
+**And it should stay quiet until it matters.** A treasury of eight hundred
+dropping by three a turn is not an emergency; the same drop with forty gold left
+is. The alert is about the *runway*, not the slope -- which is also the version
+that cannot fire on turn three and teach everybody to ignore it.
