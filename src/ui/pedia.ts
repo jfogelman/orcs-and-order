@@ -9,6 +9,7 @@ import type { UnitTypeDef } from '../model/units';
 import type { FactionId, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
+import { controlsMarkup } from './controls';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -312,6 +313,7 @@ export function openPedia(player: Player, focus?: string): void {
         <button class="pedia-tab" data-tab="techs">Advances</button>
         <button class="pedia-tab" data-tab="buildings">Structures</button>
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
+        <button class="pedia-tab" data-tab="controls">Controls</button>
       </div>
 
       <div class="pedia-pane" data-pane="yours">
@@ -338,6 +340,20 @@ export function openPedia(player: Player, focus?: string): void {
           adding to it, and every one of them is an improvement on the plain ground.
         </p>
         <div class="pedia-rows">${terrainList}</div>
+      </div>
+      <div class="pedia-pane" data-pane="controls" hidden>
+        <p class="flavor">
+          Two of these are worth knowing and neither is guessable.
+          <strong>Right-click is the order button</strong>: it acts with the unit you
+          already have in hand and asks no questions about what is on the tile, which
+          is how you walk a unit <em>onto</em> one of your own cities. A
+          <strong>left click on your own city opens the city</strong> instead, whatever
+          is standing there &mdash; and everything standing there is listed in the
+          panel, including whatever the city has just finished building.
+          A left click on open ground sets a march, which carries on across as many
+          turns as it takes.
+        </p>
+        <div class="pedia-controls">${controlsMarkup()}</div>
       </div>`,
     onMount: (root) => {
       // Swap in the procedural drawing wherever there is no artwork yet, so a

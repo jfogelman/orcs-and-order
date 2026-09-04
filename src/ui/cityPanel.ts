@@ -1,11 +1,19 @@
 import { idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
-import type { AutoBuild, City, GameState, ProductionItem, Unit, UnitTypeId } from '../model/types';
+import type {
+  AutoBuild,
+  City,
+  GameState,
+  ProductionItem,
+  Unit,
+  UnitOrder,
+  UnitTypeId,
+} from '../model/types';
 import {
   CALM_BONUS,
   autoBuildOf,
-  garrisonOf,
+  unitsInCity,
   buildOptions,
   cityYield,
   contentLimit,
@@ -46,6 +54,20 @@ import { unitType } from '../model/units';
  *
  * If the CSS height changes, this changes with it.
  */
+/**
+ * What a unit standing in a city is doing, in words the panel can show.
+ *
+ * `none` is the interesting one: the raw order reads as "nothing", when what it
+ * means is that the unit is awake and has not been told to do anything -- which
+ * is every unit the city has just finished building.
+ */
+const POSTURE: Record<UnitOrder, string> = {
+  none: 'ready',
+  skip: 'passed',
+  sentry: 'sentry',
+  fortified: 'fortified',
+};
+
 const CITIZEN_FACE = 32;
 
 /** Terrain and land-special art, for the tiles in the fat cross. */
@@ -255,9 +277,10 @@ export function openCityPanel(
 
   // What this city does when it runs out of orders. Marked with the same
   // `armed` style the ability buttons use, so a set city reads at a glance.
-  // Units resting here are drawn as a number on the city rather than on the
-  // tile, so this list is the only way back to them.
-  const garrison = garrisonOf(state, city);
+  // Everything standing here, not only what is resting out of sight. Clicking
+  // the city opens the city, so for a unit with no orders yet -- anything this
+  // city has just built -- this list is the only way back to it.
+  const garrison = unitsInCity(state, city);
   const auto = autoBuildOf(city);
   const autoBtn = (mode: AutoBuild, label: string, title: string) =>
     `<button class="small${auto === mode ? ' armed' : ''}" data-auto="${mode}"
@@ -346,7 +369,7 @@ export function openCityPanel(
                                title="${escapeHtml(unitType(u.type).blurb)}">
                          <img class="unit-icon" src="${unitIconPath(u.type)}" alt="" />
                          ${escapeHtml(unitType(u.type).name)}
-                         <span class="muted">${escapeHtml(u.order)}${
+                         <span class="muted">${escapeHtml(POSTURE[u.order])}${
                            u.rank > 0 ? ` &middot; rank ${u.rank}` : ''
                          }</span>
                        </button>`,

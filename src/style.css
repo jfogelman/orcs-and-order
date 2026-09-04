@@ -1502,3 +1502,41 @@ kbd {
   height: 20px;
   opacity: 0.82;
 }
+
+/* ------------------------------ the controls tab in the Orcpedia, section 81 */
+
+/* Thirty-odd rows down one side of a 1100px panel is a scroll for no reason, so
+   the list flows into columns and uses the width the Orcpedia already has. */
+.pedia-controls {
+  column-width: 320px;
+  column-gap: 24px;
+  padding: 10px 12px 16px;
+}
+
+.pedia-controls .panel-title {
+  /* A heading left stranded at the foot of a column is worse than a short one. */
+  break-after: avoid;
+  break-inside: avoid;
+  margin: 12px 0 4px;
+}
+
+.pedia-controls .panel-title:first-child {
+  margin-top: 0;
+}
+
+.pedia-controls .stat-row {
+  break-inside: avoid;
+  gap: 14px;
+  align-items: baseline;
+}
+
+/* The key is what the eye is scanning for, so it keeps its width and the
+   description takes what is left. */
+.pedia-controls .stat-row .label {
+  flex: 0 0 auto;
+}
+
+.pedia-controls .stat-row .value {
+  text-align: right;
+  font-variant-numeric: normal;
+}
