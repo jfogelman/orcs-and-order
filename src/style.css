@@ -1420,3 +1420,52 @@ kbd {
   color: var(--gold);
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+
+/* ------------------------------------------- advisors that argue, section 46 */
+
+/* Only the ones somebody would talk back to look clickable. */
+.advisor.contested {
+  cursor: pointer;
+}
+
+.advisor.contested:hover,
+.advisor.contested:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+.advisor-replies {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(240, 198, 74, 0.35);
+  display: grid;
+  gap: 8px;
+}
+
+/*
+ * An interruption is indented and quieter than the line that provoked it: the
+ * person you asked is still the one talking, and the rest are heckling.
+ */
+.advisor-reply {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.advisor-reply .advisor-name {
+  display: block;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.advisor-reply-face {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  image-rendering: pixelated;
+}

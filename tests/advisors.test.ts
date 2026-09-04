@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ADVISORS,
+  advisorConcern,
+  objectionsTo,
   type Situation,
   advisorLine,
   advisorsFor,
@@ -248,6 +250,86 @@ describe('nobody has touched the trade split', () => {
     for (const faction of ['orc', 'human'] as const) {
       const trade = advisorsFor(faction).find((a) => a.role === 'trade')!;
       expect(advisorLine(trade, untouched(faction))).not.toMatch(/\d/);
+    }
+  });
+});
+
+/**
+ * DESIGN_QUEUE section 46. Six opinions in a list is not an argument, and six
+ * faces all talking at once is a lot of movement on a screen somebody is
+ * reading. So you ask one, and only those who *disagree* say anything back.
+ */
+describe('advisors who talk back', () => {
+  const quiet = calm();
+
+  it('objects by topic rather than by naming names', () => {
+    // Six people who each disagree with two or three others is thirty-odd
+    // relationships to maintain, and every new advisor multiplies it. A topic
+    // is one word on the line and one word on whoever objects.
+    for (const a of ADVISORS) {
+      for (const c of a.concerns) {
+        if (!c.about) continue;
+        expect(typeof c.about).toBe('string');
+      }
+    }
+    expect(ADVISORS.some((a) => a.retorts && Object.keys(a.retorts).length > 0)).toBe(true);
+  });
+
+  it('lets somebody argue with the arcane advisor about magic', () => {
+    const arcane = advisorsFor('orc').find((a) => a.role === 'arcane')!;
+    // The state that puts his magic line on top: an army, and nobody in it who
+    // can do anything interesting.
+    const s: Situation = { ...quiet, faction: 'orc', army: 12, magicUnits: 0, researching: 'Axes' };
+    const line = advisorConcern(arcane, s);
+    expect(line?.about, 'the arcane advisor was not talking about magic').toBe('magic');
+
+    const said = objectionsTo(arcane, line);
+    expect(said.length, 'nobody disagreed about magic').toBeGreaterThan(0);
+    expect(said.every((o) => o.advisor.faction === 'orc')).toBe(true);
+  });
+
+  it('never lets an advisor heckle themselves', () => {
+    for (const a of ADVISORS) {
+      for (const c of a.concerns) {
+        expect(objectionsTo(a, c).some((o) => o.advisor.id === a.id)).toBe(false);
+      }
+    }
+  });
+
+  it('never lets the two councils hear each other', () => {
+    // The sides never meet. An orc heckling the Kingdom's Archmage would be a
+    // fog-of-war leak in the shape of a joke.
+    for (const a of ADVISORS) {
+      for (const c of a.concerns) {
+        for (const o of objectionsTo(a, c)) {
+          expect(o.advisor.faction).toBe(a.faction);
+        }
+      }
+    }
+  });
+
+  it('says nothing at all about an untagged line', () => {
+    for (const a of ADVISORS) {
+      for (const c of a.concerns) {
+        if (c.about) continue;
+        expect(objectionsTo(a, c)).toEqual([]);
+      }
+    }
+    // And nothing when the advisor has no concern at all, which is the common
+    // case: most turns most of them are idle.
+    expect(objectionsTo(ADVISORS[0], null)).toEqual([]);
+  });
+
+  it('keeps every retort to a topic somebody actually raises', () => {
+    // A retort about a subject no line is tagged with can never be heard, which
+    // is a dead line in a file of jokes rather than a bug that shows up.
+    const raised = new Set(
+      ADVISORS.flatMap((a) => a.concerns.map((c) => c.about).filter(Boolean)),
+    );
+    for (const a of ADVISORS) {
+      for (const topic of Object.keys(a.retorts ?? {})) {
+        expect(raised.has(topic as never), `${a.id} answers "${topic}", which nobody raises`).toBe(true);
+      }
     }
   });
 });

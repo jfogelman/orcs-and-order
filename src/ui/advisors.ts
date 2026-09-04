@@ -4,8 +4,10 @@ import { unitType } from '../model/units';
 import {
   ROLE_NAMES,
   type Situation,
+  advisorConcern,
   advisorLine,
   advisorsFor,
+  objectionsTo,
 } from '../model/advisors';
 import {
   buildingUpkeep,
@@ -135,8 +137,13 @@ export function openAdvisors(state: GameState, playerId: number): void {
   const situation = situationOf(state, playerId);
   const advisors = advisorsFor(player.faction);
 
-  const card = (a: (typeof advisors)[number]) => `
-    <div class="advisor">
+  const card = (a: (typeof advisors)[number]) => {
+    // Only somebody with something to say back is worth clicking, so the ones
+    // who would draw nothing out of the room do not pretend otherwise.
+    const contested = objectionsTo(a, advisorConcern(a, situation)).length > 0;
+    return `
+    <div class="advisor${contested ? ' contested' : ''}" data-advisor="${escapeHtml(a.id)}"
+         ${contested ? 'role="button" tabindex="0" title="Ask them, and see who objects"' : ''}>
       <img class="advisor-face" src="${portraitPath(a.id)}" alt="" />
       <div class="advisor-who">
         <span class="advisor-name">${escapeHtml(a.name)}</span>
@@ -144,7 +151,9 @@ export function openAdvisors(state: GameState, playerId: number): void {
         <span class="advisor-blurb muted">${escapeHtml(a.blurb)}</span>
       </div>
       <div class="advisor-line">${escapeHtml(advisorLine(a, situation))}</div>
+      <div class="advisor-replies" hidden></div>
     </div>`;
+  };
 
   openModal({
     title: player.faction === 'orc' ? 'Those Who Advise' : 'The Council',
@@ -160,6 +169,58 @@ export function openAdvisors(state: GameState, playerId: number): void {
       // the opinion rather than a broken-image glyph.
       root.querySelectorAll<HTMLImageElement>('.advisor-face').forEach((img) => {
         img.addEventListener('error', () => img.remove());
+      });
+
+      // Ask one, and let the others interrupt.
+      //
+      // Section 46 settled the shape: six faces all talking at once is a lot of
+      // movement on a screen somebody is reading, and six opinions in a list is
+      // not an argument. You pick somebody, and only those who *disagree* say
+      // anything back -- which is what turns a panel of characters into a room.
+      const speak = (holder: HTMLElement) => {
+        const who = advisors.find((a) => a.id === holder.dataset.advisor);
+        if (!who) return;
+        const replies = holder.querySelector<HTMLElement>('.advisor-replies');
+        if (!replies) return;
+        if (!replies.hidden) {
+          // Asking again puts the room away rather than repeating itself.
+          replies.hidden = true;
+          replies.innerHTML = '';
+          return;
+        }
+        // Close anybody else's, so only one argument is running at a time.
+        root.querySelectorAll<HTMLElement>('.advisor-replies').forEach((r) => {
+          r.hidden = true;
+          r.innerHTML = '';
+        });
+        const objections = objectionsTo(who, advisorConcern(who, situation));
+        if (objections.length === 0) return;
+        replies.innerHTML = objections
+          .map(
+            (o) => `
+            <div class="advisor-reply">
+              <img class="advisor-reply-face" src="${portraitPath(o.advisor.id)}" alt="" />
+              <div>
+                <span class="advisor-name">${escapeHtml(o.advisor.name)}</span>
+                <div>${escapeHtml(o.says)}</div>
+              </div>
+            </div>`,
+          )
+          .join('');
+        replies.hidden = false;
+        replies.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+          img.addEventListener('error', () => img.remove());
+        });
+      };
+
+      root.querySelectorAll<HTMLElement>('.advisor.contested').forEach((holder) => {
+        holder.addEventListener('click', () => speak(holder));
+        holder.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            speak(holder);
+          }
+        });
       });
     },
   });
