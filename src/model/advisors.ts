@@ -71,6 +71,21 @@ export interface Situation {
   coinBuildings: number;
   /** Cities with something that keeps people calm. */
   calmBuildings: number;
+  /**
+   * Whether anything that calms a city can be built at all yet, and what
+   * advance would change that.
+   *
+   * Separate from `calmBuildings`, which counts what is standing. A player with
+   * riots everywhere and no Totem may be failing to build one or unable to --
+   * and those are opposite problems with opposite answers. Read from a played
+   * save at turn 143 where eight cities held forty-five people, four of them
+   * were rioting, half the trade was going to calm, and the advance that
+   * unlocks the Horde's happiness building had simply never been taken. Nothing
+   * in the game said so.
+   */
+  calmAvailable: boolean;
+  /** The advance that would unlock one, when there is none. */
+  calmNeedsAdvance: string | null;
   /** Structures that push supply further out. */
   supplyPosts: number;
   /**
@@ -117,7 +132,8 @@ export type Topic =
   | 'money'
   | 'expansion'
   | 'the-dead'
-  | 'the-little-ones';
+  | 'the-little-ones'
+  | 'the-spiral';
 
 export interface AdvisorDef {
   id: string;
@@ -332,6 +348,16 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Dwarf engineer. Checks a spirit-level while you talk.',
     concerns: [
       {
+        // The spiral, named. A riot with nothing buildable to end it is a
+        // different problem from a riot with something buildable to end it,
+        // and the difference is one advance the player has not taken.
+        about: 'the-spiral',
+        when: (s) => s.rioting > 0 && !s.calmAvailable && s.calmNeedsAdvance !== null,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} rioting, and not one thing we may lawfully build to ` +
+          `stop it. The advance is called ${s.calmNeedsAdvance}. I have written it down. Twice.`,
+      },
+      {
         when: (s) => s.rioting > 0,
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} rioting. Have you tried a sturdier roof? Works for morale, ` +
@@ -486,6 +512,7 @@ const KINGDOM: AdvisorDef[] = [
       },
     ],
     retorts: {
+      'the-spiral': 'One advance, yes. *One.* And then the rest of the tree, which is where the interesting things are.',
       walls: 'A wall is a solved problem. Somebody solved it. That is rather the difficulty with walls.',
       war: 'By all means. Send them. I shall be in the tower, being useful.',
     },
@@ -546,6 +573,13 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Clipboard made of bone. Fewer fingers than last week.',
     concerns: [
+      {
+        about: 'the-spiral',
+        when: (s) => s.rioting > 0 && !s.calmAvailable && s.calmNeedsAdvance !== null,
+        say: (s) =>
+          `${count(s.rioting, 'city', 'cities')} rioting, boss, and we got nothing to build at dem. ` +
+          `Da clever ones say we need ${s.calmNeedsAdvance}. I do not know what dat is. Dey do.`,
+      },
       {
         when: (s) => s.rioting > 0,
         say: (s) =>
@@ -693,6 +727,7 @@ const HORDE: AdvisorDef[] = [
       },
     ],
     retorts: {
+      'the-spiral': 'Or we take a city that already has one. Faster, and the walk does them good.',
       magic: 'A spell is a thing that can fail. A blade is a thing that has already been tested.',
       walls: 'Walls are what a realm builds when it has stopped intending to win.',
     },

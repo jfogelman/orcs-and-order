@@ -40,6 +40,8 @@ function calm(): Situation {
     coinBuildings: 4,
     calmBuildings: 4,
     supplyPosts: 2,
+    calmAvailable: true,
+    calmNeedsAdvance: null,
     dominance: null,
   };
 }
