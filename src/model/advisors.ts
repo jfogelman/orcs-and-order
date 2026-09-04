@@ -90,7 +90,34 @@ export interface Concern {
   /** Whether this is what is on their mind right now. */
   when: (s: Situation) => boolean;
   say: (s: Situation) => string;
+  /**
+   * What this line is *about*, so somebody else can object to it.
+   *
+   * A tag rather than a rule between two advisors: six people who each disagree
+   * with two or three others is thirty-odd relationships to write and maintain,
+   * and every new advisor multiplies it. A topic is one word on the line and one
+   * word on whoever objects, and it stays true when the cast changes.
+   *
+   * Untagged lines are simply nobody's business, which is most of them.
+   */
+  about?: Topic;
 }
+
+/**
+ * The things this council argues about.
+ *
+ * Deliberately few and deliberately blunt. These are not policy areas, they are
+ * the handful of subjects on which these particular people are known to be
+ * tiresome.
+ */
+export type Topic =
+  | 'magic'
+  | 'walls'
+  | 'war'
+  | 'money'
+  | 'expansion'
+  | 'the-dead'
+  | 'the-little-ones';
 
 export interface AdvisorDef {
   id: string;
@@ -108,6 +135,42 @@ export interface AdvisorDef {
   /** When nothing they care about is happening. Chosen by turn, not at random,
    *  so an advisor does not change their mind while you are looking at them. */
   idle: string[];
+  /**
+   * What they say when somebody else raises a subject they object to.
+   *
+   * Keyed by topic. Having one is what makes an advisor an interruption rather
+   * than a row in a list -- and not having one is fine, since somebody who
+   * agrees with everybody is a perfectly good advisor and a bad argument.
+   */
+  retorts?: Partial<Record<Topic, string>>;
+}
+
+/**
+ * Who speaks up when this line is said, and what they say.
+ *
+ * Never the speaker themselves, and only advisors on the same council -- the
+ * two sides never meet, and an orc heckling the Kingdom's Archmage would be a
+ * fog-of-war leak in the shape of a joke.
+ */
+export function objectionsTo(
+  speaker: AdvisorDef,
+  line: Concern | null,
+): Array<{ advisor: AdvisorDef; says: string }> {
+  if (!line?.about) return [];
+  const topic = line.about;
+  return advisorsFor(speaker.faction)
+    .filter((a) => a.id !== speaker.id && a.retorts?.[topic])
+    .map((a) => ({ advisor: a, says: a.retorts![topic]! }));
+}
+
+/**
+ * The concern an advisor is currently voicing, rather than the text of it.
+ *
+ * `advisorLine` returns a string, which is all the panel needed until the panel
+ * needed to know what the line was *about*.
+ */
+export function advisorConcern(a: AdvisorDef, s: Situation): Concern | null {
+  return a.concerns.find((c) => c.when(s)) ?? null;
 }
 
 const NUMBER_WORDS = [
@@ -175,6 +238,7 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Dented breastplate, never repaired, out of pride.',
     concerns: [
       {
+        about: 'war',
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
           `Orcs. ${spell(s.enemiesSeen)} of them, in the open, unpunished. Every hour we do not ` +
@@ -187,6 +251,7 @@ const KINGDOM: AdvisorDef[] = [
           `I do not ask for much. I ask for a man with a spear. One man. One spear.`,
       },
       {
+        about: 'walls',
         when: (s) => s.wallsAvailable && s.walled < s.cities,
         say: (s) =>
           `${count(s.cities - s.walled, 'city', 'cities')} without walls. Stone does not sleep, sire. ` +
@@ -225,6 +290,7 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Radiant, humourless, standing suspiciously straight.',
     concerns: [
       {
+        about: 'magic',
         when: (s) => s.magicUnits > 0,
         say: (s) =>
           `We field ${count(s.magicUnits, 'practitioner')} of the arcane. I have said nothing about ` +
@@ -249,6 +315,9 @@ const KINGDOM: AdvisorDef[] = [
           `not say what it is what happens *because of*. I shall simply stand here.`,
       },
     ],
+    retorts: {
+      magic: 'I withdraw my earlier silence on the subject of mages.',
+    },
     idle: [
       'The orcs raise death knights from fallen heroes. We could simply... not do that. I merely mention it.',
       'A righteous realm needs no advice. I remain available, regardless, in case that changes.',
@@ -287,6 +356,10 @@ const KINGDOM: AdvisorDef[] = [
           `too, right up until you cannot.`,
       },
     ],
+    retorts: {
+      magic: 'Stone does not need feeding, does not sulk, and has never once set a granary alight.',
+      war: 'Attack, then. I shall be here. Behind the stone. When it goes badly.',
+    },
     idle: [
       'Your peasants are unhappy. Have you tried a sturdier roof? Works for morale, works for mine collapses.',
       'Everything is standing. I have checked twice. I shall check again shortly.',
@@ -399,6 +472,7 @@ const KINGDOM: AdvisorDef[] = [
           `${spell(s.rates.beakers)}. One can barely discover the problem.`,
       },
       {
+        about: 'magic',
         when: (s) => s.magicUnits === 0 && s.army > 8,
         say: (s) =>
           `${count(s.army, 'soldier')}, and not one of them able to do anything a horse could not. ` +
@@ -411,6 +485,10 @@ const KINGDOM: AdvisorDef[] = [
           `discovered fire again. We are delighted for them.`,
       },
     ],
+    retorts: {
+      walls: 'A wall is a solved problem. Somebody solved it. That is rather the difficulty with walls.',
+      war: 'By all means. Send them. I shall be in the tower, being useful.',
+    },
     idle: [
       'Your alchemists have discovered fire again. We are delighted for them.',
       'The work proceeds. It would proceed faster with funding, but it proceeds.',
@@ -430,6 +508,7 @@ const HORDE: AdvisorDef[] = [
     blurb: 'Trophies sewn into the armour. Not all of them old.',
     concerns: [
       {
+        about: 'war',
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
           `${spell(s.enemiesSeen)} of them. Standing there. Being alive. I do not know what else ` +
@@ -555,6 +634,7 @@ const HORDE: AdvisorDef[] = [
           `assistants — motivated, but forgetful.`,
       },
       {
+        about: 'magic',
         when: (s) => s.magicUnits === 0,
         say: () =>
           `Not one of our number can do anything a strong arm cannot. It is embarrassing. ` +
@@ -567,6 +647,11 @@ const HORDE: AdvisorDef[] = [
           `made of angry people.`,
       },
     ],
+    retorts: {
+      war: 'Swing harder, by all means. The dead swung harder too, once.',
+      walls: 'Build it. I shall be interested to see what walks through it.',
+      'the-little-ones': 'Goblins are not a resource. They are barely a species. Use them.',
+    },
     idle: [
       'Progress is slow. The dead make poor assistants — motivated, but forgetful.',
       'I have been experimenting. Do not drink from the north well for a while.',
@@ -581,6 +666,7 @@ const HORDE: AdvisorDef[] = [
     blurb: 'Black armour, fel-green eyes, unsettlingly calm.',
     concerns: [
       {
+        about: 'the-little-ones',
         when: (s) => s.rankAndFile > s.army * 0.6 && s.army > 6,
         say: (s) =>
           `${spell(s.rankAndFile)} of our ${spell(s.army)} are goblins and common orcs. They will break. ` +
@@ -606,6 +692,10 @@ const HORDE: AdvisorDef[] = [
           `honourable for longer.`,
       },
     ],
+    retorts: {
+      magic: 'A spell is a thing that can fail. A blade is a thing that has already been tested.',
+      walls: 'Walls are what a realm builds when it has stopped intending to win.',
+    },
     idle: [
       'Our warriors fear death less than dishonour. This is either our greatest strength or the reason our graveyards are so full.',
       'The oaths hold. For now. Oaths are like walls that way.',
@@ -660,6 +750,10 @@ const HORDE: AdvisorDef[] = [
           `an ongoing disagreement and you should probably spend it before it resolves.`,
       },
     ],
+    retorts: {
+      war: 'Right head says war is expensive. Left head says right head has never bought anything.',
+      'the-little-ones': 'Goblins eat. Goblins carry. Left head has the figures and does not like them.',
+    },
     idle: [
       'Left head says trade is good this season. Right head already ate the trade.',
       'Supplies counted. Twice. Different answers. Averaging.',

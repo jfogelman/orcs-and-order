@@ -3471,6 +3471,33 @@ That means a GUI change, so it is deliberately **not** an immediate piece of
 work. The stills are wired and the cycles are drawn; this is the design they are
 waiting on rather than a blocker for anything already shipped.
 
+### The argument is built. The animation is not.
+
+Split deliberately: the *mechanic* needed no art, so it went first and the
+talking cycles can follow whenever the slicer learns to read a vertical strip.
+
+`Concern` gained `about?: Topic` and `AdvisorDef` gained `retorts`. **Topics
+rather than pairwise rules**, exactly as this section predicted: six people who
+each disagree with two or three others is thirty-odd relationships to write and
+maintain, and every new advisor multiplies it. A topic is one word on the line
+and one word on whoever objects, and it survives the cast changing.
+
+Only advisors whose *current* line is contested are clickable, so the panel
+never invites a click that produces nothing. Asking one closes anybody else's
+argument, so only one is running at a time, and asking again puts it away.
+
+**A test caught the obvious failure mode before it shipped**: retorts written
+for topics no line is tagged with, which are jokes that can never be heard. Four
+of the six I wrote were unreachable. Two got their lines tagged -- `war` on both
+military advisors, `the-little-ones` on the Death Knight calling the rank and
+file expendable, which is the one thing the Goblin Overseer will fight about --
+and the rest were deleted. The test now fails if anybody writes a retort about a
+subject nobody raises.
+
+Still to do: the talking cycles themselves. Vertical strips of 512x2064, four
+frames of 512x516, two filenames that do not match their ids, and the
+Blademaster possibly wanting a redraw. All still true, all still art plumbing.
+
 ## 47. A default nobody adjusts is not a default, it is a rule
 
 Section 45 said of the three-way trade split: *"the AI still leaves it on even,
@@ -4993,3 +5020,96 @@ people learn to skip.
 are left and whose side it favours -- and both trade advisors lead with it,
 above their own money, because there shortly may not be a treasury. The log says
 it once, when the clock starts, and then keeps quiet.
+
+## 75. The advances screen: come back, commit, and ask somebody
+
+Three things from play, which together are one complaint: choosing what to
+research is the least supported decision in the game.
+
+### Closing the Orcpedia should go back to the advances screen
+
+Clicking an advance opens the Orcpedia over the top of it, and closing that
+closes everything, so looking something up costs you your place. `openModal`
+has no notion of a stack -- the Orcpedia is opened from three or four places and
+each one currently gets the same behaviour, which is right everywhere except
+here. Wants a "return to" rather than a general modal stack, which would be a
+larger change than the problem deserves.
+
+### You should not be allowed to research nothing
+
+There is no reason to be able to decline. Beakers accumulate regardless, so
+choosing nothing is choosing to throw them away, and nothing in the interface
+says so. Either the screen refuses to close without a pick, or -- better --
+picking nothing quietly means "carry on with the cheapest thing", the way
+`nextProduction` already does for cities. The second is kinder and matches a
+pattern the game already uses.
+
+Worth checking what the game does with unspent beakers today before choosing:
+if they bank, declining is merely odd; if they evaporate, it is a trap.
+
+### An advisor should suggest one, tongue in cheek
+
+The council already exists, already has an arcane advisor on each side whose
+whole character is wanting the next advance, and already reads a `Situation`. A
+suggestion on the advances screen is a legitimate utility -- most players will
+not know which of six branches leads anywhere -- and it is funnier coming from
+somebody with an obvious agenda than from a neutral hint.
+
+The joke writes itself and the utility is real: the Archmage recommends the
+magic branch, the Blademaster recommends whatever ends in a bigger weapon, and
+the Ogre Quartermaster recommends whichever is cheapest because he has seen the
+figures. **They should not agree**, and the player picking between three
+self-interested recommendations is a better tutorial than one correct arrow.
+
+Section 46's `Topic` and `retorts` machinery is the same shape and could carry
+it: a recommendation is a line with something to disagree about.
+
+**The military advisor always wants a war advance**, and should. That is the
+whole design: he is not a hint system with a helmet on, he is a man who has one
+idea. The Blademaster recommending axes while the Death Mage recommends anything
+at all involving the word *arcane* is the joke and the tutorial at once, and
+neither of them is lying -- both branches do lead somewhere.
+
+The thing that makes it a utility rather than a gag is that **the recommendations
+have to be real**: each one should name an advance that is actually reachable
+now, not a favourite that is four prerequisites away. An advisor who recommends
+something you cannot pick has told you nothing, twice.
+
+## 76. Push and pull: the advisors know things nobody is being told
+
+Everything the council says today is **pull**. It waits in a panel until you
+open it, so the game can be quietly going wrong for twenty turns while six
+people who noticed say nothing.
+
+Section 74 built the first **push** for exactly this reason -- the dominance
+clock now announces itself once and then lives in the advisors -- and that split
+is the pattern worth generalising rather than a one-off.
+
+Two alerts asked for, and they are not the same difficulty.
+
+### High discontent -- mostly already there
+
+`rioting` and `restless` are in `Situation` and four advisors already have lines
+about them. What is missing is only the push: nothing tells you the turn a
+second city starts rioting unless you happen to open the panel. Cheap, and the
+dominance warning is the template -- say it once when it crosses, not every turn
+while it stays true, which is the mistake that first version made.
+
+### Losing money consistently -- needs something the game does not have
+
+This one is a **trend**, and nothing in the game remembers a previous turn.
+`Situation` is built fresh each time it is asked for, `Player` has a `gold`
+figure and no history, and a save has no room for one either. "We are losing
+money this turn" already exists and is not what was asked for -- somebody one
+turn into a bad patch does not need telling.
+
+So this needs a small, honest piece of state: a short ring of recent
+`goldPerTurn`, or simply "the turn our balance last went positive". The second is
+one number and answers the question directly, which is the version to try first.
+Whatever it is, it wants to survive a save, which means it is a schema change
+rather than a UI one.
+
+**And it should stay quiet until it matters.** A treasury of eight hundred
+dropping by three a turn is not an emergency; the same drop with forty gold left
+is. The alert is about the *runway*, not the slope -- which is also the version
+that cannot fire on turn three and teach everybody to ignore it.
