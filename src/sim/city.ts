@@ -473,6 +473,21 @@ export function garrisonOf(state: GameState, city: City): Unit[] {
   );
 }
 
+/**
+ * Everything of the owner's standing on the city tile, awake or not.
+ *
+ * Wider than `garrisonOf`, which counts only what is tucked out of sight and
+ * feeds the number drawn on the city. This is the list the city panel shows,
+ * and it has to include a unit that is merely standing there -- a newly built
+ * one has no orders yet, and clicking the city no longer selects it, so this
+ * list is the way back to it.
+ */
+export function unitsInCity(state: GameState, city: City): Unit[] {
+  return state.units.filter(
+    (u) => u.owner === city.owner && u.x === city.x && u.y === city.y,
+  );
+}
+
 export function capitalOf(state: GameState, playerId: number): City | null {
   const older = (a: City, b: City) =>
     a.foundedTurn < b.foundedTurn || (a.foundedTurn === b.foundedTurn && a.id < b.id);

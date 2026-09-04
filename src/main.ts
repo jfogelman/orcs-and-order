@@ -1222,30 +1222,22 @@ class App {
     const mine = unit && unit.owner === this.viewerId && visible;
     const myCity = city && city.owner === this.viewerId;
 
-    if (mine) {
-      // A unit resting in its own city is not what the player is clicking at:
-      // they are clicking the city. It is not drawn on the tile either, so
-      // selecting it here would select something invisible. The city panel
-      // lists the garrison and wakes them, which is the way back to it.
-      if (myCity && (unit.order === 'fortified' || unit.order === 'sentry')) {
-        this.openCity(city);
-        return;
-      }
-      // Otherwise a unit standing on its city would swallow every click and the
-      // city could never be opened. Clicking one that is already selected falls
-      // through to whatever it is standing on.
-      if (this.overlay.selectedUnitId !== unit.id) {
-        this.select(unit);
-        return;
-      }
-      if (myCity) {
-        this.openCity(city);
-        return;
-      }
+    // Your own city wins the tile, whatever is standing on it. Resting units
+    // were already handled this way -- they are drawn as a number on the city
+    // rather than on the tile, so selecting one would select something
+    // invisible. A unit with no orders yet was not, and it took the first click
+    // while the city took the second.
+    //
+    // Which made the double click start exactly when a city finished building
+    // something, because what a city builds stands on the tile awake. The city
+    // panel lists everything standing here, so nothing is stranded by this.
+    if (myCity) {
+      this.openCity(city);
+      return;
     }
 
-    if (myCity && !mine) {
-      this.openCity(city);
+    if (mine && this.overlay.selectedUnitId !== unit.id) {
+      this.select(unit);
       return;
     }
 
