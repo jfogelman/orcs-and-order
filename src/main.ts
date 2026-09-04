@@ -52,6 +52,7 @@ import {
 } from './ui/dom';
 import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from './sim/abilities';
 import type { AbilityId } from './sim/abilities';
+import { controlsMarkup } from './ui/controls';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
@@ -63,78 +64,23 @@ const BATTLE_LINGER_TURNS = 2;
 const AUDIO_UNLOCK_EVENTS = ['pointerdown', 'mousedown', 'touchstart', 'keydown'] as const;
 
 /**
- * Every keyboard shortcut, in one list, because there were two.
+ * The list of every control, printed from the tables the game itself reads.
  *
- * The buttons in the unit panel print their own key -- `Fortify (F)`, and the
- * ability buttons read theirs straight out of `ABILITIES` -- while the handler
- * had its own hand-written switch. They drifted: Reload, Split and Drain each
- * advertised a key that did nothing at all, because only `ranged` and `heal`
- * were ever wired. Abilities are now looked up in their own table at the point
- * of use, and everything else lives here and is printed from here, so a
- * shortcut that is listed is a shortcut that works.
+ * There were two lists of shortcuts once. The buttons in the unit panel print
+ * their own key -- `Fortify (F)`, and the ability buttons read theirs straight
+ * out of `ABILITIES` -- while the handler had its own hand-written switch. They
+ * drifted: Reload, Split and Drain each advertised a key that did nothing,
+ * because only `ranged` and `heal` were ever wired.
  *
- * Grouped for the help panel: the order is the order somebody reads them in.
- */
-const SHORTCUTS: Array<{ group: string; keys: string; does: string }> = [
-  { group: 'Units', keys: 'Space', does: 'Skip this one for now' },
-  { group: 'Units', keys: 'N', does: 'Next one with something left to do' },
-  { group: 'Units', keys: 'F', does: 'Fortify, or wake something fortified' },
-  { group: 'Units', keys: 'S', does: 'Sentry: sleep until something happens' },
-  { group: 'Units', keys: 'B', does: 'Found a city' },
-  { group: 'Units', keys: 'X', does: 'Halt a march' },
-  { group: 'Units', keys: 'U', does: 'Resupply' },
-  { group: 'Units', keys: 'C', does: 'Centre the view on it' },
-  { group: 'Units', keys: 'Esc', does: 'Put down an ability, then deselect' },
-  { group: 'Cities', keys: ', / .', does: 'Previous or next city of yours' },
-  { group: 'Cities', keys: 'O', does: 'Open the city under the selected unit' },
-  { group: 'The map', keys: 'Arrows', does: 'Pan' },
-  { group: 'The map', keys: '+ / -', does: 'Zoom in or out' },
-  { group: 'The map', keys: '0', does: 'Back to the middle zoom' },
-  { group: 'The map', keys: 'G', does: 'Show or hide the grid' },
-  { group: 'Screens', keys: 'T', does: 'Advances' },
-  { group: 'Screens', keys: 'A', does: 'Advisors' },
-  { group: 'Screens', keys: 'I', does: 'The empire report' },
-  { group: 'Screens', keys: 'P', does: 'Orcpedia' },
-  { group: 'Screens', keys: 'Ctrl+S', does: 'Saves' },
-  { group: 'Screens', keys: '?', does: 'This list' },
-  { group: 'Everything else', keys: 'Enter', does: 'End the turn' },
-  { group: 'Everything else', keys: 'M', does: 'Sound on or off' },
-];
-
-/**
- * The list, printed from the same table the handler reads.
- *
- * There was no way at all to learn most of these: the unit panel prints the
- * five or six that sit on its own buttons, and the other dozen -- the screens,
- * the grid, the zoom, the sound -- were discoverable only by reading the
- * source.
+ * So there is one table, in `ui/controls`, and both this panel and the
+ * Orcpedia's own tab print from it. There was no way at all to learn most of
+ * these otherwise: the unit panel shows the five or six on its own buttons, and
+ * the mouse was written down nowhere.
  */
 function openShortcuts(): void {
-  // Abilities are generated from the same table the handler and the unit
-  // buttons read, so the three that used to advertise a dead key cannot go
-  // missing from the list either.
-  const listed = [
-    ...SHORTCUTS,
-    ...Object.values(ABILITIES).map((a) => ({
-      group: 'Abilities, when the unit has one',
-      keys: a.key.toUpperCase(),
-      does: `${a.label}: ${a.verb}`,
-    })),
-  ];
-  const groups: string[] = [];
-  for (const group of [...new Set(listed.map((k) => k.group))]) {
-    const rows = listed.filter((k) => k.group === group)
-      .map(
-        (k) =>
-          `<div class="stat-row"><span class="label"><kbd>${escapeHtml(k.keys)}</kbd></span>` +
-          `<span class="value">${escapeHtml(k.does)}</span></div>`,
-      )
-      .join('');
-    groups.push(`<div class="panel-title">${escapeHtml(group)}</div>${rows}`);
-  }
   openModal({
-    title: 'Keys',
-    body: `<div class="panel-body">${groups.join('')}</div>`,
+    title: 'Controls',
+    body: `<div class="panel-body">${controlsMarkup()}</div>`,
   });
 }
 
