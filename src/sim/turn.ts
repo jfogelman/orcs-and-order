@@ -440,6 +440,54 @@ function checkElimination(state: GameState): void {
   }
 }
 
+/**
+ * Turns left before the deadline decides it on points.
+ *
+ * Announced at these marks, once each, to everybody. Thirty because that is
+ * roughly enough time to still swing a points result -- another city, a couple
+ * of advances -- and ten because by then it is about what you can finish rather
+ * than what you can start.
+ *
+ * Said the way the dominance clock is said, and for the same reason: a game
+ * that ends at the deadline with no warning reads as the game stopping for no
+ * reason. That was reported once already.
+ */
+export const CLOCK_WARNINGS = [30, 10] as const;
+
+/** How many turns are left before the deadline. */
+export function turnsLeft(state: GameState): number {
+  return state.settings.maxTurns - state.turn;
+}
+
+function warnAboutTheClock(state: GameState): void {
+  if (isOver(state)) return;
+  const left = turnsLeft(state);
+  // Exactly on the mark, so it is said once and needs nothing remembered.
+  if (!CLOCK_WARNINGS.includes(left as (typeof CLOCK_WARNINGS)[number])) return;
+  const ranked = [...state.players]
+    .filter((p) => p.alive)
+    .sort((a, b) => playerScore(state, b.id) - playerScore(state, a.id));
+  const leader = ranked[0];
+  const level = ranked.length > 1 && playerScore(state, ranked[0].id) === playerScore(state, ranked[1].id);
+  for (const p of state.players) {
+    if (!p.alive) continue;
+    const standing = level
+      ? 'and the totals are level'
+      : leader.id === p.id
+        ? 'and you are ahead on points'
+        : `and ${leader.name} is ahead on points`;
+    log(
+      state,
+      `${left} turns to the deadline, ${standing}. ` +
+        (left > 10
+          ? 'Long enough to change that, if it is going to be changed.'
+          : 'Long enough to finish something, not to start one.'),
+      'info',
+      p.id,
+    );
+  }
+}
+
 export function beginPlayerTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
@@ -463,6 +511,10 @@ export function endPlayerTurn(state: GameState): void {
     if (state.activePlayer >= state.players.length) {
       state.activePlayer = 0;
       state.turn++;
+      // Here, not in `beginPlayerTurn`: that runs once per player, so the
+      // dominance countdown said itself six times a turn until it was moved.
+      // The calendar advances exactly here and nowhere else.
+      warnAboutTheClock(state);
     }
     if (state.players[state.activePlayer].alive) break;
   }

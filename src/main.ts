@@ -9,7 +9,7 @@ import { FACTIONS } from './model/factions';
 import { TERRAIN } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
-import type { City, GameState, Player, Unit } from './model/types';
+import type { City, GameState, Player, Unit, VictoryKind } from './model/types';
 import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
 import { EffectLayer } from './render/effects';
@@ -54,6 +54,7 @@ import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from
 import type { AbilityId } from './sim/abilities';
 import { controlsMarkup } from './ui/controls';
 import { chooseFocus } from './ui/watch';
+import { STATUS_RULES, statusesOf } from './sim/status';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { openTechPanel } from './ui/techPanel';
@@ -815,6 +816,11 @@ class App {
     openModal({
       title: !winner ? 'Nobody has won' : you ? 'You have won' : 'You have lost',
       width: 'min(760px, 96vw)',
+      // No way to dismiss it onto a finished map. The game is over: there is
+      // nothing behind this to go back to, and closing it used to leave the
+      // player looking at a board that would never move again with no way
+      // forward but the toolbar.
+      sticky: true,
       body: `
         <img class="victory-art" src="${this.victoryArt(winner)}" alt="" />
         <div class="panel-body">
@@ -825,10 +831,15 @@ class App {
               : `After ${this.state.turn} ${this.state.turn === 1 ? 'turn' : 'turns'} ` +
                 'the two sides are exactly level.'
           }</p>
+          <div class="stat-row">
+            <span class="label">How it ended</span>
+            <span class="value">${escapeHtml(VICTORY_ROUTES[this.state.victory ?? 'conquest'])}</span>
+          </div>
           ${scores}
           <p class="flavor">${this.victoryLine(winner, you)}</p>
         </div>
         <div class="button-row" style="justify-content:flex-end">
+          <button class="small" id="btn-load">Load a Game</button>
           <button class="primary" id="btn-again">Another Go</button>
         </div>`,
       onMount: (root, close) => {
@@ -840,6 +851,10 @@ class App {
         root.querySelector('#btn-again')?.addEventListener('click', () => {
           close();
           this.openNewGame();
+        });
+        root.querySelector('#btn-load')?.addEventListener('click', () => {
+          close();
+          this.openSaves();
         });
       },
     });
@@ -1382,6 +1397,22 @@ class App {
               : ''
           }
           ${
+            // What is currently wrong with it. The map draws a mark for these,
+            // but a mark cannot say how long it lasts or what it does, and the
+            // panel is where you look when you have picked the unit up to
+            // decide what to do with it.
+            statusesOf(unit)
+              .map(
+                (st) =>
+                  `<div class="stat-row"><span class="label k-bad">${escapeHtml(
+                    STATUS_RULES[st.kind].label,
+                  )}</span><span class="value k-bad">${escapeHtml(
+                    STATUS_RULES[st.kind].blurb,
+                  )} &middot; ${st.turns} ${st.turns === 1 ? 'turn' : 'turns'} left</span></div>`,
+              )
+              .join('')
+          }
+          ${
             !inSupply(this.state, unit)
               ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from any city of yours &middot; fights weakly and cannot heal</span></div>`
               : ''
@@ -1607,6 +1638,21 @@ const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined
 const ATTACK_HOLD_MS = 420;
 
 /** What each rank is called in the readout. Index 0 is never shown. */
+/**
+ * How a game ended, said plainly.
+ *
+ * The flavour line underneath hints at it, and hinting is not the same as
+ * saying: a game won on the turn limit looked exactly like one won by conquest
+ * except for a joke about totting up columns, so nobody could tell which had
+ * happened.
+ */
+const VICTORY_ROUTES: Record<VictoryKind, string> = {
+  conquest: 'Conquest — the other side has nothing left',
+  dominance: 'Dominance — most of the world, held long enough that it counted',
+  points: 'Points — the turn limit arrived and the columns were totalled',
+  draw: 'A draw — the turn limit arrived and the columns matched',
+};
+
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;
 
 /** Most animations played for one drain of the log. */

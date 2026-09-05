@@ -5488,3 +5488,70 @@ right shape for a defensive roster arriving.
 identified, and this section says so rather than guessing. What is established:
 the win rate is real and measured, the founding explanation is dead, the guard
 explanation is dead, and the collapse has a start time.
+
+## 83. The endgame was silent, and the ending did not say what it was
+
+Four things from one screenshot and one finished game, all of them the same
+complaint: the game knew something and did not say it.
+
+### A selected unit did not mention what was wrong with it
+
+The map draws a mark for burning, frozen, confused and spent. A mark cannot say
+how long it lasts or what it does, and the panel -- which is what you are
+looking at when you have picked a unit up to decide what to do with it -- listed
+disarmed and out-of-supply and nothing else. Now it lists the statuses too, with
+the effect and the turns remaining.
+
+### The victory screen did not say how it was won
+
+It showed the score breakdown, which is the *evidence*, and left the route to a
+joke in the flavour line. A game won at the turn limit looked exactly like one
+won by conquest except for a remark about totting up columns. There is now a
+line that says which of the three it was, in as many words:
+
+> **How it ended** — Points, the turn limit arrived and the columns were totalled
+
+### Closing the ending left you nowhere
+
+The victory modal could be dismissed onto a board that would never move again,
+with no way forward but the toolbar. It is sticky now, and offers **Another Go**
+and **Load a Game**.
+
+**Queued: continue playing.** The classic third option, and the one that wants
+real thought rather than a button -- the game is over, `isOver` gates the turn
+pipeline, and "carry on anyway" means deciding what a game with no win condition
+left is for. Worth doing, not worth doing carelessly.
+
+### Nothing warned that the deadline was coming
+
+Turn 300 arrived and decided the game on points, and nothing ever mentioned it
+was on the way. **The dominance clock had exactly this complaint made about it
+already** -- section 74, reported from a game that ended at turn 137 with the
+loser never told. A countdown nobody can see is indistinguishable from the game
+stopping for no reason.
+
+Announced now at thirty turns and again at ten, once each, to both sides, with
+where they stand:
+
+> *30 turns to the deadline, and The Radiant Kingdom of Bram is ahead on points.
+> Long enough to change that, if it is going to be changed.*
+
+> *10 turns to the deadline... Long enough to finish something, not to start one.*
+
+Thirty because that is roughly enough to still swing a points result, and ten
+because by then it is about what can be finished. Said from the one place the
+calendar actually advances, **not** from `beginPlayerTurn` -- that runs once per
+player, which is how the dominance countdown came to say itself six times a
+turn.
+
+The advisors get the same clock, above even the dominance concern: that one is
+somebody winning, this one is time running out on everybody and cannot be
+reversed. They give the advice the score actually rewards, which is not the
+advice they usually give:
+
+> *30 turns left and we are losing on the counting. More citizens, more
+> advances, more buildings. Both heads agree, which is rare.*
+
+There is still no advisor popup on a critical event -- the advisors have to be
+opened to be heard. The log carries the warning on its own so this is useful
+without it, and the popup stays queued.
