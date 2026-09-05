@@ -724,7 +724,8 @@ class App {
     this.playLogCues();
     audio.play('blocked');
     openCrisisCall(raise.map((c) => c.headline), player.faction, () =>
-      openAdvisors(this.state, this.viewerId),
+      // Passed through, so the room talks about what it interrupted for.
+      openAdvisors(this.state, this.viewerId, raise),
     );
   }
 
