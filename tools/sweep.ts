@@ -1,7 +1,7 @@
 import { AI_TUNING, runAiTurn } from '../src/ai/ai';
 import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
-import { CALM, DISORDER, MILITIA, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
+import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import type { GameState } from '../src/model/types';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
@@ -50,6 +50,7 @@ export const LEVERS: Record<string, object> = {
   DRAIN,
   FORTIFY_BONUS_REF,
   MILITIA,
+  POSTING,
   REGEN,
   RESETTLE,
   RUIN,

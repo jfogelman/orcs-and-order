@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
-import { CALM } from '../src/sim/city';
+import { CALM, POSTING } from '../src/sim/city';
 import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 
@@ -24,42 +24,34 @@ import { rawRows, report, runSweep, seedSet } from './sweep';
  * - **Two seed sets.** One to tune against, one to decide with. Section 19's
  *   numbers reversed between them.
  *
- * The arms below are the worked example: militia strength at its current value
- * against double it, which is a large enough change that the sweep should see
- * it. Replace them with whatever you are actually asking.
+ * The arms below are whatever is being asked right now. Replace them.
  */
 
 // Declared rather than pulled in via @types/node, matching the balance suite.
 declare const process: { env: Record<string, string | undefined> };
 
 /**
- * Section 85's three levers, each against one shared control.
+ * Every arm sets **every** knob, including the ones it is not changing.
  *
- * The Horde riots on 16 to 18 per cent of its city-turns against the Kingdom's
- * 10, and a rioting city produces nothing at all. Every arm here is an attempt
- * to break that loop at a different point: raise the bar, start building the
- * Totem earlier, or buy calm before the riot instead of after it.
- *
- * Each arm sets **every** knob, including the ones it is not changing. An arm
- * that only sets what it moves inherits whatever the previous arm left behind,
- * which is a different bug from section 59's but the same kind of wrong answer.
+ * An arm that only sets what it moves inherits whatever the previous arm left
+ * behind, which is a different bug from section 59's and the same kind of wrong
+ * answer.
  */
 const control = () => {
   CALM.base = 6;
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
+  POSTING.enabled = true;
 };
 
 const ARMS: Arm[] = [
-  { label: 'control', apply: control },
-  // The bar itself, now six after section 86. Kept as an arm so the result can
-  // be re-run against the old value rather than taken on trust.
-  { label: 'base 5', apply: () => { control(); CALM.base = 5; } },
-  // Three turns of warning rather than one, for a city that grows every twelve
-  // and needs forty shields for a Totem.
-  { label: 'build ahead 3', apply: () => { control(); AI_TUNING.calmBuildAhead = 3; } },
-  // A city one citizen from rioting counts as much as one already rioting.
-  { label: 'calm early', apply: () => { control(); AI_TUNING.calmRateAtLimit = 2; } },
+  // Section 70. A Posting calms a city while two soldiers stand in it, which
+  // is the one content lever not bought with trade. The question is whether it
+  // moves anything at all for an AI that keeps one soldier per city: if the
+  // answer is no, it is a player-facing option and inert to balance, which is
+  // a perfectly good result and worth knowing before shipping it as one.
+  { label: 'no posting', apply: () => { control(); POSTING.enabled = false; } },
+  { label: 'posting', apply: control },
 ];
 
 /**

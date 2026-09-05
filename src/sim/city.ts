@@ -55,6 +55,21 @@ export interface Yield {
  */
 export const CALM = { base: 6 };
 
+/**
+ * Whether a Posting can be built at all.
+ *
+ * A switch so the sweep can hold an arm without it, in the manner of section
+ * 59: emulate a control by moving a constant, never by stashing the source.
+ * Off, a Posting is not offered and grants nothing, which is what a game
+ * without the building looks like.
+ */
+export const POSTING = { enabled: true };
+
+/** Soldiers this building wants standing in the city before it does anything. */
+export function garrisonNeededBy(b: { garrisonNeeded?: number; needsGarrison?: boolean }): number {
+  return b.garrisonNeeded ?? (b.needsGarrison ? 1 : 0);
+}
+
 /** Food eaten per citizen per turn. */
 export const FOOD_PER_CITIZEN = 2;
 
@@ -250,8 +265,11 @@ export function baseTrade(state: GameState, city: City): number {
 
 export function contentLimit(state: GameState, city: City): number {
   const owner = state.players[city.owner];
-  let limit = CALM.base;
-  for (const b of workingBuildings(state, city)) limit += BUILDINGS[b]?.contentBonus ?? 0;
+  // Through `sumBonus`, which is the only thing that honours a garrison
+  // requirement. This used to add `contentBonus` straight off the building
+  // list, so a posting would have calmed a city with nobody standing in it --
+  // the gate existed and this was not asking it.
+  let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
   // What the empire spends on keeping this particular city calm.
@@ -315,9 +333,19 @@ export function cityScienceBonus(state: GameState, city: City): number {
 
 /** Is anybody actually standing in this city? Settlers do not count as cover. */
 export function isGarrisoned(state: GameState, city: City): boolean {
-  return state.units.some(
+  return garrisonSize(state, city) > 0;
+}
+
+/**
+ * Soldiers standing in the city, which is what a posting is paid in.
+ *
+ * Settlers do not count -- they are not standing anywhere on purpose, and a
+ * city is not held by somebody passing through with a shovel.
+ */
+export function garrisonSize(state: GameState, city: City): number {
+  return state.units.filter(
     (u) => u.owner === city.owner && u.x === city.x && u.y === city.y && !unitType(u.type).settler,
-  );
+  ).length;
 }
 
 /**
@@ -329,16 +357,18 @@ function sumBonus(
   city: City,
   pick: (b: BuildingDef) => number | undefined,
 ): number {
-  let garrisoned: boolean | null = null;
+  let held: number | null = null;
   let total = 0;
   for (const id of workingBuildings(state, city)) {
     const def = BUILDINGS[id];
     const value = def ? pick(def) : undefined;
     if (!def || !value) continue;
-    if (def.needsGarrison) {
-      // Worked out at most once per city, not once per building.
-      garrisoned ??= isGarrisoned(state, city);
-      if (!garrisoned) continue;
+    if (!POSTING.enabled && def.garrisonNeeded && def.contentBonus) continue;
+    const needed = garrisonNeededBy(def);
+    if (needed > 0) {
+      // Counted at most once per city, not once per building.
+      held ??= garrisonSize(state, city);
+      if (held < needed) continue;
     }
     total += value;
   }

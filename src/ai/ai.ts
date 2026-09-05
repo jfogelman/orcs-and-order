@@ -10,7 +10,10 @@ import {
   buildOptions,
   canFoundCity,
   capitalOf,
+  POSTING,
   contentLimit,
+  garrisonNeededBy,
+  garrisonSize,
   foundCity,
   rushBlocked,
   rushBuy,
@@ -518,7 +521,17 @@ function chooseProduction(
   // produces nothing at all, so a happiness building is worth more than any
   // amount of economy sitting on top of a riot.
   if (city.size >= contentLimit(state, city) - AI_TUNING.calmBuildAhead) {
-    const calming = options.buildings.find((b) => b.contentBonus);
+    // Only one it would actually get the benefit of. A Posting calms a city
+    // while two soldiers stand in it, and this AI keeps one -- so without this
+    // check it would spend thirty shields and an upkeep on a building that
+    // does nothing, and go on rioting.
+    const held = garrisonSize(state, city);
+    const calming = options.buildings.find(
+      (b) =>
+        b.contentBonus &&
+        !(!POSTING.enabled && b.garrisonNeeded) &&
+        garrisonNeededBy(b) <= held,
+    );
     if (calming) return { kind: 'building', id: calming.id };
     // Only when it is actually rioting, and only when there is nothing left to
     // build that would help. Placating costs the city its whole production,
