@@ -194,6 +194,100 @@ export function objectionsTo(
  * `advisorLine` returns a string, which is all the panel needed until the panel
  * needed to know what the line was *about*.
  */
+/**
+ * Something bad enough that the council asks to be heard rather than waiting to
+ * be asked.
+ *
+ * The advisors have always had opinions and no way to raise them: you had to
+ * press A and go looking. That is fine for an opinion and useless for a crisis,
+ * because the player who most needs the council is the one who does not know
+ * anything is wrong.
+ *
+ * These are **thresholds being crossed**, not states being in. Each is raised
+ * once when it starts and again only if it clears and comes back, which is why
+ * `newCrises` takes what has already been raised and hands back what to
+ * remember. A council that demanded an audience every turn of a long riot would
+ * be trained away in three turns.
+ *
+ * The headline is what the player reads *before* deciding whether to listen, so
+ * it says what is wrong and nothing about what to do -- the advice is the thing
+ * they are choosing to hear.
+ */
+export interface Crisis {
+  /** Stable, because it is what "already raised this one" is keyed on. */
+  id: string;
+  headline: string;
+}
+
+/** How many turns of the current loss the treasury can still take. */
+function runway(s: Situation): number {
+  if (s.goldPerTurn >= 0) return Infinity;
+  return s.gold / -s.goldPerTurn;
+}
+
+/**
+ * Everything currently wrong enough to interrupt for, worst first.
+ *
+ * Ordered, because the headline list is read top down and the first line is the
+ * one that decides whether anybody clicks.
+ */
+export function crises(s: Situation): Crisis[] {
+  const out: Crisis[] = [];
+
+  if (s.dominance?.theirs) {
+    out.push({
+      id: 'dominance-theirs',
+      headline: `They hold most of the known world. ${count(s.dominance.turnsLeft, 'turn')} and it is over.`,
+    });
+  }
+  // The spiral of section 77: rioting with nothing that can be built to stop it.
+  // Worse than ordinary unrest, because waiting does not fix it.
+  if (s.rioting > 0 && !s.calmAvailable && s.calmNeedsAdvance) {
+    out.push({
+      id: 'calm-spiral',
+      headline:
+        `${sentence(count(s.rioting, 'city'))} rioting and nothing we can build will stop it. ` +
+        `We have never researched ${s.calmNeedsAdvance}.`,
+    });
+  } else if (s.rioting >= 2) {
+    out.push({ id: 'riots', headline: `${sentence(count(s.rioting, 'city'))} rioting.` });
+  }
+  if (runway(s) < 5) {
+    out.push({
+      id: 'bankrupt',
+      headline: `The treasury runs dry in ${count(Math.max(0, Math.floor(runway(s))), 'turn')}.`,
+    });
+  }
+  if (s.deadline && !s.deadline.ahead && s.deadline.turnsLeft <= 10) {
+    out.push({
+      id: 'deadline-behind',
+      headline: `${sentence(count(s.deadline.turnsLeft, 'turn'))} to the deadline, and we are behind on points.`,
+    });
+  }
+  if (s.starving >= 2) {
+    out.push({ id: 'starving', headline: `${sentence(count(s.starving, 'city'))} losing people to hunger.` });
+  }
+  return out;
+}
+
+/**
+ * What is newly wrong, and what to remember having said.
+ *
+ * `warned` comes back as exactly what is wrong *now*, so a crisis that clears
+ * is forgotten and can raise again later. That is the whole difference between
+ * a threshold and a state.
+ */
+export function newCrises(
+  s: Situation,
+  alreadyWarned: readonly string[] = [],
+): { raise: Crisis[]; warned: string[] } {
+  const now = crises(s);
+  return {
+    raise: now.filter((c) => !alreadyWarned.includes(c.id)),
+    warned: now.map((c) => c.id),
+  };
+}
+
 export function advisorConcern(a: AdvisorDef, s: Situation): Concern | null {
   return a.concerns.find((c) => c.when(s)) ?? null;
 }
