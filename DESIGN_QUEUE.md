@@ -6059,3 +6059,47 @@ can speak to is visible rather than silently dropped.
 the player can still act in -- and `count(0, 'turn')` is "no turns". It now says
 *one last turn*.
 
+
+## 90. A band on the balance regression
+
+Section 86 moved `CALM.base` on the strength of 432 games and left the cheap
+per-commit guard asserting only that neither side is *hopeless* on research --
+which is why it passed happily through the whole 34% stretch.
+
+### Why the band is on means, and not on wins
+
+Six games is a **deterministic** sample, not a random one: the same seeds give
+the same games every run. What it is sensitive to is any change that shifts the
+RNG stream, which is most changes to the simulation. A tight assertion on six
+win/loss results would therefore not flake -- it would break on work that had
+nothing to do with balance, and get widened until it meant nothing.
+
+Means survive that shuffling far better than a binary count, so the bands sit on
+**cities, population and advances**, each side required to stay above 45% of the
+other. Wins are asserted too, but only once eighteen games have been decided: at
+that size a side has to lose fifteen of eighteen to trip it, which is 0.4% under
+an even matchup and unmissable if something has actually broken. At six it would
+trip on chance often enough to be noise, and saying so is better than pretending
+a six-game win count means something.
+
+**The authoritative measurement is still the sweep.** This is the guard that
+runs on every commit and notices a collapse; `npm run sweep` is what measures a
+win rate, and it keeps `base 5` as a live arm for exactly that.
+
+### Measured, for whoever reads a failure
+
+|  | wins | cities | population | advances |
+|---|---|---|---|---|
+| 6 seeds (default) | 4-2 | 5.8 / 5.5 | 40.2 / 39.7 | 25.5 / 22.2 |
+| 18 seeds | 10-8 | 6.0 / 6.4 | 46.2 / 44.7 | 28.4 / 24.4 |
+
+The bands are nowhere near these on purpose. They are there to catch a side
+being crushed, not to pin a balance nobody has agreed to.
+
+### Checked by breaking it
+
+A band nobody has seen fail is a band nobody knows works. Setting the content
+limit to zero for the Horde alone -- every city rioting from the first citizen
+-- fails three of the four with the side and the measure named:
+
+> *the Horde has almost no cities left: expected 0 to be greater than 2.7*

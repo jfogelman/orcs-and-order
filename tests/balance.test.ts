@@ -76,11 +76,74 @@ describe('faction balance across seeds', () => {
     }
   });
 
-  it('leaves neither faction hopeless on research', () => {
-    const orc = outcomes.reduce((s, o) => s + o.techs[0], 0) / outcomes.length;
-    const human = outcomes.reduce((s, o) => s + o.techs[1], 0) / outcomes.length;
-    expect(orc).toBeGreaterThan(human * 0.45);
-    expect(human).toBeGreaterThan(orc * 0.45);
+  /**
+   * A band, and the reason it is a band on means rather than on wins.
+   *
+   * Six games is a deterministic sample, not a random one -- the same seeds
+   * give the same games every run. What it is *sensitive* to is any change that
+   * shifts the RNG stream, which is most changes to the simulation. So a tight
+   * assertion on six win/loss results would not flake, it would simply break on
+   * work that had nothing to do with balance, and get widened until it meant
+   * nothing.
+   *
+   * Means are far steadier under that shuffling than a binary count, so the
+   * bands sit on cities, population and advances. Wins are checked too, but
+   * only once there are enough of them to mean anything.
+   *
+   * **The authoritative measurement is the sweep, not this.** Section 86 ran
+   * 432 games across two seed sets to move `CALM.base`; this is the cheap guard
+   * that runs on every commit and notices if a side starts collapsing.
+   */
+  const HOPELESS_BELOW = 0.45;
+
+  /**
+   * Enough wins to be worth asserting on.
+   *
+   * At eighteen, a side has to lose fifteen of eighteen to trip the band, which
+   * is 0.4% under an even matchup and unmissable if something has actually
+   * broken. At six it would trip on chance alone often enough to be noise, so
+   * it is not asserted there -- and saying so is more honest than pretending a
+   * six-game win count means something.
+   */
+  const WINS_NEED = 18;
+  const WIN_SHARE = { min: 0.15, max: 0.85 };
+
+  const meanOf = (pick: (o: Outcome) => number) =>
+    outcomes.reduce((s, o) => s + pick(o), 0) / outcomes.length;
+
+  /**
+   * Measured on the seeds below after section 86, for whoever reads a failure.
+   *
+   *   6 seeds:  wins 4-2   cities 5.8/5.5  pop 40.2/39.7  advances 25.5/22.2
+   *  18 seeds:  wins 10-8  cities 6.0/6.4  pop 46.2/44.7  advances 28.4/24.4
+   *
+   * The bands are nowhere near these numbers on purpose. They are there to
+   * catch a side being crushed, not to pin a balance nobody has agreed to.
+   */
+  it.each([
+    ['cities', (o: Outcome) => o.cities[0], (o: Outcome) => o.cities[1]],
+    ['population', (o: Outcome) => o.population[0], (o: Outcome) => o.population[1]],
+    ['advances', (o: Outcome) => o.techs[0], (o: Outcome) => o.techs[1]],
+  ])('leaves neither faction hopeless on %s', (what, orcOf, humanOf) => {
+    const orc = meanOf(orcOf);
+    const human = meanOf(humanOf);
+    expect(orc, `the Horde has almost no ${what} left`).toBeGreaterThan(human * HOPELESS_BELOW);
+    expect(human, `the Kingdom has almost no ${what} left`).toBeGreaterThan(orc * HOPELESS_BELOW);
+  });
+
+  it('does not let either side win nearly everything', () => {
+    const decided = outcomes.filter((o) => o.winner !== null);
+    if (decided.length < WINS_NEED) {
+      // Not asserted at this sample. `BALANCE_SEEDS=18` turns it on; the sweep
+      // is what actually measures a win rate.
+      expect(decided.length).toBeGreaterThan(0);
+      return;
+    }
+    const orcShare = decided.filter((o) => o.winner === 0).length / decided.length;
+    expect(orcShare, `the Horde won ${(orcShare * 100).toFixed(0)}% of ${decided.length}`)
+      .toBeGreaterThan(WIN_SHARE.min);
+    expect(orcShare, `the Horde won ${(orcShare * 100).toFixed(0)}% of ${decided.length}`)
+      .toBeLessThan(WIN_SHARE.max);
   });
 
   it('gets somebody meaningfully up the counting ladder', () => {
