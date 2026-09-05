@@ -7,6 +7,7 @@ import { FACTIONS } from '../src/model/factions';
 import { assignWorkers } from '../src/sim/city';
 import { createGame, playerCities, playerUnits, spawnUnit } from '../src/sim/gamestate';
 import { deserialize, serialize } from '../src/persist/save';
+import { playGame } from '../tools/sweep';
 
 /**
  * Saved games that put the interface straight into a state worth looking at.
@@ -76,6 +77,40 @@ function opening(seed: number): { state: GameState; city: City } {
 function garrison(state: GameState, city: City): Unit {
   const type = FACTIONS[state.players[0].faction].starterUnit as UnitTypeId;
   return spawnUnit(state, 0, type, city.x, city.y);
+}
+
+/**
+ * Real late games, played out rather than assembled.
+ *
+ * The hand-built openings above are fine for a question about one rule, and
+ * useless for anything about the endgame: an empire at turn 269 has grown,
+ * fought, built and lost things, and none of that can be faked by placing a
+ * city and setting `turn`. Three separate throwaway saves were cut from a
+ * player's own file during one session for want of these.
+ *
+ * One game, two snapshots, because playing it twice would cost twice as much
+ * and give the same answer. Seed 22 was picked by scouting: most games end in
+ * conquest well before the deadline, and this one has both sides alive at 299.
+ */
+const LATE_SEED = 22;
+
+function lateSnapshots(): Map<number, GameState> {
+  const want = [200, 269, 299];
+  const found = new Map<number, GameState>();
+  playGame(LATE_SEED, 620, (state) => {
+    for (const turn of want) {
+      if (state.turn >= turn && !found.has(turn)) {
+        const snap = structuredClone(state);
+        // `playGame` drives both sides, so the state it hands back has the
+        // player's own seat set to `ai`. Saved like that, End Turn runs the
+        // whole rest of the game by itself -- 269 straight to 301 on the first
+        // click, which is how this was found.
+        snap.players[0].controller = 'human';
+        found.set(turn, snap);
+      }
+    }
+  });
+  return found;
 }
 
 interface Scenario {
@@ -200,6 +235,55 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
+/**
+ * The late-game set, described the same way but built from one played game.
+ *
+ * `at` is the turn to snapshot; the state is otherwise untouched, so these are
+ * a real board rather than a constructed one.
+ */
+const LATE: { name: string; about: string; at: number; check: (s: GameState) => void }[] = [
+  {
+    name: 'late-game',
+    about: 'Turn 200 of a real game, both sides alive, empires grown and fighting.',
+    at: 200,
+    check: (state) => {
+      expect(state.turn).toBeGreaterThanOrEqual(200);
+      expect(state.players.every((p) => p.alive)).toBe(true);
+      expect(playerCities(state, 0).length).toBeGreaterThan(0);
+      expect(playerCities(state, 1).length).toBeGreaterThan(0);
+    },
+  },
+  {
+    name: 'deadline-in-thirty',
+    about:
+      'Turn 269 of 300. Ending one turn crosses the thirty-turn mark, so this is the ' +
+      'save for anything about the deadline warning or the advisors noticing it.',
+    at: 269,
+    check: (state) => {
+      expect(state.turn).toBe(269);
+      // The seat has to be the player's, or End Turn plays the game for them.
+      expect(state.players[0].controller).toBe('human');
+      expect(state.settings.maxTurns - state.turn).toBe(31);
+      expect(state.players.every((p) => p.alive)).toBe(true);
+    },
+  },
+  {
+    name: 'about-to-end-on-points',
+    about:
+      'Turn 299 of 300 with both sides alive, so ending a turn decides it on points ' +
+      'rather than conquest. The save for the victory screen and for carrying on.',
+    at: 299,
+    check: (state) => {
+      expect(state.turn).toBe(299);
+      expect(state.players.every((p) => p.alive)).toBe(true);
+      // Both still standing is the whole point: a conquest ending is a
+      // different screen and is reachable from almost any save.
+      expect(playerCities(state, 0).length).toBeGreaterThan(0);
+      expect(playerCities(state, 1).length).toBeGreaterThan(0);
+    },
+  },
+];
+
 describe('saved games for reproducing interface bugs', () => {
   for (const scenario of SCENARIOS) {
     it(`${scenario.name}: ${scenario.about}`, () => {
@@ -211,6 +295,16 @@ describe('saved games for reproducing interface bugs', () => {
     });
   }
 
+  it('plays one real game and keeps three late positions from it', () => {
+    const snaps = lateSnapshots();
+    for (const scenario of LATE) {
+      const state = snaps.get(scenario.at);
+      expect(state, `seed ${LATE_SEED} never reached turn ${scenario.at}`).toBeDefined();
+      scenario.check(deserialize(serialize(state!)));
+      write(scenario.name, state!);
+    }
+  }, 120_000);
+
   it('lists what each one is for', () => {
     const lines = [
       '# Fixture saves',
@@ -219,6 +313,7 @@ describe('saved games for reproducing interface bugs', () => {
       'through Save and load (Ctrl+S), then Upload.',
       '',
       ...SCENARIOS.map((s) => `- **${s.name}.w2c** — ${s.about}`),
+      ...LATE.map((s) => `- **${s.name}.w2c** — ${s.about}`),
       '',
     ];
     if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });

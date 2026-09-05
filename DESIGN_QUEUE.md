@@ -5846,3 +5846,22 @@ Eight tests, including the two that would each have made this useless on their
 own -- that turns pass again at all, and that the turn limit does not end it a
 second time -- and that `playingOn` survives a save, since a reloaded game would
 otherwise declare its winner again on the next turn.
+
+### Late-game saves, at last
+
+Three throwaway late-game saves were cut from a player's own file during one
+session for want of these, and deleted each time. `fixtures/` now carries them
+properly: **late-game** at turn 200, **deadline-in-thirty** at 269, and
+**about-to-end-on-points** at 299 with both sides alive.
+
+Played rather than assembled. An empire at turn 269 has grown, fought, built and
+lost things, and none of that can be faked by placing a city and setting `turn`.
+One game supplies all three snapshots, on a seed picked by scouting -- most games
+end in conquest well before the deadline, and this one has both sides standing at
+299.
+
+One thing they needed fixing for, found by loading one: `playGame` drives both
+sides, so the state it hands back has the player's own seat set to `ai`. Saved
+that way, the first End Turn ran the rest of the game by itself -- turn 269
+straight to 301. The seat is restored on the way out, and a test says so.
+
