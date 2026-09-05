@@ -1565,3 +1565,89 @@ kbd {
   font-weight: 700;
   color: var(--gold);
 }
+
+/* ------------------- what the council would research, section 75 */
+
+/* Six rows that disagree. The value is in reading them together, so they are
+   compact and stacked rather than a grid of cards competing with the tree. */
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 2px;
+}
+
+.advice-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  /* Buttons here are `nowrap` by inheritance, which is right for a label on a
+     control and wrong for a sentence: the line ran off the panel rather than
+     wrapping inside it. */
+  white-space: normal;
+}
+
+.advice-row:hover {
+  border-color: var(--edge);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Small, and the same size whether or not there is a file behind it, so the
+   names stay in one column and a missing portrait does not reflow the list. */
+.advice-face {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* The collapsed row is several people and has nobody's face; so is a portrait
+   that failed to load. Both keep the space and show nothing in it. */
+.advice-face.empty {
+  border-color: transparent;
+  background: none;
+}
+
+.advice-who {
+  flex: 0 0 auto;
+  min-width: 140px;
+  color: var(--gold);
+  font-family: var(--title-font);
+  font-size: 13px;
+}
+
+.advice-why {
+  /* Flex items refuse to shrink below their content without this, so the line
+     ran off the right edge of a narrow panel instead of wrapping. */
+  min-width: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Narrow enough that a fixed name column is most of the row: stack instead. */
+@media (max-width: 720px) {
+  .advice-row {
+    flex-wrap: wrap;
+  }
+
+  .advice-who {
+    min-width: 0;
+  }
+
+  .advice-why {
+    flex: 1 1 100%;
+    padding-left: 38px;
+  }
+}

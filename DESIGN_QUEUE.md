@@ -5028,6 +5028,10 @@ it once, when the clock starts, and then keeps quiet.
 
 ## 75. The advances screen: come back, commit, and ask somebody
 
+> **Built. See section 89 for what was made of it**, including the one
+> question this section said to check first: beakers do bank, so declining
+> was merely odd rather than a trap, and it is now not possible anyway.
+
 Three things from play, which together are one complaint: choosing what to
 research is the least supported decision in the game.
 
@@ -5933,3 +5937,81 @@ about.
 
 First in the end-of-turn chain, ahead of promotions and build orders: those are
 about what to do next, and a crisis is about whether any of it matters.
+
+## 89. The advances screen, as section 75 asked for it
+
+Three things, which together were one complaint: choosing what to research is
+the least supported decision in the game.
+
+### Looking something up no longer costs your place
+
+Clicking a unit on an advance card opened the Orcpedia over the top and closing
+it closed everything. Section 75 called for a "return to" rather than a general
+modal stack, and that is what this is: the advances screen registers
+`afterModalCloses` **after** opening the Orcpedia, so it reopens when the
+Orcpedia closes. A replacement leaves the queue untouched, which is the property
+that makes it work at all.
+
+It lives in the advances screen and not in `openPedia`, because the Orcpedia is
+opened from four places and only this one wants to come back.
+
+### You cannot decline any more
+
+Section 75 said to check what happens to unspent beakers before choosing a fix.
+**They bank.** So declining was merely odd rather than a trap -- but it is still
+choosing to leave them in a shed, and nothing ever said so.
+
+The screen is now **sticky when nothing is being studied** and there is something
+to study. Not when the tree is finished, which is a different situation and not
+one to refuse to close over.
+
+While it is up it says why:
+
+> *Nothing is being studied. Beakers are piling up in a shed. Pick something.*
+
+### The council will tell you what to do, self-servingly
+
+Six advisors, one advance each, chosen from `researchableTechs` so **every
+suggestion is something that can actually be started now**. An advisor pointing
+at a locked advance would be advice you cannot take.
+
+They are not six attempts at the best advance. Each scores what is on offer
+against the one thing their department cares about, so the Blademaster wants
+whatever hits hardest whether or not anybody is at war:
+
+> **Blademaster** — *Goblin "Smarts". Hits things. I have not read the rest of it.*
+> **Troll Headhunter** — *Goblin "Smarts". They will come. Better we are difficult when they do.*
+> **Death Mage** — *Goblin "Smarts". I want to know what happens. That is a reason.*
+> **The rest of them** — *Have no view, and would take Goblin "Smarts" to be rid of the question.*
+
+**Everybody with nothing at stake is collapsed into one line.** At turn one only
+one advance unlocks anything worth an opinion, so all six would otherwise print
+the same row -- true, and a poor screen. One line saying nobody else cares is
+just as true and reads better. Clicking any row starts that advance.
+
+Ties break on the cheaper advance, which also makes the list stable between
+openings: this screen is re-rendered every time the Orcpedia closes over it, and
+advice that changes while you are reading it is not advice.
+
+### And one thing that had gone stale
+
+The screen said *"Switching targets abandons progress on the old one."* Section
+78 stopped that being true and the sentence stayed. It now says what actually
+happens -- switching keeps the work, and only changing to something already paid
+for spends the surplus.
+
+### Faces on the council rows
+
+Each advisor's portrait sits beside their name, from the same `portraitPath` the
+advisors screen uses -- two places knowing where the art lives is one too many
+the day it moves. The collapsed row is several people and so has nobody's face;
+it keeps the slot so the names stay in one column, and a portrait that fails to
+load does the same rather than reflowing the list.
+
+Two layout faults, both found by looking rather than by reasoning. The line ran
+off the right edge instead of wrapping, because a flex item will not shrink
+below its content without `min-width: 0` -- and then it *still* ran off, because
+these rows are buttons and inherit `white-space: nowrap`, which is right for a
+label on a control and wrong for a sentence. Below 720px the row stacks the
+sentence under the name, since a fixed name column is most of a narrow panel.
+

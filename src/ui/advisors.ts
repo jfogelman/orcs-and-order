@@ -32,8 +32,14 @@ import { escapeHtml, openModal } from './dom';
  * seen.
  */
 
-/** Where an advisor's portrait lives. Missing art leaves the name and the line. */
-function portraitPath(id: string): string {
+/**
+ * Where an advisor's portrait lives. Missing art leaves the name and the line.
+ *
+ * Exported because the advances screen shows the same faces beside the same
+ * people, and two places that each know where the art lives is one place too
+ * many the day it moves.
+ */
+export function portraitPath(id: string): string {
   const base = import.meta.env.BASE_URL;
   return `${base.endsWith('/') ? base : `${base}/`}advisors/${id}.png`;
 }

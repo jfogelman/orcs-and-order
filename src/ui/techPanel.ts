@@ -4,7 +4,9 @@ import type { TechDef } from '../model/techs';
 import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
 import { knowsTech, researchableTechs, setResearch, techCost } from '../sim/research';
-import { bar, escapeHtml, openModal } from './dom';
+import { advisorSuggestions } from '../model/suggestions';
+import { portraitPath } from './advisors';
+import { afterModalCloses, bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
 
 /**
@@ -108,15 +110,67 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
   }
 
   const current = player.researching ? TECHS_BY_ID[player.researching] : null;
+  const open = researchableTechs(player);
+  // Nothing to pick is a different thing from declining to pick, and only the
+  // second is worth refusing to close over.
+  const mustChoose = !current && open.length > 0;
+
+  // Six people who each want one thing, arguing for their own department. The
+  // list is worth more than any one line in it: they disagree, visibly.
+  const suggestions = advisorSuggestions(player.faction, open, (t) => techCost(player, t));
+  const invested = suggestions.filter((s) => s.stake);
+  const shrugging = suggestions.filter((s) => !s.stake);
+  // `face` is null for the collapsed row, which is several people and so has
+  // nobody's face. The slot is still drawn, so the names stay in one column.
+  const row = (who: string, why: string, id: string, face: string | null) => `
+      <button class="advice-row" data-id="${escapeHtml(id)}"
+              title="Start researching ${escapeHtml(TECHS_BY_ID[id]?.name ?? id)}">
+        ${
+          face
+            ? `<img class="advice-face" src="${portraitPath(face)}" alt="" />`
+            : '<span class="advice-face empty"></span>'
+        }
+        <span class="advice-who">${escapeHtml(who)}</span>
+        <span class="advice-why">${escapeHtml(why)}</span>
+      </button>`;
+  const council = [
+    ...invested.map((s) => row(s.advisor.name, s.why, s.tech.id, s.advisor.id)),
+    // Everybody with nothing at stake wants the quickest thing, which is the
+    // same advance for all of them. Six identical rows would be a worse screen
+    // and no more true than one line saying so.
+    ...(shrugging.length > 0
+      ? [
+          row(
+            shrugging.length === suggestions.length ? 'The council' : 'The rest of them',
+            `Have no view, and would take ${shrugging[0].tech.name} to be rid of the question.`,
+            shrugging[0].tech.id,
+            null,
+          ),
+        ]
+      : []),
+  ].join('');
+
   const body = `
     <div class="panel-body">
       ${
         current
           ? `<div class="stat-row"><span class="label">Currently researching</span><span class="value">${escapeHtml(current.name)} — ${player.beakers} / ${techCost(player, current)}</span></div>
              ${bar(player.beakers, techCost(player, current))}`
-          : '<span class="muted">No research under way. Pick something.</span>'
+          : mustChoose
+            ? '<span class="k-bad">Nothing is being studied. Beakers are piling up in a shed. Pick something.</span>'
+            : '<span class="muted">Nothing left to research.</span>'
       }
-      <p class="flavor">Click any advance you have the prerequisites for. Switching targets abandons progress on the old one.</p>
+      <p class="flavor">
+        Click any advance you have the prerequisites for. Switching keeps the work
+        you have already done &mdash; but changing to something you have
+        <em>already paid for</em> spends the surplus.
+      </p>
+      ${
+        council
+          ? `<div class="panel-title">What the council would do</div>
+             <div class="advice-list">${council}</div>`
+          : ''
+      }
     </div>
     <div class="tech-tree">${columns.join('')}</div>`;
 
@@ -124,6 +178,10 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
     title: `Advances of ${player.name}`,
     body,
     width: 'min(1400px, 97vw)',
+    // Beakers bank whether or not anything is being studied, so declining to
+    // choose is choosing to leave them in a shed. There is no reason to allow
+    // it and nothing in the interface ever said what it cost. Section 75.
+    sticky: mustChoose,
     onMount: (root, close) => {
       // No icon yet for this advance is the normal case, not an error.
       root.querySelectorAll<HTMLImageElement>('.tech-icon').forEach((img) => {
@@ -135,6 +193,26 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
           e.preventDefault();
           e.stopPropagation();
           openPedia(player, link.dataset.pedia);
+          // Looking something up should not cost you your place. `openModal`
+          // has no stack, and one is more than this problem deserves: the
+          // Orcpedia is opened from four places and only this one wants to
+          // come back. Registered after the replacement, which leaves the
+          // queue alone, so this fires when the Orcpedia itself closes.
+          afterModalCloses(() => openTechPanel(state, player, onChange));
+        });
+      });
+      // Art arrives a file at a time; a missing face leaves the name and the
+      // line, which is the whole row's content anyway.
+      root.querySelectorAll<HTMLImageElement>('.advice-face').forEach((img) => {
+        img.addEventListener('error', () => img.classList.add('empty'));
+      });
+      root.querySelectorAll<HTMLButtonElement>('.advice-row').forEach((row) => {
+        row.addEventListener('click', () => {
+          const id = row.dataset.id;
+          if (!id) return;
+          setResearch(state, player, id);
+          onChange();
+          close();
         });
       });
       root.querySelectorAll<HTMLElement>('.tech-card').forEach((card) => {
