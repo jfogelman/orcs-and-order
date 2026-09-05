@@ -9,3 +9,6 @@ through Save and load (Ctrl+S), then Upload.
 - **city-asks-what-to-build.w2c** — A city set to ask, banking shields with nothing on order. Ending the turn opens its panel with the build list live.
 - **rioting-city.w2c** — A large city in disorder with nothing calming it, for the unrest overlay and advisors.
 - **rich-and-idle.w2c** — Gold to burn and something part-built, for rush buying and the treasury.
+- **late-game.w2c** — Turn 200 of a real game, both sides alive, empires grown and fighting.
+- **deadline-in-thirty.w2c** — Turn 269 of 300. Ending one turn crosses the thirty-turn mark, so this is the save for anything about the deadline warning or the advisors noticing it.
+- **about-to-end-on-points.w2c** — Turn 299 of 300 with both sides alive, so ending a turn decides it on points rather than conquest. The save for the victory screen and for carrying on.
