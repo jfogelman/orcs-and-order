@@ -1565,3 +1565,47 @@ kbd {
   font-weight: 700;
   color: var(--gold);
 }
+
+/* ------------------- what the council would research, section 75 */
+
+/* Six rows that disagree. The value is in reading them together, so they are
+   compact and stacked rather than a grid of cards competing with the tree. */
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 2px;
+}
+
+.advice-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.advice-row:hover {
+  border-color: var(--edge);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.advice-who {
+  flex: 0 0 auto;
+  min-width: 140px;
+  color: var(--gold);
+  font-family: var(--title-font);
+  font-size: 13px;
+}
+
+.advice-why {
+  color: var(--muted);
+  line-height: 1.4;
+}
