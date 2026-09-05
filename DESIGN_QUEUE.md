@@ -5555,3 +5555,106 @@ advice they usually give:
 There is still no advisor popup on a critical event -- the advisors have to be
 opened to be heard. The log carries the warning on its own so this is useful
 without it, and the popup stays queued.
+
+## 84. Level research, unequal armies: where the Horde's game actually goes
+
+Section 82 left one question: research volume is level, so what do the two sides
+research *into*? Instrumented over 108 games, at five checkpoints.
+
+### The walls hypothesis is dead, and section 24 still holds
+
+The two building rosters are mirrored item for item at matching prices in every
+respect except defence -- Walls give the Kingdom **x2** for 60 shields, the
+Broken Catapult gives the Horde **x1.35** for the same. That looked like the
+answer, arriving exactly when section 82 says the rollback starts.
+
+It is not, because **neither is ever built**. Per game, at the end:
+
+| | orc | human |
+|---|---|---|
+| Walls | 0.00 / 0.02 | 0.04 / 0.11 |
+| Broken Catapult | 0.19 / 0.41 | 0.00 / 0.00 |
+
+Section 24 said those numbers were theory because nobody builds either one. That
+was written a long time ago and is still true. Recorded as refuted; the
+asymmetry is real and inert.
+
+### Research composition is not the story either
+
+Advances known, orc against human, tuned / held-out:
+
+| turn | orc | human |
+|---|---|---|
+| 75 | 13.72 / 13.94 | 12.94 / 13.20 |
+| 150 | 20.90 / 21.02 | 21.60 / 22.04 |
+| 250 | 26.64 / 27.29 | 25.00 / 24.74 |
+
+Level the whole way, and the Horde is marginally ahead at both ends.
+
+### The armies diverge from turn 75, and that is the story
+
+| turn | units (orc / human) | paper attack | paper defence |
+|---|---|---|---|
+| 75 | **30.15 / 30.00** | 89.09 / 101.13 | 61.83 / 87.75 |
+| 100 | 31.40 / 39.21 | 114.85 / 145.90 | 70.98 / 111.33 |
+| 150 | 28.00 / **42.83** | 119.52 / 181.88 | 66.02 / **120.42** |
+| 250 | 28.43 / 38.75 | 142.93 / 214.54 | 72.43 / 109.89 |
+
+**The Horde's army peaks at turn 75 and then shrinks.** 30.15 units to 28.00 by
+turn 150, and it never recovers. The Kingdom's goes 30.00 to 42.83 over the same
+stretch, a 43% rise. Held-out agrees throughout.
+
+Its **defence is flat for the whole game** -- 61.83 at turn 75, 72.43 at turn
+250, across 175 turns -- while attack climbs from 89 to 143. It is building
+nothing that holds ground.
+
+### Worse units each, and not more of them
+
+The sharpest number is turn 75, where the two sides have the same advances and
+the *same unit count*:
+
+| per unit, turn 75 | orc | human |
+|---|---|---|
+| attack | 2.95 / 2.86 | 3.37 / 3.40 |
+| defence | 2.05 / 1.99 | 2.93 / 2.93 |
+
+The Kingdom's units are better on **both** figures. The Horde's are cheaper, so
+the compensation is supposed to be *more of them* -- and there are not more of
+them. Whatever the ladder is meant to buy, it is not being bought.
+
+### The siege train arrives exactly on time
+
+| turn | orc siege | human siege |
+|---|---|---|
+| 75 | 1.09 / 0.91 | **0.00 / 0.00** |
+| 100 | 1.65 / 1.53 | 0.46 / 0.34 |
+| 150 | 1.50 / 1.37 | 1.98 / 2.88 |
+| 200 | 1.47 / 1.21 | 4.58 / 5.48 |
+| 250 | 2.25 / 2.10 | **6.39 / 6.32** |
+
+The Kingdom fields no siege at all until turn 75 and then builds three times the
+Horde's by the end -- Ballistae, 8 attack for 45 shields. Section 82 put the
+crossover at turn 100. This is what crosses it.
+
+### And it out-builds the Horde about two to one
+
+Buildings standing at the end, per game, on mirrored rosters at matching prices:
+
+| | orc | human |
+|---|---|---|
+| happiness | 3.13 (totem + big) | **5.89** (chapel + cathedral) |
+| money | 1.58 | **2.97** |
+| research | 0.82 | **2.35** |
+
+Same buildings, same costs, half as many of them.
+
+### What this makes the next question
+
+Equal research, converted into roughly half the army and half the buildings.
+That is a **production** gap, not a research gap -- and section 82 has the other
+half of it: the Horde founds *more* cities and holds fewer, with 31.8 citizens
+against 47.4.
+
+More cities, fewer citizens in them. The next question is why Horde cities stay
+small, and the candidates are food, happiness, and the churn itself -- a city
+taken and retaken is a small city. Not answered here.
