@@ -5658,3 +5658,90 @@ against 47.4.
 More cities, fewer citizens in them. The next question is why Horde cities stay
 small, and the candidates are food, happiness, and the churn itself -- a city
 taken and retaken is a small city. Not answered here.
+
+## 85. Horde cities are not small. They are on fire.
+
+Section 84 ended by asking why Horde cities stay small, given 31.8 citizens
+against 47.4. Instrumented over 108 games, counting every gate on growth --
+no surplus, disorder, still smoking from a capture -- from outside the rules.
+
+**The question had a false premise.**
+
+| over every city-turn | orc (tuned / held-out) | human (tuned / held-out) |
+|---|---|---|
+| mean city size | **5.68 / 5.83** | 5.52 / 5.80 |
+| food grown | **14.00 / 14.21** | 13.03 / 13.59 |
+| food surplus | **2.65 / 2.55** | 1.98 / 2.00 |
+| turns to next citizen | **12.4 / 12.9** | 15.0 / 15.9 |
+
+Horde cities are the same size, sit on **better ground**, run a **larger food
+surplus**, and grow about **a fifth faster**. Nothing about growth is wrong with
+them. Section 82's population gap is arithmetic on city *count*, not on size --
+fewer cities, each of them fine.
+
+### What is wrong is that they riot
+
+| | orc | human |
+|---|---|---|
+| city-turns rioting | **16.4% / 18.3%** | 9.8% / 9.9% |
+| city-turns at the content limit | **28.6% / 29.9%** | 19.0% / 18.9% |
+| headroom before rioting | 1.54 / 1.47 | **1.98 / 1.94** |
+
+And it is worst in exactly the half of the game section 82 says the Horde is
+supposed to be winning:
+
+| turn | orc rioting | human rioting |
+|---|---|---|
+| 50 | 12.5% / 9.8% | **4.0% / 3.4%** |
+| 75 | 9.6% / 13.9% | **3.1% / 4.2%** |
+| 100 | 11.2% / 12.8% | **1.5% / 4.6%** |
+| 250 | 21.3% / 26.2% | 21.9% / 19.7% |
+
+At turn 100 the Horde is rioting seven times as much on the tuned set. By turn
+250 the two are level, and by then it is over.
+
+### The spiral
+
+A rioting city produces **nothing** -- no shields, no trade -- and cannot grow.
+So:
+
+1. Better land and a bigger surplus means Horde cities **grow faster**.
+2. Growing faster means passing `contentLimit` sooner -- and the base limit is
+   five for everybody, so the side that grows quicker hits it first.
+3. Past the limit the city riots and produces nothing.
+4. Producing nothing means it cannot build the Totem that would raise the
+   limit -- which is why section 84 found the Horde with **half** the happiness
+   buildings on a roster where the Totem and the Chapel cost the same and do the
+   same thing.
+5. Fewer calming buildings, so it riots again.
+
+**The Horde's advantage is the cause of its problem.** It out-grows its own
+ability to keep anybody calm, and the AI's rate policy cannot save it: that
+policy is identical for both sides and reacts to riots that have already
+happened, buying calm after production has already been lost.
+
+This is section 77's spiral -- the played game where Joy Making was never
+researched and everything rioted -- except it is not one bad game. It is a
+systematic property of the faction, present from turn 50.
+
+### What it does not explain
+
+Rioting 16-18% of city-turns against 10% is a large and consistent gap, and it
+is not on its own a factor of two in army and buildings. The Horde also holds
+fewer cities. Recorded as **the largest mechanism found so far, not the whole
+of it**.
+
+### The obvious levers, unmeasured
+
+Not tried, and deliberately not guessed at:
+
+- **`BASE_CONTENT`**, five for both. The side that grows faster hits it first,
+  so a flat limit is not a neutral rule.
+- **Building the Totem earlier.** `chooseProduction` only reaches its happiness
+  rule at `size >= contentLimit - 1`, which is one turn of warning for a city
+  growing every twelve.
+- **Buying calm before the riot rather than after.** `manageRates` counts cities
+  already rioting at double weight and cities merely at the limit at single, so
+  it is always a step behind.
+
+Any of these is a sweep. `npm run growth` is the instrument.
