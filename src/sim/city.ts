@@ -25,8 +25,36 @@ export interface Yield {
   trade: number;
 }
 
-/** Citizens beyond this go unhappy without help. */
-export const BASE_CONTENT = 5;
+/**
+ * How many citizens are content with nothing helping them.
+ *
+ * A mutable object rather than a bare number so a sweep can move it -- section
+ * 59: emulate a control by moving a constant, never by stashing the source.
+ *
+ * Flat for both sides, which section 85 points out is not the neutral rule it
+ * looks like: the side whose cities grow faster reaches the limit first, and
+ * the Horde grows about a fifth faster on better ground. It riots on 16 to 18
+ * per cent of its city-turns against the Kingdom's 10, and a rioting city
+ * produces nothing at all.
+ *
+ * **Six, not five, and measured.** Section 86 swept this against the two other
+ * ways of attacking the same loop, 432 games:
+ *
+ * | | tuned | held-out | orc wins /108 |
+ * |---|---|---|---|
+ * | five | 21-33 | 16-38 | 37 (34%) |
+ * | **six** | **27-27** | **27-27** | **54 (50%)** |
+ * | build the Totem earlier | 18-36 | 19-35 | 37 (34%) |
+ * | buy calm earlier | 17-37 | 15-39 | 32 (30%) |
+ *
+ * Dead even on both seed sets independently, which no other lever came close
+ * to. It reads as a Horde buff and is not one: the Kingdom's population barely
+ * moves (47.4 to 47.8, 53.7 to 54.2) because it was never the side pressed
+ * against the limit. Only the side that grows faster was, which is the whole
+ * argument for the number not being flat at five.
+ */
+export const CALM = { base: 6 };
+
 /** Food eaten per citizen per turn. */
 export const FOOD_PER_CITIZEN = 2;
 
@@ -222,7 +250,7 @@ export function baseTrade(state: GameState, city: City): number {
 
 export function contentLimit(state: GameState, city: City): number {
   const owner = state.players[city.owner];
-  let limit = BASE_CONTENT;
+  let limit = CALM.base;
   for (const b of workingBuildings(state, city)) limit += BUILDINGS[b]?.contentBonus ?? 0;
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;

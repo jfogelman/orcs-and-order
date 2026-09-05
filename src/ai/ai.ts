@@ -517,7 +517,7 @@ function chooseProduction(
   // 3. Keep the lid on first. A city at its content limit stops growing and
   // produces nothing at all, so a happiness building is worth more than any
   // amount of economy sitting on top of a riot.
-  if (city.size >= contentLimit(state, city) - 1) {
+  if (city.size >= contentLimit(state, city) - AI_TUNING.calmBuildAhead) {
     const calming = options.buildings.find((b) => b.contentBonus);
     if (calming) return { kind: 'building', id: calming.id };
     // Only when it is actually rioting, and only when there is nothing left to
@@ -1058,6 +1058,25 @@ export const AI_TUNING = {
    * See DESIGN_QUEUE section 65.
    */
   rushBuying: false,
+
+  /**
+   * How far below the content limit a city starts building something calming.
+   *
+   * One means "the turn before it riots", which is one turn of warning for a
+   * city that grows every twelve and needs forty shields. Section 85 named this
+   * as a lever and did not pull it.
+   */
+  calmBuildAhead: 1,
+
+  /**
+   * What a city merely *at* the limit is worth when the empire decides how much
+   * trade to spend on keeping people calm.
+   *
+   * A city already rioting counts two. This one counts a city that is one
+   * citizen from rioting, so raising it buys calm before the production is
+   * lost rather than after. Section 85.
+   */
+  calmRateAtLimit: 1,
   goldReserve: 60,
   /**
    * Buy the thing that lasts, rather than the thing that is cheapest.
@@ -1128,7 +1147,7 @@ function manageRates(state: GameState, player: Player): void {
     // A riot is worth more than a city merely getting close to one, and a
     // riot is also the thing no building can reach in time.
     if (city.disorder) wanted += 2;
-    else if (city.size >= contentLimit(state, city)) wanted += 1;
+    else if (city.size >= contentLimit(state, city)) wanted += AI_TUNING.calmRateAtLimit;
   }
   const calm = Math.min(TRADE_STEPS - 2, wanted);
   const rest = TRADE_STEPS - calm;
