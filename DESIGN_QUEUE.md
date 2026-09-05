@@ -5517,10 +5517,7 @@ The victory modal could be dismissed onto a board that would never move again,
 with no way forward but the toolbar. It is sticky now, and offers **Another Go**
 and **Load a Game**.
 
-**Queued: continue playing.** The classic third option, and the one that wants
-real thought rather than a button -- the game is over, `isOver` gates the turn
-pipeline, and "carry on anyway" means deciding what a game with no win condition
-left is for. Worth doing, not worth doing carelessly.
+**Continue playing** was queued here and is now built. See section 87.
 
 ### Nothing warned that the deadline was coming
 
@@ -5804,3 +5801,48 @@ Games run about twenty-five turns longer (238 to 267, 252 to 263), so fewer end
 in an early conquest. Whether that is better is a matter of taste and has not
 been measured. And 50% is parity between two AIs on this map generator; it says
 nothing about how the game plays for a person.
+
+## 87. Carrying on after winning
+
+Section 83 queued this rather than building it, because `isOver` gates the whole
+turn pipeline and "carry on anyway" means deciding what a game with no win
+condition left is actually for.
+
+**It is for the board.** You keep your empire, your units keep moving, the other
+side keeps playing if it still exists. What you give up is the verdict.
+
+### The result is cleared, not remembered
+
+`isOver` is `winner !== null || victory !== undefined`, and it stops
+`endPlayerTurn` at its first line. So a flag saying "won, but continuing"
+alongside a winner would leave the game exactly as stopped as it was. The winner
+and the victory kind are therefore **deleted**, and what is kept is `playingOn`,
+whose only job is to stop anybody winning a second time.
+
+That guard sits above all three routes at once, since all three are decided in
+the same place: conquest, dominance, and the turn limit. **Especially the turn
+limit.** Without it, choosing to keep playing on a points ending would last
+exactly one turn before handing back the ending it was asked to dismiss.
+
+Elimination still runs above the guard. Units disperse and players die, because
+that is the board and not the verdict.
+
+### One-way, deliberately
+
+There is no route back to the ending and the score screen does not return. It
+described a game that has since continued past it, and showing it again later
+would be showing a result that is no longer true.
+
+### Verified
+
+From a played save one turn from the deadline: the ending arrives at turn 301
+with three buttons, Keep Playing clears it, and the game runs on to turn 307
+past a deadline it can no longer reach, saying so once in the log:
+
+> *The matter was settled and you have decided to keep going anyway. Nobody will
+> stop you, and nobody will declare it again.*
+
+Eight tests, including the two that would each have made this useless on their
+own -- that turns pass again at all, and that the turn limit does not end it a
+second time -- and that `playingOn` survives a save, since a reloaded game would
+otherwise declare its winner again on the next turn.

@@ -279,6 +279,31 @@ export function isOver(state: GameState): boolean {
   return state.winner !== null || state.victory !== undefined;
 }
 
+/**
+ * Carry on after winning, the way every other game of this shape offers.
+ *
+ * The result is cleared rather than remembered, because a game with a winner
+ * in it is a game `isOver` stops dead -- the turn pipeline, the end-turn
+ * button and the questions at the end of a turn all check it. What is kept is
+ * `playingOn`, which stops anybody winning a second time.
+ *
+ * Deliberately one-way. There is no route back to the ending, and the score
+ * screen is gone for good: it described a game that has now continued past it,
+ * and showing it again later would be showing a result that is no longer true.
+ */
+export function continuePlaying(state: GameState): void {
+  if (!isOver(state)) return;
+  state.playingOn = true;
+  state.winner = null;
+  delete state.victory;
+  log(
+    state,
+    'The matter was settled and you have decided to keep going anyway. ' +
+      'Nobody will stop you, and nobody will declare it again.',
+    'info',
+  );
+}
+
 export const DOMINANCE = {
   /**
    * Share of every city on the map.
@@ -395,6 +420,11 @@ function checkElimination(state: GameState): void {
     }
     log(state, `${p.name} has no cities left. What remains of them disperses.`, 'bad');
   }
+
+  // Everything below here decides a winner, and a game being played on has
+  // already had one and declined to stop. Elimination above still runs: units
+  // disperse and players die, because that is the board and not the verdict.
+  if (state.playingOn) return;
 
   const survivors = state.players.filter((p) => p.alive);
   if (survivors.length === 1 && !isOver(state)) {

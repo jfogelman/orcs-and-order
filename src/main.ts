@@ -30,7 +30,14 @@ import {
   tryStep,
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
-import { isOver, beginPlayerTurn, endPlayerTurn, idleUnits, scoreBreakdown } from './sim/turn';
+import {
+  beginPlayerTurn,
+  continuePlaying,
+  endPlayerTurn,
+  idleUnits,
+  isOver,
+  scoreBreakdown,
+} from './sim/turn';
 import { openCityPanel } from './ui/cityPanel';
 import {
   disband,
@@ -839,6 +846,11 @@ class App {
           <p class="flavor">${this.victoryLine(winner, you)}</p>
         </div>
         <div class="button-row" style="justify-content:flex-end">
+          <button class="small" id="btn-keep" title="${
+            you
+              ? 'Carry on. Nobody will declare a winner again.'
+              : 'Carry on regardless. Nobody will declare a winner again.'
+          }">Keep Playing</button>
           <button class="small" id="btn-load">Load a Game</button>
           <button class="primary" id="btn-again">Another Go</button>
         </div>`,
@@ -855,6 +867,16 @@ class App {
         root.querySelector('#btn-load')?.addEventListener('click', () => {
           close();
           this.openSaves();
+        });
+        root.querySelector('#btn-keep')?.addEventListener('click', () => {
+          continuePlaying(this.state);
+          close();
+          // Back off the victory theme: the game is running again.
+          audio.playMusic('world');
+          this.refreshHud();
+          this.refreshSidebar();
+          this.selectNextIdle();
+          this.playLogCues();
         });
       },
     });

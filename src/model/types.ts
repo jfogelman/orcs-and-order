@@ -368,5 +368,16 @@ export interface GameState {
    * for two of the three routes.
    */
   victory?: VictoryKind;
+  /**
+   * The game was won and the player asked to carry on anyway.
+   *
+   * Clears the result and stops anybody winning again -- including the turn
+   * limit, or "keep playing" would end the game again on the next turn. The
+   * game then runs until the player leaves it, which is what the option means
+   * in every other game that offers it.
+   *
+   * Optional so every existing save loads unchanged and means "no".
+   */
+  playingOn?: boolean;
   settings: GameSettings;
 }
