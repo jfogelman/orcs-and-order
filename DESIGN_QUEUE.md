@@ -5999,3 +5999,19 @@ The screen said *"Switching targets abandons progress on the old one."* Section
 78 stopped that being true and the sentence stayed. It now says what actually
 happens -- switching keeps the work, and only changing to something already paid
 for spends the surplus.
+
+### Faces on the council rows
+
+Each advisor's portrait sits beside their name, from the same `portraitPath` the
+advisors screen uses -- two places knowing where the art lives is one too many
+the day it moves. The collapsed row is several people and so has nobody's face;
+it keeps the slot so the names stay in one column, and a portrait that fails to
+load does the same rather than reflowing the list.
+
+Two layout faults, both found by looking rather than by reasoning. The line ran
+off the right edge instead of wrapping, because a flex item will not shrink
+below its content without `min-width: 0` -- and then it *still* ran off, because
+these rows are buttons and inherit `white-space: nowrap`, which is right for a
+label on a control and wrong for a sentence. Below 720px the row stacks the
+sentence under the name, since a fixed name column is most of a narrow panel.
+

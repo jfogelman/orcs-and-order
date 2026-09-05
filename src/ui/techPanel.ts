@@ -5,6 +5,7 @@ import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
 import { knowsTech, researchableTechs, setResearch, techCost } from '../sim/research';
 import { advisorSuggestions } from '../model/suggestions';
+import { portraitPath } from './advisors';
 import { afterModalCloses, bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
 
@@ -119,14 +120,21 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
   const suggestions = advisorSuggestions(player.faction, open, (t) => techCost(player, t));
   const invested = suggestions.filter((s) => s.stake);
   const shrugging = suggestions.filter((s) => !s.stake);
-  const row = (who: string, why: string, id: string) => `
+  // `face` is null for the collapsed row, which is several people and so has
+  // nobody's face. The slot is still drawn, so the names stay in one column.
+  const row = (who: string, why: string, id: string, face: string | null) => `
       <button class="advice-row" data-id="${escapeHtml(id)}"
               title="Start researching ${escapeHtml(TECHS_BY_ID[id]?.name ?? id)}">
+        ${
+          face
+            ? `<img class="advice-face" src="${portraitPath(face)}" alt="" />`
+            : '<span class="advice-face empty"></span>'
+        }
         <span class="advice-who">${escapeHtml(who)}</span>
         <span class="advice-why">${escapeHtml(why)}</span>
       </button>`;
   const council = [
-    ...invested.map((s) => row(s.advisor.name, s.why, s.tech.id)),
+    ...invested.map((s) => row(s.advisor.name, s.why, s.tech.id, s.advisor.id)),
     // Everybody with nothing at stake wants the quickest thing, which is the
     // same advance for all of them. Six identical rows would be a worse screen
     // and no more true than one line saying so.
@@ -136,6 +144,7 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
             shrugging.length === suggestions.length ? 'The council' : 'The rest of them',
             `Have no view, and would take ${shrugging[0].tech.name} to be rid of the question.`,
             shrugging[0].tech.id,
+            null,
           ),
         ]
       : []),
@@ -191,6 +200,11 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
           // queue alone, so this fires when the Orcpedia itself closes.
           afterModalCloses(() => openTechPanel(state, player, onChange));
         });
+      });
+      // Art arrives a file at a time; a missing face leaves the name and the
+      // line, which is the whole row's content anyway.
+      root.querySelectorAll<HTMLImageElement>('.advice-face').forEach((img) => {
+        img.addEventListener('error', () => img.classList.add('empty'));
       });
       root.querySelectorAll<HTMLButtonElement>('.advice-row').forEach((row) => {
         row.addEventListener('click', () => {
