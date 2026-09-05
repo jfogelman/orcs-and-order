@@ -5865,3 +5865,71 @@ sides, so the state it hands back has the player's own seat set to `ai`. Saved
 that way, the first End Turn ran the rest of the game by itself -- turn 269
 straight to 301. The seat is restored on the way out, and a test says so.
 
+
+## 88. The council asks to be heard
+
+Section 83 shipped the deadline warning and noted what it could not do: the
+advisors have to be opened to be heard. That is fine for an opinion and useless
+for a crisis, because **the player who most needs the council is the one who
+does not know anything is wrong**.
+
+### A doorway, not the advice
+
+Two steps, deliberately. First a small dismissable window that says only what is
+wrong:
+
+> **Your advisors request an audience**
+> Six of them are outside. They are being unusually polite about it, which is
+> itself alarming.
+> - *One city rioting and nothing we can build will stop it. We have never
+>   researched Joy Making.*
+>
+> [Not Now] [Hear Them Out]
+
+**Hear Them Out** opens the ordinary advisors screen, where the six of them
+explain it and disagree about the fix, which is the mechanism section 46 already
+built. Nothing new is written for the crisis: if the council has something to
+say about a riot, it is already saying it, and a second voice for emergencies
+would drift from the first.
+
+The headline says **what is wrong and nothing about what to do**, and there is a
+test for that. The advice is the thing the player is choosing to hear; a
+headline that gives it away makes the audience pointless.
+
+### Thresholds, not states
+
+Each crisis is raised **once when it starts**, and again only if it clears and
+returns. `Player.warnedOf` is rewritten each check to exactly what is wrong now,
+so a crisis that ends is forgotten and can raise again later. A council that
+demanded an audience every turn of a long riot would be trained away in three
+turns, and then it would be useless for the turn it mattered.
+
+Dismissing is not punished and not remembered differently from listening: the
+crisis is marked raised either way. Every headline also goes to the log, so a
+player who waves it away can still find out what it was.
+
+### What counts, worst first
+
+| | when |
+|---|---|
+| someone else is one clock from winning | `dominance.theirs` |
+| **the spiral** | rioting, and nothing buildable would stop it |
+| ordinary unrest | two or more cities rioting |
+| the treasury | **runway** under five turns, not merely losing money |
+| the deadline | ten turns out and behind on points |
+| hunger | two or more cities losing people |
+
+Two of those are deliberate. The spiral is separated from ordinary rioting
+because waiting fixes one and not the other -- it is section 77, the played game
+where Joy Making was never researched, and the headline names the advance. And
+the treasury is keyed on **runway rather than slope**, which is what section 76
+asked for: losing five a turn on a thousand is a rounding error, and losing five
+a turn on nine is a crisis.
+
+Us being one clock from winning is not a crisis. Good news can wait to be asked
+about.
+
+### Where it sits
+
+First in the end-of-turn chain, ahead of promotions and build orders: those are
+about what to do next, and a crisis is about whether any of it matters.

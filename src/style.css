@@ -1540,3 +1540,28 @@ kbd {
   text-align: right;
   font-variant-numeric: normal;
 }
+
+/* ------------------------- the council asking to be heard, section 88 */
+
+/* Headlines, not advice. Short enough that the whole list is read before the
+   player decides whether any of it is worth a click. */
+.crisis-list {
+  margin: 10px 0 4px;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.crisis-list li {
+  position: relative;
+  padding: 4px 0;
+  color: var(--bad, #e08a72);
+  line-height: 1.45;
+}
+
+.crisis-list li::before {
+  content: '!';
+  position: absolute;
+  left: -18px;
+  font-weight: 700;
+  color: var(--gold);
+}

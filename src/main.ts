@@ -19,7 +19,7 @@ import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
 import { autoBuildOf, canFoundCity, foundCity, inSupply, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
-import { cityAt, createGame, playerCities, playerUnits, unitAt } from './sim/gamestate';
+import { cityAt, createGame, log, playerCities, playerUnits, unitAt } from './sim/gamestate';
 import {
   attackTargets,
   estimateTurns,
@@ -46,7 +46,7 @@ import {
   resupply,
   resupplyBlocked,
 } from './sim/combat';
-import { openAdvisors } from './ui/advisors';
+import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openHordeReport } from './ui/hordeReport';
 import {
   afterModalCloses,
@@ -61,6 +61,7 @@ import { ABILITIES, abilitiesOf, abilityReady, abilityTargets, useAbility } from
 import type { AbilityId } from './sim/abilities';
 import { controlsMarkup } from './ui/controls';
 import { chooseFocus } from './ui/watch';
+import { newCrises } from './model/advisors';
 import { STATUS_RULES, statusesOf } from './sim/status';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
@@ -673,6 +674,11 @@ class App {
     // questions were never asked at all.
     if (isModalOpen()) return chain();
 
+    // Before everything else: a promotion and a build order are about what to
+    // do next, and a crisis is about whether any of that matters.
+    this.promptCrisis();
+    if (isModalOpen()) return chain();
+
     this.promptPerkIfOwed();
     if (isModalOpen()) return chain();
 
@@ -693,6 +699,35 @@ class App {
    * progress -- but the direction of an empire's research is exactly the sort
    * of decision that should not happen behind the player's back.
    */
+  /**
+   * Let the council interrupt, when something has actually gone wrong.
+   *
+   * Raised on a threshold being crossed rather than on a state being in, so a
+   * long riot asks once. `newCrises` hands back what to remember, and it is
+   * remembered whether or not the player listens -- being waved away is an
+   * answer, and asking again next turn would be nagging.
+   *
+   * The headlines also go to the log, because a player who dismisses this is
+   * entitled to find out later what it was about.
+   */
+  private promptCrisis(): void {
+    if (isModalOpen() || isOver(this.state)) return;
+    const player = this.state.players[this.viewerId];
+    const situation = situationOf(this.state, this.viewerId);
+    const { raise, warned } = newCrises(situation, player.warnedOf ?? []);
+    player.warnedOf = warned;
+    if (raise.length === 0) return;
+
+    for (const c of raise) {
+      log(this.state, `Your advisors are alarmed: ${c.headline}`, 'bad', this.viewerId);
+    }
+    this.playLogCues();
+    audio.play('blocked');
+    openCrisisCall(raise.map((c) => c.headline), player.faction, () =>
+      openAdvisors(this.state, this.viewerId),
+    );
+  }
+
   /**
    * Ask about any promotion the player has not answered yet.
    *

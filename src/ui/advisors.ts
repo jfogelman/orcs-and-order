@@ -1,5 +1,5 @@
 import { BUILDINGS } from '../model/buildings';
-import type { GameState } from '../model/types';
+import type { FactionId, GameState } from '../model/types';
 import { unitType } from '../model/units';
 import {
   ROLE_NAMES,
@@ -166,6 +166,55 @@ export function situationOf(state: GameState, playerId: number): Situation {
     supplyPosts,
     dominance,
   };
+}
+
+/**
+ * The council asking to be heard, before it says anything.
+ *
+ * Deliberately a doorway rather than the advice itself. A player mid-turn wants
+ * to know **whether** this is worth their attention, and the headline answers
+ * that in one line; the arguing, the six opinions and the suggested fixes are
+ * behind a click, where they cost nothing to anybody who does not want them.
+ *
+ * Dismissable, and dismissing is not punished: the crisis is remembered as
+ * raised either way, so it will not ask again about the same thing. Everything
+ * here is also in the log, which is where a player who waves this away will
+ * find it.
+ */
+export function openCrisisCall(
+  headlines: string[],
+  faction: FactionId,
+  onHear: () => void,
+): void {
+  const lines = headlines
+    .map((h) => `<li>${escapeHtml(h)}</li>`)
+    .join('');
+  openModal({
+    title: 'Your advisors request an audience',
+    width: 'min(560px, 94vw)',
+    body: `
+      <div class="panel-body">
+        <p class="flavor">
+          ${
+            faction === 'orc'
+              ? 'Six of them are outside. They are being unusually polite about it, which is itself alarming.'
+              : 'The council has convened without being summoned. Somebody has brought a folder.'
+          }
+        </p>
+        <ul class="crisis-list">${lines}</ul>
+      </div>
+      <div class="button-row" style="justify-content:flex-end">
+        <button class="small" data-act="later">Not Now</button>
+        <button class="primary" data-act="hear">Hear Them Out</button>
+      </div>`,
+    onMount: (root, close) => {
+      root.querySelector('[data-act="later"]')?.addEventListener('click', () => close());
+      root.querySelector('[data-act="hear"]')?.addEventListener('click', () => {
+        close();
+        onHear();
+      });
+    },
+  });
 }
 
 export function openAdvisors(state: GameState, playerId: number): void {

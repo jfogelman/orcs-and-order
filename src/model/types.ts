@@ -59,6 +59,18 @@ export interface Player {
   visible: number[];
   alive: boolean;
   /**
+   * Crises the council has already demanded an audience about.
+   *
+   * Exactly what is wrong right now, rewritten each time it is checked, so a
+   * crisis that clears is forgotten and can be raised again if it returns. A
+   * council that asked every turn of a long riot would be trained away in
+   * three turns.
+   *
+   * Optional so every existing save loads unchanged and means "nothing said
+   * yet", which at worst raises one audience the player has already had.
+   */
+  warnedOf?: string[];
+  /**
    * Turn this player first held a commanding share of the map without
    * interruption, or absent if they do not hold one now.
    *
