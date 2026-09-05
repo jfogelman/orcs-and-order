@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { BUILDINGS } from '../src/model/buildings';
 import type { City, GameState } from '../src/model/types';
 import { techsForFaction } from '../src/model/techs';
-import { CALM, assignWorkers, contentLimit, garrisonSize, isGarrisoned } from '../src/sim/city';
+import {
+  CALM,
+  assignWorkers,
+  buildOptions,
+  contentLimit,
+  garrisonSize,
+  isGarrisoned,
+  militiaStrength,
+} from '../src/sim/city';
+import { unlockedBuildings } from '../src/sim/research';
+import { defenseStrength } from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 
 function board(): GameState {
@@ -136,5 +146,89 @@ describe('a posting, paid for in soldiers', () => {
     const city = town(state);
     soldiers(state, city, 1);
     expect(isGarrisoned(state, city)).toBe(true);
+  });
+});
+
+/**
+ * A posting needs somewhere to put the soldiers.
+ *
+ * The Barracks was doing very little -- section 84 measured it standing in 0.37
+ * and 0.07 games out of one -- and it is the obvious place to keep soldiers who
+ * are standing about on purpose. So it gates the Posting, using the `needs`
+ * field the Cathedral already uses to sit behind a Chapel.
+ */
+describe('a posting needs a barracks', () => {
+  const withTech = (state: GameState) => {
+    state.players[0].techs = techsForFaction('orc').map((t) => t.id);
+    return state;
+  };
+
+  it('is not offered to a city with no barracks', () => {
+    const state = withTech(board());
+    const city = town(state);
+    expect(unlockedBuildings(state.players[0]).map((b) => b.id)).toContain('orcPosting');
+    // Known, and still not offered here: the advance is empire-wide and the
+    // barracks is a thing standing in this particular city.
+    expect(buildOptions(state, city).buildings.map((b) => b.id)).not.toContain('orcPosting');
+  });
+
+  it('is offered once the barracks stands', () => {
+    const state = withTech(board());
+    const city = town(state, ['barracks']);
+    expect(buildOptions(state, city).buildings.map((b) => b.id)).toContain('orcPosting');
+  });
+
+  it('keeps working if the barracks is later sacked', () => {
+    const state = withTech(board());
+    const city = town(state, ['barracks', 'orcPosting']);
+    soldiers(state, city, 2);
+    const before = contentLimit(state, city);
+
+    city.buildings = city.buildings.filter((b) => b !== 'barracks');
+
+    // `needs` gates building the thing, not owning it, which is how the
+    // Cathedral already behaves. Losing a building to a sack should not
+    // silently switch another one off.
+    expect(contentLimit(state, city)).toBe(before);
+  });
+});
+
+/**
+ * The Posting must not become the price of having a guard.
+ *
+ * It buys *content*. Everything else a soldier standing in a city does -- hold
+ * it, defend it, raise militia, count as garrisoned -- has nothing to do with
+ * whether anybody built a Posting, and would be a strange rule if it did.
+ */
+describe('guarding a city, with or without a posting', () => {
+  it('counts as garrisoned on one soldier and no posting at all', () => {
+    const state = board();
+    const city = town(state);
+    soldiers(state, city, 1);
+    expect(isGarrisoned(state, city)).toBe(true);
+  });
+
+  it('raises militia the same either way', () => {
+    const bare = board();
+    const one = town(bare);
+    const posted = board();
+    const two = town(posted, ['barracks', 'orcPosting']);
+    soldiers(posted, two, 2);
+    // Militia is about citizens, and a Posting is not a militia building.
+    expect(militiaStrength(one)).toBe(militiaStrength(two));
+  });
+
+  it('defends the same either way', () => {
+    const bare = board();
+    const plain = town(bare);
+    const guard = spawnUnit(bare, 0, 'goblin', plain.x, plain.y, false);
+
+    const posted = board();
+    const withPosting = town(posted, ['barracks', 'orcPosting']);
+    const guard2 = spawnUnit(posted, 0, 'goblin', withPosting.x, withPosting.y, false);
+    spawnUnit(posted, 0, 'goblin', withPosting.x, withPosting.y, false);
+
+    // A Posting has no `defenseMult`; it buys patience, not walls.
+    expect(defenseStrength(posted, guard2).total).toBe(defenseStrength(bare, guard).total);
   });
 });
