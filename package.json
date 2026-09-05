@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "art": "python tools/prepare_art.py",
-    "sweep": "vitest run --config vitest.sweep.config.ts"
+    "sweep": "vitest run --config vitest.sweep.config.ts tools/sweep.run.test.ts",
+    "diagnose": "vitest run --config vitest.sweep.config.ts tools/founding.run.test.ts"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

@@ -3,6 +3,7 @@ import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
 import { DISORDER, MILITIA, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
+import type { GameState } from '../src/model/types';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
@@ -116,7 +117,18 @@ export const HALF_TURNS = 700;
  * mattered -- one of them read fights off the tail of a trimmed log and
  * reported none.
  */
-export function playGame(seed: number, halfTurns = HALF_TURNS): Outcome {
+export function playGame(
+  seed: number,
+  halfTurns = HALF_TURNS,
+  /**
+   * Called after every half-turn, for a diagnostic that needs to watch a game
+   * rather than only read its result.
+   *
+   * An observer rather than a second loop, because a second loop is how the
+   * near-copies got out of step in the first place -- see the note above.
+   */
+  watch?: (state: GameState) => void,
+): Outcome {
   const state = createGame({ seed });
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
@@ -152,6 +164,7 @@ export function playGame(seed: number, halfTurns = HALF_TURNS): Outcome {
     endPlayerTurn(state);
     countCombat();
     sweepOwners();
+    watch?.(state);
   }
   const per = (p: number) => playerUnits(state, p).map((u) => u.type);
   return {
@@ -202,8 +215,10 @@ export function seedSet(name: string, bases: number[], perBase = 18): SeedSet {
  * 54-54 against 50-58. One set would have shipped the wrong rule with a
  * confident number attached to it.
  */
-export const TUNED = seedSet('tuned', [1, 1_000_003, 2_000_011]);
-export const HELD_OUT = seedSet('held-out', [7_654_321, 8_000_011, 9_000_017]);
+export const TUNED_BASES = [1, 1_000_003, 2_000_011];
+export const HELD_OUT_BASES = [7_654_321, 8_000_011, 9_000_017];
+export const TUNED = seedSet('tuned', TUNED_BASES);
+export const HELD_OUT = seedSet('held-out', HELD_OUT_BASES);
 
 // -------------------------------------------------------------------- sweeps
 

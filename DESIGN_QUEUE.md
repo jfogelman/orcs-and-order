@@ -4309,6 +4309,11 @@ one respect in which the stale-measurement problem got cheaper to fix.
 
 ## 61. The founding gap: the Horde builds fewer settlers, not worse ones
 
+> **Superseded by section 82.** Re-measured on today's build, this table is
+> inverted: the Horde now builds *more* settlers and founds *more* cities than
+> the Kingdom. The gap moved from founding to holding. Read this for the
+> method and section 82 for the numbers.
+
 Section 20's re-check found its own headline inverted -- "both sides found the
 same number of cities" became 9.76 against 12.39 -- and left the mechanism
 unidentified rather than guessed at. Instrumented over 108 games:
@@ -5406,3 +5411,80 @@ again. A full two-arm sweep is 216 games, about half an hour.
 
 `SWEEP_PER_BASE=1` runs the same arms in a minute, which is how you find out
 that an arm throws without finding out half an hour in.
+
+## 82. The Horde wins a third of its games, and the reason has moved
+
+The militia sweep in section 81 was asking about militia. It answered that (no
+effect on wins) and incidentally measured something larger: across its 108
+control games, **the Kingdom won 71 and the Horde 37**.
+
+That is 34%, about 3.3 standard deviations from even, so it is not the sample.
+The balance regression has been passing throughout, because it only asserts that
+neither side is hopeless -- and neither side is.
+
+### Section 61's founding gap has inverted
+
+Re-run with the same instrumentation on today's build, 54 games a set:
+
+| per game | orc (tuned / held-out) | human (tuned / held-out) |
+|---|---|---|
+| settlers built | **12.70 / 12.24** | 10.65 / 10.52 |
+| cities founded | **10.96 / 10.57** | 9.35 / 8.96 |
+| cities lost | 5.63 / 5.13 | **4.07 / 3.07** |
+| mean cities held | 5.66 / 5.65 | 6.10 / 5.98 |
+| cities at the end | 5.07 / 4.69 | **7.50 / 7.78** |
+
+Section 61 had the Horde building a quarter *fewer* settlers (12.83 against
+16.59) and founding a quarter fewer cities. Today it builds a fifth more and
+founds a fifth more. Whatever closed that gap closed it and kept going.
+
+**The Horde now out-expands the Kingdom and still ends with two and a half
+fewer cities**, because it loses nearly twice as many. Founding is not the
+problem any more. Holding is.
+
+### It is not the guard rule
+
+Section 61 left one thing unfinished: production priority when below target,
+where rule 1 of `chooseProduction` builds a defender for an ungarrisoned city
+*before* the settler rule is reached. That is now isolated, by asking the board
+the same question the rule asks, every half-turn, without hooking the AI:
+
+| share of below-target city-turns pre-empted by a guard | orc | human |
+|---|---|---|
+| tuned | 25.7% | **34.7%** |
+| held-out | 25.1% | **32.8%** |
+
+**The Kingdom is pre-empted more, on both sets.** The hypothesis was that the
+Horde leaves its cities empty, builds guards instead of settlers, and falls
+behind; the opposite is true, and the Horde is also the *less* ungarrisoned side
+(17.6%/13.9% against 19.4%/17.4%). Recorded as refuted rather than quietly
+dropped.
+
+### Where it actually goes wrong: turn 100 onwards
+
+Cities held, averaged over 54 games a set:
+
+| turn | orc (tuned / held-out) | human (tuned / held-out) |
+|---|---|---|
+| 25 | 3.59 / 3.85 | 4.35 / 4.15 |
+| 50 | 5.91 / 6.04 | 5.94 / 5.94 |
+| 75 | **6.15 / 6.26** | 6.04 / 5.78 |
+| 100 | 5.78 / 5.94 | 6.09 / 6.00 |
+| 150 | 4.89 / 5.46 | **6.39 / 6.50** |
+| 200 | 3.93 / 4.52 | 4.57 / 5.35 |
+| 250 | 3.30 / 3.46 | 3.63 / 3.85 |
+
+**The Horde is ahead at turn 75 and behind from turn 100.** It expands faster,
+peaks earlier, and is rolled back for the rest of the game. Both seed sets agree
+on the shape and on where it turns.
+
+Research volume is not it: 24.1 against 23.4 advances, and 25.0 against 24.1.
+The two sides learn about the same amount. What they learn it *into* has not
+been looked at, and that is the obvious next question -- the Kingdom's line runs
+through knights, archery and walls, and a rollback starting at turn 100 is the
+right shape for a defensive roster arriving.
+
+**Unfinished, deliberately.** The mechanism behind the rollback is not
+identified, and this section says so rather than guessing. What is established:
+the win rate is real and measured, the founding explanation is dead, the guard
+explanation is dead, and the collapse has a start time.
