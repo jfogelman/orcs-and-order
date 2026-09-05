@@ -6015,3 +6015,47 @@ these rows are buttons and inherit `white-space: nowrap`, which is right for a
 label on a control and wrong for a sentence. Below 720px the row stacks the
 sentence under the name, since a fixed name column is most of a narrow panel.
 
+### The council has to talk about what it interrupted for
+
+Reported from play with a screenshot: the audience was called about the treasury
+and the deadline, and the room then discussed farms, walls and the dead. One of
+two crises was addressed, by one advisor.
+
+The lines existed. The Quartermaster has one about losing money -- but each
+advisor says their **first** applicable concern and something else was above it.
+Ordering is the character, so it is not the ordering that gives way: a crisis
+names a `Topic`, and the room is assigned across the crises rather than each
+advisor deciding alone.
+
+Three separate mistakes on the way to that, all found by looking at the screen
+rather than by reasoning about it:
+
+1. **Preferring a topic per advisor was not enough.** The Quartermaster owns both
+   money and the clock, so he took the clock and the treasury went unspoken --
+   a tidier version of the reported bug. Crises now claim advisors one at a time,
+   worst first, and a claimed advisor is not asked twice.
+2. **List order decided who answered.** The Blademaster was assigned the treasury
+   because he is first in the array, while the Quartermaster said the same thing
+   anyway off his own list: two voices on the money, none on the clock. Topics
+   now name an owning department, and the clock belongs to *domestic* rather than
+   trade precisely so one person is not put on both fires.
+3. **The card printed a different line from the one the room chose.** `concern`
+   decided the speech bubble and `advisorLine` looked the line up again, so the
+   Quartermaster was *marked* as talking about the treasury and said the clock.
+   The chosen concern is passed in now.
+
+Four new lines so the common pairs have two voices between them: each military
+advisor minds about not being paid, and each domestic one about the reckoning
+counting people and roofs. They sit at the **end** of their lists -- available to
+a crisis, which searches by topic, and never displacing what the advisor would
+say unprompted.
+
+The screen also prints **what they came about** at the top, so a crisis nobody
+can speak to is visible rather than silently dropped.
+
+### And "no turns to the deadline"
+
+`turnsLeft` is `maxTurns - turn`, which is **zero on the final turn** -- a turn
+the player can still act in -- and `count(0, 'turn')` is "no turns". It now says
+*one last turn*.
+

@@ -3,9 +3,10 @@ import type { FactionId, GameState } from '../model/types';
 import { unitType } from '../model/units';
 import {
   ROLE_NAMES,
+  type Crisis,
   type Situation,
-  advisorConcern,
   advisorLine,
+  councilConcerns,
   advisorsFor,
   objectionsTo,
 } from '../model/advisors';
@@ -223,15 +224,31 @@ export function openCrisisCall(
   });
 }
 
-export function openAdvisors(state: GameState, playerId: number): void {
+export function openAdvisors(
+  state: GameState,
+  playerId: number,
+  /**
+   * What the council was summoned about, when it summoned itself.
+   *
+   * Reported from play: two crises were raised and the room then discussed
+   * farms, walls and the dead. Passing them through means an advisor who has a
+   * line on one of them leads with it -- and that the screen says at the top
+   * what it was called about, so a crisis nobody can speak to is still visible
+   * rather than silently dropped.
+   */
+  raised: readonly Crisis[] = [],
+): void {
   const player = state.players[playerId];
   const situation = situationOf(state, playerId);
   const advisors = advisorsFor(player.faction);
+  // Who speaks to what, decided across the whole room rather than per advisor:
+  // one voice per crisis where that is possible, worst crisis first.
+  const lines = councilConcerns(advisors, situation, raised);
 
   const card = (a: (typeof advisors)[number]) => {
     // Only somebody with something to say back is worth clicking, so the ones
     // who would draw nothing out of the room do not pretend otherwise.
-    const concern = advisorConcern(a, situation);
+    const concern = lines.get(a.id) ?? null;
     const contested = objectionsTo(a, concern).length > 0;
     // Two marks, because there are two different things worth knowing and the
     // cursor changing shape on hover told you neither.
@@ -261,7 +278,7 @@ export function openAdvisors(state: GameState, playerId: number): void {
         <span class="advisor-role muted">${escapeHtml(ROLE_NAMES[a.role])}</span>
         <span class="advisor-blurb muted">${escapeHtml(a.blurb)}</span>
       </div>
-      <div class="advisor-line">${escapeHtml(advisorLine(a, situation))}</div>
+      <div class="advisor-line">${escapeHtml(advisorLine(a, situation, concern))}</div>
       <div class="advisor-replies" hidden></div>
     </div>`;
   };
@@ -274,6 +291,16 @@ export function openAdvisors(state: GameState, playerId: number): void {
         Six people with opinions. They are not experts and they do not agree;
         each one wants what they have always wanted, and will find a reason.
       </div>
+      ${
+        raised.length > 0
+          ? `<div class="panel-body">
+               <div class="panel-title">What they came about</div>
+               <ul class="crisis-list">${raised
+                 .map((c) => `<li>${escapeHtml(c.headline)}</li>`)
+                 .join('')}</ul>
+             </div>`
+          : ''
+      }
       <div class="advisors">${advisors.map(card).join('')}</div>`,
     onMount: (root) => {
       // Art arrives a file at a time, so a missing portrait leaves the name and
@@ -304,7 +331,7 @@ export function openAdvisors(state: GameState, playerId: number): void {
           r.hidden = true;
           r.innerHTML = '';
         });
-        const objections = objectionsTo(who, advisorConcern(who, situation));
+        const objections = objectionsTo(who, lines.get(who.id) ?? null);
         if (objections.length === 0) return;
         replies.innerHTML = objections
           .map(

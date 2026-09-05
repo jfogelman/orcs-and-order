@@ -142,7 +142,14 @@ export type Topic =
   | 'expansion'
   | 'the-dead'
   | 'the-little-ones'
-  | 'the-spiral';
+  | 'the-spiral'
+  // Added for the crisis audience: when the council asks to be heard, the
+  // advisors have to talk about the thing they interrupted for, and a topic is
+  // how a crisis finds the lines that speak to it.
+  | 'the-clock'
+  | 'unrest'
+  | 'hunger'
+  | 'the-treasury';
 
 export interface AdvisorDef {
   id: string;
@@ -217,12 +224,99 @@ export interface Crisis {
   /** Stable, because it is what "already raised this one" is keyed on. */
   id: string;
   headline: string;
+  /**
+   * What the council has to talk about, having interrupted for it.
+   *
+   * Reported from play: two crises were raised and the advisors then discussed
+   * farms, walls and the dead. The lines that address a crisis already existed
+   * -- the Quartermaster has one about losing money -- but each advisor says
+   * their *first* applicable concern, and something else was above it. So a
+   * crisis names its topic, and an advisor summoned about that topic leads with
+   * the line they have on it.
+   */
+  topic: Topic;
+}
+
+/**
+ * How long is left, said the way somebody would say it.
+ *
+ * `turnsLeft` is `maxTurns - turn`, so on the final turn it is **zero** -- and
+ * `count(0, 'turn')` is "no turns", which produced "No turns to the deadline"
+ * on a turn the player could still act in. Reported from play. There is one
+ * turn left when it says zero; this says so.
+ */
+function toGo(n: number): string {
+  return n <= 0 ? 'one last turn' : count(n, 'turn');
 }
 
 /** How many turns of the current loss the treasury can still take. */
 function runway(s: Situation): number {
   if (s.goldPerTurn >= 0) return Infinity;
   return s.gold / -s.goldPerTurn;
+}
+
+/**
+ * Whose department a crisis is, so the right person answers for it.
+ *
+ * Without this the assignment ran in list order and gave the treasury to the
+ * Blademaster -- who does have a line about not being paid -- while the
+ * Quartermaster said the same thing anyway off his own concern list. Two voices
+ * on the money and none on the clock, which is a tidier version of the bug
+ * being fixed.
+ *
+ * The clock belongs to the domestic advisor rather than the trade one on
+ * purpose: points are citizens, advances and buildings, and giving trade both
+ * the money and the counting puts the same person on both fires.
+ */
+const TOPIC_OWNER: Partial<Record<Topic, AdvisorRole>> = {
+  'the-treasury': 'trade',
+  'the-clock': 'domestic',
+  unrest: 'domestic',
+  hunger: 'domestic',
+  'the-spiral': 'faith',
+};
+
+/**
+ * Who says what, when the council has summoned itself.
+ *
+ * One advisor per crisis where that is possible, **worst crisis first**. The
+ * naive version -- let every advisor prefer any raised topic -- put the
+ * Quartermaster on the clock and left the treasury unspoken, because he owns
+ * both topics and his clock line is first in his own list. Reported from play
+ * as exactly that: two crises raised, one addressed.
+ *
+ * So crises claim advisors, and an advisor already claimed is not asked again.
+ * Where nobody is left who can speak to a crisis it stays in the list the
+ * screen prints at the top, which is why that list exists.
+ */
+export function councilConcerns(
+  advisors: readonly AdvisorDef[],
+  s: Situation,
+  raised: readonly Crisis[],
+): Map<string, Concern | null> {
+  const said = new Map<string, Concern | null>();
+
+  for (const crisis of raised) {
+    // The department it belongs to first, then anybody else who has a line.
+    const owner = TOPIC_OWNER[crisis.topic];
+    const order = owner
+      ? [...advisors].sort((a, b) => Number(b.role === owner) - Number(a.role === owner))
+      : advisors;
+    for (const a of order) {
+      if (said.has(a.id)) continue;
+      const line = a.concerns.find((c) => c.about === crisis.topic && c.when(s));
+      if (line) {
+        said.set(a.id, line);
+        break;
+      }
+    }
+  }
+  // Everybody not speaking to a fire says whatever is on their mind, which is
+  // how five of six still sound like themselves.
+  for (const a of advisors) {
+    if (!said.has(a.id)) said.set(a.id, advisorConcern(a, s));
+  }
+  return said;
 }
 
 /**
@@ -237,6 +331,7 @@ export function crises(s: Situation): Crisis[] {
   if (s.dominance?.theirs) {
     out.push({
       id: 'dominance-theirs',
+      topic: 'the-clock',
       headline: `They hold most of the known world. ${count(s.dominance.turnsLeft, 'turn')} and it is over.`,
     });
   }
@@ -245,27 +340,30 @@ export function crises(s: Situation): Crisis[] {
   if (s.rioting > 0 && !s.calmAvailable && s.calmNeedsAdvance) {
     out.push({
       id: 'calm-spiral',
+      topic: 'the-spiral',
       headline:
         `${sentence(count(s.rioting, 'city'))} rioting and nothing we can build will stop it. ` +
         `We have never researched ${s.calmNeedsAdvance}.`,
     });
   } else if (s.rioting >= 2) {
-    out.push({ id: 'riots', headline: `${sentence(count(s.rioting, 'city'))} rioting.` });
+    out.push({ id: 'riots', topic: 'unrest', headline: `${sentence(count(s.rioting, 'city'))} rioting.` });
   }
   if (runway(s) < 5) {
     out.push({
       id: 'bankrupt',
+      topic: 'the-treasury',
       headline: `The treasury runs dry in ${count(Math.max(0, Math.floor(runway(s))), 'turn')}.`,
     });
   }
   if (s.deadline && !s.deadline.ahead && s.deadline.turnsLeft <= 10) {
     out.push({
       id: 'deadline-behind',
-      headline: `${sentence(count(s.deadline.turnsLeft, 'turn'))} to the deadline, and we are behind on points.`,
+      topic: 'the-clock',
+      headline: `${sentence(toGo(s.deadline.turnsLeft))} to the deadline, and we are behind on points.`,
     });
   }
   if (s.starving >= 2) {
-    out.push({ id: 'starving', headline: `${sentence(count(s.starving, 'city'))} losing people to hunger.` });
+    out.push({ id: 'starving', topic: 'hunger', headline: `${sentence(count(s.starving, 'city'))} losing people to hunger.` });
   }
   return out;
 }
@@ -288,7 +386,26 @@ export function newCrises(
   };
 }
 
-export function advisorConcern(a: AdvisorDef, s: Situation): Concern | null {
+export function advisorConcern(
+  a: AdvisorDef,
+  s: Situation,
+  /**
+   * Topics the council has been summoned about.
+   *
+   * An advisor with something to say on one of these says *that*, even if
+   * something they care about more is also true. Ordering is the character --
+   * the Knight-Marshal checks for enemies before walls -- and being asked
+   * directly about the fire is the one time character gives way.
+   *
+   * Falls through to their own first concern when they have nothing on any of
+   * it, which is how five of six still sound like themselves.
+   */
+  prefer: readonly Topic[] = [],
+): Concern | null {
+  if (prefer.length > 0) {
+    const onTopic = a.concerns.find((c) => c.about && prefer.includes(c.about) && c.when(s));
+    if (onTopic) return onTopic;
+  }
   return a.concerns.find((c) => c.when(s)) ?? null;
 }
 
@@ -394,6 +511,15 @@ const KINGDOM: AdvisorDef[] = [
           `An army marches on its stomach and ours is marching on optimism. Forward posts. ` +
           `Now, ideally before the marching.`,
       },
+      {
+        // Soldiers are paid. A treasury that runs dry is a military problem
+        // before it is anybody else's, which is a thing he will explain.
+        about: 'the-treasury',
+        when: (s) => s.goldPerTurn < 0 && s.gold < 60,
+        say: (s) =>
+          `${sentence(count(s.gold, 'coin'))} in the vault and falling. I am not a treasurer, ` +
+          `but I know what an unpaid garrison does, and it is not garrison.`,
+      },
     ],
     idle: [
       'Our footmen stand idle while orcs sharpen their axes on our fenceposts. Idle. Steel rusts from disuse faster than from blood.',
@@ -429,6 +555,7 @@ const KINGDOM: AdvisorDef[] = [
       },
       {
         when: (s) => s.rioting > 0,
+        about: 'unrest',
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} in open disorder. This is what happens. I shall ` +
           `not say what it is what happens *because of*. I shall simply stand here.`,
@@ -462,12 +589,14 @@ const KINGDOM: AdvisorDef[] = [
       },
       {
         when: (s) => s.rioting > 0,
+        about: 'unrest',
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} rioting. Have you tried a sturdier roof? Works for morale, ` +
           `works for mine collapses. Same principle, mostly.`,
       },
       {
         when: (s) => s.starving > 0,
+        about: 'hunger',
         say: (s) =>
           `${count(s.starving, 'city', 'cities')} eating less than it grows. That is not a mood, that is ` +
           `arithmetic, and arithmetic does not cheer up on its own.`,
@@ -483,6 +612,13 @@ const KINGDOM: AdvisorDef[] = [
         say: () =>
           `Not a copper going to keeping folk content. You can hold a wall up with nothing, ` +
           `too, right up until you cannot.`,
+      },
+      {
+        about: 'the-clock',
+        when: (s) => s.deadline !== null,
+        say: (s) =>
+          `${sentence(toGo(s.deadline!.turnsLeft))} before the reckoning, and reckonings count ` +
+          `people and roofs. Both of those take longer than you have. Start anyway.`,
       },
     ],
     retorts: {
@@ -506,19 +642,21 @@ const KINGDOM: AdvisorDef[] = [
         // Above even the dominance clock: that one is somebody winning, this
         // one is time running out on everybody, and it cannot be reversed.
         when: (s) => s.deadline !== null,
+        about: 'the-clock',
         say: (s) =>
           s.deadline!.level
-            ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes, and the ` +
+            ? `${sentence(toGo(s.deadline!.turnsLeft))} until the ledger closes, and the ` +
               `two columns are the same length. I have checked. Twice.`
             : s.deadline!.ahead
-              ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes and we ` +
+              ? `${sentence(toGo(s.deadline!.turnsLeft))} until the ledger closes and we ` +
                 `are the longer column. Do not do anything expensive and interesting.`
-              : `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes and we ` +
+              : `${sentence(toGo(s.deadline!.turnsLeft))} until the ledger closes and we ` +
                 `are the shorter column. Citizens, advances, structures. In that order. Now.`,
       },
       {
         // Before the money, because there shortly may not be a treasury.
         when: (s) => s.dominance !== null,
+        about: 'the-clock',
         say: (s) =>
           s.dominance!.theirs
             ? `They hold most of the known world. ${sentence(count(s.dominance!.turnsLeft, 'turn'))} ` +
@@ -528,6 +666,7 @@ const KINGDOM: AdvisorDef[] = [
       },
       {
         when: (s) => s.goldPerTurn < 0,
+        about: 'the-treasury',
         say: (s) =>
           `We are losing ${spell(Math.abs(s.goldPerTurn))} a turn. Losing. I have written it down ` +
           `in the ledger, in a colour I do not enjoy using.`,
@@ -584,6 +723,7 @@ const KINGDOM: AdvisorDef[] = [
       },
       {
         when: (s) => s.starving > 0,
+        about: 'hunger',
         say: () =>
           `A city that does not eat does not grow, and a realm that does not grow is simply ` +
           `a long, well-attended decline.`,
@@ -676,6 +816,13 @@ const HORDE: AdvisorDef[] = [
           `Our young are learning to fight by fighting and then by dying. It works. It is ` +
           `slow. A barracks is faster and I am impatient.`,
       },
+      {
+        about: 'the-treasury',
+        when: (s) => s.goldPerTurn < 0 && s.gold < 60,
+        say: (s) =>
+          `${sentence(count(s.gold, 'coin'))} left. I do not understand coin. I understand that ` +
+          `when it runs out somebody tells me to stop, and I do not enjoy being told to stop.`,
+      },
     ],
     idle: [
       'You want more farms? Farms do not swing axes. Though I suppose someone must feed the axe-swingers.',
@@ -699,12 +846,14 @@ const HORDE: AdvisorDef[] = [
       },
       {
         when: (s) => s.rioting > 0,
+        about: 'unrest',
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} rioting, boss. Very energetic. Could be worse — could be ` +
           `rioting *at us*. Give them something shiny, is my advice, I have no other advice.`,
       },
       {
         when: (s) => s.starving > 0,
+        about: 'hunger',
         say: (s) =>
           `${count(s.starving, 'city', 'cities')} running out of food. We tried eating optimism. Results ` +
           `disappointing, boss.`,
@@ -720,6 +869,13 @@ const HORDE: AdvisorDef[] = [
         say: () =>
           `Nothing set aside for keeping the lads happy. Happy lads dig. Unhappy lads also ` +
           `dig, but at the wrong things, boss.`,
+      },
+      {
+        about: 'the-clock',
+        when: (s) => s.deadline !== null,
+        say: (s) =>
+          `${sentence(toGo(s.deadline!.turnsLeft))} left, boss. Dey count heads at da end. ` +
+          `We got heads. We could have more heads. Just saying.`,
       },
     ],
     idle: [
@@ -793,6 +949,7 @@ const HORDE: AdvisorDef[] = [
       },
       {
         when: (s) => s.rioting > 0,
+        about: 'unrest',
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} in uproar. Delicious. Nothing motivates study like a deadline ` +
           `made of angry people.`,
@@ -832,6 +989,7 @@ const HORDE: AdvisorDef[] = [
       },
       {
         when: (s) => s.rioting > 0,
+        about: 'unrest',
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} forgetting itself. Good. A realm that never suffers never ` +
           `learns what it is for.`,
@@ -863,18 +1021,20 @@ const HORDE: AdvisorDef[] = [
     concerns: [
       {
         when: (s) => s.deadline !== null,
+        about: 'the-clock',
         say: (s) =>
           s.deadline!.level
-            ? `Both heads counted the turns. ${sentence(count(s.deadline!.turnsLeft, 'turn'))} left. ` +
+            ? `Both heads counted the turns. ${sentence(toGo(s.deadline!.turnsLeft))} left. ` +
               `Both heads counted the score. Same number. Neither head likes this.`
             : s.deadline!.ahead
-              ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} left and we are winning on the ` +
+              ? `${sentence(toGo(s.deadline!.turnsLeft))} left and we are winning on the ` +
                 `counting. Right head wants to attack something. Do not listen to right head.`
-              : `${sentence(count(s.deadline!.turnsLeft, 'turn'))} left and we are losing on the ` +
+              : `${sentence(toGo(s.deadline!.turnsLeft))} left and we are losing on the ` +
                 `counting. More citizens, more advances, more buildings. Both heads agree, which is rare.`,
       },
       {
         when: (s) => s.dominance !== null,
+        about: 'the-clock',
         say: (s) =>
           s.dominance!.theirs
             ? `Both heads counted the world. Both heads say most of it is theirs. ` +
@@ -884,12 +1044,14 @@ const HORDE: AdvisorDef[] = [
       },
       {
         when: (s) => s.goldPerTurn < 0,
+        about: 'the-treasury',
         say: (s) =>
           `Left head says we lose ${spell(Math.abs(s.goldPerTurn))} coin every turn. Right head ` +
           `says that is fine because coin is not food. Left head is upset.`,
       },
       {
         when: (s) => s.gold < 20,
+        about: 'the-treasury',
         say: (s) =>
           `${spell(s.gold)} coin. Both heads counted. Both heads got ${spell(s.gold)}. Left head is ` +
           `worried, right head is hungry, nobody is happy.`,
@@ -940,7 +1102,21 @@ export function advisorsFor(faction: FactionId): AdvisorDef[] {
  * by turn rather than at random so that opening the panel twice on the same
  * turn does not get two different opinions out of the same person.
  */
-export function advisorLine(advisor: AdvisorDef, s: Situation): string {
+export function advisorLine(
+  advisor: AdvisorDef,
+  s: Situation,
+  /**
+   * The line the room has decided this one is giving, from `councilConcerns`.
+   *
+   * Passed in rather than looked up again, because it was looked up again --
+   * the crisis screen redirected the *bubble mark* and then printed whatever
+   * this function found on its own, so the Quartermaster was marked as talking
+   * about the treasury and said the clock. Reported from play, twice: once as
+   * the original bug and once as this.
+   */
+  chosen?: Concern | null,
+): string {
+  if (chosen) return sentence(chosen.say(s));
   for (const concern of advisor.concerns) {
     if (concern.when(s)) return sentence(concern.say(s));
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Situation } from '../src/model/advisors';
-import { crises, newCrises } from '../src/model/advisors';
+import { ADVISORS, advisorConcern, councilConcerns, crises, newCrises } from '../src/model/advisors';
 
 const base = (over: Partial<Situation>): Situation =>
   ({
@@ -118,5 +118,76 @@ describe('asking once, not every turn', () => {
   it('copes with a save that never knew about any of this', () => {
     // `warnedOf` is optional, so an old save means "nothing said yet".
     expect(newCrises(base({ rioting: 3 })).raise.map((c) => c.id)).toEqual(['riots']);
+  });
+});
+
+/**
+ * Reported from play with a screenshot: the council interrupted about the
+ * treasury and the deadline, and then discussed farms, walls and the dead. Only
+ * one advisor addressed one of the two.
+ *
+ * The lines existed -- the Quartermaster has one about losing money -- but each
+ * advisor says their *first* applicable concern, and something else was above
+ * it. Ordering is the character, so it is not the ordering that gives way: a
+ * crisis names a topic, and an advisor summoned about that topic leads with
+ * whatever they have on it.
+ */
+describe('the council addressing what it interrupted for', () => {
+  const orcs = ADVISORS.filter((a) => a.faction === 'orc');
+  /** What the room actually says, decided across the whole room. */
+  const room = (s: Situation) => [...councilConcerns(orcs, s, crises(s)).values()];
+  const topicsSaid = (s: Situation) => room(s).map((c) => c?.about);
+
+  it('gives every crisis somebody who talks about it', () => {
+    const s = base({ rioting: 3, gold: 2, goldPerTurn: -4 });
+    const raised = crises(s);
+    expect(raised.length).toBeGreaterThan(1);
+
+    const covered = new Set(topicsSaid(s));
+    for (const c of raised) {
+      expect(covered.has(c.topic), `nobody speaks to ${c.id}`).toBe(true);
+    }
+  });
+
+  it('is the exact case that was reported: money and the clock at once', () => {
+    const s = base({
+      gold: 2,
+      goldPerTurn: -4,
+      deadline: { turnsLeft: 0, ahead: false, level: false },
+    });
+    const topics = crises(s).map((c) => c.topic);
+    expect(topics).toContain('the-treasury');
+    expect(topics).toContain('the-clock');
+
+    // The naive version put the Quartermaster on the clock and left the
+    // treasury unspoken, because he owns both and his clock line comes first.
+    const said = topicsSaid(s);
+    expect(said).toContain('the-treasury');
+    expect(said).toContain('the-clock');
+  });
+
+  it('does not put the whole room on one subject', () => {
+    const s = base({ gold: 2, goldPerTurn: -4 });
+    const said = topicsSaid(s);
+    // One voice per crisis. Six advisors all reciting the treasury would be a
+    // worse screen than the one that was reported.
+    expect(said.filter((t) => t === 'the-treasury').length).toBe(1);
+  });
+
+  it('does not redirect anybody when nothing was raised', () => {
+    const s = base({ rioting: 3, gold: 2, goldPerTurn: -4 });
+    const asked = councilConcerns(orcs, s, []);
+    for (const a of orcs) {
+      expect(asked.get(a.id)).toBe(advisorConcern(a, s));
+    }
+  });
+
+  it('never says "no turns" on a turn you can still act in', () => {
+    // `turnsLeft` is zero on the final turn, and `count(0, "turn")` is "no
+    // turns" -- which is what the screenshot showed.
+    const s = base({ deadline: { turnsLeft: 0, ahead: false, level: false } });
+    const line = crises(s).find((c) => c.id === 'deadline-behind')!.headline;
+    expect(line).not.toMatch(/no turns/i);
+    expect(line).toMatch(/one last turn/i);
   });
 });
