@@ -5745,3 +5745,62 @@ Not tried, and deliberately not guessed at:
   it is always a step behind.
 
 Any of these is a sweep. `npm run growth` is the instrument.
+
+## 86. The content limit was never a neutral rule
+
+Section 85 named three ways to break the Horde's riot loop and pulled none of
+them. All three swept against one shared control, 432 games, two seed sets:
+
+| arm | tuned | held-out | orc wins /108 | orc population |
+|---|---|---|---|---|
+| control (base 5) | 21-33 | 16-38 | 37 (34%) | 31.8 / 30.3 |
+| **base 6** | **27-27** | **27-27** | **54 (50%)** | **42.2 / 38.9** |
+| build the Totem earlier | 18-36 | 19-35 | 37 (34%) | 24.6 / 32.5 |
+| buy calm earlier | 17-37 | 15-39 | 32 (30%) | 22.9 / 26.2 |
+
+**`CALM.base` is now six.**
+
+### Why it is not the Horde buff it looks like
+
+Dead even on both seed sets *independently* -- 27-27 and 27-27 -- which nothing
+else came near. And the Kingdom barely notices: its population goes 47.4 to 47.8
+and 53.7 to 54.2, its cities 7.50 to 6.91 and 7.78 to 7.48.
+
+That is the argument. The Kingdom was never the side pressed against the limit,
+so raising it hands it almost nothing. Only the faster-growing side was, which
+is exactly section 85's point: **a flat limit is not a neutral rule when one
+side grows a fifth faster.** Five was quietly a handicap applied to whoever
+built the better empire.
+
+The Horde also gains three advances (24.1 to 27.2, 25.0 to 27.4), which is the
+loop unwinding rather than a second effect: cities that are not rioting produce
+trade, and trade is research.
+
+### Both AI levers failed, one of them backwards
+
+**Building the Totem earlier changed nothing** -- 37 wins either way -- and cost
+the Horde a city (5.07 to 4.11 on the tuned set). Starting the building sooner
+does not create the shields to finish it; it just displaces something else.
+
+**Buying calm earlier was actively worse**, 32 wins against 37, and it is clear
+why: research fell with it, 24.1 to 22.4 and 25.0 to 23.7. Trade spent on
+luxuries is trade not spent on study, and section 47 already found that a fixed
+calm rate cost the AI a fifth of its research and took the Horde from 10-19 to
+4-29. This is the same trade, made a little earlier, and it fails the same way.
+
+**The lesson is the one section 61 keeps re-teaching**: when a mechanism is
+structural, the AI policy knobs around it move nothing. Both policy arms were
+plausible, both were measured, both are recorded as refuted.
+
+### Kept as an arm
+
+`base 5` stays in `tools/sweep.run.test.ts` as a live arm rather than a note, so
+the result can be re-run against the old value instead of taken on trust. The
+next person to doubt this can spend an hour and find out.
+
+### What is not claimed
+
+Games run about twenty-five turns longer (238 to 267, 252 to 263), so fewer end
+in an early conquest. Whether that is better is a matter of taste and has not
+been measured. And 50% is parity between two AIs on this map generator; it says
+nothing about how the game plays for a person.

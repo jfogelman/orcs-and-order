@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { City, GameState, Unit } from '../src/model/types';
 import {
-  BASE_CONTENT,
+  CALM,
   CALM_BONUS,
   cityYield,
   contentLimit,
@@ -27,7 +27,7 @@ function riotingCity(): { state: GameState; city: City } {
   const state = createGame({ seed: 20260822, width: 40, height: 30 });
   const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
   const city = foundCity(state, settler)!;
-  city.size = BASE_CONTENT + 4; // comfortably over any limit it can reach
+  city.size = CALM.base + 4; // comfortably over any limit it can reach
   city.disorder = true;
   return { state, city };
 }
@@ -62,7 +62,7 @@ describe('a rioting city', () => {
     const state = createGame({ seed: 20260822, width: 40, height: 30 });
     const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
     const city = foundCity(state, settler)!;
-    city.size = BASE_CONTENT + 1; // one over the bare limit
+    city.size = CALM.base + 1; // one over the bare limit
     city.producing = { kind: 'calm' } as never;
 
     beginPlayerTurn(state, 0);
