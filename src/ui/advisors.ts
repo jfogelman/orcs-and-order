@@ -17,7 +17,7 @@ import {
   isGarrisoned,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
-import { DOMINANCE } from '../sim/turn';
+import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { TECHS } from '../model/techs';
 import { tradeRates, unlockedBuildings } from '../sim/research';
 import { TECHS_BY_ID } from '../model/techs';
@@ -119,9 +119,25 @@ export function situationOf(state: GameState, playerId: number): Situation {
     dominance = { turnsLeft: left, theirs: p.id !== playerId };
   }
 
+  // The deadline, once it is close enough to plan around. `CLOCK_WARNINGS[0]`
+  // rather than a number of its own, so the advisors start talking about it on
+  // the same turn the log first mentions it.
+  const left = turnsLeft(state);
+  const scores = state.players.filter((p) => p.alive).map((p) => ({ id: p.id, score: playerScore(state, p.id) }));
+  const best = Math.max(...scores.map((s) => s.score));
+  const deadline: Situation['deadline'] =
+    left > CLOCK_WARNINGS[0] || left < 0
+      ? null
+      : {
+          turnsLeft: left,
+          ahead: playerScore(state, playerId) >= best,
+          level: scores.filter((s) => s.score === best).length > 1,
+        };
+
   return {
     turn: state.turn,
     faction: player.faction,
+    deadline,
     cities: cities.length,
     rioting,
     restless,

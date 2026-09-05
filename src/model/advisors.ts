@@ -98,6 +98,15 @@ export interface Situation {
    * what advisors are for.
    */
   dominance: { turnsLeft: number; theirs: boolean } | null;
+  /**
+   * The deadline, once it is close enough to be worth planning around.
+   *
+   * Null until then, so an advisor can simply ask whether it is set rather than
+   * doing arithmetic about the turn limit in every line that mentions it.
+   * `ahead` is the points standing as it currently stands, which is the only
+   * part of it a player can still do anything about.
+   */
+  deadline: { turnsLeft: number; ahead: boolean; level: boolean } | null;
 }
 
 /** One thing an advisor might be exercised about, and what they say about it. */
@@ -399,6 +408,20 @@ const KINGDOM: AdvisorDef[] = [
     faction: 'human',
     blurb: 'Gold-threaded beard. Abacus of carved stone beads.',
     concerns: [
+      {
+        // Above even the dominance clock: that one is somebody winning, this
+        // one is time running out on everybody, and it cannot be reversed.
+        when: (s) => s.deadline !== null,
+        say: (s) =>
+          s.deadline!.level
+            ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes, and the ` +
+              `two columns are the same length. I have checked. Twice.`
+            : s.deadline!.ahead
+              ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes and we ` +
+                `are the longer column. Do not do anything expensive and interesting.`
+              : `${sentence(count(s.deadline!.turnsLeft, 'turn'))} until the ledger closes and we ` +
+                `are the shorter column. Citizens, advances, structures. In that order. Now.`,
+      },
       {
         // Before the money, because there shortly may not be a treasury.
         when: (s) => s.dominance !== null,
@@ -744,6 +767,18 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Two heads. One does the maths, one eats the samples.',
     concerns: [
+      {
+        when: (s) => s.deadline !== null,
+        say: (s) =>
+          s.deadline!.level
+            ? `Both heads counted the turns. ${sentence(count(s.deadline!.turnsLeft, 'turn'))} left. ` +
+              `Both heads counted the score. Same number. Neither head likes this.`
+            : s.deadline!.ahead
+              ? `${sentence(count(s.deadline!.turnsLeft, 'turn'))} left and we are winning on the ` +
+                `counting. Right head wants to attack something. Do not listen to right head.`
+              : `${sentence(count(s.deadline!.turnsLeft, 'turn'))} left and we are losing on the ` +
+                `counting. More citizens, more advances, more buildings. Both heads agree, which is rare.`,
+      },
       {
         when: (s) => s.dominance !== null,
         say: (s) =>

@@ -19,6 +19,8 @@ function calm(): Situation {
   return {
     turn: 10,
     faction: 'orc',
+    // Turn 10 of 300: the deadline is not a thing anybody is thinking about.
+    deadline: null,
     cities: 4,
     rioting: 0,
     restless: 0,
