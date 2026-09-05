@@ -167,6 +167,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     contentBonus: 2,
     garrisonNeeded: 2,
+    // Somewhere to put them first. A posting is soldiers standing about on
+    // purpose, and that is what a barracks is for -- which also gives the
+    // barracks a second reason to exist, having had only veterancy before.
+    needs: 'barracks',
     blurb:
       'Two orcs stand here at all times and look at everybody. Nobody has ' +
       'explained what they are for. Everybody has worked it out.',
@@ -179,6 +183,10 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     upkeep: 1,
     contentBonus: 2,
     garrisonNeeded: 2,
+    // Somewhere to put them first. A posting is soldiers standing about on
+    // purpose, and that is what a barracks is for -- which also gives the
+    // barracks a second reason to exist, having had only veterancy before.
+    needs: 'barracks',
     blurb:
       'A friendly reminder that you are being watched, delivered by two ' +
       'people who are watching.',

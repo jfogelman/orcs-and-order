@@ -6162,6 +6162,33 @@ the rule needs two, and `chooseProduction` will not spend thirty shields on a
 building that would do nothing. The games never diverge because no decision ever
 differs.
 
+### It needs a barracks, which gives the barracks a reason to exist
+
+Somewhere to put them first. A posting is soldiers standing about on purpose,
+which is what a barracks is for -- and the barracks needed the help: section 84
+measured one standing in **0.37 and 0.07 games out of one**, so it was very
+nearly dead weight bought for veterancy and little else.
+
+No new plumbing. `needs` already existed for exactly this, and is why a Cathedral
+sits behind a Chapel. It gates **building** the thing rather than owning it, so a
+barracks lost to a sack does not quietly switch off a posting that is already
+standing -- which is how the Cathedral behaves too, and the alternative would be
+a cascade nobody could see coming.
+
+### It is not the price of having a guard
+
+Worth stating because it would be a strange rule if it were. A Posting buys
+**content**. Everything else a soldier standing in a city does -- hold it,
+defend it, raise militia, count as garrisoned -- is unchanged and has nothing to
+do with whether anybody built one. There are tests for each: one soldier still
+garrisons a city with no Posting anywhere, militia is identical either way, and
+so is defence, because a Posting has no `defenseMult`. It buys patience, not
+walls.
+
+The city panel's dormant marker was asking `isGarrisoned` -- a yes/no -- which
+would have shown a Posting with one soldier in it as working while it paid
+nothing. It asks for the count now.
+
 ### Which makes it a player's tool, deliberately
 
 There is precedent and it is explicit: `AI_TUNING.rushBuying` is off for the same
