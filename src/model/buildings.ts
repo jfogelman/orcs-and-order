@@ -63,6 +63,15 @@ export interface BuildingDef {
    */
   needsGarrison?: boolean;
   /**
+   * Soldiers the city must be holding before this does anything, where one is
+   * not enough.
+   *
+   * `needsGarrison` means one, which is what the AI keeps in every city anyway
+   * -- so a bonus gated on it costs that AI nothing. Two is the smallest number
+   * that is actually a soldier: one more than the garrison already there.
+   */
+  garrisonNeeded?: number;
+  /**
    * Extends supply to this city, so units near it fight and heal normally.
    *
    * Without one, only the capital supplies anything -- which is what stops a
@@ -149,6 +158,30 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'This would have been a marvellous ranged weapon if anybody here ' +
       'understood wheels. As it stands, everyone gets very worked up and ' +
       'runs out to fight instead, which turns out to work.',
+  },
+  orcPosting: {
+    id: 'orcPosting',
+    name: 'Orc Posting',
+    faction: 'orc',
+    cost: 30,
+    upkeep: 1,
+    contentBonus: 2,
+    garrisonNeeded: 2,
+    blurb:
+      'Two orcs stand here at all times and look at everybody. Nobody has ' +
+      'explained what they are for. Everybody has worked it out.',
+  },
+  soldierPosting: {
+    id: 'soldierPosting',
+    name: 'Soldier Posting',
+    faction: 'human',
+    cost: 30,
+    upkeep: 1,
+    contentBonus: 2,
+    garrisonNeeded: 2,
+    blurb:
+      'A friendly reminder that you are being watched, delivered by two ' +
+      'people who are watching.',
   },
   totem: {
     id: 'totem',

@@ -5086,6 +5086,18 @@ something you cannot pick has told you nothing, twice.
 
 ## 76. Push and pull: the advisors know things nobody is being told
 
+> **Built, by section 88.** Both alerts exist as crises: two or more cities
+> rioting, and the treasury keyed on **runway** exactly as this section asked.
+>
+> The interesting part is what turned out not to be needed. This section
+> reasoned that "losing money consistently" is a *trend*, that nothing in the
+> game remembers a previous turn, and that it therefore wanted a schema change
+> -- a ring of recent `goldPerTurn`, or the turn the balance last went positive.
+> None of that was built, because **runway is not a trend**: `gold / -goldPerTurn`
+> is a number about right now that answers the question the trend was a proxy
+> for. The last paragraph below had the answer in it and this section did not
+> notice.
+
 Everything the council says today is **pull**. It waits in a panel until you
 open it, so the game can be quietly going wrong for twenty turns while six
 people who noticed say nothing.
@@ -6103,3 +6115,65 @@ limit to zero for the Horde alone -- every city rioting from the first citizen
 -- fails three of the four with the side and the measure named:
 
 > *the Horde has almost no cities left: expected 0 to be greater than 2.7*
+
+## 91. Soldier Posting, and a measurement that came back at zero
+
+Section 70 asked for content bought with **soldiers** rather than trade, on the
+grounds that every existing way out of a riot spends the same currency wearing a
+different hat -- a Totem costs shields and upkeep, Placating spends the city's
+whole production, and the calm share spends empire-wide trade.
+
+**Orc Posting / Soldier Posting**: 30 shields, 1 upkeep, **+2 content while two
+soldiers stand in the city**. Unlocked by the barracks advance on each side --
+`To Be An Orc` and `Join the Army` -- which is the joke: the advance that teaches
+you to have soldiers teaches you to point them at your own people. Cheaper and
+earlier than a Totem, 30 against 40 from a 45-beaker advance against 65, so the
+soldiers are genuinely the price.
+
+### Two soldiers, not one
+
+`needsGarrison` already existed and the gold buildings use it, but it means
+**one** -- which is exactly what the AI keeps in every city anyway, so a bonus
+gated on it costs nothing at all. `garrisonNeeded: 2` is one more than the
+garrison already there, which is the smallest number that is actually a soldier.
+
+And a latent fault found on the way: **`contentLimit` bypassed `sumBonus`
+entirely**, adding `contentBonus` straight off the building list. The garrison
+gate existed and that function was not asking it. No live effect -- nothing
+gated was a content building until now -- and a Posting would have calmed an
+empty city.
+
+### The measurement came back at exactly zero
+
+216 games, two seed sets, with and without:
+
+| arm | tuned | held-out | cities | population |
+|---|---|---|---|---|
+| no posting | 27-27 | 27-27 | 5.96/6.91 | 42.2/47.8 |
+| posting | 27-27 | 27-27 | 5.96/6.91 | 42.2/47.8 |
+
+Identical to the decimal on every column, which is precisely the tell section 59
+warns about -- so it was checked rather than believed. The lever moves the number
+it should (a garrisoned Posting reads 8 against a base of 6, and 6 with the flag
+off), and the building **is** offered to a researched Horde. Both verified.
+
+So the zero is real: **the AI never builds one.** It keeps one soldier per city,
+the rule needs two, and `chooseProduction` will not spend thirty shields on a
+building that would do nothing. The games never diverge because no decision ever
+differs.
+
+### Which makes it a player's tool, deliberately
+
+There is precedent and it is explicit: `AI_TUNING.rushBuying` is off for the same
+shape of reason -- the mechanic exists, a person can use it, the AI does not.
+Shipping it means a human playing either side has an option their opponent will
+not take. That is worth saying out loud rather than discovering.
+
+It also means this changes no balance, which the numbers above establish about
+as firmly as anything in this file.
+
+**The open question is whether the mechanic is any good**, and the measurement
+that would answer it is different: teach the AI to hold two soldiers where a
+Posting is built, and sweep *that*. If posting two soldiers is worth more than
+what those soldiers do elsewhere, an AI that does it should win more. That is a
+real change to `garrisonPerCity` and its own piece of work.
