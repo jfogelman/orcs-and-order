@@ -10,7 +10,19 @@ import type { GameSettings, TerrainId } from '../model/types';
  * not also be a literal buried in the generator, or the two drift apart and the
  * encyclopedia starts lying quietly.
  */
-export const SPECIAL_CHANCE = 0.06;
+export const SPECIALS = {
+  /**
+   * Chance a tile that could carry a special does.
+   *
+   * A mutable object rather than a bare number so a sweep can move it, in the
+   * manner of section 59. Section 66 said to measure what the existing eight are
+   * worth **before** adding new kinds of special on top, since adding to an
+   * unmeasured baseline is how a sweep becomes unreadable -- which sections 17
+   * and 21 both learned the hard way.
+   */
+  chance: 0.06,
+};
+
 
 export interface StartPosition {
   x: number;
@@ -355,7 +367,7 @@ function generateAttempt(
 
   const specials: number[] = new Array(w * h).fill(0);
   for (let i = 0; i < specials.length; i++) {
-    if (TERRAIN[terrain[i]].special && rng.chance(SPECIAL_CHANCE)) specials[i] = 1;
+    if (TERRAIN[terrain[i]].special && rng.chance(SPECIALS.chance)) specials[i] = 1;
   }
 
   const { starts, mainlandSize } = pickStarts(terrain, specials, w, h, playerCount);

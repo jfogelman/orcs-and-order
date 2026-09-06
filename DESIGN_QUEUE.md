@@ -6271,3 +6271,69 @@ cities behind the line, which is where being pleased with yourself belongs.
 Out of the renderer and into `sim/city`, because it is a statement about the
 board rather than about drawing -- which also means it can be tested without a
 canvas. Mapping a condition to a picture stays the renderer's business.
+
+## 93. What the eight specials are worth, which is not nothing
+
+Section 66 wanted two things: more than one special per terrain, and specials
+that do something other than swap yields. It also said, plainly, to **measure
+the existing eight first** -- `SPECIAL_CHANCE` had sat at 0.06 since it was
+written and had never been swept, and adding new kinds on top of an unmeasured
+baseline is how a sweep becomes unreadable.
+
+324 games, three arms, two seed sets:
+
+| arm | tuned | held-out | orc wins /108 | fights a game |
+|---|---|---|---|---|
+| none (0) | 29-25 | 31-23 | **60 (56%)** | 34 / 33 |
+| as shipped (0.06) | 27-27 | 27-27 | **54 (50%)** | 27 / 25 |
+| plentiful (0.18) | 25-29 | 24-30 | **49 (45%)** | 20 / 19 |
+
+### Specials are a Kingdom lever, and nobody knew
+
+Monotonic, and **both seed sets agree at every step**: the more resources on the
+map, the better the Kingdom does. Sixty orc wins down to forty-nine across the
+range, an eleven-point swing on a number that was never chosen for balance.
+
+The population figures say where it goes. From none to plentiful, tuned: orc
+34.7 to 45.2, human 40.3 to 55.2. Held-out is starker -- orc 41.3 to **41.1**,
+human 42.1 to **60.1**. The Horde gains nothing at all there and the Kingdom
+gains forty per cent.
+
+The mechanism is almost certainly section 84's. Most specials are trade and
+shields -- A Very Deep Hole is 0/2/6, Bones Worth Something 0/1/5, Smells Like
+Money 1/4/0 -- and section 84 measured the Kingdom converting level research
+into twice the army and twice the buildings. **Specials hand out the currency
+the Kingdom is better at spending.** More of them is a bigger gift to whoever
+converts it better, which is not the Horde.
+
+### 0.06 is where the balance is, by luck
+
+Both sets return exactly 27-27 at the shipped value. That is either a fortunate
+guess or somebody's good instinct, and either way it is now a **measured
+constant rather than an arbitrary one**: moving it in either direction moves the
+faction balance, and anybody tempted to tune it for map flavour should know they
+are tuning the win rate.
+
+Left at 0.06.
+
+### And they buy peace
+
+Fights a game fall by nearly half: 34 with none, 27 as shipped, 20 with plenty.
+City captures go the other way, 7.0 to 9.2 to 10.0, so it is not that the map
+gets quieter -- it is that prosperity buys off the early skirmishing and what
+fighting remains is decisive. Nobody asked for that and it is worth knowing.
+
+### Which inverts section 66's two directions
+
+The obvious reading of section 66 is that **more specials per terrain** is the
+cheap, safe, flavourful half and **specials that are rules** is the ambitious
+half. The measurement says the opposite about the risk:
+
+- **More yield specials, or more per terrain, is a Kingdom buff** whose size is
+  now known. It cannot be added for flavour without being measured for balance.
+- **Specials that are not yields** -- defensive ground, a ford, a pass -- do not
+  touch the trade economy at all, so they are the direction that does *not* move
+  this dial. Section 66's ambitious half is its safer half.
+
+That is the sequencing this section changes, and it is exactly the thing section
+66 was worried about not knowing.

@@ -8,6 +8,7 @@ import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
 import { SPELL_TURNS } from '../src/sim/status';
+import { SPECIALS } from '../src/sim/worldgen';
 import { DOMINANCE, REGEN, SCORE_WEIGHTS, beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
 /**
@@ -57,6 +58,7 @@ export const LEVERS: Record<string, object> = {
   SACKING,
   SCORE_WEIGHTS,
   SETTLER,
+  SPECIALS,
   SPELL_TURNS,
   SPLIT,
   SUPPLY,

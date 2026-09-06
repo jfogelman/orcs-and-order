@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
+import { SPECIALS } from '../src/sim/worldgen';
 import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 
@@ -42,16 +43,22 @@ const control = () => {
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
   POSTING.enabled = true;
+  SPECIALS.chance = 0.06;
 };
 
 const ARMS: Arm[] = [
-  // Section 70. A Posting calms a city while two soldiers stand in it, which
-  // is the one content lever not bought with trade. The question is whether it
-  // moves anything at all for an AI that keeps one soldier per city: if the
-  // answer is no, it is a player-facing option and inert to balance, which is
-  // a perfectly good result and worth knowing before shipping it as one.
-  { label: 'no posting', apply: () => { control(); POSTING.enabled = false; } },
-  { label: 'posting', apply: control },
+  // Section 66, and the thing that section says to do first: nobody has ever
+  // measured what the existing eight specials are worth. `SPECIAL_CHANCE` has
+  // sat at 0.06 since it was written and has never been swept, and adding new
+  // *kinds* of special on top of an unmeasured baseline is how a sweep becomes
+  // unreadable -- which sections 17 and 21 both learned the hard way.
+  //
+  // A world with none of them against the one we have against one with plenty.
+  // The seed still decides the map; what changes is how often a tile that could
+  // carry a resource does.
+  { label: 'no specials', apply: () => { control(); SPECIALS.chance = 0; } },
+  { label: 'as shipped', apply: control },
+  { label: 'plentiful', apply: () => { control(); SPECIALS.chance = 0.18; } },
 ];
 
 /**

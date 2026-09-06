@@ -8,6 +8,7 @@ import { CREATURES, CREATURES_BY_ID, UNIT_TYPES, unitType } from '../model/units
 import type { UnitTypeDef } from '../model/units';
 import type { FactionId, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
+import { SPECIALS } from '../sim/worldgen';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 
@@ -334,7 +335,7 @@ export function openPedia(player: Player, focus?: string): void {
       </div>
       <div class="pedia-pane" data-pane="terrain" hidden>
         <p class="flavor">
-          Yields are food / shields / trade. About one tile in sixteen carries a
+          Yields are food / shields / trade. About one tile in ${Math.round(1 / SPECIALS.chance)} carries a
           <em>land special</em> &mdash; the marked ones on the map. A special
           <strong>replaces</strong> what the tile would otherwise produce rather than
           adding to it, and every one of them is an improvement on the plain ground.
