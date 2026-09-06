@@ -1117,6 +1117,95 @@ export function foundCity(state: GameState, unit: Unit): City | null {
 
 /** Default production for a newly captured or confused city. */
 /** A city's setting, defaulting to `ask` for anything that never set one. */
+/**
+ * What a settlement is quietly doing, for the two markers section 72 drew and
+ * could not attach to anything.
+ *
+ * Both are deliberately about states the map cannot otherwise show. Everything
+ * already marked is bad news -- besieged, rioting, starving, still smoking --
+ * and the happiness economy in particular was all punishment and no reward.
+ */
+export const CELEBRATION = {
+  /**
+   * Citizens of headroom before the limit. Section 85 measured the average at
+   * about one and a half, so three is genuinely comfortable rather than merely
+   * not-rioting.
+   */
+  headroom: 3,
+  /**
+   * A city has to be somebody before it can be pleased with itself. A new
+   * settlement of two with five citizens of headroom is not celebrating, it is
+   * empty.
+   */
+  minSize: 5,
+};
+
+/**
+ * A city doing well enough to be worth looking at.
+ *
+ * Content, big enough to matter, and still growing -- the last because a city
+ * sitting comfortably at a standstill is fine rather than celebrating, and the
+ * difference is what makes the marker mean anything.
+ */
+export function isCelebrating(state: GameState, city: City): boolean {
+  if (city.disorder || isRuined(state, city)) return false;
+  if (city.size < CELEBRATION.minSize) return false;
+  if (foodSurplus(state, city) <= 0) return false;
+  return contentLimit(state, city) - city.size >= CELEBRATION.headroom;
+}
+
+/**
+ * A city with nothing on order, waiting to be told.
+ *
+ * Banking shields *because nobody has said what to build* -- not because it was
+ * told to bank them. A city set to `coin` on purpose is doing its job and is not
+ * idle; the difference is the whole point of the marker, which exists to find
+ * the ones you have forgotten.
+ */
+export function isIdle(city: City): boolean {
+  return city.producing.kind === 'coin' && autoBuildOf(city) === 'ask';
+}
+
+/**
+ * Which badge a settlement is wearing, or none. Worst news first.
+ *
+ * Every state here is read from something the rules already track, rather than
+ * invented for the picture: `disorder` is the riot flag, starvation is a food
+ * deficit, a siege is somebody else's fighter standing next to the place, and
+ * resettling is the timer capture sets. Nothing here is new game state.
+ *
+ * Only one is shown at a time. A city that is besieged *and* rioting *and*
+ * starving is a city with one problem worth naming, and three markers stacked
+ * in a corner at twelve pixels is a smudge rather than information.
+ *
+ * Lives here rather than in the renderer because it is a statement about the
+ * board and not about drawing -- which also means it can be tested without a
+ * canvas. Mapping a condition to a picture stays the renderer's business.
+ */
+export function cityCondition(state: GameState, c: City): string {
+  const besieged = state.units.some(
+    (u) =>
+      u.owner !== c.owner &&
+      unitType(u.type).attack > 0 &&
+      Math.abs(u.x - c.x) <= 1 &&
+      Math.abs(u.y - c.y) <= 1,
+  );
+  if (besieged) return 'besieged';
+  if (c.disorder) return 'unrest';
+  if (foodSurplus(state, c) < 0) return 'starving';
+  if (isRuined(state, c)) return 'ruined';
+  // Below the bad news and above the good. A city with nothing on order is a
+  // thing to go and fix: a smaller call than a siege, a larger one than being
+  // pleased with itself.
+  if (isIdle(c)) return 'idle';
+  if (suppliesArmy(state, c)) return 'supplied';
+  // Last, because it is the only one not asking for anything. A celebrating
+  // city that also feeds an army shows the supply mark, since that is the one
+  // you would act on.
+  if (isCelebrating(state, c)) return 'celebration';
+  return 'none';
+}
+
 export function autoBuildOf(city: City): AutoBuild {
   return city.autoBuild ?? 'ask';
 }

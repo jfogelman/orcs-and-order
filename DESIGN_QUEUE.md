@@ -4922,6 +4922,11 @@ from the outside, which is a fog-of-war leak with a picture on it.
 
 ## 72. Three settlement overlays with nothing to attach to
 
+> **Two of the three are attached. See section 92.** Celebration got its
+> condition when section 70 landed, exactly as predicted below. Idle turned
+> out to have a better meaning than this section credited it with. Damaged
+> still has no home, for the reason given here.
+
 `celebration`, `idle` and `damaged` are drawn, processed and unused, because the
 game has no state that means any of them. Recorded here rather than left in the
 folder to be rediscovered.
@@ -6204,3 +6209,65 @@ that would answer it is different: teach the AI to hold two soldiers where a
 Posting is built, and sweep *that*. If posting two soldiers is worth more than
 what those soldiers do elsewhere, an AI that does it should win more. That is a
 real change to `garrisonPerCity` and its own piece of work.
+
+## 92. Two of the three overlays now mean something
+
+Section 72 recorded `celebration`, `idle` and `damaged` as drawn, processed and
+unused, and said celebration was the one to take **if the happiness work in
+section 70 happened**. It has.
+
+### Celebration: content, sizeable, and still growing
+
+Three conditions, and the third is what makes it worth a picture. A city sitting
+comfortably at a standstill is *fine*; a city with room to spare and food coming
+in is doing well. Three citizens of headroom, because section 85 measured the
+average at about one and a half -- so three is genuinely comfortable rather than
+merely not-rioting -- and a floor of five citizens, because a new settlement of
+two with headroom to spare is empty rather than happy.
+
+The happiness economy was **all punishment and no reward**: every marker on the
+map was bad news, and every content mechanic was a way to stop something. This
+is the first one that is a way to notice something.
+
+### Idle: waiting to be told, which is better than section 72 thought
+
+That section called it "a real state but a thin one", reasoning that `autoBuild`
+means a city always has *something* queued. What it always has is **coin** -- and
+a city banking shields because nobody has said what to build is exactly the state
+worth finding. It is also the backlog reported from play, where dismissed
+build prompts pile up three deep by turn 303.
+
+The distinction that makes it useful: a city set to `coin` **on purpose** is
+doing its job and is not idle. Marking that one would train the player to ignore
+the marker on the ones that matter.
+
+### Damaged still has no home
+
+Cities have no health, and "recently sacked" is what `ruined` already draws.
+Unchanged from section 72, and recorded as still unattached rather than given a
+strained meaning to use the art up.
+
+### Where they sit
+
+Worst news first, and the two new ones join a list that was entirely bad news --
+so the question is whether either can hide something. Neither can:
+
+> besieged &rarr; unrest &rarr; starving &rarr; ruined &rarr; **idle** &rarr;
+> supplied &rarr; **celebration**
+
+Idle sits below the bad news and above the good: a city with nothing on order is
+a thing to go and fix, which is a smaller call than a siege and a larger one than
+being pleased with itself. Celebration is last because it is the only state not
+asking for anything -- a celebrating city that also feeds an army shows the
+supply mark, since that is the one you would act on. There are tests for each
+of those, including that a rioting city waiting for orders still shows the riot.
+
+**The capital never celebrates**, because it always supplies an army and supply
+outranks it. That is correct and worth knowing: the marker is for the quiet
+cities behind the line, which is where being pleased with yourself belongs.
+
+### `cityCondition` moved
+
+Out of the renderer and into `sim/city`, because it is a statement about the
+board rather than about drawing -- which also means it can be tested without a
+canvas. Mapping a condition to a picture stays the renderer's business.
