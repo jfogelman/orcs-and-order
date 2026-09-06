@@ -12,9 +12,7 @@ import {
   garrisonOf,
   capitalOf,
   inSupply,
-  foodSurplus,
-  isRuined,
-  suppliesArmy,
+  cityCondition,
 } from '../sim/city';
 import { TerrainLayer } from './terrainLayer';
 import { UnitAnimator } from './unitAnimator';
@@ -69,29 +67,6 @@ export const EMPTY_OVERLAY: MapOverlay = {
 
 const VOID_COLOR = '#0a0806';
 
-/**
- * Which badge a settlement is wearing, or none.
- *
- * Every state here is read from something the rules already track, rather than
- * invented for the picture: `disorder` is the riot flag, starvation is a food
- * deficit, a siege is somebody else's fighter standing next to the place, and
- * resettling is the timer capture sets. Nothing here is new game state.
- */
-function cityCondition(state: GameState, c: City): string {
-  const besieged = state.units.some(
-    (u) =>
-      u.owner !== c.owner &&
-      unitType(u.type).attack > 0 &&
-      Math.abs(u.x - c.x) <= 1 &&
-      Math.abs(u.y - c.y) <= 1,
-  );
-  if (besieged) return 'besieged';
-  if (c.disorder) return 'unrest';
-  if (foodSurplus(state, c) < 0) return 'starving';
-  if (isRuined(state, c)) return 'ruined';
-  if (suppliesArmy(state, c)) return 'supplied';
-  return 'none';
-}
 
 /**
  * The badges a settlement can wear, worst news first.
@@ -111,7 +86,9 @@ const CITY_OVERLAY_STATES = [
   'unrest',
   'starving',
   'ruined',
+  'idle',
   'supplied',
+  'celebration',
 ];
 
 /**
