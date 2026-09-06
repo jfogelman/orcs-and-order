@@ -6337,3 +6337,72 @@ half. The measurement says the opposite about the risk:
 
 That is the sequencing this section changes, and it is exactly the thing section
 66 was worried about not knowing.
+
+## 94. Ground worth standing on, and a control that proved the change is additive
+
+Section 66's two directions, with section 93's measurement deciding the order:
+the yield specials are a Kingdom lever, so **more of those** cannot be added for
+flavour -- while a special that is a **rule** touches no yields and should not
+move the dial at all. This builds the second one and checks that claim.
+
+### What was built
+
+`TerrainDef.special` becomes `specials: TerrainSpecial[]`, and `state.specials[i]`
+becomes a **one-based index** into it. One-based deliberately: a save written
+when every terrain had exactly one special stored `1`, and `1` still names that
+same first special. Nothing needed versioning or migrating.
+
+Three defensive grounds, each yielding **exactly what the bare ground yields**:
+
+| terrain | | defence |
+|---|---|---|
+| grass | A Very Rude Boulder | x1 &rarr; **x2** |
+| forest | The Tanglewood | x1.25 &rarr; **x2.25** |
+| desert | The Only Cover For Miles | x1 &rarr; **x2** |
+
+A test enforces the no-yields rule across the whole table, because a rule that
+also paid out would be precisely what section 93 warned against.
+
+### The first measurement asked the wrong question
+
+The obvious arm is "turn the rule off", and it is wrong. Turning the *rule* off
+leaves the three tiles in the roll, so **both** arms still split grass, forest
+and desert between two specials -- which means the yield special turns up about
+half as often on that ground either way. Section 93 says that dilution is the
+balance-relevant change, and holding it constant in both arms measures the one
+thing that was never in question.
+
+`SPECIALS.ruleTiles` exists for that reason: it takes the tiles out of the world
+rather than merely making them inert.
+
+### The answer, and a control that came back perfect
+
+| arm | tuned | held-out | orc wins /108 |
+|---|---|---|---|
+| no rule tiles | 27-27 | 27-27 | **54 (50%)** |
+| rule tiles | 28-26 | 24-30 | **52 (48%)** |
+
+Two games in 108, and the sets **disagree in direction** -- tuned +1, held-out
+-3. That is noise, and section 93's prediction holds: a special that pays out
+nothing does not move the faction balance.
+
+**The control is the better result.** With the rule tiles out of the roll, the
+run reproduces section 93's shipped arm *exactly* -- 27-27 and 27-27, cities
+5.96/6.91 and 5.07/7.48, population 42.2/47.8 and 38.9/54.2, every figure to the
+decimal. So the whole change is **additive**: with the new tiles absent the world
+is the world that was there before, down to the seed stream. That also disposes
+of a worry raised while setting this up, that rolling *which* special a tile gets
+would consume an extra draw and shift every map -- it does not, because a terrain
+with one special takes no draw at all.
+
+And the shipping configuration reproduced across two separate sweeps, 28-26 and
+24-30 both times, which is the harness saying it is telling the truth.
+
+### One number left unexplained
+
+The discarded arm -- tiles present but inert -- came back at **46**, worse for
+the Horde than either shipping configuration. That configuration cannot occur in
+any real build, so it is not actionable, but it is not understood either: a
+wasted special slot ought to behave like a slightly emptier map, and section 93
+measured an emptier map as *better* for the Horde. Recorded as odd rather than
+explained.

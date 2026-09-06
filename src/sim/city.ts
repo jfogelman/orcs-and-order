@@ -1,7 +1,7 @@
 import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { hasPerk } from '../model/perks';
-import { TERRAIN } from '../model/terrain';
+import { TERRAIN, specialAt } from '../model/terrain';
 import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
@@ -79,7 +79,7 @@ export function foodToGrow(size: number): number {
 
 export function tileYield(state: GameState, index: number, isCenter: boolean): Yield {
   const def = TERRAIN[state.terrain[index]];
-  const special = state.specials[index] && def.special ? def.special : null;
+  const special = specialAt(state.terrain[index], state.specials[index]);
   const y: Yield = {
     food: special ? special.food : def.food,
     shields: special ? special.shields : def.shields,

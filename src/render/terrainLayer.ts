@@ -130,7 +130,7 @@ export class TerrainLayer {
     state: GameState,
     tiles: TerrainTileSet,
     specialIcon: HTMLCanvasElement,
-    specialArt?: Map<TerrainId, HTMLImageElement>,
+    specialArt?: Map<string, HTMLImageElement>,
   ): TerrainLayer {
     const { width: w, height: h, terrain } = state;
     const masked = buildMaskedTiles(tiles);
@@ -171,8 +171,11 @@ export class TerrainLayer {
           ctx.drawImage(masked[o.terrain][o.variant][o.direction], px, py, TILE, TILE);
         }
 
-        if (state.specials[idx(x, y, w)]) {
-          const art = specialArt?.get(terrain[idx(x, y, w)]);
+        const at = state.specials[idx(x, y, w)];
+        if (at) {
+          // Keyed per special, since one terrain may offer several and a
+          // boulder should not be drawn as a patch of good grass.
+          const art = specialArt?.get(`${terrain[idx(x, y, w)]}:${at}`);
           if (art) {
             const s = TerrainLayer.SPECIAL_SIZE;
             const inset = TerrainLayer.SPECIAL_INSET;

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
-import { SPECIALS } from '../src/sim/worldgen';
+import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 
@@ -44,21 +44,17 @@ const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   POSTING.enabled = true;
   SPECIALS.chance = 0.06;
+  SPECIALS.rules = true;
+  SPECIALS.ruleTiles = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 66, and the thing that section says to do first: nobody has ever
-  // measured what the existing eight specials are worth. `SPECIAL_CHANCE` has
-  // sat at 0.06 since it was written and has never been swept, and adding new
-  // *kinds* of special on top of an unmeasured baseline is how a sweep becomes
-  // unreadable -- which sections 17 and 21 both learned the hard way.
-  //
-  // A world with none of them against the one we have against one with plenty.
-  // The seed still decides the map; what changes is how often a tile that could
-  // carry a resource does.
-  { label: 'no specials', apply: () => { control(); SPECIALS.chance = 0; } },
-  { label: 'as shipped', apply: control },
-  { label: 'plentiful', apply: () => { control(); SPECIALS.chance = 0.18; } },
+  // The question the first run of this got wrong. Turning the *rule* off left
+  // the tiles in the roll, so both arms still split grass, forest and desert
+  // between two specials -- and section 93 says that dilution, not the rule, is
+  // what moves the balance. This takes the tiles out of the world entirely.
+  { label: 'no rule tiles', apply: () => { control(); SPECIALS.ruleTiles = false; } },
+  { label: 'rule tiles', apply: control },
 ];
 
 /**

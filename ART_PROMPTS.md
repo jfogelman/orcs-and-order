@@ -521,11 +521,17 @@ them read as anything in particular. **All eight are now drawn, processed and wi
 the art is stamped at half a tile in the top-right corner, where the diamond used to
 sit, and the diamond remains the fallback for any terrain whose file is missing.
 
-Save as `art_src/specials/<terrain id>.<ext>`. They are stamped onto a **32px terrain
-tile**, so they end up smaller than anything else in the game: **one object, no
-scene, no ground**, on flat magenta. Silhouette is the whole job.
+Save as `art_src/specials/<terrain id>_<n>.<ext>`, where `n` is the special's place
+in that terrain's list, counting from two. **The eight originals keep their bare
+filename** -- they were drawn before a terrain could offer more than one, and the
+sprite cache tries `<t>_1.png` and falls back to `<t>.png`, so renaming them would be
+churn for nothing.
 
-| terrain | what it is called | prompt |
+They are stamped onto a **32px terrain tile**, so they end up smaller than anything
+else in the game: **one object, no scene, no ground**, on flat magenta. Silhouette is
+the whole job.
+
+| file | what it is called | prompt |
 |---|---|---|
 | `grass` | Suspiciously Good Grass | A single fat tuft of vivid green grass with three seed heads, faintly glowing, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
 | `forest` | Big Angry Game | A pair of heavy curved antlers, chipped and scarred, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
@@ -535,6 +541,29 @@ scene, no ground**, on flat magenta. Silhouette is the whole job.
 | `desert` | Bones Worth Something | A bleached horned skull half-buried, with one gold ring around a horn, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
 | `water` | Fish, Probably | Two silver-blue fish crossed tail over tail, one with an odd extra fin, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
 | `deep` | Something Enormous | A single vast dark coil breaking a water surface, with two small bubbles, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+
+### Ground worth standing on, rather than worth working
+
+Three new ones, and they are a different kind of thing: they change **defence** and
+touch no yields at all. Section 93 measured the yield specials and found them a
+Kingdom lever -- they hand out trade, and the Kingdom spends trade better -- so a
+special that pays out nothing is the only kind that can be added without moving the
+faction balance.
+
+That has to read on the tile. These are not treasure; they are **cover**. Grey and
+brown rather than gold and glitter, and shaped like something you would put your back
+against.
+
+| file | what it is called | prompt |
+|---|---|---|
+| `grass_2` | A Very Rude Boulder | A single hunched grey granite boulder with one flat face and a chipped corner, sitting alone, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `forest_2` | The Tanglewood | A dense knot of dark thorned branches woven into a low barrier, no leaves, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+| `desert_2` | The Only Cover For Miles | A lone weathered rock arch throwing a hard shadow, pale sandstone, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+
+**The read to aim for is "I would fight from behind that".** If one of these looks
+like something you would pick up and carry home, it is drawn as treasure and it is
+wrong -- a player who mistakes cover for a resource will work the tile instead of
+standing on it.
 
 These are the smallest things in the game, and that changes what works:
 

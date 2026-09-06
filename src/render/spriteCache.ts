@@ -1,4 +1,5 @@
 import type { FactionId, TerrainId, UnitTypeId } from '../model/types';
+import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import { buildCitySprite, buildUnitSprite, composeGroupSprite } from './placeholders';
 import { makeCanvas, TERRAIN_VARIANTS } from './tileArt';
@@ -297,18 +298,34 @@ export class SpriteCache {
    * the drawn diamond, so a partial set is fine -- which matters because these
    * were written up in ART_PROMPTS.md long before all eight existed.
    */
+  /**
+   * Art for each special, keyed `terrain:index` because a terrain may now offer
+   * several and they should not all look the same.
+   *
+   * The first special of a terrain is looked for under the **bare**
+   * `specials/<terrain>.png`, which is what the eight originals were drawn as,
+   * and only then under `<terrain>_1.png`. That way round because the bare file
+   * is the one that exists: the other order works and costs eight failed
+   * requests every session for nothing.
+   */
   installSpecialArt(
-    into: Map<TerrainId, HTMLImageElement>,
+    into: Map<string, HTMLImageElement>,
     ids: TerrainId[],
     onLoaded?: () => void,
   ): void {
     for (const id of ids) {
-      loadImage(`${this.base}specials/${id}.png`)
-        .then((img) => {
-          into.set(id, img);
-          onLoaded?.();
-        })
-        .catch(() => {});
+      TERRAIN[id].specials.forEach((_special, n) => {
+        const key = `${id}:${n + 1}`;
+        const numbered = `${this.base}specials/${id}_${n + 1}.png`;
+        const first = n === 0 ? `${this.base}specials/${id}.png` : numbered;
+        loadImage(first)
+          .catch(() => (first === numbered ? Promise.reject() : loadImage(numbered)))
+          .then((img) => {
+            into.set(key, img);
+            onLoaded?.();
+          })
+          .catch(() => {});
+      });
     }
   }
 
