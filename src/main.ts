@@ -6,7 +6,7 @@ import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { idx } from './engine/grid';
 import { FACTIONS } from './model/factions';
-import { TERRAIN } from './model/terrain';
+import { TERRAIN, specialAt } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
 import type { City, GameState, Player, Unit, VictoryKind } from './model/types';
@@ -1597,7 +1597,7 @@ class App {
         <div class="panel-body muted">Nobody has been here. Nobody is volunteering.</div>`;
     }
     const def = TERRAIN[this.state.terrain[i]];
-    const special = this.state.specials[i] && def.special ? def.special : null;
+    const special = specialAt(this.state.terrain[i], this.state.specials[i]);
     const occupant = viewer.visible[i] ? unitAt(this.state, h.x, h.y) : undefined;
     const city = cityAt(this.state, h.x, h.y);
     return `

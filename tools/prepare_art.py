@@ -74,6 +74,24 @@ CREATURES = [
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
 
+# Land specials, named per terrain and per place in that terrain's list, because a
+# terrain may now offer more than one and they must not share a picture. The eight
+# originals stay reachable under their old un-numbered filename -- the sprite cache
+# falls back to it for `_1` -- so nothing already drawn needs renaming.
+#
+# Kept in step with `src/model/terrain.ts` by hand. A name here with no file is
+# reported as missing, which is the pipeline's way of asking for the art.
+SPECIALS = [
+    # The eight originals keep their bare filename. They were drawn before a
+    # terrain could offer more than one, and the sprite cache tries `<t>_1.png`
+    # first and falls back to `<t>.png` -- so renaming them would be churn for
+    # nothing.
+    *TERRAINS,
+    "grass_2",    # A Very Rude Boulder
+    "forest_2",   # The Tanglewood
+    "desert_2",   # The Only Cover For Miles
+]
+
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
@@ -1651,7 +1669,7 @@ def main() -> int:
     # ART_PROMPTS.md. Missing ones fall back to the drawn diamond, so a partial
     # set is fine and silent.
     specials, missing_specials, failed_specials = process_cutouts(
-        "specials", TERRAINS, force, size=SPECIAL_SIZE, quiet_missing=True
+        "specials", SPECIALS, force, size=SPECIAL_SIZE, quiet_missing=True
     )
     icons += specials
     missing_icons.extend(missing_specials)

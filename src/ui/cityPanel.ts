@@ -1,6 +1,6 @@
 import { idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
-import { TERRAIN } from '../model/terrain';
+import { TERRAIN, specialAt } from '../model/terrain';
 import type {
   AutoBuild,
   City,
@@ -112,7 +112,7 @@ function fatCross(state: GameState, city: City): string {
       const t = state.terrain[i];
       const def = TERRAIN[t];
       const y2 = tileYield(state, i, dx === 0 && dy === 0);
-      const special = state.specials[i] && def.special ? def.special : null;
+      const special = specialAt(state.terrain[i], state.specials[i]);
       if (dx === 0 && dy === 0) {
         cells.push(
           `<div class="crop-cell centre" title="${escapeHtml(city.name)} itself, worked for free">

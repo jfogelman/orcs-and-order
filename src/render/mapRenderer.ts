@@ -3,7 +3,7 @@ import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
-import type { City, GameState, TerrainId, Unit } from '../model/types';
+import type { City, GameState, Unit } from '../model/types';
 import { Camera } from './camera';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
@@ -118,7 +118,7 @@ export class MapRenderer {
   private tiles: TerrainTileSet;
   private specialIcon: HTMLCanvasElement;
   /** Real art for the land specials, by terrain. Empty until it loads. */
-  private specialArt = new Map<TerrainId, HTMLImageElement>();
+  private specialArt = new Map<string, HTMLImageElement>();
   /** Badges a settlement wears, by state. Empty until the art loads. */
   private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;

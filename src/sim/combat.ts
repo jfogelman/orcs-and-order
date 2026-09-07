@@ -1,7 +1,7 @@
 import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
-import { TERRAIN } from '../model/terrain';
+import { defenseOf } from '../model/terrain';
 import { headcount, needsAmmo, unitType } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
@@ -382,7 +382,8 @@ export function defenseStrength(
 ): StrengthBreakdown {
   const type = unitType(defender.type);
   const owner = state.players[defender.owner];
-  const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
+  const here = idx(defender.x, defender.y, state.width);
+  const ground = defenseOf(state.terrain[here], state.specials[here]);
   const city = cityAt(state, defender.x, defender.y);
   const berserk = hasFlag(owner, 'berserk');
 
@@ -404,7 +405,9 @@ export function defenseStrength(
   total *= headcount(defender);
   total *= rankBonus(defender);
   if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
-  total *= terrain.defense;
+  // Through `defenseOf`, so a tile whose special is a rule rather than a
+  // number -- section 66's defensive ground -- reaches the fight.
+  total *= ground;
   if (fortified) total *= FORTIFY_BONUS_REF.value;
   total *= wallsMult;
   if (berserk) total *= 0.75;
@@ -414,7 +417,7 @@ export function defenseStrength(
     base: type.defense,
     veteran: defender.rank > 0,
     fortified,
-    terrainMult: terrain.defense,
+    terrainMult: ground,
     wallsMult,
     siegeMult: 1,
     sallyMult: 1,

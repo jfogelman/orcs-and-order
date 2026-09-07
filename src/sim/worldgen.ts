@@ -1,16 +1,9 @@
 import { Rng } from '../engine/rng';
 import { fatCrossIndices, idx, inBounds, distance } from '../engine/grid';
-import { TERRAIN } from '../model/terrain';
+import { SPECIALS, TERRAIN, rollableSpecials, specialAt } from '../model/terrain';
 import type { GameSettings, TerrainId } from '../model/types';
 
-/**
- * How often a tile that could carry a special actually does.
- *
- * Named because the Orcpedia quotes it. A number a player is told about should
- * not also be a literal buried in the generator, or the two drift apart and the
- * encyclopedia starts lying quietly.
- */
-export const SPECIAL_CHANCE = 0.06;
+
 
 export interface StartPosition {
   x: number;
@@ -189,10 +182,11 @@ function siteScore(
     let food = t.food;
     let shields = t.shields;
     let trade = t.trade;
-    if (specials[i] && t.special) {
-      food = t.special.food;
-      shields = t.special.shields;
-      trade = t.special.trade;
+    const special = specialAt(terrain[i], specials[i]);
+    if (special) {
+      food = special.food;
+      shields = special.shields;
+      trade = special.trade;
     }
     score += food * 3 + shields * 2 + trade;
   }
@@ -355,7 +349,13 @@ function generateAttempt(
 
   const specials: number[] = new Array(w * h).fill(0);
   for (let i = 0; i < specials.length; i++) {
-    if (TERRAIN[terrain[i]].special && rng.chance(SPECIAL_CHANCE)) specials[i] = 1;
+    // One-based: which of this terrain's specials the tile got, rolled evenly.
+    // Zero is nothing, and a tile that could only ever carry one still stores 1,
+    // which is what every save written before this wrote.
+    const choices = rollableSpecials(terrain[i]);
+    if (choices.length > 0 && rng.chance(SPECIALS.chance)) {
+      specials[i] = choices.length === 1 ? choices[0] : choices[rng.int(choices.length)];
+    }
   }
 
   const { starts, mainlandSize } = pickStarts(terrain, specials, w, h, playerCount);

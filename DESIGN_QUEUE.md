@@ -6271,3 +6271,138 @@ cities behind the line, which is where being pleased with yourself belongs.
 Out of the renderer and into `sim/city`, because it is a statement about the
 board rather than about drawing -- which also means it can be tested without a
 canvas. Mapping a condition to a picture stays the renderer's business.
+
+## 93. What the eight specials are worth, which is not nothing
+
+Section 66 wanted two things: more than one special per terrain, and specials
+that do something other than swap yields. It also said, plainly, to **measure
+the existing eight first** -- `SPECIAL_CHANCE` had sat at 0.06 since it was
+written and had never been swept, and adding new kinds on top of an unmeasured
+baseline is how a sweep becomes unreadable.
+
+324 games, three arms, two seed sets:
+
+| arm | tuned | held-out | orc wins /108 | fights a game |
+|---|---|---|---|---|
+| none (0) | 29-25 | 31-23 | **60 (56%)** | 34 / 33 |
+| as shipped (0.06) | 27-27 | 27-27 | **54 (50%)** | 27 / 25 |
+| plentiful (0.18) | 25-29 | 24-30 | **49 (45%)** | 20 / 19 |
+
+### Specials are a Kingdom lever, and nobody knew
+
+Monotonic, and **both seed sets agree at every step**: the more resources on the
+map, the better the Kingdom does. Sixty orc wins down to forty-nine across the
+range, an eleven-point swing on a number that was never chosen for balance.
+
+The population figures say where it goes. From none to plentiful, tuned: orc
+34.7 to 45.2, human 40.3 to 55.2. Held-out is starker -- orc 41.3 to **41.1**,
+human 42.1 to **60.1**. The Horde gains nothing at all there and the Kingdom
+gains forty per cent.
+
+The mechanism is almost certainly section 84's. Most specials are trade and
+shields -- A Very Deep Hole is 0/2/6, Bones Worth Something 0/1/5, Smells Like
+Money 1/4/0 -- and section 84 measured the Kingdom converting level research
+into twice the army and twice the buildings. **Specials hand out the currency
+the Kingdom is better at spending.** More of them is a bigger gift to whoever
+converts it better, which is not the Horde.
+
+### 0.06 is where the balance is, by luck
+
+Both sets return exactly 27-27 at the shipped value. That is either a fortunate
+guess or somebody's good instinct, and either way it is now a **measured
+constant rather than an arbitrary one**: moving it in either direction moves the
+faction balance, and anybody tempted to tune it for map flavour should know they
+are tuning the win rate.
+
+Left at 0.06.
+
+### And they buy peace
+
+Fights a game fall by nearly half: 34 with none, 27 as shipped, 20 with plenty.
+City captures go the other way, 7.0 to 9.2 to 10.0, so it is not that the map
+gets quieter -- it is that prosperity buys off the early skirmishing and what
+fighting remains is decisive. Nobody asked for that and it is worth knowing.
+
+### Which inverts section 66's two directions
+
+The obvious reading of section 66 is that **more specials per terrain** is the
+cheap, safe, flavourful half and **specials that are rules** is the ambitious
+half. The measurement says the opposite about the risk:
+
+- **More yield specials, or more per terrain, is a Kingdom buff** whose size is
+  now known. It cannot be added for flavour without being measured for balance.
+- **Specials that are not yields** -- defensive ground, a ford, a pass -- do not
+  touch the trade economy at all, so they are the direction that does *not* move
+  this dial. Section 66's ambitious half is its safer half.
+
+That is the sequencing this section changes, and it is exactly the thing section
+66 was worried about not knowing.
+
+## 94. Ground worth standing on, and a control that proved the change is additive
+
+Section 66's two directions, with section 93's measurement deciding the order:
+the yield specials are a Kingdom lever, so **more of those** cannot be added for
+flavour -- while a special that is a **rule** touches no yields and should not
+move the dial at all. This builds the second one and checks that claim.
+
+### What was built
+
+`TerrainDef.special` becomes `specials: TerrainSpecial[]`, and `state.specials[i]`
+becomes a **one-based index** into it. One-based deliberately: a save written
+when every terrain had exactly one special stored `1`, and `1` still names that
+same first special. Nothing needed versioning or migrating.
+
+Three defensive grounds, each yielding **exactly what the bare ground yields**:
+
+| terrain | | defence |
+|---|---|---|
+| grass | A Very Rude Boulder | x1 &rarr; **x2** |
+| forest | The Tanglewood | x1.25 &rarr; **x2.25** |
+| desert | The Only Cover For Miles | x1 &rarr; **x2** |
+
+A test enforces the no-yields rule across the whole table, because a rule that
+also paid out would be precisely what section 93 warned against.
+
+### The first measurement asked the wrong question
+
+The obvious arm is "turn the rule off", and it is wrong. Turning the *rule* off
+leaves the three tiles in the roll, so **both** arms still split grass, forest
+and desert between two specials -- which means the yield special turns up about
+half as often on that ground either way. Section 93 says that dilution is the
+balance-relevant change, and holding it constant in both arms measures the one
+thing that was never in question.
+
+`SPECIALS.ruleTiles` exists for that reason: it takes the tiles out of the world
+rather than merely making them inert.
+
+### The answer, and a control that came back perfect
+
+| arm | tuned | held-out | orc wins /108 |
+|---|---|---|---|
+| no rule tiles | 27-27 | 27-27 | **54 (50%)** |
+| rule tiles | 28-26 | 24-30 | **52 (48%)** |
+
+Two games in 108, and the sets **disagree in direction** -- tuned +1, held-out
+-3. That is noise, and section 93's prediction holds: a special that pays out
+nothing does not move the faction balance.
+
+**The control is the better result.** With the rule tiles out of the roll, the
+run reproduces section 93's shipped arm *exactly* -- 27-27 and 27-27, cities
+5.96/6.91 and 5.07/7.48, population 42.2/47.8 and 38.9/54.2, every figure to the
+decimal. So the whole change is **additive**: with the new tiles absent the world
+is the world that was there before, down to the seed stream. That also disposes
+of a worry raised while setting this up, that rolling *which* special a tile gets
+would consume an extra draw and shift every map -- it does not, because a terrain
+with one special takes no draw at all.
+
+And the shipping configuration reproduced across two separate sweeps, 28-26 and
+24-30 both times, which is the harness saying it is telling the truth.
+
+### One number left unexplained
+
+The discarded arm -- tiles present but inert -- came back at **46**, worse for
+the Horde than either shipping configuration. That configuration cannot occur in
+any real build, so it is not actionable, but it is not understood either: a
+wasted special slot ought to behave like a slightly emptier map, and section 93
+measured an emptier map as *better* for the Horde. Recorded as odd rather than
+explained.

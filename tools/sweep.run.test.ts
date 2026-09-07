@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
+import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 
@@ -42,16 +43,18 @@ const control = () => {
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
   POSTING.enabled = true;
+  SPECIALS.chance = 0.06;
+  SPECIALS.rules = true;
+  SPECIALS.ruleTiles = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 70. A Posting calms a city while two soldiers stand in it, which
-  // is the one content lever not bought with trade. The question is whether it
-  // moves anything at all for an AI that keeps one soldier per city: if the
-  // answer is no, it is a player-facing option and inert to balance, which is
-  // a perfectly good result and worth knowing before shipping it as one.
-  { label: 'no posting', apply: () => { control(); POSTING.enabled = false; } },
-  { label: 'posting', apply: control },
+  // The question the first run of this got wrong. Turning the *rule* off left
+  // the tiles in the roll, so both arms still split grass, forest and desert
+  // between two specials -- and section 93 says that dilution, not the rule, is
+  // what moves the balance. This takes the tiles out of the world entirely.
+  { label: 'no rule tiles', apply: () => { control(); SPECIALS.ruleTiles = false; } },
+  { label: 'rule tiles', apply: control },
 ];
 
 /**
