@@ -19,6 +19,7 @@ import {
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
+import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
 import { TECHS } from '../model/techs';
 import { tradeRates, unlockedBuildings } from '../sim/research';
 import { TECHS_BY_ID } from '../model/techs';
@@ -141,10 +142,17 @@ export function situationOf(state: GameState, playerId: number): Situation {
           level: scores.filter((s) => s.score === best).length > 1,
         };
 
+  // Null rather than zero in a game without them, so no line about raiders is
+  // written for a game that will never have any.
+  const raiders = raidersActive(state)
+    ? { seen: raidersSeen(state, playerId), atTheGate: raidersAtTheGate(state, playerId) }
+    : null;
+
   return {
     turn: state.turn,
     faction: player.faction,
     deadline,
+    raiders,
     cities: cities.length,
     rioting,
     restless,

@@ -70,6 +70,10 @@ CREATURES = [
     "deathknight", "dragon", "goblincatapult",
     "peasant", "footman", "outrider", "archer", "knight", "ballista",
     "mage", "paladin",
+    # The wilds. One band, grunt only, per DESIGN_QUEUE section 69's cheapest
+    # version -- the rest of `art_src/barbarians/` stays drafted until a rule
+    # needs it.
+    "skirmisher",
 ]
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]

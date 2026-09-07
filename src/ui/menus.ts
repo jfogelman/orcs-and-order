@@ -73,6 +73,18 @@ export function openNewGameMenu(
           At the turn limit, whoever has built the most is declared the winner, which
           nobody involved finds satisfying.
         </p>
+
+        <label class="field-check">
+          <input type="checkbox" id="barbarians-input" />
+          <span>
+            <strong>Raiders in the wilds</strong>
+            <span class="muted">
+              &mdash; a third lot, from nowhere in particular, who attack both sides and
+              hold nothing. Waves get bigger as the two empires do. Decided now and kept
+              for the whole game.
+            </span>
+          </span>
+        </label>
       </div>
       <div class="button-row" style="justify-content:flex-end">
         <button class="primary" id="btn-start">Begin</button>
@@ -116,6 +128,8 @@ export function openNewGameMenu(
           playerFaction: faction,
           ...dims,
           maxTurns: Number.isFinite(maxTurns) ? maxTurns : 300,
+          barbarians:
+            root.querySelector<HTMLInputElement>('#barbarians-input')?.checked === true,
           ...(Number.isFinite(parsedSeed) ? { seed: parsedSeed >>> 0 } : {}),
         });
       });

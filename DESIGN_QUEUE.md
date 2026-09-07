@@ -6406,3 +6406,93 @@ any real build, so it is not actionable, but it is not understood either: a
 wasted special slot ought to behave like a slightly emptier map, and section 93
 measured an emptier map as *better* for the Horde. Recorded as odd rather than
 explained.
+
+## 95. Raiders in the wilds
+
+Section 69 asked for barbarians and spent most of itself on the warning: a third
+actor is **not a new unit type, it is a change to what a game is**. Every
+measurement in this file counts wins as orc-against-human across exactly two
+sides. So the shape of this is set by that warning rather than by the feature.
+
+### Off unless a game asks for it, and decided once
+
+`settings.barbarians` is per game and saved with it, set from a checkbox on the
+new-game screen. A game started without them never grows them; a game started
+with them keeps them. `BARBARIANS.enabled` sits behind that as the code-side
+switch, so every existing sweep arm stays runnable and raiders can be measured
+as an arm rather than becoming the new floor under every earlier number.
+
+### A player slot, deliberately not a contender
+
+Units are owned by index and the whole game assumes that, so a raiding band has
+to hold a `Player`. What it must never be is a **side**. `contenders()` is the
+list of everybody who can actually win, and every loop that decides something --
+elimination, conquest, the points ranking, the dominance clock, the deadline
+warning -- asks for that rather than `state.players`.
+
+It also starts with **nothing**: `makePlayer` hands out the advances every
+empire begins with, and a band holding those would have been *scored* for them.
+That is exactly how a third party quietly becomes a third contender, and there
+is a test that it scores zero.
+
+### Waves, sized by how far along the two empires are
+
+Not by the turn. A slow game should not be punished for being slow, and a
+runaway one should still have to look over its shoulder. Averaged across both
+empires, so beating the other side does not summon a bigger horde onto you
+alone -- there is a test that a lopsided game and an even one with the same
+total advances get the same wave.
+
+| | |
+|---|---|
+| first wave | turn 25, then every 15 |
+| size | 1, plus 0.12 per advance known on average, capped at 5 |
+| lands | dry ground, four tiles clear of any city |
+
+Clear of cities because a party that materialises next door is a dice roll
+rather than a border to garrison, and the band's whole job is pressure on the
+edges. The wave arrives **together** at one place: scattered individuals read as
+bad luck, a band arriving somewhere reads as a thing that has happened.
+
+Everything it rolls comes off the game's own seeded stream, so a game with
+raiders is as reproducible as one without -- which is what lets them be measured
+at all.
+
+### What they do, and what they cannot
+
+They walk at the nearest thing that is not theirs and hit it. No supply, no
+orders, no plan -- a band that manoeuvred would be a third empire. Movement goes
+through `tryStep` so the real combat rules resolve the fight; a raid that
+resolved its own would be a second combat model, and two of those drift.
+
+**They take no cities.** Section 69's cheapest version, and the reason the whole
+thing changes no win condition.
+
+### The unit
+
+Wildland Raiders, grunt tier: the **Beastfolk Skirmisher**, 2 attack, 1 defence,
+8 health, 3 movement. The bible's brief exactly -- loses to one garrisoned unit
+most of the time, which is the teaching moment, and fast enough to find an
+undefended border.
+
+`CreatureDef.wild` is what marks it as belonging to nobody. `FactionId` stays
+two-valued: a third would want a third set of advisor lines, perk names and
+faction blurbs that nobody would ever read, to describe something that is not an
+empire. The flag keeps it out of both Orcpedia rosters, and no advance unlocks
+it, so nobody can build one.
+
+### And the council notices
+
+> **Blademaster** &mdash; *Barbarians spotted! We don't trust 'em cuz they ain't
+> us. Three of them out there, boss.*
+
+Seen is a thing to mention; one standing next to something of yours is a thing
+to be **interrupted** for, and only that raises an audience. Raiders that nobody
+has laid eyes on are not mentioned at all -- a wave lands in fog by design, and
+an advisor reporting a sighting he has not had is worse than silence.
+
+### Not measured, deliberately
+
+Off by default, so nothing that has been measured is disturbed. What a game with
+raiders in it plays like is a question for a person, and what it does to the
+faction balance is a sweep arm for when somebody wants the answer.

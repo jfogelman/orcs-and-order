@@ -216,7 +216,9 @@ function unitCard(def: UnitTypeDef): string {
 }
 
 function creatureSection(faction: FactionId): string {
-  const creatures = CREATURES.filter((c) => c.faction === faction);
+  // Wild things belong to nobody, so they are in neither roster. A raiding
+  // party is not something the Horde can put in a queue.
+  const creatures = CREATURES.filter((c) => c.faction === faction && !c.wild);
   return creatures
     .map((c) => {
       const variants = c.counts.map((n) => UNIT_TYPES[n === 1 ? c.id : `${c.id}_x${n}`]);

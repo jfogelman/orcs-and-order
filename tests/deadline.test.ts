@@ -93,7 +93,7 @@ describe('the deadline announcing itself', () => {
 describe('what the advisors make of the deadline', () => {
   const base = (over: Partial<Situation>): Situation =>
     ({
-      turn: 275, faction: 'orc', deadline: null, cities: 4, rioting: 0, restless: 0,
+      turn: 275, faction: 'orc', deadline: null, raiders: null, cities: 4, rioting: 0, restless: 0,
       starving: 0, gold: 100, goldPerTurn: 2, beakersPerTurn: 5,
       rates: { coin: 4, beakers: 4, calm: 4 }, researching: 'Axes', undefended: 0,
       enemiesSeen: 0, army: 4, magicUnits: 0, rankAndFile: 2, paladins: 0, walled: 0,
