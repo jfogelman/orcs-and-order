@@ -170,6 +170,57 @@ describe('what a raiding party does', () => {
     expect(after).toBeLessThan(before);
   });
 
+  it('sacks an undefended city rather than walking past it', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities[0];
+    city.buildings = ['granary', 'walls'];
+    spawnUnit(state, wild.id, RAIDER, city.x + 1, city.y, false);
+
+    runRaiders(state, wild.id);
+
+    // A band at an open gate that did nothing would not be a raid.
+    expect(city.buildings).not.toContain('granary');
+    // The walls stay, as they do on a capture: hand-sharpened spears do not
+    // level a wall.
+    expect(city.buildings).toContain('walls');
+    expect(city.owner).toBe(0);
+    expect(state.log.map((e) => e.text).join(' ')).toMatch(/raiders are in/i);
+  });
+
+  it('takes people only when there is nothing left to break', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities[0];
+    city.buildings = [];
+    const before = city.size;
+    spawnUnit(state, wild.id, RAIDER, city.x + 1, city.y, false);
+
+    runRaiders(state, wild.id);
+
+    expect(city.size).toBeLessThan(before);
+    expect(state.log.map((e) => e.text).join(' ')).toMatch(/took people/i);
+  });
+
+  it('never takes the last citizen, however often they come', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities[0];
+    city.buildings = [];
+    city.size = 1;
+    spawnUnit(state, wild.id, RAIDER, city.x + 1, city.y, false);
+
+    for (let visit = 0; visit < 5; visit++) {
+      for (const u of playerUnits(state, wild.id)) u.moves = 3;
+      runRaiders(state, wild.id);
+    }
+
+    // A thing with no plan should not be able to decide the game by erasing
+    // somebody, which is what removing the last citizen would do.
+    expect(city.size).toBe(1);
+    expect(state.cities).toContain(city);
+  });
+
   it('does not take cities, whatever it is standing next to', () => {
     const state = game();
     const wild = barbarianOf(state)!;

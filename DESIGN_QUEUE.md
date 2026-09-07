@@ -6491,8 +6491,54 @@ to be **interrupted** for, and only that raises an audience. Raiders that nobody
 has laid eyes on are not mentioned at all -- a wave lands in fog by design, and
 an advisor reporting a sighting he has not had is worse than silence.
 
+### Sacking, which is the half that makes it a raid
+
+They cannot take a city. They can walk into one nobody is defending and **take
+something**, which is a different thing and is what keeps this pressure rather
+than conquest: the city keeps its owner, its name and its place on the map, and
+loses something it will have to replace.
+
+A **building** first, because that is a thing somebody chose to build and will
+notice going. **Citizens** only when there is nothing left to break, and never
+the last one -- a band with no plan should not be able to decide the game by
+erasing somebody. The walls stay, exactly as they do on a capture: hand-
+sharpened spears do not level a wall.
+
+The first version of this had them simply stop at an undefended city, which is
+not a raid. Reported immediately, and rightly.
+
 ### Not measured, deliberately
 
 Off by default, so nothing that has been measured is disturbed. What a game with
 raiders in it plays like is a question for a person, and what it does to the
 faction balance is a sweep arm for when somebody wants the answer.
+
+## 96. Pillaging, once there is anything on a tile to pillage
+
+Raiders in section 95 sack **cities** -- a building, or people when there are no
+buildings left. What they cannot do is the other half of what a raiding band is
+for in this kind of game: ruin the ground on the way past.
+
+**There is nothing out there to ruin.** A tile carries terrain, and sometimes a
+special, and that is the whole of it. No roads, no irrigation, no mines, no
+improvements of any kind -- section 27's roads are drafted and unbuilt, and
+without them a raider crossing your best farmland does it no harm at all.
+
+So this is blocked on the same thing twice over:
+
+- **Tile improvements have to exist first.** Section 27 (roads) is the nearest
+  candidate and would bring the machinery -- something on a tile, built by
+  somebody, that can be present or absent.
+- **And a special is not a substitute.** Land specials are generated, not built.
+  A raider destroying A Very Deep Hole would be destroying a fact about the
+  world rather than somebody's work, and losing it would be bad luck rather
+  than a consequence of not garrisoning a border. Pillaging is only interesting
+  when what is lost was *chosen*.
+
+**What it would want when it lands:** a raider spending its turn on an improved
+tile removes the improvement and the owner is told where. That is the entire
+mechanic; the interest is in it happening to ground you were relying on.
+
+Worth doing after roads and not before, and worth noting now so that whoever
+builds roads knows there is a second customer for them.
+

@@ -1,7 +1,9 @@
 import { DIRS8, distance, idx, inBounds } from '../engine/grid';
+import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
+import { assignWorkers, syncCitizens } from './city';
 import { tryStep } from './movement';
 
 /**
@@ -56,6 +58,20 @@ export const BARBARIANS = {
 
   /** How far from any city a raiding party will appear. */
   clearOfCities: 4,
+
+  /**
+   * Citizens taken when a raiding band reaches a city nobody is defending.
+   *
+   * They cannot hold a city -- section 69's cheapest version, and what keeps
+   * the win conditions untouched -- but walking up to an open gate and doing
+   * nothing is not a raid. So they take something and leave: a building if
+   * there is one, and people if there is not.
+   *
+   * Never the last citizen. A band that could erase a city outright would be
+   * deciding the game, which is precisely what a thing with no plan should not
+   * be able to do.
+   */
+  takesCitizens: 1,
 };
 
 /** The grunt. One band, one unit, per section 69's cheapest version. */
@@ -227,8 +243,55 @@ function stepToward(state: GameState, raider: Unit, tx: number, ty: number): voi
   if (!pick) return;
   const city = state.cities.find((c) => c.x === pick![0] && c.y === pick![1]);
   const held = state.units.some((u) => u.x === pick![0] && u.y === pick![1]);
-  if (city && !held) return;
+  if (city && !held) {
+    sack(state, city);
+    return;
+  }
   tryStep(state, raider, pick[0], pick[1]);
+}
+
+/**
+ * What a raiding band does to a city with nobody in it.
+ *
+ * Not a capture. The city keeps its owner, its name and its place on the map,
+ * and loses something it will have to replace -- which is the whole difference
+ * between pressure on the edges and a third empire taking territory.
+ *
+ * A building first, because that is a thing somebody chose to build and will
+ * notice going. Citizens only when there is nothing left to break, and never
+ * the last one: erasing a city outright would be a thing with no plan deciding
+ * the game.
+ *
+ * The walls stay, as they do on a capture. A band with hand-sharpened spears
+ * does not level a wall.
+ */
+function sack(state: GameState, city: City): void {
+  const breakable = city.buildings.filter((b) => b !== 'walls');
+  if (breakable.length > 0) {
+    const lost = withRng(state, (rng) => rng.pick(breakable));
+    city.buildings = city.buildings.filter((b) => b !== lost);
+    log(
+      state,
+      `Raiders are in ${city.name}. The ${BUILDINGS[lost]?.name ?? lost} is a loss.`,
+      'bad',
+      city.owner,
+      undefined,
+      [city.x, city.y],
+    );
+    return;
+  }
+  if (city.size <= 1) return;
+  city.size = Math.max(1, city.size - BARBARIANS.takesCitizens);
+  syncCitizens(state, city);
+  assignWorkers(state, city);
+  log(
+    state,
+    `Raiders are in ${city.name} and there was nothing left to break, so they took people.`,
+    'bad',
+    city.owner,
+    undefined,
+    [city.x, city.y],
+  );
 }
 
 /** Cities a raider is currently standing next to, for the advisors. */
