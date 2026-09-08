@@ -168,18 +168,94 @@ export function spawnWave(state: GameState): Unit[] {
 
   if (born.length > 0) {
     for (const p of contenders(state)) {
+      // Deliberately without a position, and deliberately not phrased as a
+      // sighting.
+      //
+      // A wave lands in open ground four tiles clear of every city, which is
+      // almost always inside somebody's fog. The old message said "Raiders out
+      // of the wilds" and carried the spawn tile, so the camera was asked to
+      // look at a patch of nothing -- and `chooseFocus` rightly refused, which
+      // left a warning pointing at a place the player could not see and had not
+      // seen. If we are telling you where they are, we saw them; if we did not
+      // see them, this is a rumour and reads like one. The sighting is a
+      // separate event, below.
       log(
         state,
-        `Raiders out of the wilds: ${born.length} of them, and they are not from here.`,
+        `Something has come out of the wilds. ${born.length === 1 ? 'One of them' : `${born.length} of them`}, by the sound of it, and they are not from here.`,
         'bad',
         p.id,
-        undefined,
-        [born[0].x, born[0].y],
       );
     }
   }
   return born;
 }
+
+/**
+ * Tell a player about raiders they can now see, and only those.
+ *
+ * Called after visibility is recomputed, so "can see" means what the map says
+ * rather than what happened. The ids seen last turn are kept on the player so a
+ * band walking your border is announced once rather than every turn -- and so a
+ * band that goes back into the trees and comes out again is announced again,
+ * which is right, because that is a second sighting.
+ *
+ * One line per sighting rather than one per raider: a wave of four arriving at
+ * your fence is one thing that has happened, and four identical messages is how
+ * a log stops being read.
+ */
+export function reportSightings(state: GameState, viewerId: number): void {
+  const viewer = state.players[viewerId];
+  if (!viewer || viewer.barbarian) return;
+  const wild = barbarianOf(state);
+  if (!wild) {
+    viewer.sightedRaiders = undefined;
+    return;
+  }
+
+  const visible = state.units.filter(
+    (u) => u.owner === wild.id && viewer.visible[idx(u.x, u.y, state.width)] > 0,
+  );
+  const known = new Set(viewer.sightedRaiders ?? []);
+  const fresh = visible.filter((u) => !known.has(u.id));
+
+  // Rewritten from what is visible now rather than added to, so the list stays
+  // the size of a war band instead of growing for the length of the game.
+  viewer.sightedRaiders = visible.map((u) => u.id);
+  if (fresh.length === 0) return;
+
+  // The nearest one to something of ours, because that is the one that matters
+  // and the one the camera should be looking at.
+  const mine: Array<{ x: number; y: number }> = [
+    ...state.cities.filter((c) => c.owner === viewerId),
+    ...playerUnits(state, viewerId),
+  ];
+  const closeness = (u: Unit) =>
+    mine.reduce((best, m) => Math.min(best, distance(m.x, m.y, u.x, u.y)), Infinity);
+  const nearest = fresh.reduce((a, b) => (closeness(a) <= closeness(b) ? a : b));
+
+  log(
+    state,
+    fresh.length === 1
+      ? 'Raiders spotted. We do not trust them, on account of them not being us.'
+      : `Raiders spotted, ${fresh.length} of them. We do not trust them, on account of them not being us.`,
+    'bad',
+    viewerId,
+    undefined,
+    [nearest.x, nearest.y],
+    undefined,
+    SIGHTING,
+  );
+}
+
+/**
+ * Marks a log entry as "we have just laid eyes on this".
+ *
+ * Read by the camera, which ranks a first sighting above ordinary news but
+ * below losing something of your own -- see `ui/watch.ts`. A string on the
+ * entry rather than a new `kind`, because it is not a new *sort* of message,
+ * it is the same bad news with a claim attached: we can see this.
+ */
+export const SIGHTING = 'raiders-sighted';
 
 /**
  * What a raiding party does with its turn.

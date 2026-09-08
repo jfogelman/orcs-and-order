@@ -1,4 +1,5 @@
 import type { GameState, LogEntry } from '../model/types';
+import { SIGHTING } from '../sim/barbarians';
 
 /**
  * Which of a turn's events the camera should turn to look at.
@@ -15,9 +16,24 @@ import type { GameState, LogEntry } from '../model/types';
  * is in the log, and what you want to be looking at is where things ended up.
  */
 
-export const WATCH: { yourLoss: number; yours: number; beside: number; no: number } = {
+export const WATCH: {
+  yourLoss: number;
+  sighting: number;
+  yours: number;
+  beside: number;
+  no: number;
+} = {
   /** Something of yours was destroyed, burned, drained, or starved. */
-  yourLoss: 3,
+  yourLoss: 4,
+  /**
+   * You have just laid eyes on something that belongs to nobody.
+   *
+   * Above ordinary news because you cannot answer what you have not seen, and
+   * the whole point of the message is that it is new. Below a loss because a
+   * band on the horizon is a thing to deal with and a burning city is a thing
+   * that has already happened to you.
+   */
+  sighting: 3,
   /** Something else of yours, addressed to you. */
   yours: 2,
   /** Somebody else's fight, close enough to one of your things to matter. */
@@ -31,6 +47,7 @@ export function watchRank(state: GameState, viewerId: number, entry: LogEntry): 
   if (entry.kind !== 'combat' && entry.kind !== 'bad') return WATCH.no;
 
   if (entry.player === viewerId) {
+    if (entry.subject === SIGHTING) return WATCH.sighting;
     return entry.kind === 'bad' ? WATCH.yourLoss : WATCH.yours;
   }
 

@@ -389,6 +389,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <strong>One unit in a city is usually enough to stop them</strong>, which is the
           entire lesson.
         </p>
+        <p class="flavor">
+          You are told twice, and the two mean different things. When a wave lands
+          somewhere in the wilds you hear that <em>something has come out</em> &mdash;
+          a rumour, with no place attached, because nobody of yours was standing there
+          to see it. When one of them actually comes into view you get
+          <strong>&ldquo;Raiders spotted&rdquo;</strong>, and the map turns to look at
+          them, because that time we really did see them.
+        </p>
         <div class="pedia-grid">${unitCard(UNIT_TYPES[RAIDER])}</div>
       </div>
       <div class="pedia-pane" data-pane="controls" hidden>

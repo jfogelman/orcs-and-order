@@ -89,6 +89,19 @@ export interface Player {
    * so it measures an unbroken run rather than a total.
    */
   dominantSince?: number;
+  /**
+   * Raiders this player can currently see, by unit id.
+   *
+   * Held so a sighting is announced when it *happens* rather than every turn a
+   * band spends walking along your border. Rewritten each turn from what is
+   * actually visible, which also means a band that slips back into the trees
+   * and comes out again is reported again -- correctly, because that is a new
+   * sighting.
+   *
+   * Optional so every existing save loads unchanged and means "nothing seen
+   * yet", which at worst re-announces a band already on screen once.
+   */
+  sightedRaiders?: number[];
 }
 
 // ---------------------------------------------------------------------- units
