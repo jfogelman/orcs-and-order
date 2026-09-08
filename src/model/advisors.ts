@@ -107,6 +107,14 @@ export interface Situation {
    * part of it a player can still do anything about.
    */
   deadline: { turnsLeft: number; ahead: boolean; level: boolean } | null;
+  /**
+   * Raiders we can currently see, and whether any is at somebody's door.
+   *
+   * Null in a game without them, so an advisor asks whether there are raiders
+   * at all rather than comparing a count to zero -- which would have every line
+   * about them written for a game that never has any.
+   */
+  raiders: { seen: number; atTheGate: boolean } | null;
 }
 
 /** One thing an advisor might be exercised about, and what they say about it. */
@@ -149,7 +157,8 @@ export type Topic =
   | 'the-clock'
   | 'unrest'
   | 'hunger'
-  | 'the-treasury';
+  | 'the-treasury'
+  | 'raiders';
 
 export interface AdvisorDef {
   id: string;
@@ -270,6 +279,7 @@ function runway(s: Situation): number {
  */
 const TOPIC_OWNER: Partial<Record<Topic, AdvisorRole>> = {
   'the-treasury': 'trade',
+  raiders: 'military',
   'the-clock': 'domestic',
   unrest: 'domestic',
   hunger: 'domestic',
@@ -353,6 +363,15 @@ export function crises(s: Situation): Crisis[] {
       id: 'bankrupt',
       topic: 'the-treasury',
       headline: `The treasury runs dry in ${count(Math.max(0, Math.floor(runway(s))), 'turn')}.`,
+    });
+  }
+  if (s.raiders?.atTheGate) {
+    out.push({
+      id: 'raiders',
+      topic: 'raiders',
+      headline:
+        `${sentence(count(s.raiders.seen, 'raider'))} in sight, and at least one of them is ` +
+        `standing next to something of ours.`,
     });
   }
   if (s.deadline && !s.deadline.ahead && s.deadline.turnsLeft <= 10) {
@@ -473,6 +492,13 @@ const KINGDOM: AdvisorDef[] = [
     faction: 'human',
     blurb: 'Dented breastplate, never repaired, out of pride.',
     concerns: [
+      {
+        about: 'raiders',
+        when: (s) => s.raiders !== null && s.raiders.seen > 0,
+        say: (s) =>
+          `${sentence(count(s.raiders!.seen, 'raider'))} in the open, flying no colours and ` +
+          `owed no courtesy. I have wanted a war nobody could object to for some time.`,
+      },
       {
         about: 'war',
         when: (s) => s.enemiesSeen > 0,
@@ -791,6 +817,15 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Trophies sewn into the armour. Not all of them old.',
     concerns: [
+      {
+        // Reported as the shape of the thing: they are not us, and that is the
+        // whole of the analysis.
+        about: 'raiders',
+        when: (s) => s.raiders !== null && s.raiders.seen > 0,
+        say: (s) =>
+          `Barbarians spotted! We don't trust 'em cuz they ain't us. ` +
+          `${sentence(count(s.raiders!.seen, 'of them', 'of them'))} out there, boss.`,
+      },
       {
         about: 'war',
         when: (s) => s.enemiesSeen > 0,

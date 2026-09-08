@@ -34,6 +34,16 @@ export interface CreatureDef {
   /** Plural form, used for every other count: "Orcs". */
   plural: string;
   faction: FactionId;
+  /**
+   * Not part of either empire's roster: something the map produces.
+   *
+   * `faction` still says orc or human because half the game indexes by it and
+   * a third value would want a third set of advisor lines, perk names and
+   * faction blurbs that nobody would ever read. This flag is what actually
+   * means "belongs to nobody" -- it keeps the creature out of the Orcpedia's
+   * rosters, and no advance unlocks it, so nobody can build one.
+   */
+  wild?: boolean;
   role: UnitRole;
   attack: number;
   defense: number;
@@ -187,6 +197,34 @@ export const CREATURES: CreatureDef[] = [
     trim: '#4a3a26',
     blurb: 'Digs holes. Occasionally a city happens.',
   },
+  // ------------------------------------------------------- the wilds
+  {
+    id: 'skirmisher',
+    name: 'Beastfolk Skirmisher',
+    plural: 'Beastfolk Skirmishers',
+    // Nominal. `wild` is what decides anything, and nothing asks a raiding
+    // party which empire it belongs to.
+    faction: 'orc',
+    wild: true,
+    role: 'melee',
+    // The bible's grunt: loses to one garrisoned unit most of the time, which
+    // is the teaching moment. Fast, so an undefended border is found quickly.
+    attack: 2,
+    defense: 1,
+    hp: 8,
+    move: 3,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'small',
+    body: '#8a7248',
+    trim: '#d8c9a3',
+    blurb:
+      'Comes out of the long grass at a jog, carrying something sharpened by ' +
+      'hand. Wants what you have and has not thought much past that.',
+  },
+
   {
     id: 'goblin',
     expendable: true,

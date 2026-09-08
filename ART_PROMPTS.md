@@ -1240,3 +1240,24 @@ Both of the above take `#00FF00` instead of magenta for anything violet or
 purple, and `art_src/unit states/` already has `deathknight weakened (green
 bg).png` doing exactly that. The parenthesis is stripped when the file is
 processed, so the tag is free to leave in the name as a note to yourself.
+
+## Raiders in the wilds
+
+One band and one unit, per DESIGN_QUEUE section 69's cheapest honest version:
+the **Wildland Raiders**, grunt tier only. `art_src/barbarians/` already holds a
+bible and twelve sprites across four bands; only the one below is wired, and the
+rest stay drafted until there is a rule that needs them.
+
+Processed as a unit sprite, so the same rules as everything in the unit section
+apply -- **one figure, no scene, no ground**, on flat magenta.
+
+| file | what it is | prompt |
+|---|---|---|
+| `skirmisher` | Beastfolk Skirmisher | A lean feral beastfolk raider mid-stride, earthy furs and bone trinkets, warpaint across the muzzle, carrying a crude hand-sharpened spear, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game unit |
+
+**They must not read as either empire.** The Horde is green and red, the Kingdom
+blue and steel; these are earth, bone and warpaint, and a player glancing at the
+map should be able to tell in one look that the thing approaching is neither.
+That is the entire visual job -- the bible calls it a palette per band for
+exactly this reason.
+

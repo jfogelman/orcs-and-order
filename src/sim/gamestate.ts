@@ -1,5 +1,6 @@
 import { EVEN_RATES } from './research';
 import { Rng } from '../engine/rng';
+import { addRaiders } from './barbarians';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
@@ -32,6 +33,8 @@ export interface NewGameOptions {
   maxTurns?: number;
   /** Which side the person at the keyboard plays. */
   playerFaction?: FactionId;
+  /** Whether the wilds send raiding parties. Off unless asked for. */
+  barbarians?: boolean;
 }
 
 // ------------------------------------------------------------- accessors
@@ -54,6 +57,22 @@ export function findCity(state: GameState, id: number): City | undefined {
 
 export function playerUnits(state: GameState, owner: number): Unit[] {
   return state.units.filter((u) => u.owner === owner);
+}
+
+/**
+ * The two empires: everybody who can actually win.
+ *
+ * Every loop that decides something -- who is eliminated, who is ahead, who
+ * holds most of the world -- asks for these rather than `state.players`, so
+ * adding a third thing to the map cannot quietly become a third contender.
+ */
+export function contenders(state: GameState): Player[] {
+  return state.players.filter((p) => !p.barbarian);
+}
+
+/** The barbarian slot, if this game has one. */
+export function barbarianOf(state: GameState): Player | null {
+  return state.players.find((p) => p.barbarian) ?? null;
 }
 
 export function playerCities(state: GameState, owner: number): City[] {
@@ -232,6 +251,7 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     landRatio: opts.landRatio ?? 0.34,
     difficulty: opts.difficulty ?? 'normal',
     maxTurns: opts.maxTurns ?? 300,
+    barbarians: opts.barbarians === true,
   };
   const seed = (opts.seed ?? Math.floor(Math.random() * 0xffffffff)) >>> 0;
   const playerFaction = opts.playerFaction ?? 'orc';
@@ -285,6 +305,11 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   }
   // Consume one draw so the seed stream is defined even when nothing shifted.
   rng.next();
+
+  // After the starting forces, so the band cannot land on top of anybody, and
+  // before the first turn, so a game either has raiders from the beginning or
+  // never does.
+  addRaiders(state, tileCount, (id) => makePlayer(id, playerFaction, 'ai', tileCount));
 
   recomputeAllVisibility(state);
   log(

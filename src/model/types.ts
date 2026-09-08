@@ -30,6 +30,17 @@ export type Controller = 'human' | 'ai';
 export interface Player {
   id: number;
   faction: FactionId;
+  /**
+   * Not a side in the game, just something that lives on the map.
+   *
+   * Barbarians hold a `Player` slot because units are owned by index and every
+   * lookup in the game assumes that. What they are not is a **contender**: they
+   * are skipped by victory, elimination, score and the dominance clock, so a
+   * game with them in it is still won or lost between the two empires.
+   *
+   * Optional so every save without them loads as "no barbarians here".
+   */
+  barbarian?: boolean;
   /** The civilisation name, e.g. "The Bleeding Skull Horde". */
   name: string;
   /** The leader's name, e.g. "Grunk the Reasonably Confident". */
@@ -346,6 +357,15 @@ export interface GameSettings {
   difficulty: 'peaceful' | 'normal' | 'nasty';
   /** After this turn, the highest score wins by default. */
   maxTurns: number;
+  /**
+   * Whether the wilds send raiding parties.
+   *
+   * Per game and saved with it, so a game started without them never grows
+   * them and a game started with them keeps them. Off unless asked for:
+   * section 69 is emphatic that a third party changes what a game *is*, and
+   * every measurement in this project assumes exactly two sides.
+   */
+  barbarians?: boolean;
 }
 
 export interface GameState {

@@ -4,7 +4,7 @@ import { ADVISORS, advisorConcern, councilConcerns, crises, newCrises } from '..
 
 const base = (over: Partial<Situation>): Situation =>
   ({
-    turn: 120, faction: 'orc', deadline: null, cities: 4, rioting: 0, restless: 0,
+    turn: 120, faction: 'orc', deadline: null, raiders: null, cities: 4, rioting: 0, restless: 0,
     starving: 0, gold: 200, goldPerTurn: 5, beakersPerTurn: 5,
     rates: { coin: 4, beakers: 4, calm: 4 }, researching: 'Axes', undefended: 0,
     enemiesSeen: 0, army: 4, magicUnits: 0, rankAndFile: 2, paladins: 0, walled: 0,

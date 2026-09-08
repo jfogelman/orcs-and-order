@@ -14,7 +14,8 @@ import {
 } from './city';
 import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
-import { log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
+import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
+import { runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders } from './movement';
 import { addBeakers } from './research';
 import { effectiveMove } from './rules';
@@ -353,7 +354,7 @@ export const DOMINANCE = {
 function checkDominance(state: GameState): void {
   if (isOver(state)) return;
   const total = state.cities.length;
-  for (const p of state.players) {
+  for (const p of contenders(state)) {
     if (!p.alive) {
       delete p.dominantSince;
       continue;
@@ -377,7 +378,7 @@ function checkDominance(state: GameState): void {
       // once. The condition was met fairly -- three quarters of the world, held
       // -- but a countdown nobody can see is indistinguishable from the game
       // stopping for no reason, which is exactly how it was described.
-      for (const other of state.players) {
+      for (const other of contenders(state)) {
         log(
           state,
           other.id === p.id
@@ -405,7 +406,7 @@ function checkDominance(state: GameState): void {
 }
 
 function checkElimination(state: GameState): void {
-  for (const p of state.players) {
+  for (const p of contenders(state)) {
     if (!p.alive) continue;
     const cities = playerCities(state, p.id).length;
     const units = playerUnits(state, p.id).length;
@@ -426,7 +427,10 @@ function checkElimination(state: GameState): void {
   // disperse and players die, because that is the board and not the verdict.
   if (state.playingOn) return;
 
-  const survivors = state.players.filter((p) => p.alive);
+  // Contenders only. A raiding band holds a player slot so that units can be
+  // owned by index, and it must never be mistaken for a side that can win or be
+  // eliminated -- section 69's whole warning.
+  const survivors = contenders(state).filter((p) => p.alive);
   if (survivors.length === 1 && !isOver(state)) {
     state.winner = survivors[0].id;
     state.victory = 'conquest';
@@ -494,12 +498,12 @@ function warnAboutTheClock(state: GameState): void {
   const left = turnsLeft(state);
   // Exactly on the mark, so it is said once and needs nothing remembered.
   if (!CLOCK_WARNINGS.includes(left as (typeof CLOCK_WARNINGS)[number])) return;
-  const ranked = [...state.players]
+  const ranked = contenders(state)
     .filter((p) => p.alive)
     .sort((a, b) => playerScore(state, b.id) - playerScore(state, a.id));
   const leader = ranked[0];
   const level = ranked.length > 1 && playerScore(state, ranked[0].id) === playerScore(state, ranked[1].id);
-  for (const p of state.players) {
+  for (const p of contenders(state)) {
     if (!p.alive) continue;
     const standing = level
       ? 'and the totals are level'
@@ -521,6 +525,15 @@ function warnAboutTheClock(state: GameState): void {
 export function beginPlayerTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
+
+  // A raiding band has no economy, no research and nothing to heal for; it
+  // gets its movement back and a wave now and then, and that is all it is.
+  if (player.barbarian) {
+    refreshUnits(state, player);
+    spawnWave(state);
+    runRaiders(state, playerId);
+    return;
+  }
 
   tickUnitStatuses(state, playerId);
   refreshUnits(state, player);

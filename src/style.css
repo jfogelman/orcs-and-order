@@ -1651,3 +1651,25 @@ kbd {
     padding-left: 38px;
   }
 }
+
+/* ------------------------------- the raiders toggle, section 95 */
+
+/* A checkbox with a sentence beside it, which the new-game form had no shape
+   for -- every other field there is a labelled input. */
+.field-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.field-check input {
+  margin-top: 3px;
+  flex: 0 0 auto;
+}
