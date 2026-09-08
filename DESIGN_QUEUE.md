@@ -6744,6 +6744,23 @@ The larger values were not chosen because they change what the pose *means* for
 the big creatures -- at 0.333 a dragon kneels at 8 hit points of 25, which is
 not barely still in the fight, it is a bad afternoon.
 
+### Decided: it stays at 0.1
+
+Jeremy declined the change. Recorded here so the question is closed rather than
+rediscovered every time somebody reads the arithmetic and notices the gap.
+
+What that settles, plainly: **for the eight creatures with ten or fewer hit
+points the kneeling frame is dead art.** Peon, peasant, goblin, sapper, archer,
+axethrower, skirmisher and outrider ship a weakened sheet whose second pose will
+never be drawn, and neither will their group variants'. The first pose still
+carries them, and the measurement above is the reason that is an acceptable
+trade rather than an oversight: the whole weakened band is 1.6% of what is on
+screen, and moving the threshold buys a fraction of a fraction.
+
+The practical consequence is for art rather than code. A weakened sheet for one
+of those eight is judged on **frame one alone** -- there is no point re-rolling
+a sheet because its kneeling pose reads badly, since nobody will ever see it.
+
 ### A methodology note, in the section 59 tradition
 
 The first version of this probe keyed its per-unit map by `u.id`. Unit ids
