@@ -1265,6 +1265,14 @@ apply -- **one figure, no scene, no ground**, on flat magenta.
 |---|---|---|
 | `skirmisher` | Beastfolk Skirmisher | A lean feral beastfolk raider mid-stride, earthy furs and bone trinkets, warpaint across the muzzle, carrying a crude hand-sharpened spear, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game unit |
 
+**The attack strip too**, `Beastfolk Skirmisher attack.jpg` in the same folder,
+following the 4-frame house style above. Named rather than scanned, so the other
+eleven attack sheets in that folder are held rather than warned about.
+
+**Still wanted: a weakened sheet.** Run the standing weakened template over the
+skirmisher. Every other wired creature has one, and without it a raider at a
+tenth of its health stands there looking untroubled.
+
 **Filed where it belongs, served where it is needed.** This one sheet sits in
 `art_src/barbarians/` under its creature name, not in `art_src/units/` under its
 id -- `prepare_art.py` carries it across into `public/units/skirmisher.png`,

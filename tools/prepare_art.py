@@ -983,7 +983,7 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
         return 0, [], []
     out.mkdir(parents=True, exist_ok=True)
 
-    known = {c for c in CREATURES}
+    known = set(CREATURES) | set(WILDS)
     best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
     unknown: list[str] = []
     problems: list[str] = []
@@ -1292,6 +1292,27 @@ def split_variant(name: str, known: set[str]) -> tuple[str, str] | None:
     return best
 
 
+def wild_attack_sheets() -> list[tuple[Path, str]]:
+    """
+    The raiders' attack strips, which live with their band rather than in
+    `unit effects/`.
+
+    Named rather than scanned. `art_src/barbarians/` holds an attack sheet for
+    all twelve creatures in the bible and only the wired ones have a unit to
+    attach to, so scanning that folder would report eleven unknown creatures
+    every single run -- which is how a warning list stops being read.
+    """
+    src = SRC / "barbarians"
+    if not src.is_dir():
+        return []
+    found: list[tuple[Path, str]] = []
+    for unit_id, creature in WILDS.items():
+        path = find_source(src, f"{creature} attack")
+        if path is not None:
+            found.append((path, unit_id))
+    return found
+
+
 def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     """
     Per-creature attack animations, sliced the same way the effect strips are.
@@ -1322,18 +1343,27 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
     unknown: list[str] = []
     problems_early: list[str] = []
-    for path in sorted(src.iterdir()):
-        if path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        base, variant = normalise_stem(path.stem)
-        base = re.sub(r"\s*attack$", "", base).strip()
-        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
-        split = split_variant(name, known)
-        if split is None:
-            unknown.append(f"{path.name} -> '{name}'")
-            continue
-        creature, suffix = split
-        name = "-".join(x for x in (creature, suffix, variant) if x)
+    # Most sheets are named for the creature and found by scanning; the wilds
+    # are named for the unit and fetched by name. `None` means "work the name
+    # out from the filename", which is the ordinary case.
+    sources: list[tuple[Path, str | None]] = [
+        (p, None) for p in sorted(src.iterdir()) if p.suffix.lower() in IMAGE_SUFFIXES
+    ]
+    sources.extend(wild_attack_sheets())
+
+    for path, forced in sources:
+        if forced is not None:
+            name = forced
+        else:
+            base, variant = normalise_stem(path.stem)
+            base = re.sub(r"\s*attack$", "", base).strip()
+            name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+            split = split_variant(name, known)
+            if split is None:
+                unknown.append(f"{path.name} -> '{name}'")
+                continue
+            creature, suffix = split
+            name = "-".join(x for x in (creature, suffix, variant) if x)
         keyed, cut_out = remove_background(Image.open(path))
         if not cut_out:
             problems_early.append(f"{name}: background would not key")

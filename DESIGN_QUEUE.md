@@ -6592,3 +6592,22 @@ be **filed by what it is and served by what uses it** -- the Beastfolk
 Skirmisher stays with its band, and `public/units/skirmisher.png` is what the
 renderer asks for. The rest of that folder is now one line of `WILDS` away from
 being wired, whenever a rule wants a second raider.
+
+### And their attack cycle
+
+Twelve attack strips arrived with the sprites, one per creature in the bible,
+and only one has a unit to attach to. `process_unit_effects` scans a folder and
+works the creature out of each filename, which would have meant eleven "unknown
+creature" warnings on every run -- and a warning list nobody reads is worse than
+no warning list.
+
+So the wilds are **named rather than scanned**: `wild_attack_sheets()` asks
+`WILDS` for the sheets belonging to units that actually exist, and the other
+eleven sit in the folder costing nothing until a rule wants them. Same split as
+the sprites -- filed by what it is, served by what uses it -- reached the same
+way, which is the point.
+
+The one gap left is a **weakened** sheet. Every wired creature has one and the
+raider does not, so a raider at a tenth of its health still stands there
+unbothered. It wants the section-95 prompt run through the standing weakened
+template, and nothing in the code has to change to receive it.
