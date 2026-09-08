@@ -16,7 +16,8 @@
     "sweep": "vitest run --config vitest.sweep.config.ts tools/sweep.run.test.ts",
     "diagnose": "vitest run --config vitest.sweep.config.ts tools/founding.run.test.ts",
     "composition": "vitest run --config vitest.sweep.config.ts tools/composition.run.test.ts",
-    "growth": "vitest run --config vitest.sweep.config.ts tools/growth.run.test.ts"
+    "growth": "vitest run --config vitest.sweep.config.ts tools/growth.run.test.ts",
+    "poses": "vitest run --config vitest.sweep.config.ts tools/poses.run.test.ts"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
