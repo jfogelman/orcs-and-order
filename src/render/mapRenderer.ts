@@ -98,7 +98,7 @@ const CITY_OVERLAY_STATES = [
  * bar already carries the exact figure; this is so a battered army reads as
  * battered at a glance, without counting bars.
  */
-const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
+export const HURT_LEVELS = { hurt: 0.5, dying: 0.1 } as const;
 
 /**
  * Which club an ogre is swinging, as an art suffix.

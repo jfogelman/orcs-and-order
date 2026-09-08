@@ -6658,3 +6658,101 @@ cannot enter. The fix is one number and it is not obviously 0.2: that threshold
 decides how a battered army reads at a glance, and moving it changes every
 creature at once. Worth measuring against a played game rather than guessed at,
 which is why it is written down here instead of changed in this pass.
+
+## 98. How often each weakened pose lands
+
+Section 97 noticed that the kneeling pose is unreachable for creatures with ten
+or fewer hit points and declined to fix it by guessing at a number. This is the
+measurement it asked for: 108 games, two seed sets, 214,264 unit-turns.
+
+`tools/poses.run.test.ts`, via `npm run poses`. It changes nothing and plays no
+arm twice -- it watches games through `playGame`'s observer and records, for
+every unit standing on the board at the end of every half-turn, its share of
+full health. Every candidate threshold is then scored against those same
+recorded observations, which is both cheaper than a sweep and stricter: the
+arms cannot differ by anything except the number, because there are no arms.
+
+`HURT_LEVELS` is imported from the renderer rather than restated, since the
+whole question is about those two numbers and a measurement holding its own
+copy could answer confidently about a game that does not exist.
+
+### What is actually on screen
+
+|                    | per unit-turn | of units, ever |
+|---|---|---|
+| healthy            | 98.37% | -- |
+| weakened, upright  | 1.42%  | 21.65% |
+| weakened, kneeling | 0.21%  | 3.39%  |
+
+Both sets agree: 1.61/0.27 tuned against 1.22/0.16 held-out per unit-turn,
+22.7/4.0 against 20.6/2.7 per unit ever.
+
+The first thing this says has nothing to do with thresholds. **The weakened art
+is on screen about one and a half percent of the time.** Units in this game are
+overwhelmingly killed outright from good health rather than ground down -- a
+peon is seen weakened 1.1% of the time it exists, a peasant 3.5%. Whatever is
+done about the second pose, neither pose is carrying much of the game's look.
+
+Where it does carry: the knight (56% ever weakened), troll (39%), footman (39%),
+ogre (35%). Big expensive things that trade blows and survive to do it again.
+
+### The unreachable pose, confirmed
+
+|             | units | ever weakened | ever kneeling |
+|---|---|---|---|
+| maxHp <= 10 | 902 | 130 | **0** |
+| maxHp >  10 | 987 | 279 | 64 |
+
+Zero. Not "rare" -- across 108 games and nine hundred units, the kneeling pose
+was shown for a creature with ten or fewer hit points exactly no times, which is
+what the arithmetic said would happen.
+
+**Groups do not rescue it, and this corrects an assumption made in section 97.**
+`units.ts` sets `hp: c.hp` flat, deliberately -- N orcs are efficient because
+they hold one tile and spend one movement point, and the price is losing all of
+them at once. So `orc_x2` has the same 12 hp as `orc`, and `archer_x2` inherits
+the archer's unreachable pose along with its ten.
+
+Eight of the nineteen base creatures are affected: peon, peasant, goblin,
+sapper, archer, axethrower at 10, skirmisher and outrider at 8. That is the
+whole human archery line and the whole orc axethrower line, not a handful of
+workers.
+
+### What each threshold would buy
+
+| dying < | per unit-turn | of units, ever |
+|---|---|---|
+| 0.100 (ships) | 0.21% | 3.39% |
+| 0.150 | 0.41% | 6.09% |
+| 0.200 | 0.55% | 8.26% |
+| 0.250 | 0.64% | 10.32% |
+| 0.333 | 1.10% | 15.78% |
+
+**The recommendation is 0.15**, and the reason is a boundary rather than a
+preference. The smallest share a living unit can have is `1 / maxHp`, which is
+0.125 for the 8-hp creatures, so *any* threshold above 0.125 makes the pose
+reachable for every creature in the game and every threshold at or below it
+leaves the skirmisher and the outrider out. 0.15 is the smallest round number
+past that line.
+
+What it buys is modest and honest: roughly double the kneeling pose, from 3.4%
+to 6.1% of units. What it mostly means in practice is "down to its last hit
+point" for the small creatures and "down to two" for a knight, which is a
+defensible reading of a pose that shows something barely still in the fight.
+
+The larger values were not chosen because they change what the pose *means* for
+the big creatures -- at 0.333 a dragon kneels at 8 hit points of 25, which is
+not barely still in the fight, it is a bad afternoon.
+
+### A methodology note, in the section 59 tradition
+
+The first version of this probe keyed its per-unit map by `u.id`. Unit ids
+restart at the top of every game, so 54 games did not produce 54 populations --
+they produced one population of about 350 in which "unit 7" was the minimum over
+every unit 7 in every game. It reported **68%** of units as ever weakened. Keyed
+by seed *and* id, the same six games say **22%**.
+
+The per-unit-turn figures were never affected, because they do not depend on
+identity. Only the lifetime figures were, and those are the ones the decision
+rests on. Caught because the pooled row claimed 346 units after two sets of 346
+and 319, which is not how addition works.
