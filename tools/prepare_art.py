@@ -984,26 +984,48 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
     out.mkdir(parents=True, exist_ok=True)
 
     known = set(CREATURES) | set(WILDS)
+    drafts = wild_drafts()
+    held = 0
     best: dict[str, tuple[int, Path, int, int, Image.Image]] = {}
     unknown: list[str] = []
     problems: list[str] = []
 
-    for path in sorted(src.iterdir()):
-        if path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        base, variant = normalise_stem(path.stem)
-        words = base.split()
-        kind = STATE_KINDS.get(words[-1]) if words else None
-        if kind is None:
-            unknown.append(f"{path.name}: no idea which state '{base}' is")
-            continue
-        name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
-        split = split_variant(name, known)
-        if split is None:
-            unknown.append(f"{path.name} -> '{name}'")
-            continue
-        creature, suffix = split
-        name = "-".join(x for x in (creature, suffix) if x)
+    # As in the attack pass: most sheets are found by scanning and named for the
+    # creature, and the wilds are fetched by name because their folders hold
+    # more creatures than the game has units.
+    sources: list[tuple[Path, str | None, str | None]] = [
+        (p, None, None) for p in sorted(src.iterdir()) if p.suffix.lower() in IMAGE_SUFFIXES
+    ]
+    for word, kind_of in STATE_KINDS.items():
+        sources.extend(
+            (path, unit_id, kind_of)
+            for path, unit_id in wild_sheets(word, "unit states", "barbarians")
+        )
+
+    for path, forced, forced_kind in sources:
+        variant = ""
+        if forced is not None:
+            name, kind = forced, forced_kind
+        else:
+            base, variant = normalise_stem(path.stem)
+            words = base.split()
+            kind = STATE_KINDS.get(words[-1]) if words else None
+            if kind is None:
+                unknown.append(f"{path.name}: no idea which state '{base}' is")
+                continue
+            name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
+            # Drafted before parsed: a creature the wilds have drawn but no rule
+            # has asked for is held, not complained about, and must never reach
+            # `split_variant` -- see `wild_drafts`.
+            if name in drafts:
+                held += 1
+                continue
+            split = split_variant(name, known)
+            if split is None:
+                unknown.append(f"{path.name} -> '{name}'")
+                continue
+            creature, suffix = split
+            name = "-".join(x for x in (creature, suffix) if x)
 
         keyed, cut_out = remove_background(Image.open(path))
         if not cut_out:
@@ -1028,6 +1050,8 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
         sheet.save(target, optimize=True)
         print(f"  units/{key}.png ({frames} frames from {w}x{h})")
         done += 1
+    if held:
+        print(f"  ({held} sheets held: drawn for the wilds, no unit asks for them yet)")
     return done, problems, unknown
 
 
@@ -1292,24 +1316,60 @@ def split_variant(name: str, known: set[str]) -> tuple[str, str] | None:
     return best
 
 
-def wild_attack_sheets() -> list[tuple[Path, str]]:
+def wild_drafts() -> set[str]:
     """
-    The raiders' attack strips, which live with their band rather than in
-    `unit effects/`.
+    Every creature the wilds have art for, wired or not, as a slug.
 
-    Named rather than scanned. `art_src/barbarians/` holds an attack sheet for
-    all twelve creatures in the bible and only the wired ones have a unit to
-    attach to, so scanning that folder would report eleven unknown creatures
-    every single run -- which is how a warning list stops being read.
+    Read off `art_src/barbarians/` rather than listed, so the folder is its own
+    register and nobody has to remember to update a constant when a band gets
+    another member.
+
+    It exists so the scanning passes can tell **drafted** from **unknown**. The
+    weakened sheets arrived in `unit states/` alongside everybody else's, which
+    means eleven creatures with no unit are sitting in a folder that gets
+    scanned. Without this they are reported as mistakes on every run, and worse,
+    `Ogre Clan Brute weakened.jpg` parses cleanly as the creature `ogre` with
+    the variant `clan-brute` -- so it does not even warn, it quietly writes a
+    sheet for a unit that does not exist.
     """
     src = SRC / "barbarians"
     if not src.is_dir():
-        return []
+        return set()
+    names: set[str] = set()
+    states = "|".join(STATE_KINDS)
+    for path in src.iterdir():
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, _ = normalise_stem(path.stem)
+        base = re.sub(rf"\s+(attack|{states})$", "", base).strip()
+        names.add(re.sub(r"[^a-z0-9]+", "-", base).strip("-"))
+    return names
+
+
+def wild_sheets(suffix: str, *folders: str) -> list[tuple[Path, str]]:
+    """
+    A raider's sheets, which are named for the creature and wanted by unit id.
+
+    Named rather than scanned, which is the whole point. The bible has twelve
+    creatures and only the wired ones have a unit to attach a picture to, so
+    scanning the folder would report eleven unknown creatures on every single
+    run -- and that is how a warning list stops being read.
+
+    Several folders because a set arrives wherever the artist happened to put
+    it: the attack strips came in beside the sprites, the weakened sheets came
+    in with everybody else's. Both are correct, neither is worth a rule, and
+    looking in both costs nothing.
+    """
     found: list[tuple[Path, str]] = []
     for unit_id, creature in WILDS.items():
-        path = find_source(src, f"{creature} attack")
-        if path is not None:
-            found.append((path, unit_id))
+        for folder in folders:
+            src = SRC / folder
+            if not src.is_dir():
+                continue
+            path = find_source(src, f"{creature} {suffix}")
+            if path is not None:
+                found.append((path, unit_id))
+                break
     return found
 
 
@@ -1336,7 +1396,9 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
         return 0, [], []
     out.mkdir(parents=True, exist_ok=True)
 
-    known = {c for c in CREATURES}
+    known = set(CREATURES) | set(WILDS)
+    drafts = wild_drafts()
+    held = 0
     # A re-roll usually keeps the old file beside it, tagged in parentheses
     # ("(green bg)"). Prefer whichever holds more frames, and on a tie the one
     # generated most recently -- a second attempt supersedes the first.
@@ -1349,7 +1411,7 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     sources: list[tuple[Path, str | None]] = [
         (p, None) for p in sorted(src.iterdir()) if p.suffix.lower() in IMAGE_SUFFIXES
     ]
-    sources.extend(wild_attack_sheets())
+    sources.extend(wild_sheets("attack", "barbarians", "unit effects"))
 
     for path, forced in sources:
         if forced is not None:
@@ -1358,6 +1420,9 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
             base, variant = normalise_stem(path.stem)
             base = re.sub(r"\s*attack$", "", base).strip()
             name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+            if name in drafts:
+                held += 1
+                continue
             split = split_variant(name, known)
             if split is None:
                 unknown.append(f"{path.name} -> '{name}'")
@@ -1391,6 +1456,8 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
         print(f"  units/{name}_attack.png ({frames} frames from {w}x{h})")
         done += 1
 
+    if held:
+        print(f"  ({held} sheets held: drawn for the wilds, no unit asks for them yet)")
     missing = sorted(known - {n for n in best if "-" not in n})
     return done, problems + [f"no animation for {m}" for m in missing], unknown
 

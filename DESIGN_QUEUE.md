@@ -6607,7 +6607,40 @@ eleven sit in the folder costing nothing until a rule wants them. Same split as
 the sprites -- filed by what it is, served by what uses it -- reached the same
 way, which is the point.
 
-The one gap left is a **weakened** sheet. Every wired creature has one and the
-raider does not, so a raider at a tenth of its health still stands there
-unbothered. It wants the section-95 prompt run through the standing weakened
-template, and nothing in the code has to change to receive it.
+### And their weakened poses
+
+The twelve weakened sheets arrived in `art_src/unit states/` rather than with
+the band, which is fine and is why `wild_sheets` takes a list of folders -- a
+set arrives wherever the artist happened to put it, and looking in both places
+costs nothing.
+
+What it did expose is that a scanned folder now holds creatures the game has no
+unit for, and the failure is not the warning you would expect. `Ogre Clan Brute
+weakened.jpg` parses **cleanly** as the creature `ogre` with the variant
+`clan-brute`, so it does not warn at all -- it quietly writes
+`units/ogre-clan-brute_hurt.png`, a sheet for a unit that does not exist, into
+the shipped bundle.
+
+So `wild_drafts()` reads `art_src/barbarians/` and treats every creature drawn
+there as **held** rather than unknown, checked *before* the name is parsed. The
+folder is its own register: another raider in the band needs no constant
+updated. One line per pass says how many were held, so held art stays visible
+without eleven warnings a run burying the real ones.
+
+### Noted while checking it: the second weakened pose is unreachable
+
+`HURT_LEVELS = { hurt: 0.5, dying: 0.1 }`, and the sheets hold two poses --
+battered but upright, and down on one knee. The second is drawn at
+`share < 0.1`, which for a singleton needs `maxHp > 10`, because the smallest
+share a living unit can have is `1 / maxHp`.
+
+Eight of the base creatures have 10 hp or fewer. **For every one of them the
+kneeling pose can never be shown**, on any turn, in any game -- a unit at 1 hp
+out of 8 is at 0.125 and gets the upright pose. It only ever appears on the
+bigger creatures and on groups, whose hp is multiplied by their count.
+
+This is art that was drawn, keyed, sliced and shipped for a state the game
+cannot enter. The fix is one number and it is not obviously 0.2: that threshold
+decides how a battered army reads at a glance, and moving it changes every
+creature at once. Worth measuring against a played game rather than guessed at,
+which is why it is written down here instead of changed in this pass.
