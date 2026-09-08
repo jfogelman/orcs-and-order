@@ -1265,6 +1265,20 @@ apply -- **one figure, no scene, no ground**, on flat magenta.
 |---|---|---|
 | `skirmisher` | Beastfolk Skirmisher | A lean feral beastfolk raider mid-stride, earthy furs and bone trinkets, warpaint across the muzzle, carrying a crude hand-sharpened spear, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game unit |
 
+**The attack strip too**, `Beastfolk Skirmisher attack.jpg` in the same folder,
+following the 4-frame house style above. Named rather than scanned, so the other
+eleven attack sheets in that folder are held rather than warned about.
+
+**And the weakened sheet**, `Beastfolk Skirmisher weakened.jpg`, which arrived
+in `art_src/unit states/` with everybody else's rather than with the band. Both
+folders are searched, so either is correct.
+
+**Sheets for creatures with no unit are held, not warned about.** The eleven
+other raiders have attack and weakened sheets drawn and nothing to attach them
+to. `prepare_art.py` reads `art_src/barbarians/` as the register of who the
+wilds are and holds their art silently, saying only how many. Wiring one is a
+line in `WILDS`.
+
 **Filed where it belongs, served where it is needed.** This one sheet sits in
 `art_src/barbarians/` under its creature name, not in `art_src/units/` under its
 id -- `prepare_art.py` carries it across into `public/units/skirmisher.png`,
