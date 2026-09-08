@@ -209,7 +209,7 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
         link.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          openPedia(player, link.dataset.pedia);
+          openPedia(state, player, link.dataset.pedia);
           // Looking something up should not cost you your place. `openModal`
           // has no stack, and one is more than this problem deserves: the
           // Orcpedia is opened from four places and only this one wants to

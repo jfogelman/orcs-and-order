@@ -6507,6 +6507,20 @@ sharpened spears do not level a wall.
 The first version of this had them simply stop at an undefended city, which is
 not a raid. Reported immediately, and rightly.
 
+### And the Orcpedia explains them
+
+A tab of their own, because they belong to neither roster. It says whether *this*
+game has them, since that is decided when a game starts and cannot be changed
+after; the wave numbers are read from the constants rather than written out, so
+the page cannot drift from the rule the way the terrain page had begun to.
+
+Worth stating as a habit rather than a one-off: **a rule ships with its Orcpedia
+entry**. This file records why a thing was built and what was measured, and it is
+written for whoever works on the game next -- a player never sees it. A mechanic
+that exists only here is one nobody can look up, which is the same failure as the
+keyboard shortcuts in section 73: real, working, and discoverable only by reading
+the source.
+
 ### Not measured, deliberately
 
 Off by default, so nothing that has been measured is disturbed. What a game with

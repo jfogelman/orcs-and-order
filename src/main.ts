@@ -1040,7 +1040,7 @@ class App {
       openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud()),
     );
     el<HTMLButtonElement>('btn-pedia').addEventListener('click', () =>
-      openPedia(this.state.players[this.viewerId], this.selected?.type),
+      openPedia(this.state, this.state.players[this.viewerId], this.selected?.type),
     );
     el<HTMLButtonElement>('btn-mute').addEventListener('click', () =>
       openAudioMenu(() => this.refreshMuteButton()),
@@ -1309,7 +1309,7 @@ class App {
         this.toggleMute();
         break;
       case 'p':
-        openPedia(this.state.players[this.viewerId], this.selected?.type);
+        openPedia(this.state, this.state.players[this.viewerId], this.selected?.type);
         break;
       case 'a':
         openAdvisors(this.state, this.viewerId);
@@ -1529,7 +1529,7 @@ class App {
       panel.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
         link.addEventListener('click', (e) => {
           e.preventDefault();
-          openPedia(this.state.players[this.viewerId], link.dataset.pedia);
+          openPedia(this.state, this.state.players[this.viewerId], link.dataset.pedia);
         });
       });
       panel.querySelectorAll<HTMLButtonElement>('button[data-act]').forEach((btn) => {
