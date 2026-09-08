@@ -1,4 +1,5 @@
 import { unitType } from '../model/units';
+import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
 import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
@@ -17,7 +18,7 @@ import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders } from './movement';
-import { addBeakers } from './research';
+import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
 
 /**
@@ -491,6 +492,49 @@ export const CLOCK_WARNINGS = [30, 10] as const;
 /** How many turns are left before the deadline. */
 export function turnsLeft(state: GameState): number {
   return state.settings.maxTurns - state.turn;
+}
+
+/**
+ * What the empire earns toward its current study each turn.
+ *
+ * Here rather than counted at each screen. The advisors were already summing
+ * this inline, and a second copy on the advances screen is the shape of mistake
+ * `cityIncome` was extracted to prevent: two formulas with two percentage
+ * bonuses in them, agreeing right up until somebody changes one.
+ *
+ * It lives beside `turnsLeft` rather than in `research.ts` because a sum over
+ * cities needs `cityIncome`, and `city.ts` already reads the trade split out of
+ * `research.ts`. Putting it there would close a loop between the two.
+ */
+export function beakersPerTurn(state: GameState, playerId: number): number {
+  const player = state.players[playerId];
+  return playerCities(state, playerId).reduce(
+    (n, city) => n + cityIncome(state, city, player).beakers,
+    0,
+  );
+}
+
+/**
+ * Turns until the current study finishes, or null when it will not.
+ *
+ * Null rather than a big number, because an empire earning nothing is a
+ * different sentence rather than a longer wait -- every city in disorder
+ * produces no trade at all, and "never at this rate" is the thing worth
+ * saying.
+ *
+ * Rounded **up**, and a study already paid for reads as zero: telling somebody
+ * "1" when they mean "it lands this turn" is the sort of small lie an interface
+ * should not tell.
+ */
+export function turnsToLearn(state: GameState, playerId: number): number | null {
+  const player = state.players[playerId];
+  if (!player.researching) return null;
+  const def = TECHS_BY_ID[player.researching];
+  if (!def) return null;
+  const left = techCost(player, def) - player.beakers;
+  if (left <= 0) return 0;
+  const rate = beakersPerTurn(state, playerId);
+  return rate > 0 ? Math.ceil(left / rate) : null;
 }
 
 function warnAboutTheClock(state: GameState): void {

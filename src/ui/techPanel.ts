@@ -4,10 +4,26 @@ import type { TechDef } from '../model/techs';
 import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
 import { knowsTech, researchableTechs, setResearch, techCost } from '../sim/research';
+import { turnsToLearn } from '../sim/turn';
 import { advisorSuggestions } from '../model/suggestions';
 import { portraitPath } from './advisors';
 import { afterModalCloses, bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
+
+/**
+ * How long the current study has to run, said in words.
+ *
+ * Shared between the advances screen and the status bar so the two cannot
+ * disagree, and phrased rather than printed: "3" alone is ambiguous about
+ * whether this turn counts, and an empire whose cities are all rioting earns
+ * nothing at all, which is a different answer rather than a bigger number.
+ */
+export function etaText(state: GameState, playerId: number): string {
+  const turns = turnsToLearn(state, playerId);
+  if (turns === null) return 'not at this rate';
+  if (turns === 0) return 'this turn';
+  return turns === 1 ? '1 turn' : `${turns} turns`;
+}
 
 /**
  * The tech tree, laid out in dependency tiers.
@@ -155,6 +171,7 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
       ${
         current
           ? `<div class="stat-row"><span class="label">Currently researching</span><span class="value">${escapeHtml(current.name)} — ${player.beakers} / ${techCost(player, current)}</span></div>
+             <div class="stat-row"><span class="label">Turns left</span><span class="value">${etaText(state, player.id)}</span></div>
              ${bar(player.beakers, techCost(player, current))}`
           : mustChoose
             ? '<span class="k-bad">Nothing is being studied. Beakers are piling up in a shed. Pick something.</span>'
