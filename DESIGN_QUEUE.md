@@ -6542,3 +6542,53 @@ mechanic; the interest is in it happening to ground you were relying on.
 Worth doing after roads and not before, and worth noting now so that whoever
 builds roads knows there is a second customer for them.
 
+
+## 97. Turns left, and the raiders get their faces
+
+Two small things, both of which were doing arithmetic the game already knew.
+
+### Turns left on an advance
+
+The status bar has always said `Full of Fire -- 201/340`, and the advances
+screen has always said the same in a wider font with a bar under it. Neither
+ever said the thing anybody actually wants, which is **when**. You could work it
+out -- add up the beakers your cities make, divide, round up -- but you had to do
+it *every turn*, because every city that grows or riots changes the answer.
+
+So both now end with it:
+
+    Full of Fire — 201/340 · 18 turns
+
+and the advances screen gains a **Turns left** row of its own above the bar.
+
+**One function, not two.** `beakersPerTurn` and `turnsToLearn` live in
+`sim/turn.ts`, beside `turnsLeft`, and both screens go through the same
+`etaText`. The obvious home was `sim/research.ts` and it is the wrong one: the
+sum needs `cityIncome`, and `city.ts` already reads the trade split out of
+`research.ts`, so putting it there closes a loop between two files that are
+imported by nearly everything. This is the third time a cycle has been caught by
+trying it; the note is here so the fourth attempt goes straight to `turn.ts`.
+
+**It answers in words, not numbers.** `etaText` returns `this turn`, `1 turn`,
+`18 turns`, or `not at this rate`. The last is the interesting one: an empire
+whose cities are all in disorder earns no trade at all, and the honest answer to
+"when" is then a different sentence rather than a bigger number.
+`turnsToLearn` returns `null` for it rather than `Infinity`, so a caller has to
+decide what to say.
+
+**Rounded up, and zero means this turn.** A study four fifths paid for is not
+finished. A study already paid for lands on the turn you are looking at, and
+saying "1" there would be a small lie.
+
+### The raiders stop being placeholders
+
+`art_src/barbarians/` has held twelve sprites and a bible since section 95, and
+the one wired unit was still drawing its procedural silhouette. The reason was
+prosaic: `prepare_art.py` resolves a unit id to `art_src/units/<id>.*`, and the
+raider is filed under its creature name in another folder.
+
+Rather than moving the file, `process_aliased` grew an `out_folder`, so art can
+be **filed by what it is and served by what uses it** -- the Beastfolk
+Skirmisher stays with its band, and `public/units/skirmisher.png` is what the
+renderer asks for. The rest of that folder is now one line of `WILDS` away from
+being wired, whenever a rule wants a second raider.

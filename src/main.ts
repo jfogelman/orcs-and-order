@@ -65,7 +65,7 @@ import { newCrises } from './model/advisors';
 import { STATUS_RULES, statusesOf } from './sim/status';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
-import { openTechPanel } from './ui/techPanel';
+import { etaText, openTechPanel } from './ui/techPanel';
 
 /** Turns the battle theme keeps playing after the last enemy is lost from sight. */
 const BATTLE_LINGER_TURNS = 2;
@@ -1380,8 +1380,10 @@ class App {
     el('stat-gold').textContent = `${p.gold}g`;
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;
+    // The turns are on the chip and not only behind the advances screen: doing
+    // the division yourself every turn was the whole complaint.
     el('stat-research').textContent = research
-      ? `${research.name} — ${p.beakers}/${techCost(p, research)}`
+      ? `${research.name} — ${p.beakers}/${techCost(p, research)} · ${etaText(this.state, p.id)}`
       : 'Researching nothing in particular';
 
     this.refreshLog();

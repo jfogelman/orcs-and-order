@@ -70,11 +70,14 @@ CREATURES = [
     "deathknight", "dragon", "goblincatapult",
     "peasant", "footman", "outrider", "archer", "knight", "ballista",
     "mage", "paladin",
-    # The wilds. One band, grunt only, per DESIGN_QUEUE section 69's cheapest
-    # version -- the rest of `art_src/barbarians/` stays drafted until a rule
-    # needs it.
-    "skirmisher",
 ]
+
+# The wilds, drawn in `art_src/barbarians/` and named for the creature rather
+# than for the unit id. One band, grunt only, per DESIGN_QUEUE section 69's
+# cheapest version -- the rest of that folder stays drafted until a rule needs
+# it. They land in `units/` because the renderer knows raiders as units and
+# should not have to care where their pictures were filed.
+WILDS = {"skirmisher": "beastfolk skirmisher"}
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
 
@@ -561,14 +564,19 @@ def process_aliased(
     names: dict[str, str],
     force: bool,
     size: int,
+    out_folder: str | None = None,
 ) -> tuple[int, list[str], list[str]]:
     """
     Like `process_cutouts`, but where the file is not called what the game
     calls the thing. Advisor portraits arrive named for a person rather than
     for an id, and an id with a space in it becomes a URL with a space in it.
+
+    `out_folder` splits the two apart entirely, for art that is *filed* by what
+    it is and *served* by what uses it: the raiders are drawn as beastfolk in
+    `barbarians/` and loaded as units.
     """
     src = SRC / folder
-    out = OUT / folder
+    out = OUT / (out_folder or folder)
     out.mkdir(parents=True, exist_ok=True)
     done = 0
     missing: list[str] = []
@@ -587,7 +595,10 @@ def process_aliased(
         img = trim_and_square(img, size)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
-        print(f"  {folder}/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
+        # Where it landed, not where it came from: the raiders are read out of
+        # `barbarians/` and written into `units/`, and a line naming the source
+        # sends you looking for a file that is not there.
+        print(f"  {out_folder or folder}/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
         if not cut_out:
             failed.append(out_id)
         done += 1
@@ -1624,6 +1635,12 @@ def main() -> int:
 
     print("Units:")
     units, missing_units, failed_units = process_cutouts("units", CREATURES, force)
+    wilds, missing_wilds, failed_wilds = process_aliased(
+        "barbarians", WILDS, force, UNIT_SIZE, out_folder="units"
+    )
+    units += wilds
+    missing_units.extend(missing_wilds)
+    failed_units.extend(failed_wilds)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
     print("Advisor bubbles:")

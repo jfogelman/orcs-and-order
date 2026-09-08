@@ -1220,7 +1220,17 @@ picture.
 > behind every frame, mid-1990s fantasy strategy game style, bright saturated
 > colours, thick readable shapes, no text, no other figures, no frame borders or
 > dividing lines, no background scenery. Leverage the attached image as the
-> creature, showing its full figure.
+> creature, showing its full figure, no weapon changes -- fully in frame -- just
+> two frames.
+
+**Use it verbatim.** This is the wording that came back with usable sheets, and
+three clauses in it are there because something went wrong without them: *no
+weapon changes* (a generator that is told a creature is losing will helpfully
+take its axe away, and then the weakened sprite is a different unit), *fully in
+frame* (a kneeling figure gets cropped at the shin, and the game scales the
+frame rather than the creature, so it lands smaller than its healthy self), and
+*just two frames* (asking for two states reads as an invitation to show the
+in-between).
 
 **Two frames means 2:1**, for the same reason as above.
 
@@ -1254,6 +1264,12 @@ apply -- **one figure, no scene, no ground**, on flat magenta.
 | file | what it is | prompt |
 |---|---|---|
 | `skirmisher` | Beastfolk Skirmisher | A lean feral beastfolk raider mid-stride, earthy furs and bone trinkets, warpaint across the muzzle, carrying a crude hand-sharpened spear, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game unit |
+
+**Filed where it belongs, served where it is needed.** This one sheet sits in
+`art_src/barbarians/` under its creature name, not in `art_src/units/` under its
+id -- `prepare_art.py` carries it across into `public/units/skirmisher.png`,
+which is what the renderer asks for. Adding another raider is a line in `WILDS`
+in that script, not a file that has to be moved out of its band.
 
 **They must not read as either empire.** The Horde is green and red, the Kingdom
 blue and steel; these are earth, bone and warpaint, and a player glancing at the
