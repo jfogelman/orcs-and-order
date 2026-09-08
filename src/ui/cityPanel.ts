@@ -488,7 +488,7 @@ export function openCityPanel(
           // Stop the click reaching the build button underneath it.
           e.preventDefault();
           e.stopPropagation();
-          openPedia(state.players[city.owner], link.dataset.pedia);
+          openPedia(state, state.players[city.owner], link.dataset.pedia);
         });
       });
       // The fat cross. Redrawn wholesale after a click rather than patched:

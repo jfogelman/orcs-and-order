@@ -7,10 +7,11 @@ import { SPECIALS } from '../model/terrain';
 import { TECHS, TECHS_BY_ID } from '../model/techs';
 import { CREATURES, CREATURES_BY_ID, UNIT_TYPES, unitType } from '../model/units';
 import type { UnitTypeDef } from '../model/units';
-import type { FactionId, Player, UnitTypeId } from '../model/types';
+import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
+import { BARBARIANS, RAIDER } from '../sim/barbarians';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -243,7 +244,7 @@ function creatureSection(faction: FactionId): string {
  * `focus` takes either a unit type or a building id and works out which it is,
  * so callers can pass whatever they happen to be showing without caring.
  */
-export function openPedia(player: Player, focus?: string): void {
+export function openPedia(state: GameState, player: Player, focus?: string): void {
   const faction = player.faction;
   const other: FactionId = faction === 'orc' ? 'human' : 'orc';
 
@@ -327,6 +328,7 @@ export function openPedia(player: Player, focus?: string): void {
         <button class="pedia-tab" data-tab="techs">Advances</button>
         <button class="pedia-tab" data-tab="buildings">Structures</button>
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
+        <button class="pedia-tab" data-tab="wilds">The Wilds</button>
         <button class="pedia-tab" data-tab="controls">Controls</button>
       </div>
 
@@ -356,6 +358,38 @@ export function openPedia(player: Player, focus?: string): void {
           change nothing about what the tile grows.
         </p>
         <div class="pedia-rows">${terrainList}</div>
+      </div>
+      <div class="pedia-pane" data-pane="wilds" hidden>
+        <p class="flavor">
+          ${
+            state.settings.barbarians
+              ? 'This game has raiders in it. They were decided when it began and will not go away.'
+              : 'This game has no raiders. It is a choice made when a game is started, on the new-game screen, and it holds for the whole game.'
+          }
+        </p>
+        <p class="flavor">
+          Raiders belong to nobody. They attack the Horde and the Kingdom alike, refuse
+          every conversation, and hold no ground &mdash; there is no arrangement to be
+          reached and no border to agree. They come out of the unclaimed wilds in
+          <strong>waves</strong>, and a wave grows with how far along the two empires
+          are between them, so falling behind does not make them easier and racing ahead
+          does not make them worse for you alone.
+        </p>
+        <div class="panel-body">
+          <div class="stat-row"><span class="label">First wave</span><span class="value">turn ${BARBARIANS.notBefore}, then every ${BARBARIANS.every} turns</span></div>
+          <div class="stat-row"><span class="label">How many</span><span class="value">grows with the average advances known, up to ${BARBARIANS.cap}</span></div>
+          <div class="stat-row"><span class="label">Where</span><span class="value">open ground, at least ${BARBARIANS.clearOfCities} tiles from any city</span></div>
+          <div class="stat-row"><span class="label">Cities</span><span class="value">they cannot take one, ever</span></div>
+        </div>
+        <p class="flavor">
+          What they <em>can</em> do is walk into a city nobody is defending and take
+          something: a building if there is one, and people if there is not. It keeps its
+          name and its owner. The walls stay standing &mdash; they have not brought
+          anything that would trouble a wall.
+          <strong>One unit in a city is usually enough to stop them</strong>, which is the
+          entire lesson.
+        </p>
+        <div class="pedia-grid">${unitCard(UNIT_TYPES[RAIDER])}</div>
       </div>
       <div class="pedia-pane" data-pane="controls" hidden>
         <p class="flavor">
