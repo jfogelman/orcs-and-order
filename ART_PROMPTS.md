@@ -1239,6 +1239,18 @@ prompts, where it means "no lettering" — but here the subject *is* a character
 and a generator that takes it literally returns an empty frame. "No other
 figures" is what is actually wanted.
 
+**On eight creatures the second frame is never shown.** The renderer picks the
+kneeling pose below a tenth of full health, and the smallest share a living unit
+can have is `1 / maxHp` -- so a creature with ten hit points or fewer can never
+get there. That is the peon, peasant, goblin, sapper, archer, axethrower,
+skirmisher and outrider, and their group variants, whose health does not
+multiply with their count. The threshold was measured and deliberately left
+alone; DESIGN_QUEUE section 98 has the numbers.
+
+So for those eight, **judge the sheet on frame one**. Do not re-roll one because
+its kneeling pose came out badly -- draw the second frame, because the sheet
+format wants it, and then ignore it.
+
 **The two frames are thresholds, not a sequence.** The game shows frame one when
 a unit drops below half health and frame two below a tenth. They are two states
 it can sit in for many turns, not an animation that plays — so the second should
