@@ -6773,3 +6773,50 @@ The per-unit-turn figures were never affected, because they do not depend on
 identity. Only the lifetime figures were, and those are the ones the decision
 rests on. Caught because the pooled row claimed 346 units after two sets of 346
 and 319, which is not how addition works.
+
+## 99. A sighting is when you see them
+
+From play: *"if barbarians are spotted, focus should move on them! Otherwise how
+did we spot them?"*
+
+The camera was not the bug, it was the symptom. `spawnWave` announced every wave
+to both empires with the spawn tile attached, and a wave lands in open ground
+four tiles clear of every city -- which is almost always inside somebody's fog.
+`chooseFocus` then did exactly what section 72 built it to do and refused to
+move, because it will not swing the camera to a patch of fog and thereby say
+plainly that something is there.
+
+So the game was announcing sightings that had not happened, and the camera was
+correctly declining to illustrate them. The question in the report is the right
+one and the answer was "we didn't".
+
+### Two events, because there are two things
+
+- **A wave lands.** Everyone hears it, worded as the rumour it is -- *"Something
+  has come out of the wilds"* -- and it carries **no position**. Section 69
+  wanted raiders to be pressure you can prepare for rather than an ambush, and
+  this is what that warning is honestly worth: something is out there, garrison
+  up.
+- **You see one.** `reportSightings` runs after visibility is recomputed and
+  logs *"Raiders spotted"* to that player alone, with the tile, and the camera
+  goes there.
+
+The remembered ids live on the player as `sightedRaiders`, rewritten each turn
+from what is visible rather than accumulated -- so a band on your border is
+announced once and not every turn, the list stays the size of a war band rather
+than growing for the length of the game, and a band that goes back into the
+trees and comes out again is announced again. That last one is not a bug: it is
+a second sighting.
+
+### Where it sits in the camera's ranking
+
+A new tier, `WATCH.sighting`, between `yourLoss` and `yours`. Above ordinary
+news because **you cannot answer what you have not seen** and the entire point
+of the message is that it is new; below a loss because a band on the horizon is
+a thing to deal with and a burning city is a thing that has already happened to
+you. Ranking it at `yourLoss` would have let a wave arriving take the camera off
+the ogre from section 72, which is the bug that built this file.
+
+Carried as `subject: SIGHTING` on the log entry rather than as a new `kind`,
+because it is not a new sort of message. It is the same bad news with a claim
+attached: we can see this one.

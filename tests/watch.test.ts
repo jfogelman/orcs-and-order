@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState, LogEntry } from '../src/model/types';
 import { WATCH, chooseFocus, watchRank } from '../src/ui/watch';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
+import { SIGHTING } from '../src/sim/barbarians';
 
 function board(): GameState {
   const state = createGame({ seed: 20260906, width: 40, height: 30 });
@@ -30,6 +31,32 @@ const nowhere = () => false;
  * here now, where it can be tested without a browser.
  */
 describe('what the camera turns to look at', () => {
+  it('turns to raiders the moment you spot them, but not over your own losses', () => {
+    // Reported from play: the log said raiders had been spotted and the camera
+    // stayed where it was, which raises the fair question of how we spotted
+    // them. A sighting is new information you cannot answer without seeing --
+    // so above ordinary news, and below a city of yours burning, which has
+    // already happened to you.
+    const state = board();
+    const sighting = entry({ kind: 'bad', player: 0, at: [12, 8], subject: SIGHTING });
+    const loss = entry({ kind: 'bad', player: 0, at: [30, 20] });
+    const news = entry({ kind: 'combat', player: 0, at: [4, 4] });
+
+    expect(watchRank(state, 0, sighting)).toBe(WATCH.sighting);
+    expect(WATCH.sighting).toBeGreaterThan(watchRank(state, 0, news));
+    expect(WATCH.sighting).toBeLessThan(watchRank(state, 0, loss));
+
+    // And it is the tile the camera actually goes to, over the earlier news.
+    expect(chooseFocus(state, 0, [news, sighting], everywhere, nowhere)).toEqual([12, 8]);
+    expect(chooseFocus(state, 0, [sighting, loss], everywhere, nowhere)).toEqual([30, 20]);
+  });
+
+  it('will not turn to a sighting of something in the fog, which is a contradiction', () => {
+    const state = board();
+    const sighting = entry({ kind: 'bad', player: 0, at: [12, 8], subject: SIGHTING });
+    expect(chooseFocus(state, 0, [sighting], nowhere, nowhere)).toBeNull();
+  });
+
   it('ranks losing something of yours above a fight you are standing beside', () => {
     const state = board();
     spawnUnit(state, 0, 'goblin', 10, 10, false);

@@ -5,7 +5,9 @@ import type { City, GameState } from '../src/model/types';
 import {
   BARBARIANS,
   RAIDER,
+  SIGHTING,
   raidersActive,
+  reportSightings,
   runRaiders,
   spawnWave,
   waveDue,
@@ -14,7 +16,14 @@ import {
 import { ADVISORS, advisorConcern, crises } from '../src/model/advisors';
 import type { Situation } from '../src/model/advisors';
 import { assignWorkers } from '../src/sim/city';
-import { barbarianOf, contenders, createGame, playerUnits, spawnUnit } from '../src/sim/gamestate';
+import {
+  barbarianOf,
+  contenders,
+  createGame,
+  playerUnits,
+  recomputeVisibility,
+  spawnUnit,
+} from '../src/sim/gamestate';
 import { endPlayerTurn, isOver, playerScore } from '../src/sim/turn';
 
 function game(over: { barbarians?: boolean; turn?: number } = {}): GameState {
@@ -146,14 +155,109 @@ describe('waves, and what makes them bigger', () => {
         );
       }
     }
-    expect(state.log.map((e) => e.text).join(' ')).toMatch(/raiders out of the wilds/i);
+    expect(state.log.map((e) => e.text).join(' ')).toMatch(/out of the wilds/i);
   });
 
   it('tells both sides, since it is nobody in particular arriving', () => {
     const state = game();
     spawnWave(state);
-    const told = new Set(state.log.filter((e) => /raiders/i.test(e.text)).map((e) => e.player));
+    const told = new Set(
+      state.log.filter((e) => /out of the wilds/i.test(e.text)).map((e) => e.player),
+    );
     expect(told).toEqual(new Set([0, 1]));
+  });
+
+  it('does not say where, because nobody saw it happen', () => {
+    // A wave lands four tiles clear of every city, which is almost always
+    // inside somebody's fog. The old message carried the spawn tile, so the
+    // camera was asked to look at a place the player had never seen -- and
+    // refused, leaving a warning pointing at nothing.
+    const state = game();
+    spawnWave(state);
+    for (const entry of state.log.filter((e) => /out of the wilds/i.test(e.text))) {
+      expect(entry.at, 'a rumour must not carry a position').toBeUndefined();
+    }
+  });
+});
+
+describe('spotting raiders, which is a different thing from them existing', () => {
+  /** Put one raider where the given player can see it, and look. */
+  function sight(state: GameState, viewerId: number): void {
+    const me = playerUnits(state, viewerId)[0] ?? state.cities.find((c) => c.owner === viewerId)!;
+    const wild = barbarianOf(state)!;
+    spawnUnit(state, wild.id, RAIDER, me.x + 1, me.y, false);
+    recomputeVisibility(state, viewerId);
+    reportSightings(state, viewerId);
+  }
+
+  const sightings = (state: GameState, viewerId: number) =>
+    state.log.filter((e) => e.player === viewerId && e.subject === SIGHTING);
+
+  it('says nothing at all about raiders nobody can see', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    // Far side of the map from either city.
+    spawnUnit(state, wild.id, RAIDER, 20, 14, false);
+    recomputeVisibility(state, 0);
+    reportSightings(state, 0);
+    expect(sightings(state, 0)).toHaveLength(0);
+  });
+
+  it('reports one that walks into view, and says where', () => {
+    const state = game();
+    sight(state, 0);
+    const seen = sightings(state, 0);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].at, 'a sighting must say where, or it is not a sighting').toBeDefined();
+    const [x, y] = seen[0].at!;
+    expect(state.players[0].visible[y * state.width + x]).toBeGreaterThan(0);
+  });
+
+  it('does not say it again every turn the band stands there', () => {
+    const state = game();
+    sight(state, 0);
+    reportSightings(state, 0);
+    reportSightings(state, 0);
+    expect(sightings(state, 0)).toHaveLength(1);
+  });
+
+  it('says it again if they go away and come back', () => {
+    const state = game();
+    sight(state, 0);
+    const raider = playerUnits(state, barbarianOf(state)!.id)[0];
+
+    raider.x = 20;
+    raider.y = 14;
+    recomputeVisibility(state, 0);
+    reportSightings(state, 0);
+    expect(sightings(state, 0), 'walking off is not a sighting').toHaveLength(1);
+
+    const me = playerUnits(state, 0)[0] ?? state.cities.find((c) => c.owner === 0)!;
+    raider.x = me.x + 1;
+    raider.y = me.y;
+    recomputeVisibility(state, 0);
+    reportSightings(state, 0);
+    expect(sightings(state, 0), 'coming back is a second sighting').toHaveLength(2);
+  });
+
+  it('tells only the side that saw them', () => {
+    const state = game();
+    sight(state, 0);
+    recomputeVisibility(state, 1);
+    reportSightings(state, 1);
+    expect(sightings(state, 0)).toHaveLength(1);
+    expect(sightings(state, 1)).toHaveLength(0);
+  });
+
+  it('keeps the remembered list the size of a war band, not of the game', () => {
+    const state = game();
+    sight(state, 0);
+    const raider = playerUnits(state, barbarianOf(state)!.id)[0];
+    raider.x = 20;
+    raider.y = 14;
+    recomputeVisibility(state, 0);
+    reportSightings(state, 0);
+    expect(state.players[0].sightedRaiders).toEqual([]);
   });
 });
 

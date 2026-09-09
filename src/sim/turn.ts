@@ -16,7 +16,7 @@ import {
 import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
-import { runRaiders, spawnWave } from './barbarians';
+import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders } from './movement';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
@@ -585,6 +585,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   runEconomy(state, player);
   resumeGotoOrders(state, playerId);
   recomputeVisibility(state, playerId);
+  // After visibility and not before: a sighting is a fact about what this
+  // player can see this turn, so it has to be asked of the map as it now is.
+  reportSightings(state, playerId);
   checkElimination(state);
 }
 
