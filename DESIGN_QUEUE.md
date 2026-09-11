@@ -6820,3 +6820,76 @@ the ogre from section 72, which is the bug that built this file.
 Carried as `subject: SIGHTING` on the log entry rather than as a new `kind`,
 because it is not a new sort of message. It is the same bad news with a claim
 attached: we can see this one.
+
+## 100. The game with raiders in it
+
+Every balance number in this file -- section 86's 27-27 and section 90's band
+included -- was taken with raiders off, because the sweep could not turn them
+on. Raiders are in the games actually being played now, so this is the
+measurement of those games. Getting to the point where it meant anything turned
+up three problems, each of which would have made it describe something that
+should not exist.
+
+### The empire AI was driving the raiders
+
+`addRaiders` marks the band `controller: 'ai'`, and both the game loop in
+`main.ts` and the sweep's `playGame` hand every `ai` player to `runAiTurn`. So a
+band's turn went: `runRaiders` takes its one deliberately stupid step, and then
+the Horde's own AI picks up whatever movement is left and spends it.
+
+Probed over four games before fixing anything:
+
+|                                   | times |
+|---|---|
+| raider moved by its own brain     | 1,278 |
+| raider moved again by the empire AI | 3,864 |
+| barbarian turns with research chosen | 777 |
+
+For most of their movement, raiders were not walking at the nearest thing, as
+the Orcpedia says and section 69 required. They were being manoeuvred by the
+Horde. Section 69 names exactly that -- a band that manoeuvres is a third
+empire -- as the thing a raiding band must not be.
+
+`runAiTurn` now returns at once for a barbarian. **This changes the game you
+have been playing**: any impression of raiders from played games so far is an
+impression of raiders with the Horde's brain.
+
+### They could hold cities
+
+Reported from play, alongside the above. Their own brain never took one --
+`stepToward` sacks an empty city instead of stepping onto it. But that rule
+lived only in that brain, so when the empire AI was moving them it walked them
+onto empty cities like anything else and `captureCity` went through.
+
+The refusal is now in `tryStep`, where captures actually happen: a unit whose
+owner is a barbarian cannot move onto a city that is not its own. A rule about
+what may happen belongs where it happens, not in one of the things that might
+try it.
+
+Saves already carrying a raider-held city are repaired in `deserialize`: the city
+goes back to `foundedBy` if that empire is still in the game, and is abandoned
+if not -- left standing, it would be a frozen raider camp that grows nothing and
+can only be taken back by force.
+
+### The sweep would have lied about them
+
+Two things, one of which is the section 59 trap wearing a different coat.
+
+**The identity check could not see raiders.** They are a setting chosen when a
+game is created, not a constant a rule reads, so nothing in `LEVERS` moved when
+they were switched on. `NEW_GAME = { barbarians: false }` is now a lever like the
+rest. Off by default, so every earlier number still describes the game it came
+from.
+
+**The half-turn cap assumed two players.** `HALF_TURNS = 700` is 350 turns for
+two players and 233 for three. In the first smoke run every raiders-on game that
+nobody had already won stopped at **exactly turn 234**, with no winner, in a
+table that counted a game with no winner as a draw. Five of six raiders-on games
+came back "drawn" at turn 234 against none of six without raiders -- which reads
+precisely as *raiders make games shorter and more often drawn*, the thing being
+measured, and would have confirmed the impression from play.
+
+The cap is now `halfTurnsFor(state)`, scaled by the players in the game. The
+table prints `unfin` separately from `draw`, and `runSweep` warns in capitals if
+any uncapped game runs out. The raiders-off rows of the rerun matched the first
+run to the game, so the control did not move.
