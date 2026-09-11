@@ -7016,6 +7016,20 @@ bonus, and the gold buildings' `needsGarrison` still ask about the city tile
 itself, because those are about whether anybody is home -- and a soldier beside
 the walls is not home.
 
+**It now does something**, which it never had. The same six AI games that
+found no city tile ever holding two units, rerun with the new count:
+
+| | before | after |
+|---|---|---|
+| cities that built a Posting | 0 | 11 |
+| city-turns with one standing | 0 | 1,629 |
+| city-turns it was paying out | 0 | 1,203 (74%) |
+
+Nothing was taught to the AI to get there. Its build check already refused a
+calming building it would not benefit from, and it now asks the same question
+the rule asks, through `soldiersFor` -- so it builds a Posting where two of its
+units happen to be standing around a city at its limit, and not otherwise.
+
 Taken as a stopgap, and chosen as one. The better answer is section 102.
 
 ## 102. A garrison you build on a tile

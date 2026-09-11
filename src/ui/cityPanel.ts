@@ -358,8 +358,18 @@ export function openCityPanel(
           ${
             idleGuarded.length
               ? `<div class="stat-row"><span class="label k-bad">Unguarded</span><span class="value k-bad">${idleGuarded
-                  .map((b) => escapeHtml(BUILDINGS[b]?.name ?? b))
-                  .join(', ')} pays nothing until a unit stands here</span></div>`
+                  .map((b) => {
+                    const def = BUILDINGS[b];
+                    const name = escapeHtml(def?.name ?? b);
+                    // Said per building, because they want different things. A
+                    // treasury wants somebody home; a Posting wants soldiers in
+                    // the city or right beside it, and "a unit stands here" was
+                    // wrong about both how many and where (section 101).
+                    return def?.garrisonNeeded
+                      ? `${name} pays nothing until ${def.garrisonNeeded} soldiers stand in or beside the city`
+                      : `${name} pays nothing until a unit stands here`;
+                  })
+                  .join('; ')}</span></div>`
               : ''
           }
           <div class="stat-row"><span class="label">Founded</span><span class="value">Turn ${city.foundedTurn}</span></div>
