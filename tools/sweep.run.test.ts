@@ -50,11 +50,11 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 69 said a third party changes what every number here means, and
-  // every number here -- section 86's 27-27 and section 90's band included --
-  // was taken without one. Raiders are in the games actually being played now.
-  { label: 'raiders off', apply: control },
-  { label: 'raiders on', apply: () => { control(); NEW_GAME.barbarians = true; } },
+  // Section 101: a Posting could not be switched on by anybody until it counted
+  // soldiers around the city rather than in it. Section 91 measured exactly
+  // zero; this asks whether the rule does anything now that it can be met.
+  { label: 'no posting', apply: () => { control(); POSTING.enabled = false; } },
+  { label: 'posting', apply: control },
 ];
 
 /**

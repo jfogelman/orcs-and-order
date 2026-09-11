@@ -7065,3 +7065,60 @@ on -- which is the test section 96 set for what is worth losing.
 When this lands, **revisit section 101's decision**: the around-the-city count
 should probably go, and the Posting either becomes this improvement or stops
 existing as a city building.
+
+### Measured, now that it can be switched on
+
+216 games, both seed sets, the same seeds in both arms, none unfinished.
+
+| arm | tuned | held-out | cities orc/hum | population orc/hum |
+|---|---|---|---|---|
+| no posting | 28-26 | 24-30 | 5.83/6.61, 5.13/7.33 | 42.3/45.4, 36.8/52.0 |
+| posting    | 30-24 | 28-26 | 6.20/6.11, 5.57/6.80 | 45.8/43.9, 41.1/46.1 |
+
+The no-posting arm is section 94's shipping 28-26 and 24-30 for the fourth
+sweep running -- which it has to be, since until this change a Posting never
+paid out and the shipping game *was* the game without one.
+
+**A lean toward the Horde, and not established.** Pooled, 52-56 becomes 58-50:
+the Horde's share goes from 48% to 54%, +2 and +4 on the two sets. The city and
+population columns move with it on both sets -- the Horde up, the Kingdom down --
+which is what a real effect would look like. But paired seed by seed, 14 games
+flip toward the Horde against 8 the other way, and a fair coin splits 22 that
+lopsidedly about three times in ten. Inside section 90's band either way.
+
+Pace and endings barely move: 272 and 271 turns become 270 and 274, conquest is
+unchanged, and dominance slips 11 to 8 on the held-out set only.
+
+**Why it leans that way is established, and it is the interesting part.** The
+same six probe games, split by side:
+
+| | Horde | Kingdom |
+|---|---|---|
+| cities that built a Posting | 11 | **0** |
+| city-turns it was paying out | 1,203 | 0 |
+| city-turns at or over the content limit | 22.7% | 12.1% |
+| city-turns in disorder | 13.4% | 5.9% |
+
+**Only the Horde ever builds one.** Its cities spend nearly twice as long at
+their limit and more than twice as long rioting -- section 85's finding, still
+true -- and the AI only looks for a calming building when a city is at its
+limit, where a Posting is the cheapest thing on the list. The Kingdom rarely
+gets there, so it rarely asks.
+
+So a mechanic available to both sides at the same price is, in AI play, a Horde
+mechanic, because only the Horde has the problem it solves. That is in character
+-- a Horde that keeps order by having two orcs stand about looking at everybody
+is the building's own blurb -- and it is the same shape as section 23's warning:
+a mechanic denominated in X favours whoever needs X most.
+
+**Not changed on this evidence.** The lean is small, unestablished, and pointed
+at the side section 82 measured losing a third of its games. Two things worth
+knowing before any tuning:
+
+- **It stacks with raiders, unmeasured.** Section 100 measured raiders leaning
+  toward the Horde too, 48% to 56% -- with Postings still unreachable. Both are in
+  the game now, and the games being played have both. A raiders-on arm against
+  this would say whether the two leans add up.
+- **Section 102 should be measured against this, not against zero.** When the
+  garrison post replaces the around-the-city count, this table is the baseline
+  it has to beat or match.
