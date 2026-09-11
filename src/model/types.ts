@@ -181,6 +181,15 @@ export interface Unit {
    * roads loads unchanged, and absent means no job.
    */
   work?: number;
+  /**
+   * A road this worker is laying all the way to a tile: dig wherever the ground
+   * wants a road, walk over road that is already there, stop at the end.
+   *
+   * Beside `goto` rather than folded into it, because a march and a road-to are
+   * interrupted by different things -- a march does not stop to dig. Optional so
+   * every save from before it loads unchanged.
+   */
+  roadTo?: { x: number; y: number };
 }
 
 // --------------------------------------------------------------------- cities

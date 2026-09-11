@@ -7409,3 +7409,114 @@ The gate is on **building**, not walking: anybody may still use a road somebody
 else laid. The Build Road button does not appear until the advance is known, and
 pressing R before then says what is missing. The AI does not build roads, so no
 measurement moves.
+
+### Build Road To
+
+Asked for from play the moment roads existed: laying a road one tile and one
+order at a time is not how anybody wants to join two cities.
+
+- **Shift+R, or the Road To… button, then a click.** Armed the way an ability
+  is, because a left click on open ground is already a march and has to know it
+  means something else this time.
+- **The worker follows the route a march would take**, digging on every tile
+  that wants a road -- both ends included -- and walking over road that is
+  already down, which costs a third, so it can cross several tiles of it in one
+  turn. The order ends when the destination has its road.
+- **Carried across turns at the top of the owner's turn**, after that morning's
+  digging has advanced, so a worker that finishes a stretch walks on to the next
+  one the same turn.
+- **Interrupted like a march.** A friendly in the way is a traffic jam and waits.
+  An enemy coming into view, or a step that cannot be retried, ends the order.
+  Halt (X) cancels it, any order given by hand replaces it, and a worker on a
+  road-to is not counted among the units with nothing to do.
+- **`roadTo` on the unit**, beside `goto` rather than folded into it, because a
+  march and a road-to are interrupted by different things. Optional, and saved.
+
+**One thing the first test caught.** On open ground many routes tie -- three
+steps east can be taken as east, north-east, south-east -- and the pathfinder
+takes whichever it meets first. A march does not care, but a road is left behind
+as a record of the route, and the first version laid one that bent off the
+straight line for no reason. Road-to routes now add a thousandth of a point to
+every diagonal step, which breaks those ties toward the straight line and, since
+even sixty-four diagonals add less than one road step, never makes a longer route
+win. Marches keep the plain route, so no AI game changes.
+
+## 106. A road between two treasuries
+
+**Queued, not built.** Jeremy's idea, from the first road slice: roads should pay
+for the time they take, and the natural place for that is the gold buildings.
+
+### The rule as asked
+
+- **Two of your cities joined by road** -- a continuous run of road tiles, with
+  each city tile counting as road, as it already does for movement.
+- **Both with their side's gold building standing**: the Goblin Treasury or the
+  Simple Market, which both come with **Not You Again!** (45 beakers, after
+  Mapmaking). Each already doubles a city's gold while a unit stands in it.
+- **A small gold-per-turn bonus that grows with the distance between them**, so a
+  long road is worth more than a short one -- the reward is for the digging, and
+  a long road is more digging.
+- **Normalised by the size of the map**, so a large map does not hand out absurd
+  sums just because its cities can be further apart.
+
+It is a trade route in Civ2's sense, paid for in worker-turns rather than a
+caravan, and it is the natural third step of section 27's order: overlay and
+save, then movement, then trade.
+
+### The player has to be told, and shown
+
+From Jeremy, on the same idea:
+
+- **A notification when a link is made.** Gold that simply starts arriving is a
+  rule nobody can see -- the same failure section 73 found with shortcuts that
+  existed and were never shown. When a road completes a link between two gold
+  buildings, the log says so, names both cities and what the link pays, and
+  points at the road. **And when one is lost** -- cut by pillaging once section 96
+  exists, or because one end lost its building -- it says that too.
+- **In the city view.** Each city lists its links: which city, how far, what it
+  pays, and whether it is paying right now (it will not be, if the gold building
+  is idle for want of a garrison).
+
+### The advisors should want roads
+
+Also from Jeremy. Roads are exactly the kind of thing section 76 said the
+council knows and nobody is being told:
+
+- **The war advisor wants roads toward the front.** Movement along a road costs a
+  third, so a road from the cities that build the army to the ones that face the
+  enemy turns a three-turn march into a one-turn one. This half does **not** wait
+  for trade routes -- roads already do this today -- and could come first.
+- **The trade advisor wants roads between the gold buildings.** Once links pay,
+  an unlinked pair of cities that both have a treasury is money left in the
+  ground, and a trade advisor who does not say so is not doing the job.
+
+Both are advice, not automation: the advisor names the two cities and the road
+it would like, and a worker still has to be sent. Road To makes that one order.
+
+### What it will need deciding, in order
+
+- **Distance measured how.** Straight-line (Chebyshev) distance between the two
+  cities is the one that cannot be farmed: measured along the road, a winding
+  road would pay more than a straight one, which rewards building badly.
+- **Normalised by what.** Half the map's width plus height is the obvious scale --
+  a road across the whole map is then worth about the same on every map size.
+- **How many links a city can have.** Every pair of linked cities is n-squared; a
+  web of small cities all joined to each other would multiply. A cap per city --
+  its best one or two links -- keeps it a bonus rather than an economy.
+- **Whether the garrison rule carries over.** The gold buildings pay nothing
+  without a unit standing in the city. The link could inherit that (each end must
+  be earning) or ignore it (the road is the point). Inheriting is simpler and
+  cannot pay a city that is itself paying nothing.
+- **What cuts it.** Section 96's pillaging, once it exists, is the obvious answer:
+  a raider on a road tile breaks every link through it.
+
+### What it is blocked on
+
+**The AI building roads.** Until it does, this is gold only a person can earn, and
+no sweep can see it -- the same trap as section 18's escorts. It is also an
+economy change, so it wants measuring on its own, after the AI can build roads
+and before anything else about roads changes the balance. The war advisor's half
+is the exception, and only needs the advisors to read the road layer.
+
+When it lands, the Orcpedia's gold buildings and its roads paragraph both need a
+line.

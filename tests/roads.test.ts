@@ -3,7 +3,7 @@ import { idx } from '../src/engine/grid';
 import type { City, GameState, TerrainId } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
-import { routeTo, stepsThisTurn, tryStep } from '../src/sim/movement';
+import { routeTo, startRoadTo, stepsThisTurn, tryStep } from '../src/sim/movement';
 import {
   ROADS,
   advanceRoadWork,
@@ -15,7 +15,7 @@ import {
   stepCost,
 } from '../src/sim/roads';
 import { terrainMoveCost } from '../src/sim/rules';
-import { beginPlayerTurn } from '../src/sim/turn';
+import { beginPlayerTurn, idleUnits } from '../src/sim/turn';
 
 /** A flat, fully explored map with nothing on it but what a test puts there. */
 function flatWorld(ground: TerrainId = 'grass'): GameState {
@@ -266,5 +266,90 @@ describe('the advance that teaches roads', () => {
     forget(state, 0);
     lay(state, [5, 5], [6, 5]);
     expect(stepCost(state, state.players[0], 5, 5, 6, 5)).toBeCloseTo(ROADS.moveCost);
+  });
+});
+
+/**
+ * Build Road To: asked for the moment roads existed, because laying one tile and
+ * one order at a time is not how anybody wants to join two cities.
+ */
+describe('laying a road all the way to a tile', () => {
+  /** A worker at (5,5), and somebody on the other side so nobody is eliminated. */
+  function crew(ground: TerrainId = 'grass') {
+    const state = flatWorld(ground);
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    spawnUnit(state, 1, 'footman', 25, 15, false);
+    return { state, peon };
+  }
+  /** Turns until the order finishes, or -1 if it has not after `limit`. */
+  const turnsUntilDone = (state: GameState, peon: { roadTo?: unknown }, limit = 20) => {
+    for (let t = 1; t <= limit; t++) {
+      beginPlayerTurn(state, 0);
+      if (!peon.roadTo) return t;
+    }
+    return -1;
+  };
+
+  it('lays road on every tile of the route, both ends included, then stops', () => {
+    const { state, peon } = crew();
+    expect(startRoadTo(state, peon, 8, 5).ok).toBe(true);
+
+    expect(turnsUntilDone(state, peon)).toBeGreaterThan(0);
+
+    for (let x = 5; x <= 8; x++) expect(hasRoad(state, x, 5)).toBe(true);
+    expect([peon.x, peon.y]).toEqual([8, 5]);
+    expect(peon.order).toBe('none');
+  });
+
+  it('walks over road that is already there instead of stopping on it', () => {
+    const plain = crew();
+    startRoadTo(plain.state, plain.peon, 8, 5);
+    const fresh = turnsUntilDone(plain.state, plain.peon);
+
+    const joined = crew();
+    lay(joined.state, [6, 5], [7, 5]);
+    startRoadTo(joined.state, joined.peon, 8, 5);
+    const across = turnsUntilDone(joined.state, joined.peon);
+
+    expect(across).toBeGreaterThan(0);
+    expect(across).toBeLessThan(fresh);
+  });
+
+  it('refuses a worker whose side does not know Bridge Building', () => {
+    const { state, peon } = crew();
+    state.players[0].techs = state.players[0].techs.filter((t) => t !== 'bridge-building');
+    const check = startRoadTo(state, peon, 8, 5);
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/Bridge Building/);
+    expect(peon.roadTo).toBeUndefined();
+  });
+
+  it('waits for a friendly in the way rather than giving up', () => {
+    const { state, peon } = crew();
+    const blocker = spawnUnit(state, 0, 'goblin', 6, 5, false);
+    blocker.order = 'fortified';
+    startRoadTo(state, peon, 6, 5);
+    for (let t = 0; t < 4; t++) beginPlayerTurn(state, 0);
+    expect(peon.roadTo).toBeDefined();
+
+    state.units = state.units.filter((u) => u.id !== blocker.id);
+    expect(turnsUntilDone(state, peon)).toBeGreaterThan(0);
+    expect(hasRoad(state, 6, 5)).toBe(true);
+  });
+
+  it('is not left on the list of units with nothing to do', () => {
+    const { state, peon } = crew();
+    startRoadTo(state, peon, 8, 5);
+    expect(idleUnits(state, 0).some((u) => u.id === peon.id)).toBe(false);
+  });
+
+  it('carries on after a save and a load', () => {
+    const { state, peon } = crew();
+    startRoadTo(state, peon, 8, 5);
+    const restored = deserialize(serialize(state));
+    const back = restored.units.find((u) => u.id === peon.id)!;
+    expect(back.roadTo).toEqual({ x: 8, y: 5 });
+    expect(turnsUntilDone(restored, back)).toBeGreaterThan(0);
+    expect(hasRoad(restored, 8, 5)).toBe(true);
   });
 });

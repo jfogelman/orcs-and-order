@@ -17,7 +17,7 @@ import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
-import { resumeGotoOrders } from './movement';
+import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
@@ -597,6 +597,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   healUnits(state, playerId);
   runEconomy(state, player);
   resumeGotoOrders(state, playerId);
+  // After the digging above has advanced, so a worker that finished a stretch
+  // this morning walks on to the next one the same turn.
+  resumeRoadOrders(state, playerId);
   recomputeVisibility(state, playerId);
   // After visibility and not before: a sighting is a fact about what this
   // player can see this turn, so it has to be asked of the map as it now is.
@@ -628,6 +631,6 @@ export function endPlayerTurn(state: GameState): void {
 /** Units that still have moves and no standing order — the "anything left?" check. */
 export function idleUnits(state: GameState, playerId: number) {
   return state.units.filter(
-    (u) => u.owner === playerId && u.moves > 0 && u.order === 'none' && !u.goto,
+    (u) => u.owner === playerId && u.moves > 0 && u.order === 'none' && !u.goto && !u.roadTo,
   );
 }

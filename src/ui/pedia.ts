@@ -368,7 +368,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <p class="flavor">
           <strong>Roads.</strong> Once you know <strong>Bridge Building</strong>, a Peon or Peasant can lay one where it stands (<kbd>R</kbd>):
           ${ROADS.turns.grass} turns on grass or wastes, ${ROADS.turns.forest} in forest, hills or
-          swamp, ${ROADS.turns.mountains} up a mountain. Walking off abandons the job. A step from one
+          swamp, ${ROADS.turns.mountains} up a mountain. Walking off abandons the job. <kbd>Shift+R</kbd> and a click lays a road all the way to that tile, digging where the ground needs it and walking over any road already down. A step from one
           road tile to the next costs <strong>a third of a move</strong>, so a worker that has joined
           two cities has shortened every march between them. A city counts as a road already, and a
           road does not know whose it is &mdash; the other lot may use yours.

@@ -20,7 +20,7 @@ import {
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove } from './rules';
-import { snapMoves, stepCost } from './roads';
+import { canBuildRoad, canLayRoads, snapMoves, startRoad, stepCost } from './roads';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -210,6 +210,33 @@ export function routeTo(
   y: number,
 ): Array<[number, number]> | null {
   return findPath(state.width, state.height, [unit.x, unit.y], [x, y], costFnFor(state, unit));
+}
+
+/**
+ * The route a road-to follows: a march's route, with a hair's preference for
+ * going straight.
+ *
+ * On open ground many routes cost exactly the same -- three steps east can be
+ * taken as east, north-east, south-east -- and the pathfinder takes whichever it
+ * meets first. A march does not care. A road is left behind as a record of the
+ * route, and one that wanders off the straight line for no reason reads as a
+ * mistake. A thousandth of a point on every diagonal step breaks those ties
+ * toward the straight line; even sixty-four diagonals add less than one road
+ * step costs, so it never makes a longer route win. Marches keep the plain
+ * route, so no AI game changes.
+ */
+export function roadRouteTo(
+  state: GameState,
+  unit: Unit,
+  x: number,
+  y: number,
+): Array<[number, number]> | null {
+  const walk = costFnFor(state, unit);
+  const cost: CostFn = (tx, ty, fx, fy) => {
+    const c = walk(tx, ty, fx, fy);
+    return c === null ? null : c + (tx !== fx && ty !== fy ? 0.001 : 0);
+  };
+  return findPath(state.width, state.height, [unit.x, unit.y], [x, y], cost);
 }
 
 /**
@@ -694,5 +721,84 @@ export function resumeGotoOrders(state: GameState, playerId: number): void {
     if (!state.units.includes(unit)) continue;
     const { x, y } = unit.goto;
     moveToward(state, unit, x, y);
+  }
+}
+
+/**
+ * Lay a road all the way to a tile -- "Build Road To".
+ *
+ * Asked for the moment roads existed, because nobody wants to place a road one
+ * tile and one order at a time. Everything after this call is `advanceRoadTo`,
+ * run now and then at the top of every turn.
+ */
+export function startRoadTo(
+  state: GameState,
+  unit: Unit,
+  x: number,
+  y: number,
+): { ok: boolean; reason?: string } {
+  const may = canLayRoads(state, unit);
+  if (!may.ok) return may;
+  if (!(unit.x === x && unit.y === y) && !roadRouteTo(state, unit, x, y)) {
+    return { ok: false, reason: 'No route to that tile.' };
+  }
+  unit.goto = null;
+  unit.roadTo = { x, y };
+  advanceRoadTo(state, unit);
+  return { ok: true };
+}
+
+/**
+ * Carry a road-to order as far as this turn allows.
+ *
+ * Dig where it stands if the ground wants a road. Otherwise walk the route,
+ * stepping over road that is already there -- which costs a third, so a worker
+ * can cross several tiles of it in one turn -- and stop to dig at the first tile
+ * that wants one. The order ends at the destination.
+ *
+ * Interrupted the way a march is: a friendly in the way is a traffic jam and
+ * waits; anything else that stops the step, or an enemy coming into view, ends
+ * the order, because a worker walking on past a waiting army is never what was
+ * meant.
+ */
+export function advanceRoadTo(state: GameState, unit: Unit): void {
+  const plan = unit.roadTo;
+  if (!plan || unit.order === 'road') return;
+  for (let guard = 0; guard < 128; guard++) {
+    if (canBuildRoad(state, unit).ok) {
+      startRoad(state, unit);
+      return;
+    }
+    if (unit.x === plan.x && unit.y === plan.y) {
+      delete unit.roadTo;
+      return;
+    }
+    if (unit.moves <= 0) return;
+    const route = roadRouteTo(state, unit, plan.x, plan.y);
+    if (!route || route.length < 2) {
+      delete unit.roadTo;
+      return;
+    }
+    const seenBefore = visibleEnemies(state, unit.owner);
+    const outcome = tryStep(state, unit, route[1][0], route[1][1]);
+    if (outcome.kind !== 'moved') {
+      if (!(outcome.kind === 'blocked' && outcome.retryable)) delete unit.roadTo;
+      return;
+    }
+    for (const id of visibleEnemies(state, unit.owner)) {
+      if (!seenBefore.has(id)) {
+        delete unit.roadTo;
+        return;
+      }
+    }
+  }
+}
+
+/** Carry every road-to order forward at the top of a turn. */
+export function resumeRoadOrders(state: GameState, playerId: number): void {
+  for (const unit of [...state.units]) {
+    if (unit.owner !== playerId || !unit.roadTo) continue;
+    if (!state.units.includes(unit)) continue;
+    advanceRoadTo(state, unit);
   }
 }
