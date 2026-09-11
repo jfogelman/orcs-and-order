@@ -308,6 +308,30 @@ export class SpriteCache {
    * is the one that exists: the other order works and costs eight failed
    * requests every session for nothing.
    */
+  /**
+   * Real art for roads, if anybody has drawn it.
+   *
+   * `terrain/roads.png`: a strip of nine square frames -- a hub for a road with no
+   * neighbours, then one spoke per neighbour in `DIRS8` order. Absent, the map
+   * draws roads itself, which is what it does until the art exists.
+   */
+  installRoadArt(onLoaded: (frames: HTMLCanvasElement[]) => void): void {
+    loadImage(`${this.base}terrain/roads.png`)
+      .then((strip) => {
+        const size = strip.height;
+        const frames: HTMLCanvasElement[] = [];
+        for (let i = 0; i < 9; i++) {
+          const cut = makeCanvas(size, size);
+          const ctx = cut.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(strip, i * size, 0, size, size, 0, 0, size, size);
+          frames.push(cut);
+        }
+        onLoaded(frames);
+      })
+      .catch(() => {});
+  }
+
   installSpecialArt(
     into: Map<string, HTMLImageElement>,
     ids: TerrainId[],

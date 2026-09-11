@@ -19,7 +19,8 @@ import {
   XP
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
-import { effectiveMove, terrainMoveCost } from './rules';
+import { effectiveMove } from './rules';
+import { snapMoves, stepCost } from './roads';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -74,7 +75,7 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     }
   }
 
-  return (x, y) => {
+  return (x, y, fromX, fromY) => {
     const i = idx(x, y, state.width);
     // Unexplored ground is assumed walkable and ordinary. If it turns out to
     // be sea or occupied, the step is refused when the unit gets there, which
@@ -87,7 +88,7 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
-    const base = type.flies ? 1 : terrainMoveCost(owner, terrain);
+    const base = type.flies ? 1 : stepCost(state, owner, fromX, fromY, x, y);
     return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
   };
 }
@@ -162,7 +163,8 @@ export function estimateTurns(
 
   for (let i = 1; i < route.length; i++) {
     const [x, y] = route[i];
-    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    const [px, py] = route[i - 1];
+    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
     if (left <= 0) {
       turns++;
       left = perTurn;
@@ -192,7 +194,8 @@ export function stepsThisTurn(
   for (; i < route.length; i++) {
     if (left <= 0) break;
     const [x, y] = route[i];
-    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    const [px, py] = route[i - 1];
+    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
     // Any movement left always buys one more step, however rough the ground.
     left -= Math.min(cost, left);
   }
@@ -605,11 +608,16 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       return { kind: 'blocked', reason: `${city.name} threw them back.`, retryable: false };
     }
   }
-  const cost = type.flies ? 1 : terrainMoveCost(owner, terrain);
+  const cost = type.flies ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
   unit.x = x;
   unit.y = y;
-  unit.moves = Math.max(0, unit.moves - cost);
-  if (unit.order === 'fortified') unit.order = 'none';
+  unit.moves = snapMoves(unit.moves - cost);
+  // Walking off abandons a road half dug, as it abandons a fortification: the
+  // work was on the tile it just left.
+  if (unit.order === 'fortified' || unit.order === 'road') {
+    unit.order = 'none';
+    delete unit.work;
+  }
   // Somewhere with a forge, and somebody to complain to about losing an axe.
   if (city && city.owner === unit.owner) rearm(state, unit, 'is handed a new axe');
   recomputeVisibility(state, unit.owner);

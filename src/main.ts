@@ -2,6 +2,7 @@ import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
+import { canBuildRoad, formatMoves, roadTurns, startRoad } from './sim/roads';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { idx } from './engine/grid';
@@ -507,6 +508,18 @@ class App {
     this.refreshHud();
     this.playLogCues();
     if (city) this.openCity(city);
+  }
+
+  private orderRoad(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const check = canBuildRoad(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    startRoad(this.state, unit);
+    this.selectNextIdle();
   }
 
   private openCity(city: City): void {
@@ -1362,6 +1375,12 @@ class App {
         // Drain came to advertise shortcuts that did nothing.
         if (!unit) break;
         const pressed = e.key.toLowerCase();
+        // R lays a road for a worker. No worker has Ranged, so the key is free on
+        // exactly the units that can dig, and is still Ranged for everyone else.
+        if (pressed === 'r' && unitType(unit.type).settler) {
+          this.orderRoad();
+          break;
+        }
         const ability = abilitiesOf(unit).find((a) => ABILITIES[a].key === pressed);
         if (ability) this.arm(ability);
         break;
@@ -1415,6 +1434,7 @@ class App {
     if (unit) {
       const t = unitType(unit.type);
       const canSettle = t.settler && canFoundCity(this.state, unit, unit.x, unit.y).ok;
+      const canRoad = canBuildRoad(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -1432,7 +1452,7 @@ class App {
         <div class="panel-body">
           <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${t.attack} / ${t.defense}</span></div>
           <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${t.hp}</span></div>
-          <div class="stat-row"><span class="label">Movement</span><span class="value">${unit.moves} / ${t.move}</span></div>
+          <div class="stat-row"><span class="label">Movement</span><span class="value">${formatMoves(unit.moves)} / ${t.move}</span></div>
           ${
             t.crowded
               ? `<div class="stat-row"><span class="label">Crowd</span><span class="value k-bad">${t.count} of them, nobody agreeing</span></div>`
@@ -1477,7 +1497,13 @@ class App {
               ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from any city of yours &middot; fights weakly and cannot heal</span></div>`
               : ''
           }
-          ${unit.order !== 'none' ? `<div class="chip">${unit.order}</div>` : ''}
+          ${
+            unit.order === 'road'
+              ? `<div class="chip">laying a road &middot; ${unit.work ?? '?'} ${unit.work === 1 ? 'turn' : 'turns'} left</div>`
+              : unit.order !== 'none'
+                ? `<div class="chip">${unit.order}</div>`
+                : ''
+          }
           ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
@@ -1489,6 +1515,13 @@ class App {
         </div>
         <div class="button-row">
           ${canSettle ? '<button class="small" data-act="found">Found City (B)</button>' : ''}
+          ${
+            canRoad
+              ? `<button class="small" data-act="road">Build Road (R) &middot; ${roadTurns(
+                  this.state.terrain[unit.y * this.state.width + unit.x],
+                )} turns</button>`
+              : ''
+          }
           ${
             cityHere
               ? `<button class="small" data-act="city">Open ${escapeHtml(cityHere.name)}</button>`
@@ -1540,6 +1573,9 @@ class App {
               break;
             case 'found':
               this.orderFound();
+              break;
+            case 'road':
+              this.orderRoad();
               break;
             case 'halt':
               this.orderHalt();

@@ -18,6 +18,7 @@ import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders } from './movement';
+import { advanceRoadWork } from './roads';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
 
@@ -98,6 +99,18 @@ function refreshUnits(state: GameState, player: Player): void {
     const full = effectiveMove(player, unit.type);
     unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
     if (unit.order === 'skip') unit.order = 'none';
+    // Digging carries on at the top of the owner's turn, and a road is laid the
+    // turn its last shift is done.
+    if (unit.order === 'road') {
+      if (advanceRoadWork(state, unit) === 'done') {
+        log(state, `${unitType(unit.type).name} finishes a road.`, 'good', player.id, undefined, [
+          unit.x,
+          unit.y,
+        ]);
+      }
+    } else if (unit.work !== undefined) {
+      delete unit.work;
+    }
     // The axe was thrown, not destroyed. Given a moment, it is fetched back.
     if (unit.disarmed && unit.rearmIn !== undefined) {
       unit.rearmIn -= 1;

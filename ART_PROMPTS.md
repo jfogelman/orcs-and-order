@@ -1303,3 +1303,35 @@ map should be able to tell in one look that the thing approaching is neither.
 That is the entire visual job -- the bible calls it a palette per band for
 exactly this reason.
 
+
+## Roads
+
+One sheet, `roads.png`, processed into `public/terrain/roads.png`. Until it exists
+the map draws roads itself -- a dark-edged dirt line -- so nothing is waiting on it.
+
+A road is not a tile, it is **nine pieces laid over one**: a hub for a road with
+no neighbours, and one spoke from the centre toward each of the eight neighbours.
+The map draws the spoke for every neighbour that is also a road or a city, so a
+straight road is two spokes and a crossroads is four. That is how Civ2 did it, and
+the reason is the only thing borrowed: every picture here is our own.
+
+> pixel art, top-down view, a horizontal strip of exactly 9 square frames left to
+> right, each frame the same size, each showing one piece of a rough dirt track
+> for a fantasy strategy game map. Frame one: a small round patch of packed dirt
+> in the exact centre of the frame. Frames two to nine: a single dirt track running
+> from the exact centre of the frame to the middle of one edge or corner, in this
+> order: up, up-right, right, down-right, down, down-left, left, up-left. The track
+> is the same width in every frame and meets the frame edge squarely, worn cart
+> ruts, a few pebbles, earthy browns, thick dark outline, plain solid magenta
+> background (#FF00FF) everywhere that is not track, mid-1990s fantasy strategy
+> game style, no text, no other objects, no grass, no scenery, no frame borders or
+> dividing lines -- just nine frames.
+
+**The order is not negotiable.** The renderer reads frame 2 as "up" and frame 9 as
+"up-left", straight from `DIRS8`. A sheet with the spokes in any other order draws
+every road pointing the wrong way.
+
+**Every spoke must end exactly at the frame edge, at its middle** (or exactly at
+the corner, for the diagonals). Two neighbouring road tiles each draw half the
+track and they meet at that shared edge; a spoke that stops short leaves a gap in
+every road, and one that runs past the edge leaves a lump.
