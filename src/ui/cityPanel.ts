@@ -26,7 +26,7 @@ import {
   productionName,
   unitUpkeep,
   garrisonNeededBy,
-  garrisonSize,
+  soldiersFor,
   rushBlocked,
   rushBuy,
   rushCost,
@@ -271,12 +271,13 @@ export function openCityPanel(
   // A building that has stopped paying because nobody is standing in the city
   // otherwise just shows as a bonus of zero, which reads as the building being
   // broken rather than as a rule the player can act on.
-  const held = garrisonSize(state, city);
   const idleGuarded = city.buildings.filter((b) => {
     const def = BUILDINGS[b];
     // Asked as a count, not a yes/no: a Posting wants two, and one soldier
     // standing there would otherwise read as "working" while paying nothing.
-    return def ? garrisonNeededBy(def) > held : false;
+    // Through `soldiersFor`, so it asks what the rule asks -- around the city
+    // for a Posting, the city tile for a treasury.
+    return def ? garrisonNeededBy(def) > soldiersFor(state, city, def) : false;
   });
   const netShields = yields.shields - upkeep;
   const eta = turnsLeft(city, netShields);

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { cityGoldBonus, postedAround } from '../src/sim/city';
+import { tryStep } from '../src/sim/movement';
 import { BUILDINGS } from '../src/model/buildings';
 import type { City, GameState } from '../src/model/types';
 import { techsForFaction } from '../src/model/techs';
@@ -37,8 +39,23 @@ function town(state: GameState, buildings: City['buildings'] = []): City {
   return c;
 }
 
+/**
+ * Soldiers where play can actually put them: the first in the city, the rest on
+ * the tiles around it.
+ *
+ * This used to stack every one of them on the city tile with `spawnUnit`, which
+ * does not ask whether a tile is free. The game is one unit to a tile, so every
+ * test of a Posting paying out was a test of something no game could produce --
+ * which is how section 91 shipped a building nobody could switch on. Section 101.
+ */
+const AROUND: Array<[number, number]> = [
+  [0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1],
+];
 const soldiers = (state: GameState, city: City, n: number) => {
-  for (let i = 0; i < n; i++) spawnUnit(state, 0, 'goblin', city.x, city.y, false);
+  for (let i = 0; i < n; i++) {
+    const [dx, dy] = AROUND[i];
+    spawnUnit(state, 0, 'goblin', city.x + dx, city.y + dy, false);
+  }
 };
 
 /**
@@ -91,9 +108,9 @@ describe('a posting, paid for in soldiers', () => {
     const state = board();
     const city = town(state, ['orcPosting']);
     soldiers(state, city, 1);
-    spawnUnit(state, 0, 'peon', city.x, city.y, false);
+    spawnUnit(state, 0, 'peon', city.x + 1, city.y, false);
     // A city is not held by somebody passing through with a shovel.
-    expect(garrisonSize(state, city)).toBe(1);
+    expect(postedAround(state, city)).toBe(1);
     expect(contentLimit(state, city)).toBe(CALM.base);
   });
 
@@ -226,9 +243,79 @@ describe('guarding a city, with or without a posting', () => {
     const posted = board();
     const withPosting = town(posted, ['barracks', 'orcPosting']);
     const guard2 = spawnUnit(posted, 0, 'goblin', withPosting.x, withPosting.y, false);
-    spawnUnit(posted, 0, 'goblin', withPosting.x, withPosting.y, false);
+    spawnUnit(posted, 0, 'goblin', withPosting.x + 1, withPosting.y, false);
+    // Actually paying, or this compares two cities without a working Posting.
+    expect(postedAround(posted, withPosting)).toBe(2);
 
     // A Posting has no `defenseMult`; it buys patience, not walls.
     expect(defenseStrength(posted, guard2).total).toBe(defenseStrength(bare, guard).total);
+  });
+});
+
+/**
+ * Section 101. A city tile holds one unit, so a Posting that wanted two soldiers
+ * *in* the city could not be switched on by anybody. It counts the ones posted
+ * around it instead -- and only a building that asks for a number reaches out.
+ */
+describe('two soldiers, and room for only one in the city', () => {
+  it('cannot fit a second soldier into the city by walking one in', () => {
+    const state = board();
+    const city = town(state, ['orcPosting']);
+    soldiers(state, city, 1);
+    const second = spawnUnit(state, 0, 'goblin', city.x + 2, city.y, false);
+    second.moves = 3;
+
+    tryStep(state, second, city.x + 1, city.y);
+    const inside = tryStep(state, second, city.x, city.y);
+
+    expect(inside.kind).toBe('blocked');
+    expect(garrisonSize(state, city)).toBe(1);
+  });
+
+  it('pays out with one in the city and one at the gate', () => {
+    const state = board();
+    const city = town(state, ['orcPosting']);
+    spawnUnit(state, 0, 'goblin', city.x, city.y, false);
+    spawnUnit(state, 0, 'goblin', city.x + 1, city.y + 1, false);
+    expect(contentLimit(state, city)).toBe(CALM.base + BUILDINGS.orcPosting.contentBonus!);
+  });
+
+  it('pays out with nobody inside, as long as two stand around it', () => {
+    // The consequence of counting around the city, stated rather than
+    // discovered: the Posting buys content, and whether the city is held is
+    // still asked of the tile.
+    const state = board();
+    const city = town(state, ['orcPosting']);
+    spawnUnit(state, 0, 'goblin', city.x - 1, city.y, false);
+    spawnUnit(state, 0, 'goblin', city.x + 1, city.y, false);
+    expect(contentLimit(state, city)).toBe(CALM.base + BUILDINGS.orcPosting.contentBonus!);
+    expect(isGarrisoned(state, city)).toBe(false);
+  });
+
+  it('does not count a soldier two tiles out', () => {
+    const state = board();
+    const city = town(state, ['orcPosting']);
+    spawnUnit(state, 0, 'goblin', city.x, city.y, false);
+    spawnUnit(state, 0, 'goblin', city.x + 2, city.y, false);
+    expect(contentLimit(state, city)).toBe(CALM.base);
+  });
+
+  it('does not count somebody else standing at the gate', () => {
+    const state = board();
+    const city = town(state, ['orcPosting']);
+    spawnUnit(state, 0, 'goblin', city.x, city.y, false);
+    spawnUnit(state, 1, 'footman', city.x + 1, city.y, false);
+    expect(contentLimit(state, city)).toBe(CALM.base);
+  });
+
+  it('still asks a treasury whether anybody is actually home', () => {
+    // Only a count reaches out. A soldier beside the walls is not home, and the
+    // gold buildings ask whether anyone is.
+    const state = board();
+    const city = town(state, ['treasury']);
+    spawnUnit(state, 0, 'goblin', city.x + 1, city.y, false);
+    expect(cityGoldBonus(state, city)).toBe(0);
+    spawnUnit(state, 0, 'goblin', city.x, city.y, false);
+    expect(cityGoldBonus(state, city)).toBeGreaterThan(0);
   });
 });

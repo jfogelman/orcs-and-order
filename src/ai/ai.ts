@@ -13,7 +13,7 @@ import {
   POSTING,
   contentLimit,
   garrisonNeededBy,
-  garrisonSize,
+  soldiersFor,
   foundCity,
   rushBlocked,
   rushBuy,
@@ -522,15 +522,16 @@ function chooseProduction(
   // amount of economy sitting on top of a riot.
   if (city.size >= contentLimit(state, city) - AI_TUNING.calmBuildAhead) {
     // Only one it would actually get the benefit of. A Posting calms a city
-    // while two soldiers stand in it, and this AI keeps one -- so without this
-    // check it would spend thirty shields and an upkeep on a building that
-    // does nothing, and go on rioting.
-    const held = garrisonSize(state, city);
+    // while two soldiers stand around it, and this AI keeps one -- so without
+    // this check it would spend thirty shields and an upkeep on a building
+    // that does nothing, and go on rioting. Asked through `soldiersFor`, the
+    // same question the rule asks: this used to count the city tile, which can
+    // only ever hold one, so the answer was always no (section 101).
     const calming = options.buildings.find(
       (b) =>
         b.contentBonus &&
         !(!POSTING.enabled && b.garrisonNeeded) &&
-        garrisonNeededBy(b) <= held,
+        garrisonNeededBy(b) <= soldiersFor(state, city, b),
     );
     if (calming) return { kind: 'building', id: calming.id };
     // Only when it is actually rioting, and only when there is nothing left to
