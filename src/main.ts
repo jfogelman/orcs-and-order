@@ -3,7 +3,7 @@ import './style.css';
 
 import { runAiTurn } from './ai/ai';
 import { canBuildRoad, canLayRoads, formatMoves, roadTurns, startRoad } from './sim/roads';
-import { startRoadTo } from './sim/movement';
+import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { idx } from './engine/grid';
@@ -238,7 +238,7 @@ class App {
     this.overlay.gotoPath = unit.goto
       ? this.previewTo(unit, unit.goto.x, unit.goto.y)
       : unit.roadTo
-        ? this.previewTo(unit, unit.roadTo.x, unit.roadTo.y)
+        ? this.previewTo(unit, unit.roadTo.x, unit.roadTo.y, true)
         : null;
     this.updatePathPreview();
   }
@@ -254,17 +254,20 @@ class App {
       this.overlay.path = null;
       return;
     }
-    this.overlay.path = this.previewTo(unit, hover.x, hover.y);
+    this.overlay.path = this.previewTo(unit, hover.x, hover.y, this.roadArmed);
   }
 
   /** A route, split at the point this turn's movement runs out. */
-  private previewTo(unit: Unit, x: number, y: number): RoutePreview | null {
-    const tiles = routeTo(this.state, unit, x, y);
+  private previewTo(unit: Unit, x: number, y: number, road = false): RoutePreview | null {
+    // A road-to follows its own route and takes as long as the digging does. The
+    // march estimate here first said "4" for a road that took eight turns to lay.
+    const tiles = road ? roadRouteTo(this.state, unit, x, y) : routeTo(this.state, unit, x, y);
     if (!tiles || tiles.length < 2) return null;
     return {
       tiles,
-      thisTurn: stepsThisTurn(this.state, unit, tiles),
-      turns: estimateTurns(this.state, unit, tiles),
+      // A road-to digs before it walks, so none of the route is covered this turn.
+      thisTurn: road ? 1 : stepsThisTurn(this.state, unit, tiles),
+      turns: road ? estimateRoadTurns(this.state, unit, tiles) : estimateTurns(this.state, unit, tiles),
     };
   }
 
@@ -326,8 +329,9 @@ class App {
     const unit = this.selected;
     if (!unit?.goto && !unit?.roadTo) return;
     unit.goto = null;
-    // A road-to stops where it is. Any stretch already dug stays dug, and a
-    // tile half dug is abandoned the same as walking off it would.
+    // A road-to stops where it is. Every stretch already dug stays dug, and the
+    // tile being dug right now is finished -- that is a road order of its own,
+    // the same one R gives. Walking the worker off is how to abandon that too.
     delete unit.roadTo;
     this.overlay.gotoPath = null;
     this.refreshSidebar();
@@ -1579,7 +1583,13 @@ class App {
                 }</div>`
               : ''
           }
-          ${unit.roadTo ? `<div class="chip">road to (${unit.roadTo.x}, ${unit.roadTo.y})</div>` : ''}
+          ${
+            unit.roadTo
+              ? `<div class="chip">road to (${unit.roadTo.x}, ${unit.roadTo.y})${
+                  this.overlay.gotoPath ? ` &middot; ~${this.overlay.gotoPath.turns} turns` : ''
+                }</div>`
+              : ''
+          }
           <p class="flavor">${escapeHtml(t.blurb)}</p>
         </div>
         <div class="button-row">

@@ -3,7 +3,14 @@ import { idx } from '../src/engine/grid';
 import type { City, GameState, TerrainId } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
-import { routeTo, startRoadTo, stepsThisTurn, tryStep } from '../src/sim/movement';
+import {
+  estimateRoadTurns,
+  roadRouteTo,
+  routeTo,
+  startRoadTo,
+  stepsThisTurn,
+  tryStep,
+} from '../src/sim/movement';
 import {
   ROADS,
   advanceRoadWork,
@@ -351,5 +358,50 @@ describe('laying a road all the way to a tile', () => {
     expect(back.roadTo).toEqual({ x: 8, y: 5 });
     expect(turnsUntilDone(restored, back)).toBeGreaterThan(0);
     expect(hasRoad(restored, 8, 5)).toBe(true);
+  });
+});
+
+/**
+ * The number on the route preview. It first showed the march estimate -- "4" for
+ * a road that took eight turns to lay -- which is wrong exactly when somebody is
+ * deciding whether a road is worth the Peon.
+ */
+describe('how long a road-to will take', () => {
+  function crew() {
+    const state = flatWorld('grass');
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    spawnUnit(state, 1, 'footman', 25, 15, false);
+    return { state, peon };
+  }
+  const actualTurns = (state: GameState, peon: { roadTo?: unknown }) => {
+    for (let t = 1; t <= 30; t++) {
+      beginPlayerTurn(state, 0);
+      if (!peon.roadTo) return t;
+    }
+    return -1;
+  };
+
+  it('matches the time it really takes on open ground', () => {
+    const { state, peon } = crew();
+    const estimate = estimateRoadTurns(state, peon, roadRouteTo(state, peon, 8, 5)!);
+    startRoadTo(state, peon, 8, 5);
+    expect(estimate).toBe(8);
+    expect(actualTurns(state, peon)).toBe(estimate);
+  });
+
+  it('matches it when part of the way is road already', () => {
+    const { state, peon } = crew();
+    lay(state, [6, 5], [7, 5]);
+    const estimate = estimateRoadTurns(state, peon, roadRouteTo(state, peon, 8, 5)!);
+    startRoadTo(state, peon, 8, 5);
+    expect(estimate).toBe(4);
+    expect(actualTurns(state, peon)).toBe(estimate);
+  });
+
+  it('is longer than simply walking there', () => {
+    const { state, peon } = crew();
+    peon.moves = 1;
+    const route = roadRouteTo(state, peon, 8, 5)!;
+    expect(estimateRoadTurns(state, peon, route)).toBeGreaterThan(route.length - 1);
   });
 });

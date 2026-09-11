@@ -19,8 +19,17 @@ import {
   XP
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
-import { effectiveMove } from './rules';
-import { canBuildRoad, canLayRoads, snapMoves, startRoad, stepCost } from './roads';
+import { effectiveMove, terrainMoveCost } from './rules';
+import {
+  ROADS,
+  canBuildRoad,
+  canLayRoads,
+  hasRoad,
+  roadTurns,
+  snapMoves,
+  startRoad,
+  stepCost,
+} from './roads';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -792,6 +801,58 @@ export function advanceRoadTo(state: GameState, unit: Unit): void {
       }
     }
   }
+}
+
+/**
+ * How many turns a road-to along this route will take, start to finish.
+ *
+ * Not `estimateTurns`, which is a march: walking there and laying a road there
+ * are different lengths of time, and the preview on the map said "4" for a road
+ * that took eight. This follows `advanceRoadTo` step for step instead -- every
+ * tile that wants a road costs its digging turns, both ends included; finishing
+ * a stretch refills movement, so the walk onto the next tile happens the same
+ * turn; and a stretch of road already down costs only the walk across it, a
+ * third a step, with the rule that any movement left buys one more step.
+ */
+export function estimateRoadTurns(
+  state: GameState,
+  unit: Unit,
+  route: Array<[number, number]>,
+): number {
+  if (route.length === 0) return 0;
+  const owner = state.players[unit.owner];
+  const perTurn = Math.max(1, effectiveMove(owner, unit.type));
+  const laid = new Set<number>();
+  const isRoad = (x: number, y: number) => laid.has(idx(x, y, state.width)) || hasRoad(state, x, y);
+  const wantsRoad = (x: number, y: number) => {
+    const terrain = state.terrain[idx(x, y, state.width)];
+    return !isRoad(x, y) && !TERRAIN[terrain].water && roadTurns(terrain) !== null;
+  };
+
+  let turns = 0;
+  let left = unit.moves;
+  for (let i = 0; ; i++) {
+    const [x, y] = route[i];
+    if (wantsRoad(x, y)) {
+      // The tile it is already digging costs only what is left of that job.
+      turns +=
+        i === 0 && unit.order === 'road' && unit.work !== undefined
+          ? unit.work
+          : roadTurns(state.terrain[idx(x, y, state.width)])!;
+      laid.add(idx(x, y, state.width));
+      left = perTurn;
+    }
+    if (i === route.length - 1) break;
+    const [nx, ny] = route[i + 1];
+    const ground = terrainMoveCost(owner, state.terrain[idx(nx, ny, state.width)]);
+    const cost = isRoad(x, y) && isRoad(nx, ny) ? Math.min(ground, ROADS.moveCost) : ground;
+    if (left <= 0) {
+      turns += 1;
+      left = perTurn;
+    }
+    left = snapMoves(left - Math.min(cost, left));
+  }
+  return Math.max(1, turns);
 }
 
 /** Carry every road-to order forward at the top of a turn. */
