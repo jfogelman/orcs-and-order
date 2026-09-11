@@ -1,5 +1,6 @@
 import type { GameState, Player } from '../model/types';
 import { SAVE_VERSION } from '../sim/gamestate';
+import { returnRaiderHeldCities } from '../sim/barbarians';
 
 /**
  * Saving and loading.
@@ -92,7 +93,7 @@ export function deserialize(text: string): GameState {
   const tiles = file.width * file.height;
   // Drop the save-only metadata and re-expand the packed fog bitmaps.
   const { savedAt: _savedAt, players, ...rest } = file;
-  return {
+  const state: GameState = {
     ...rest,
     players: players.map((p) => ({
       ...p,
@@ -100,6 +101,11 @@ export function deserialize(text: string): GameState {
       visible: unpackBits(p.visible, tiles),
     })),
   };
+  // A game saved while raiders could still end up holding a city carries that
+  // city with it. Repaired on the way in, so the rule holds for games already
+  // underway and not only for new ones.
+  returnRaiderHeldCities(state);
+  return state;
 }
 
 // ------------------------------------------------------------ local slots

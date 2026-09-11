@@ -6820,3 +6820,133 @@ the ogre from section 72, which is the bug that built this file.
 Carried as `subject: SIGHTING` on the log entry rather than as a new `kind`,
 because it is not a new sort of message. It is the same bad news with a claim
 attached: we can see this one.
+
+## 100. The game with raiders in it
+
+Every balance number in this file -- section 94's shipping 28-26 and 24-30, and
+section 90's band -- was taken with raiders off, because the sweep could not
+turn them on. Raiders are in the games actually being played now, so this is the
+measurement of those games. Getting to the point where it meant anything turned
+up three problems, each of which would have made it describe something that
+should not exist.
+
+### The empire AI was driving the raiders
+
+`addRaiders` marks the band `controller: 'ai'`, and both the game loop in
+`main.ts` and the sweep's `playGame` hand every `ai` player to `runAiTurn`. So a
+band's turn went: `runRaiders` takes its one deliberately stupid step, and then
+the Horde's own AI picks up whatever movement is left and spends it.
+
+Probed over four games before fixing anything:
+
+|                                   | times |
+|---|---|
+| raider moved by its own brain     | 1,278 |
+| raider moved again by the empire AI | 3,864 |
+| barbarian turns with research chosen | 777 |
+
+For most of their movement, raiders were not walking at the nearest thing, as
+the Orcpedia says and section 69 required. They were being manoeuvred by the
+Horde. Section 69 names exactly that -- a band that manoeuvres is a third
+empire -- as the thing a raiding band must not be.
+
+`runAiTurn` now returns at once for a barbarian. **This changes the game you
+have been playing**: any impression of raiders from played games so far is an
+impression of raiders with the Horde's brain.
+
+### They could hold cities
+
+Reported from play, alongside the above. Their own brain never took one --
+`stepToward` sacks an empty city instead of stepping onto it. But that rule
+lived only in that brain, so when the empire AI was moving them it walked them
+onto empty cities like anything else and `captureCity` went through.
+
+The refusal is now in `tryStep`, where captures actually happen: a unit whose
+owner is a barbarian cannot move onto a city that is not its own. A rule about
+what may happen belongs where it happens, not in one of the things that might
+try it.
+
+Saves already carrying a raider-held city are repaired in `deserialize`: the city
+goes back to `foundedBy` if that empire is still in the game, and is abandoned
+if not -- left standing, it would be a frozen raider camp that grows nothing and
+can only be taken back by force.
+
+### The sweep would have lied about them
+
+Two things, one of which is the section 59 trap wearing a different coat.
+
+**The identity check could not see raiders.** They are a setting chosen when a
+game is created, not a constant a rule reads, so nothing in `LEVERS` moved when
+they were switched on. `NEW_GAME = { barbarians: false }` is now a lever like the
+rest. Off by default, so every earlier number still describes the game it came
+from.
+
+**The half-turn cap assumed two players.** `HALF_TURNS = 700` is 350 turns for
+two players and 233 for three. In the first smoke run every raiders-on game that
+nobody had already won stopped at **exactly turn 234**, with no winner, in a
+table that counted a game with no winner as a draw. Five of six raiders-on games
+came back "drawn" at turn 234 against none of six without raiders -- which reads
+precisely as *raiders make games shorter and more often drawn*, the thing being
+measured, and would have confirmed the impression from play.
+
+The cap is now `halfTurnsFor(state)`, scaled by the players in the game. The
+table prints `unfin` separately from `draw`, and `runSweep` warns in capitals if
+any uncapped game runs out. The raiders-off rows of the rerun matched the first
+run to the game, so the control did not move.
+
+### What raiders do to the game, measured
+
+216 games: raiders off against raiders on, 54 seeds a set, both sets, the same
+seeds in both arms. No game unfinished.
+
+| | tuned | held-out | turns | captures | cities orc/hum |
+|---|---|---|---|---|---|
+| raiders off | 28-26 | 24-30 | 272 / 271 | 7.2 / 6.8 | 5.83/6.61, 5.13/7.33 |
+| raiders on  | 30-24 | 30-24 | 274 / 275 | 6.5 / 6.5 | 5.98/6.48, 6.00/6.69 |
+
+The raiders-off arm is section 94's shipping configuration to the game --
+28-26 and 24-30 -- for the third separate sweep running, so the harness changes
+above left the control exactly where it was.
+
+**Balance leans toward the Horde, and it is not yet established.** Pooled, 52-56
+becomes 60-48: the Horde's share goes from 48% to 56%. Same direction on both
+sets, +2 and +6. But paired seed by seed, raiders are a large disturbance with a
+small net: about a third of games change winner, 21 toward the Horde against 13
+toward the Kingdom. On 34 disagreeing seeds a fair coin splits at least that
+lopsidedly, either way, about one time in four. Worth watching in play; not
+worth a rule change on this evidence.
+
+**It stays inside the band.** 56% is well within section 90's 15-85%, and every
+cities, population and advances ratio is above the 0.45 hopeless line. Raiders
+do not need a second band.
+
+**Raiders do not make games faster.** 272 becomes 274, 271 becomes 275 -- a
+couple of turns *longer*. Whatever made played games feel quicker, it is not
+raiders as they now behave. Either the calm change did it, or the raiders being
+played against were the ones with the Horde's brain, which no longer exist.
+
+**The clearest effect is on how games end:**
+
+| ending | off | on |
+|---|---|---|
+| conquest  | 21 | 23 |
+| dominance | **17** (Kingdom 13, Horde 4) | **5** (Kingdom 4, Horde 1) |
+| points    | 70 | 80 |
+
+Dominance wins fall by more than two thirds, and they were mostly the Kingdom's.
+Those games go to points instead, where the Horde does better -- which is most of
+the balance lean above.
+
+**Why is not established, and one explanation is ruled out.** The dominance share
+counts cities, and raiders can no longer change who holds a city, so it is not
+sacks resetting the clock. Captures fall slightly on both sets, 7.2 to 6.5 and
+6.8 to 6.5. The likeliest reading is that raiders cost a runaway leader the
+momentum it needs to take three quarters of the map, and that leader is more
+often the Kingdom -- section 20 measured that it holds cities better. The
+measurement that would settle it counts captures by the would-be dominant side in
+the turns before the clock would have started.
+
+**Sacks are rare.** 37 of 108 raiders-on games saw one at all; under half a city
+a side a game on average; twelve in the worst game. Raiders mostly apply
+pressure by being there rather than by breaking things, which is what section 69
+asked of them.

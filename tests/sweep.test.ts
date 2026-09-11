@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
 import { MILITIA } from '../src/sim/city';
+import { createGame } from '../src/sim/gamestate';
 import {
   HELD_OUT,
   LEVERS,
+  NEW_GAME,
   TUNED,
   estimate,
+  halfTurnsFor,
   playGame,
   report,
   runSweep,
@@ -130,6 +133,68 @@ describe('the sweep harness', () => {
     // from it makes a real comparison look like a duplicate arm.
     for (const name of ['AI_TUNING', 'RESETTLE', 'DOMINANCE', 'SUPPLY', 'MILITIA', 'BEAKERS_PER_TRADE']) {
       expect(Object.keys(LEVERS)).toContain(name);
+    }
+  });
+
+  it('plays games without raiders unless asked, so earlier numbers mean what they said', () => {
+    expect(NEW_GAME.barbarians).toBe(false);
+    const saw: boolean[] = [];
+    playGame(4242, 2, (state) => saw.push(state.players.some((p) => p.barbarian === true)));
+    expect(saw.some(Boolean)).toBe(false);
+  });
+
+  it('really does put raiders in the game when the lever says so', () => {
+    const saw: boolean[] = [];
+    NEW_GAME.barbarians = true;
+    try {
+      playGame(4242, 2, (state) => saw.push(state.players.some((p) => p.barbarian === true)));
+    } finally {
+      NEW_GAME.barbarians = false;
+    }
+    expect(saw.length).toBeGreaterThan(0);
+    expect(saw.every(Boolean)).toBe(true);
+  });
+
+  it('tells raiders-on apart from raiders-off, and puts the setting back', () => {
+    // A game setting rather than a rule constant. Missing from LEVERS, the two
+    // arms would read back identically and be refused as one arm run twice.
+    expect(Object.keys(LEVERS)).toContain('NEW_GAME');
+    expect(() =>
+      runSweep({
+        arms: [
+          { label: 'off', apply: () => { NEW_GAME.barbarians = false; } },
+          { label: 'on', apply: () => { NEW_GAME.barbarians = true; } },
+        ],
+        sets: SETS,
+        halfTurns: 4,
+        say: quiet,
+      }),
+    ).not.toThrow();
+    expect(NEW_GAME.barbarians).toBe(false);
+  });
+
+  it('gives a game with raiders in it enough turns to finish', () => {
+    // 700 half-turns was 350 turns for two players and 233 for three, so every
+    // raiders-on game stopped at turn 234 with no winner and read as a draw.
+    for (const barbarians of [false, true]) {
+      const state = createGame({ seed: 4242, barbarians });
+      expect(halfTurnsFor(state) / state.players.length).toBeGreaterThan(state.settings.maxTurns);
+    }
+  });
+
+  it('counts a game the loop gave up on as unfinished, never as a draw', () => {
+    const results = runSweep({
+      arms: [
+        { label: 'a', apply: () => { MILITIA.perCitizen = 0.3; } },
+        { label: 'b', apply: () => { MILITIA.perCitizen = 0.6; } },
+      ],
+      sets: SETS,
+      halfTurns: 4,
+      say: quiet,
+    });
+    for (const row of summarise(results)) {
+      expect(row.unfinished).toBe(row.games);
+      expect(row.draws).toBe(0);
     }
   });
 
