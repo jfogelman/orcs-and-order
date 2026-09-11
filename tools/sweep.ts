@@ -5,7 +5,8 @@ import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } fro
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import type { GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
-import { ROADS } from '../src/sim/roads';
+import { ROADS, connectedByRoad } from '../src/sim/roads';
+import { capitalOf } from '../src/sim/city';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
@@ -140,6 +141,14 @@ export interface Outcome {
    * of different games, not one change, and it hid a real effect.
    */
   map: string;
+  /** Road tiles on the map when the game ended. Roads have no owner, so one number. */
+  roadTiles: number;
+  /**
+   * Share of each side's cities joined to its own capital by road at the end,
+   * orc and human. Here so a roads arm cannot come back "no effect" for the
+   * reason section 91 did: because the AI never used the thing at all.
+   */
+  joined: [number, number];
 }
 
 function deepestGroup(types: string[]): number {
@@ -162,6 +171,20 @@ const TURN_SLACK = 50;
  */
 export function halfTurnsFor(state: GameState): number {
   return (state.settings.maxTurns + TURN_SLACK) * state.players.length;
+}
+
+/**
+ * Share of this player's cities, other than the capital, on the capital's road
+ * network. The capital itself is left out, or an empire with no roads at all
+ * reads as one city in n joined.
+ */
+function joinedShare(state: GameState, playerId: number): number {
+  const seat = capitalOf(state, playerId);
+  if (!seat) return 0;
+  const others = playerCities(state, playerId).filter((c) => c.id !== seat.id);
+  if (others.length === 0) return 0;
+  const net = connectedByRoad(state, playerId, seat.x, seat.y);
+  return others.filter((c) => net.has(c.y * state.width + c.x)).length / others.length;
 }
 
 /** FNV-1a over the terrain, the specials and where everybody starts. */
@@ -261,6 +284,8 @@ export function playGame(
     victory: state.victory ?? null,
     sacks,
     map,
+    roadTiles: (state.roads ?? []).reduce((n, r) => n + r, 0),
+    joined: [joinedShare(state, 0), joinedShare(state, 1)],
   };
 }
 
@@ -477,6 +502,10 @@ export interface Summary {
   routes: Record<string, number>;
   /** Mean cities raided per game, orc and human. */
   sacks: [number, number];
+  /** Mean road tiles at the end of a game. */
+  roadTiles: number;
+  /** Mean share of cities joined to the capital by road, orc and human. */
+  joined: [number, number];
 }
 
 export function summarise(results: ArmResult[]): Summary[] {
@@ -499,6 +528,8 @@ export function summarise(results: ArmResult[]): Summary[] {
     captures: mean(r.outcomes.map((o) => o.captures)),
     routes: countBy(r.outcomes.map((o) => o.victory ?? 'unfinished')),
     sacks: [mean(r.outcomes.map((o) => o.sacks[0])), mean(r.outcomes.map((o) => o.sacks[1]))],
+    roadTiles: mean(r.outcomes.map((o) => o.roadTiles)),
+    joined: [mean(r.outcomes.map((o) => o.joined[0])), mean(r.outcomes.map((o) => o.joined[1]))],
   }));
 }
 
@@ -515,7 +546,7 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}`;
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -532,7 +563,9 @@ export function report(results: ArmResult[]): string {
       pad(r.combats.toFixed(0), 8) +
       pad(r.captures.toFixed(1), 6) +
       pad(`${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}`, 10) +
-      pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11),
+      pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +
+      pad(r.roadTiles.toFixed(0), 7) +
+      pad(`${Math.round(r.joined[0] * 100)}%/${Math.round(r.joined[1] * 100)}%`, 11),
   );
   return [head, '-'.repeat(head.length), ...body].join('\n');
 }
@@ -546,7 +579,8 @@ export function rawRows(results: ArmResult[]): string {
           `${r.arm}\t${r.set}\t${o.seed}\t${o.turns}\t${o.winner ?? '-'}\t${o.combats}\t` +
           `${o.captures}\t${o.cities[0]}\t${o.cities[1]}\t${o.population[0]}\t${o.population[1]}\t` +
           `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}\t` +
-          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}\t${o.map}`,
+          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}\t${o.map}\t` +
+          `${o.roadTiles}\t${o.joined[0].toFixed(2)}\t${o.joined[1].toFixed(2)}`,
       ),
     )
     .join('\n');

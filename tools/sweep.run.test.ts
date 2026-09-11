@@ -42,6 +42,8 @@ const control = () => {
   CALM.base = 6;
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
+  AI_TUNING.buildRoads = true;
+  AI_TUNING.citiesPerRoadWorker = 4;
   POSTING.enabled = true;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
@@ -50,12 +52,11 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Sections 100 and 101 each measured a lean toward the Horde -- raiders with
-  // Postings unreachable, Postings with raiders off -- and the game being played
-  // has both. The first arm should reproduce section 100's raiders-on 30-24 and
-  // 30-24 exactly; the second is the one cell of the two-by-two nobody has seen.
-  { label: 'raiders, no posting', apply: () => { control(); NEW_GAME.barbarians = true; POSTING.enabled = false; } },
-  { label: 'raiders, posting', apply: () => { control(); NEW_GAME.barbarians = true; } },
+  // Section 107: the AI lays roads. Until now only a person could, so no sweep
+  // could see them. The arm without should reproduce section 101's posting arm
+  // -- 30-24 and 28-26 -- exactly, since roads were the only thing added.
+  { label: 'no AI roads', apply: () => { control(); AI_TUNING.buildRoads = false; } },
+  { label: 'AI roads', apply: control },
 ];
 
 /**
@@ -104,7 +105,7 @@ describe('sweep', () => {
           table,
           '',
           'seed by seed:',
-          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap',
+          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap\troadTiles\torcJoined\thumJoined',
           rawRows(results),
           '',
         ].join('\n'),
