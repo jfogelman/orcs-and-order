@@ -7254,3 +7254,91 @@ unestablished lean toward the Horde, all pointing the same way: raiders (section
 Horde is winning too easily, those are where it came from -- and section 100 says
 most of the raiders' share arrived as lost Kingdom dominance wins, which is the
 first place to look.
+
+## 105. Roads, the first slice
+
+Section 27's first two steps -- the overlay and the save, then movement -- in
+Civ2's terms, because Civ2's terms were asked for.
+
+### What shipped
+
+- **A road is a flag per tile**, `state.roads`, and the first thing on the map
+  that changes after world generation. Created with the first road rather than
+  with the map, so a game nobody builds in, and every save from before roads,
+  carries nothing. Saved run-length packed, like the fog.
+- **Peons and Peasants lay them where they stand** -- R, or the unit panel.
+  Two turns on grass or wastes, four in forest, hills or swamp, six up a
+  mountain. The job advances at the top of the owner's turn, and walking off
+  abandons it.
+- **A step from one road tile to the next costs a third of a move.** Onto a road
+  or off one is the ground's price. A city counts as a road. A road does not know
+  whose it is.
+- **Drawn over the terrain, not baked into it** -- the terrain layer is built once
+  per map -- as a spoke from each road tile toward every neighbour that is a road
+  or a city, and a hub for a road on its own.
+- The Orcpedia's terrain tab, the controls list, and ART_PROMPTS all say how.
+
+### One price for a step
+
+`stepCost` is now the only place a step is priced, and the pathfinder, the march
+estimate and the step itself all ask it. They each read `terrainMoveCost`
+directly before, which is how section 27 counted four places to change -- and
+four copies is how two of them would have disagreed about roads.
+
+Movement is snapped to whole thirds after every step. Three road steps from one
+point leave `1e-16` in floating point, and a unit with a sliver of movement reads
+as idle forever. Whole points are untouched.
+
+### Section 27's fog question
+
+Remembered on explored ground, the way cities are: an enemy's roads are drawn
+wherever the ground has ever been seen, which is exactly what an enemy's cities
+already do. If that turns out to give away too much, it gives away cities first.
+
+### The AI does not build roads, and nothing about AI games changed
+
+Deliberately, for this slice. With no road on the map `stepCost` returns the
+ground's price without looking, and a city-only "road" can never make a step
+cheaper because no two cities are ever adjacent (`MIN_CITY_SPACING = 3`).
+
+Checked rather than assumed: 24 games from the saved raiders-on run -- with and
+without Postings -- replayed on this branch came back **identical in every
+column**: turns, winner, fights, captures, cities, population, advances, ladder,
+ending, sacks.
+
+**So every earlier measurement still stands, and none can see roads.** Until the
+AI builds them, roads are an advantage only a person can take, and no sweep will
+register them.
+
+### Verified in the game
+
+The button reads "Build Road (R) · 2 turns" on grass; clicking it and pressing R
+both start the job; the panel shows "laying a road · 2 turns left"; the road is
+laid when the turn comes round and the log says "Peon finishes a road."; the
+canvas at a crossroads is the road colour to the pixel; and movement reads "⅔ / 2".
+
+Worth knowing about the look: every road tile joins **all eight** road
+neighbours, diagonals included, so a crossroads with a road beside it draws as a
+diamond. That is Civ2's rule doing what it did in Civ2. Art can soften it; the
+rule should not change for it.
+
+### Also in this change: the save fixtures
+
+`tests/fixtures.test.ts` rewrites `fixtures/*.w2c` on every run, and they had not
+been committed since section 95. The versions committed here differ a great deal
+from those -- unit counts, cities, the RNG state -- and **none of that is roads**,
+which the replay above shows leave AI games identical. It is the AI changes merged
+since, most plainly section 101's Postings, which changed what the AI builds.
+Committing them was an accident of `git add -A`; keeping them is right, because
+they are meant to be the current game.
+
+### Next, in order
+
+1. **The AI building roads.** Until it does, roads are a player-only advantage and
+   invisible to every sweep. It wants its own measurement, since faster armies
+   are a balance change for whichever side uses them better.
+2. **Trade on roads** -- section 27's third step, and Civ2's +1 on open ground.
+   Moves the economy, so measured on its own.
+3. **Sections 96 and 102 now have their machinery.** A thing on a tile, laid by a
+   worker, saved, drawn, and removable is exactly what pillaging and the garrison
+   post were waiting for.

@@ -1306,8 +1306,10 @@ exactly this reason.
 
 ## Roads
 
-One sheet, `roads.png`, processed into `public/terrain/roads.png`. Until it exists
-the map draws roads itself -- a dark-edged dirt line -- so nothing is waiting on it.
+One sheet, `roads.png`. The game reads it from `public/terrain/roads.png`: nine square
+frames in a row, background already keyed out. **`prepare_art.py` has no pass for it
+yet** -- one gets added when the art exists. Until then the map draws roads itself, a
+dark-edged dirt line, so nothing is waiting on it.
 
 A road is not a tile, it is **nine pieces laid over one**: a hub for a road with
 no neighbours, and one spoke from the centre toward each of the eight neighbours.
