@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { runAiTurn } from '../src/ai/ai';
+import { deserialize, serialize } from '../src/persist/save';
+import { tryStep } from '../src/sim/movement';
 import { CREATURES, UNIT_TYPES } from '../src/model/units';
 import { TECHS } from '../src/model/techs';
 import type { City, GameState } from '../src/model/types';
@@ -413,5 +416,68 @@ describe('what the council makes of raiders', () => {
       .not.toContain('raiders');
     expect(crises(base({ raiders: { seen: 4, atTheGate: true } })).map((c) => c.id))
       .toContain('raiders');
+  });
+});
+
+describe('raiders think for themselves, which is to say barely', () => {
+  it('are not handed to the empire AI once their own turn is done', () => {
+    // Found while setting up the raiders-on sweep. `addRaiders` marks the band
+    // `ai`, and both the game loop and the sweep hand every `ai` player to
+    // `runAiTurn` -- so after `runRaiders` took its one step, the Horde's AI
+    // spent the rest of their movement for them. Across four games it moved
+    // them three times as often as their own brain did, and chose research for
+    // them on 777 turns.
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const home = state.cities.find((c) => c.owner === 0)!;
+    const raider = spawnUnit(state, wild.id, RAIDER, home.x + 6, home.y + 6, false);
+    const before = { x: raider.x, y: raider.y, moves: raider.moves };
+
+    runAiTurn(state, wild.id);
+
+    expect({ x: raider.x, y: raider.y, moves: raider.moves }).toEqual(before);
+    expect(wild.researching, 'a band that cannot study was given something to study').toBeNull();
+  });
+});
+
+describe('raiders do not hold cities, whoever is steering them', () => {
+  it('cannot walk onto an empty city, even when something else is moving them', () => {
+    // Reported from play. Their own brain sacks instead of stepping in, but the
+    // rule lived only in that brain; the empire AI walked them into cities.
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities.find((c) => c.owner === 0)!;
+    const raider = spawnUnit(state, wild.id, RAIDER, city.x + 1, city.y, false);
+
+    const outcome = tryStep(state, raider, city.x, city.y);
+
+    expect(outcome.kind).toBe('blocked');
+    expect(city.owner).toBe(0);
+    expect([raider.x, raider.y]).toEqual([city.x + 1, city.y]);
+  });
+
+  it('gives a city back to whoever founded it when a save has raiders holding it', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities.find((c) => c.owner === 0)!;
+    city.foundedBy = 0;
+    city.owner = wild.id;
+
+    const loaded = deserialize(serialize(state));
+
+    expect(loaded.cities.find((c) => c.id === city.id)?.owner).toBe(0);
+  });
+
+  it('abandons one with nobody to give it back to, rather than leave a raider camp', () => {
+    const state = game();
+    const wild = barbarianOf(state)!;
+    const city = state.cities.find((c) => c.owner === 1)!;
+    city.foundedBy = undefined;
+    city.owner = wild.id;
+
+    const loaded = deserialize(serialize(state));
+
+    expect(loaded.cities.some((c) => c.id === city.id)).toBe(false);
+    expect(loaded.cities.some((c) => loaded.players[c.owner]?.barbarian)).toBe(false);
   });
 });

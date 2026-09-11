@@ -74,6 +74,15 @@ export const BARBARIANS = {
   takesCitizens: 1,
 };
 
+/**
+ * Marks a log entry as a city of somebody's being raided.
+ *
+ * So it can be counted by something that is not reading the wording: the sweep
+ * harness counts sacks as they happen, and a count that matched on "Raiders are
+ * in" would silently fall to zero the first time somebody rewrote the sentence.
+ */
+export const RAIDED = 'raided';
+
 /** The grunt. One band, one unit, per section 69's cheapest version. */
 export const RAIDER = 'skirmisher';
 
@@ -353,6 +362,8 @@ function sack(state: GameState, city: City): void {
       city.owner,
       undefined,
       [city.x, city.y],
+      undefined,
+      RAIDED,
     );
     return;
   }
@@ -367,6 +378,8 @@ function sack(state: GameState, city: City): void {
     city.owner,
     undefined,
     [city.x, city.y],
+    undefined,
+    RAIDED,
   );
 }
 
@@ -390,6 +403,48 @@ export function raidersAtTheGate(state: GameState, viewerId: number): boolean {
   return state.units.some(
     (u) => u.owner === wild.id && mine.some((m) => distance(m.x, m.y, u.x, u.y) <= 1),
   );
+}
+
+/**
+ * Hand back any city a raiding band is holding, for games saved before they
+ * could not.
+ *
+ * Raiders were never meant to hold a city and their own brain never took one.
+ * But until the empire AI stopped driving them it walked them onto empty cities
+ * like any other unit, and the capture went through. Those cities are still
+ * sitting in saves, and frozen: a band has no economy, so a city it holds grows
+ * nothing, builds nothing, and can only be got back by force.
+ *
+ * Back to whoever founded it, if they are still in the game. Otherwise there is
+ * nobody for it to belong to, and it is not left standing as a raider camp -- it
+ * is abandoned, which is about what a band with no plan does with a town it has
+ * no use for.
+ */
+export function returnRaiderHeldCities(state: GameState): void {
+  const empires = contenders(state).filter((p) => p.alive);
+  for (const city of [...state.cities]) {
+    if (!state.players[city.owner]?.barbarian) continue;
+    const home = empires.find((p) => p.id === city.foundedBy);
+    if (home) {
+      city.owner = home.id;
+      city.disorder = false;
+      syncCitizens(state, city);
+      assignWorkers(state, city);
+      log(
+        state,
+        `The raiders have wandered off from ${city.name}, and it is ours again.`,
+        'good',
+        home.id,
+        undefined,
+        [city.x, city.y],
+      );
+      continue;
+    }
+    state.cities.splice(state.cities.indexOf(city), 1);
+    for (const u of state.units) {
+      if (u.homeCity === city.id) u.homeCity = null;
+    }
+  }
 }
 
 /** Make the raiding band, once, when a game is set up with them. */

@@ -5,7 +5,7 @@ import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
-import { rawRows, report, runSweep, seedSet } from './sweep';
+import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 
 /**
  * The question this sweep is currently asking.
@@ -46,15 +46,15 @@ const control = () => {
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
   SPECIALS.ruleTiles = true;
+  NEW_GAME.barbarians = false;
 };
 
 const ARMS: Arm[] = [
-  // The question the first run of this got wrong. Turning the *rule* off left
-  // the tiles in the roll, so both arms still split grass, forest and desert
-  // between two specials -- and section 93 says that dilution, not the rule, is
-  // what moves the balance. This takes the tiles out of the world entirely.
-  { label: 'no rule tiles', apply: () => { control(); SPECIALS.ruleTiles = false; } },
-  { label: 'rule tiles', apply: control },
+  // Section 69 said a third party changes what every number here means, and
+  // every number here -- section 86's 27-27 and section 90's band included --
+  // was taken without one. Raiders are in the games actually being played now.
+  { label: 'raiders off', apply: control },
+  { label: 'raiders on', apply: () => { control(); NEW_GAME.barbarians = true; } },
 ];
 
 /**
@@ -103,7 +103,7 @@ describe('sweep', () => {
           table,
           '',
           'seed by seed:',
-          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL',
+          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked',
           rawRows(results),
           '',
         ].join('\n'),

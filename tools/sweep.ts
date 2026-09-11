@@ -3,7 +3,8 @@ import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
 import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
-import type { GameState } from '../src/model/types';
+import type { GameState, VictoryKind } from '../src/model/types';
+import { RAIDED } from '../src/sim/barbarians';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
@@ -34,6 +35,20 @@ import { DOMINANCE, REGEN, SCORE_WEIGHTS, beginPlayerTurn, endPlayerTurn } from 
 // ------------------------------------------------------------------- levers
 
 /**
+ * How each game is set up, as opposed to the rules it is played under.
+ *
+ * A lever like the others so the identity check can see it. Raiders are a
+ * setting chosen at the start of a game rather than a constant a rule reads, so
+ * nothing in `LEVERS` moved when they were switched on -- and an arm with raiders
+ * against an arm without would have been refused as the same arm run twice,
+ * which is section 59's check being right about the wrong thing.
+ *
+ * Off by default, so every earlier number in this file and the balance band in
+ * `tests/balance.test.ts` still describe the game they were taken from.
+ */
+export const NEW_GAME = { barbarians: false };
+
+/**
  * Every constant a sweep is allowed to move, by name.
  *
  * The list is here rather than at each call site so that the identity check
@@ -51,6 +66,7 @@ export const LEVERS: Record<string, object> = {
   DRAIN,
   FORTIFY_BONUS_REF,
   MILITIA,
+  NEW_GAME,
   POSTING,
   REGEN,
   RESETTLE,
@@ -104,14 +120,36 @@ export interface Outcome {
   units: [number, number];
   techs: [number, number];
   ladder: [number, number];
+  /** How it ended, or null for a game still going when the half-turns ran out. */
+  victory: VictoryKind | null;
+  /**
+   * Cities of each side raided, counted as it happens for the same reason
+   * combats are. Always zero in a game without raiders.
+   */
+  sacks: [number, number];
 }
 
 function deepestGroup(types: string[]): number {
   return types.reduce((max, t) => Math.max(max, Number(t.split('_x')[1] ?? 1)), 1);
 }
 
-/** Enough to run past the turn limit, so every game reaches a verdict. */
-export const HALF_TURNS = 700;
+/** Turns past the limit the loop will run, so every game reaches a verdict. */
+const TURN_SLACK = 50;
+
+/**
+ * How many half-turns a game needs to reach its verdict.
+ *
+ * Was a flat 700, which is 350 turns for two players and quietly assumed there
+ * would only ever be two. A game with raiders has three slots in the turn order,
+ * so 700 half-turns ran out at turn 234 -- sixty-six turns short of the limit --
+ * and those games came back with no winner. In a table that counted a game with
+ * no winner as a draw, a harness running out of loop read as raiders making
+ * games shorter and more often drawn, which was the very thing being measured.
+ * Counted from the players actually in the game now.
+ */
+export function halfTurnsFor(state: GameState): number {
+  return (state.settings.maxTurns + TURN_SLACK) * state.players.length;
+}
 
 /**
  * One whole game, both sides played by the AI.
@@ -123,7 +161,7 @@ export const HALF_TURNS = 700;
  */
 export function playGame(
   seed: number,
-  halfTurns = HALF_TURNS,
+  halfTurns?: number,
   /**
    * Called after every half-turn, for a diagnostic that needs to watch a game
    * rather than only read its result.
@@ -133,7 +171,7 @@ export function playGame(
    */
   watch?: (state: GameState) => void,
 ): Outcome {
-  const state = createGame({ seed });
+  const state = createGame({ seed, barbarians: NEW_GAME.barbarians });
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
 
@@ -144,10 +182,15 @@ export function playGame(
   // early fighting straight out of the window. Read off the tail, a seed with
   // thirty-seven fights reports none.
   let combats = 0;
+  const sacks: [number, number] = [0, 0];
   let readLog = 0;
   const countCombat = () => {
     for (let i = readLog; i < state.log.length; i++) {
-      if (state.log[i].kind === 'combat') combats++;
+      const entry = state.log[i];
+      if (entry.kind === 'combat') combats++;
+      if (entry.subject === RAIDED && (entry.player === 0 || entry.player === 1)) {
+        sacks[entry.player]++;
+      }
     }
     readLog = state.log.length;
   };
@@ -159,7 +202,8 @@ export function playGame(
     }
   };
   sweepOwners();
-  for (let i = 0; i < halfTurns && state.winner === null; i++) {
+  const budget = halfTurns ?? halfTurnsFor(state);
+  for (let i = 0; i < budget && state.winner === null; i++) {
     const before = state.log.length;
     // The window slid if the log was trimmed while the turn ran; start again
     // from whatever is still there rather than from an index that has moved.
@@ -185,6 +229,8 @@ export function playGame(
     units: [playerUnits(state, 0).length, playerUnits(state, 1).length],
     techs: [state.players[0].techs.length, state.players[1].techs.length],
     ladder: [deepestGroup(per(0)), deepestGroup(per(1))],
+    victory: state.victory ?? null,
+    sacks,
   };
 }
 
@@ -331,6 +377,14 @@ export function runSweep(opts: SweepOptions): ArmResult[] {
         const at = Date.now();
         const outcomes = set.seeds.map((seed) => playGame(seed, opts.halfTurns));
         results.push({ arm: arm.label, set: set.name, outcomes });
+        // Only when nobody capped the games on purpose, as the tests do.
+        const unfinished = outcomes.filter((o) => o.victory === null).length;
+        if (unfinished > 0 && opts.halfTurns === undefined) {
+          say(
+            `  WARNING: ${unfinished} of these games ran out of turns before anybody won. ` +
+              'They are not draws, and every number below is short of them.',
+          );
+        }
         say(
           `  ${arm.label} / ${set.name}: ${outcomes.length} games in ` +
             `${((Date.now() - at) / 1000 / 60).toFixed(1)} min`,
@@ -352,6 +406,9 @@ export function runSweep(opts: SweepOptions): ArmResult[] {
 
 const mean = (ns: number[]) => (ns.length ? ns.reduce((s, n) => s + n, 0) / ns.length : 0);
 
+const countBy = (keys: string[]): Record<string, number> =>
+  keys.reduce<Record<string, number>>((acc, k) => ({ ...acc, [k]: (acc[k] ?? 0) + 1 }), {});
+
 export interface Summary {
   arm: string;
   set: string;
@@ -359,12 +416,21 @@ export interface Summary {
   orcWins: number;
   humanWins: number;
   draws: number;
+  /**
+   * Games the loop gave up on before anybody won or the limit came. Should
+   * always be zero in a real sweep, and is printed so it cannot hide again.
+   */
+  unfinished: number;
   turns: number;
   cities: [number, number];
   population: [number, number];
   techs: [number, number];
   combats: number;
   captures: number;
+  /** Games by how they ended: conquest, dominance, points, draw, unfinished. */
+  routes: Record<string, number>;
+  /** Mean cities raided per game, orc and human. */
+  sacks: [number, number];
 }
 
 export function summarise(results: ArmResult[]): Summary[] {
@@ -374,7 +440,8 @@ export function summarise(results: ArmResult[]): Summary[] {
     games: r.outcomes.length,
     orcWins: r.outcomes.filter((o) => o.winner === 0).length,
     humanWins: r.outcomes.filter((o) => o.winner === 1).length,
-    draws: r.outcomes.filter((o) => o.winner === null).length,
+    draws: r.outcomes.filter((o) => o.victory === 'draw').length,
+    unfinished: r.outcomes.filter((o) => o.victory === null).length,
     turns: mean(r.outcomes.map((o) => o.turns)),
     cities: [mean(r.outcomes.map((o) => o.cities[0])), mean(r.outcomes.map((o) => o.cities[1]))],
     population: [
@@ -384,6 +451,8 @@ export function summarise(results: ArmResult[]): Summary[] {
     techs: [mean(r.outcomes.map((o) => o.techs[0])), mean(r.outcomes.map((o) => o.techs[1]))],
     combats: mean(r.outcomes.map((o) => o.combats)),
     captures: mean(r.outcomes.map((o) => o.captures)),
+    routes: countBy(r.outcomes.map((o) => o.victory ?? 'unfinished')),
+    sacks: [mean(r.outcomes.map((o) => o.sacks[0])), mean(r.outcomes.map((o) => o.sacks[1]))],
   }));
 }
 
@@ -399,8 +468,8 @@ export function report(results: ArmResult[]): string {
   const pad = (s: string | number, n: number) => String(s).padStart(n);
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
-    `${pad('draw', 5)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}`;
+    `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -409,12 +478,15 @@ export function report(results: ArmResult[]): string {
       pad(r.orcWins, 5) +
       pad(r.humanWins, 5) +
       pad(r.draws, 5) +
+      pad(r.unfinished, 6) +
       pad(r.turns.toFixed(0), 7) +
       pad(`${r.cities[0].toFixed(2)}/${r.cities[1].toFixed(2)}`, 14) +
       pad(`${r.population[0].toFixed(1)}/${r.population[1].toFixed(1)}`, 14) +
       pad(`${r.techs[0].toFixed(1)}/${r.techs[1].toFixed(1)}`, 13) +
       pad(r.combats.toFixed(0), 8) +
-      pad(r.captures.toFixed(1), 6),
+      pad(r.captures.toFixed(1), 6) +
+      pad(`${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}`, 10) +
+      pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11),
   );
   return [head, '-'.repeat(head.length), ...body].join('\n');
 }
@@ -427,7 +499,8 @@ export function rawRows(results: ArmResult[]): string {
         (o) =>
           `${r.arm}\t${r.set}\t${o.seed}\t${o.turns}\t${o.winner ?? '-'}\t${o.combats}\t` +
           `${o.captures}\t${o.cities[0]}\t${o.cities[1]}\t${o.population[0]}\t${o.population[1]}\t` +
-          `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}`,
+          `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}\t` +
+          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}`,
       ),
     )
     .join('\n');

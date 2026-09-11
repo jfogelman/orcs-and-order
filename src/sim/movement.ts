@@ -538,6 +538,17 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
 
+  // Raiders never take a city, whoever is steering them.
+  //
+  // Their own brain sacks an empty city instead of stepping onto it, so this
+  // used to be enforced only there. That was the mistake: the rule lived in one
+  // brain, and while the empire AI was also moving them -- see `runAiTurn` -- it
+  // walked them onto empty cities like any other unit and the capture went
+  // through. A rule about what may happen belongs where it happens.
+  if (capturing && owner.barbarian) {
+    return { kind: 'blocked', reason: 'Raiders do not take cities.', retryable: false };
+  }
+
   // A city still clearing the rubble of its last sacking cannot change hands
   // again. The old population is leaving and the new one has not settled, so
   // there is no functioning place to take.
