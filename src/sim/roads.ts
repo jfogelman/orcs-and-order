@@ -1,4 +1,4 @@
-import { idx } from '../engine/grid';
+import { DIRS8, idx } from '../engine/grid';
 import { TECHS } from '../model/techs';
 import { TERRAIN } from '../model/terrain';
 import type { GameState, Player, TerrainId, Unit } from '../model/types';
@@ -78,6 +78,47 @@ export function stepCost(
   return hasRoad(state, fromX, fromY) && hasRoad(state, toX, toY)
     ? Math.min(ground, ROADS.moveCost)
     : ground;
+}
+
+/**
+ * Every tile joined by road to (x, y), as tile indices: the network a city sits
+ * on.
+ *
+ * Walked across road this player has explored, and nothing else. The AI decides
+ * from what its side knows, never from the board, and a stretch of road through
+ * the fog is not one it can count on. City tiles count as road, as they do for
+ * movement, and so do diagonal steps.
+ */
+export function connectedByRoad(
+  state: GameState,
+  viewerId: number,
+  x: number,
+  y: number,
+): Set<number> {
+  const seen = new Set<number>();
+  if (!hasRoad(state, x, y)) return seen;
+  const start = idx(x, y, state.width);
+  seen.add(start);
+  // No road laid anywhere, and no two cities are ever adjacent, so a city is on
+  // a network of one.
+  if (!state.roads) return seen;
+  const explored = state.players[viewerId]?.explored;
+  const queue = [start];
+  while (queue.length > 0) {
+    const i = queue.pop()!;
+    const cx = i % state.width;
+    const cy = Math.floor(i / state.width);
+    for (const [dx, dy] of DIRS8) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= state.width || ny >= state.height) continue;
+      const ni = idx(nx, ny, state.width);
+      if (seen.has(ni) || !explored?.[ni] || !hasRoad(state, nx, ny)) continue;
+      seen.add(ni);
+      queue.push(ni);
+    }
+  }
+  return seen;
 }
 
 /** Worker-turns to lay a road on this ground, or null if it cannot take one. */
