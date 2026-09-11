@@ -6950,3 +6950,175 @@ the turns before the clock would have started.
 a side a game on average; twelve in the worst game. Raiders mostly apply
 pressure by being there rather than by breaking things, which is what section 69
 asked of them.
+
+## 101. Nobody can post two soldiers, and nobody ever could
+
+Section 91 measured Soldier Posting at exactly zero and explained it as a
+player's tool the AI does not use: the AI keeps one soldier per city and the
+building needs two. Setting out to teach the AI to hold two found that the
+explanation was wrong. **The rule cannot be satisfied by anybody** -- not the AI,
+and not a person at the keyboard.
+
+### Why
+
+A Posting pays out while `garrisonSize(city) >= 2`, and `garrisonSize` counts
+units standing **on the city tile**. But the game has been one unit to a tile
+since its first commit:
+
+- **Walking in is refused.** `tryStep` blocks any step onto an occupied tile,
+  friendly or not -- *"One unit to a tile -- they will not share."* `unitAt`
+  has no exception for cities, and the interface moves units through the same
+  `tryStep` and `moveToward` as the AI.
+- **Building in does not stack either.** `placementFor` puts a finished unit on
+  the city tile only if nobody is standing there, and otherwise on the nearest
+  free tile around it.
+
+So the most soldiers a city tile can ever hold in play is one, and a Posting
+that wants two is a building that does nothing, for everyone, always.
+
+Measured to be sure: six whole AI games, **36,710 city-turns, and never once
+more than one unit on a city tile.** No Posting was ever built.
+
+### How section 91 missed it
+
+Its tests put both soldiers in place with `spawnUnit`, which writes a unit
+straight into the list without asking whether the tile is free. Every posting
+test passed against a situation the game cannot produce. The AI's own
+production code already knew -- the comment beside its garrison count reads
+*"Counting only the city tile would never reach two, because only one unit fits
+on a tile"* -- and counted on-or-beside for that reason. The rule and the AI
+had two different definitions of a garrison, and only the AI's was reachable.
+
+The same gap sits under `garrisonOf` and `unitsInCity`, whose tests stack two
+resting units in a city by the same route. Those are harmless -- a list that
+could hold two and only ever holds one -- but they are the same shape of test.
+
+### What it means for section 91's conclusions
+
+- **Posting never changed balance** -- still true, and now for a stronger reason.
+- **"A player's tool the AI does not use"** -- false. No player can use it.
+- **"Teach the AI to post two and sweep that"** -- impossible as written.
+  There is nothing for the AI to learn until the rule can be met.
+
+How the rule should count soldiers is a design decision rather than a fix, and
+is recorded here once it is made.
+
+### Decided: counted around the city, for now
+
+A Posting now counts soldiers standing **on the city tile or on any of the eight
+around it** -- two at the gate, looking at everybody, which is what the blurb
+always described. It is the same definition the AI's production code was already
+using, so the rule and the AI finally agree on what a garrison is.
+
+Deliberately narrow. Only a building that asks for a *number* of soldiers
+reaches out to the surrounding tiles. Holding the city, militia, the defence
+bonus, and the gold buildings' `needsGarrison` still ask about the city tile
+itself, because those are about whether anybody is home -- and a soldier beside
+the walls is not home.
+
+**It now does something**, which it never had. The same six AI games that
+found no city tile ever holding two units, rerun with the new count:
+
+| | before | after |
+|---|---|---|
+| cities that built a Posting | 0 | 11 |
+| city-turns with one standing | 0 | 1,629 |
+| city-turns it was paying out | 0 | 1,203 (74%) |
+
+Nothing was taught to the AI to get there. Its build check already refused a
+calming building it would not benefit from, and it now asks the same question
+the rule asks, through `soldiersFor` -- so it builds a Posting where two of its
+units happen to be standing around a city at its limit, and not otherwise.
+
+Taken as a stopgap, and chosen as one. The better answer is section 102.
+
+## 102. A garrison you build on a tile
+
+**After roads (section 27), with the other tile improvements.** Jeremy's idea,
+from section 101's decision.
+
+Section 101 found that a Posting cannot count soldiers standing *in* a city,
+because the game is one unit to a tile, and settled for now on counting the ones
+standing around it. That works, but it is a patch on the rule rather than a
+reason for it. The better version makes the posting a **thing on the map**:
+
+- **A small garrison post built on a tile near a city** -- a guardhouse, a
+  watchtower, a hut with a spear leaning on it -- rather than a building inside
+  the walls.
+- **Built by a worker**, the way roads will be. Peon or Peasant today, or a new
+  name for the worker unit if roads bring one in.
+- **Soldiers standing on the post** are what pays out, which gives two soldiers a
+  place to stand that is not the city tile and is not just "nearby".
+
+Why after roads and not before, for the same reasons as section 96's pillaging:
+
+- **Tile improvements have to exist first.** Roads are the nearest candidate and
+  bring the machinery -- something on a tile, built by somebody, that can be
+  present or absent, drawn on the map and saved.
+- **And it wants a worker with orders.** Nothing in the game can currently be
+  told to build on a tile rather than found a city on one.
+
+It also gives section 96 a third customer. A garrison post is exactly the sort of
+thing a raider should be able to pillage -- something chosen, built, and relied
+on -- which is the test section 96 set for what is worth losing.
+
+When this lands, **revisit section 101's decision**: the around-the-city count
+should probably go, and the Posting either becomes this improvement or stops
+existing as a city building.
+
+### Measured, now that it can be switched on
+
+216 games, both seed sets, the same seeds in both arms, none unfinished.
+
+| arm | tuned | held-out | cities orc/hum | population orc/hum |
+|---|---|---|---|---|
+| no posting | 28-26 | 24-30 | 5.83/6.61, 5.13/7.33 | 42.3/45.4, 36.8/52.0 |
+| posting    | 30-24 | 28-26 | 6.20/6.11, 5.57/6.80 | 45.8/43.9, 41.1/46.1 |
+
+The no-posting arm is section 94's shipping 28-26 and 24-30 for the fourth
+sweep running -- which it has to be, since until this change a Posting never
+paid out and the shipping game *was* the game without one.
+
+**A lean toward the Horde, and not established.** Pooled, 52-56 becomes 58-50:
+the Horde's share goes from 48% to 54%, +2 and +4 on the two sets. The city and
+population columns move with it on both sets -- the Horde up, the Kingdom down --
+which is what a real effect would look like. But paired seed by seed, 14 games
+flip toward the Horde against 8 the other way, and a fair coin splits 22 that
+lopsidedly about three times in ten. Inside section 90's band either way.
+
+Pace and endings barely move: 272 and 271 turns become 270 and 274, conquest is
+unchanged, and dominance slips 11 to 8 on the held-out set only.
+
+**Why it leans that way is established, and it is the interesting part.** The
+same six probe games, split by side:
+
+| | Horde | Kingdom |
+|---|---|---|
+| cities that built a Posting | 11 | **0** |
+| city-turns it was paying out | 1,203 | 0 |
+| city-turns at or over the content limit | 22.7% | 12.1% |
+| city-turns in disorder | 13.4% | 5.9% |
+
+**Only the Horde ever builds one.** Its cities spend nearly twice as long at
+their limit and more than twice as long rioting -- section 85's finding, still
+true -- and the AI only looks for a calming building when a city is at its
+limit, where a Posting is the cheapest thing on the list. The Kingdom rarely
+gets there, so it rarely asks.
+
+So a mechanic available to both sides at the same price is, in AI play, a Horde
+mechanic, because only the Horde has the problem it solves. That is in character
+-- a Horde that keeps order by having two orcs stand about looking at everybody
+is the building's own blurb -- and it is the same shape as section 23's warning:
+a mechanic denominated in X favours whoever needs X most.
+
+**Not changed on this evidence.** The lean is small, unestablished, and pointed
+at the side section 82 measured losing a third of its games. Two things worth
+knowing before any tuning:
+
+- **It stacks with raiders, unmeasured.** Section 100 measured raiders leaning
+  toward the Horde too, 48% to 56% -- with Postings still unreachable. Both are in
+  the game now, and the games being played have both. A raiders-on arm against
+  this would say whether the two leans add up.
+- **Section 102 should be measured against this, not against zero.** When the
+  garrison post replaces the around-the-city count, this table is the baseline
+  it has to beat or match.

@@ -337,7 +337,10 @@ export function isGarrisoned(state: GameState, city: City): boolean {
 }
 
 /**
- * Soldiers standing in the city, which is what a posting is paid in.
+ * Soldiers standing in the city itself -- whether anybody is home.
+ *
+ * Not what a Posting is paid in any more; see `postedAround`. The game is one
+ * unit to a tile, so this can only ever be zero or one.
  *
  * Settlers do not count -- they are not standing anywhere on purpose, and a
  * city is not held by somebody passing through with a shovel.
@@ -349,6 +352,39 @@ export function garrisonSize(state: GameState, city: City): number {
 }
 
 /**
+ * Soldiers posted around the city: on its tile, or on any of the eight around it.
+ *
+ * What a Posting is paid in, and deliberately wider than `garrisonSize`. The game
+ * is one unit to a tile, so the city tile can only ever hold one -- and a Posting
+ * that asked for two there could not be switched on by anybody, the AI or a
+ * person at the keyboard (section 101). Settlers still do not count.
+ */
+export function postedAround(state: GameState, city: City): number {
+  return state.units.filter(
+    (u) =>
+      u.owner === city.owner &&
+      distance(u.x, u.y, city.x, city.y) <= 1 &&
+      !unitType(u.type).settler,
+  ).length;
+}
+
+/**
+ * The soldiers that count toward what a building asks for.
+ *
+ * A building that asks for a *number* reaches out to the tiles around the city,
+ * because only one soldier fits in it. One that asks only whether anybody is
+ * home -- the treasury's and market's `needsGarrison` -- asks about the city
+ * tile, because a soldier beside the walls is not home.
+ */
+export function soldiersFor(
+  state: GameState,
+  city: City,
+  b: { garrisonNeeded?: number; needsGarrison?: boolean },
+): number {
+  return b.garrisonNeeded !== undefined ? postedAround(state, city) : garrisonSize(state, city);
+}
+
+/**
  * Add up one kind of bonus across a city's buildings, skipping any that wants
  * a garrison and has not got one.
  */
@@ -357,7 +393,9 @@ function sumBonus(
   city: City,
   pick: (b: BuildingDef) => number | undefined,
 ): number {
-  let held: number | null = null;
+  // Each counted at most once per city, not once per building.
+  let onTile: number | null = null;
+  let around: number | null = null;
   let total = 0;
   for (const id of workingBuildings(state, city)) {
     const def = BUILDINGS[id];
@@ -366,8 +404,12 @@ function sumBonus(
     if (!POSTING.enabled && def.garrisonNeeded && def.contentBonus) continue;
     const needed = garrisonNeededBy(def);
     if (needed > 0) {
-      // Counted at most once per city, not once per building.
-      held ??= garrisonSize(state, city);
+      // The same split as `soldiersFor`, cached: a count reaches out to the
+      // tiles around the city, a yes/no asks about the city tile.
+      const held =
+        def.garrisonNeeded !== undefined
+          ? (around ??= postedAround(state, city))
+          : (onTile ??= garrisonSize(state, city));
       if (held < needed) continue;
     }
     total += value;

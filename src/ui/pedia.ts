@@ -179,6 +179,13 @@ function buildingEffects(b: BuildingDef): string[] {
   if (b.needsGarrison) {
     out.push('pays nothing at all unless a unit is standing in the city');
   }
+  // A city holds one unit, so a building that wants several counts the tiles
+  // around it too. It never said it wanted soldiers at all until section 101.
+  if (b.garrisonNeeded) {
+    out.push(
+      `pays nothing at all unless ${b.garrisonNeeded} soldiers stand in the city or right beside it`,
+    );
+  }
   if (b.goldBonus) out.push(`+${pct(b.goldBonus)} gold from this city`);
   if (b.scienceBonus) out.push(`+${pct(b.scienceBonus)} research from this city`);
   if (b.contentBonus) {
