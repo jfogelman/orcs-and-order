@@ -1306,33 +1306,35 @@ exactly this reason.
 
 ## Roads
 
-**Five pieces, each its own square picture**, in `art_src/terrain/roads/`:
+**Three pieces, each its own picture**, in `art_src/terrain/roads/`:
 
 | file | what it shows |
 |---|---|
-| `hub` | a small round patch of packed dirt in the exact centre, touching no edge |
+| `hub` | a small round patch of packed dirt in the exact centre, about a fifth as wide as the tile, touching no edge |
 | `straight` | a road from the middle of the top edge to the middle of the bottom edge |
 | `diagonal` | a road from the top-left corner to the bottom-right corner |
-| `across` *(optional)* | a road from the middle of the left edge to the middle of the right edge |
-| `antidiagonal` *(optional)* | a road from the bottom-left corner to the top-right corner |
 
-`npm run art` turns them into `public/terrain/roads.png`, the nine frames the game
-reads. The two optional pieces are made by turning `straight` and mirroring
-`diagonal` when they are missing -- draw them when you can, because turning a
-picture turns its light with it.
+`npm run art` makes the other two directions itself -- the road across by turning
+`straight`, the other diagonal by mirroring `diagonal` -- then cuts every road into
+stubs and writes `public/terrain/roads.png`, the nine frames the game reads.
 
-**Why pieces and not a strip of spokes.** The game lays a stub from the middle of
-a tile toward each neighbour with a road. Asked for those stubs twice, the
-generator drew complete road tiles instead -- bends, S-curves, junctions -- and
-the second time it drew straight roads across a tile beautifully. So it is asked
-for straights, and `prepare_art.py` cuts each straight in half itself. That is
-also why every piece has to reach its edges or corners at full width: the halves
-meet there.
+**Why only three.** The game lays a stub from the middle of a tile toward each
+neighbour with a road. Asked for those stubs twice, the generator drew complete
+road tiles instead. Asked for five straight pieces, it got two right and three
+wrong: the hub came back as a dirt plaza covering nine tenths of the tile, the
+road across came back a quarter wider than the straight, and the second diagonal
+bowed up to 95px off its corner-to-corner line, which draws as a staircase. A
+turned or mirrored piece matches its original by construction, so the pieces that
+kept going wrong are no longer drawn at all.
+
+`across` and `antidiagonal` are still read if they are there, and used in place of
+the derived ones -- only worth adding if one measures the same width as `straight`
+and runs dead straight, which no generated one has yet.
 
 One prompt per file, changing only the bracketed line:
 
 > pixel art, top-down view, one single square tile for a fantasy strategy game map
-> showing [PIECE]. A rough dirt road about a third as wide as the tile, faint
+> showing [PIECE]. A rough dirt road about two fifths as wide as the tile, faint
 > shallow cart ruts, a few pebbles, earthy browns, thick dark outline on the road
 > only, plain solid magenta background (#FF00FF) everywhere else, mid-1990s fantasy
 > strategy game style, no text, no grass, no scenery, no border, nothing else in
@@ -1340,19 +1342,14 @@ One prompt per file, changing only the bracketed line:
 
 | file | [PIECE] |
 |---|---|
-| `hub` | only a small round patch of packed dirt in the exact centre, touching no edge |
-| `straight` | a straight road from the middle of the top edge to the middle of the bottom edge, centred, touching both edges |
-| `diagonal` | a straight road from the top-left corner to the bottom-right corner, touching both corners |
-| `across` | a straight road from the middle of the left edge to the middle of the right edge, centred, touching both edges |
-| `antidiagonal` | a straight road from the bottom-left corner to the top-right corner, touching both corners |
+| `hub` | only a small round patch of packed dirt in the exact centre, about a fifth as wide as the tile, touching no edge -- not a square, not a plaza |
+| `straight` | a perfectly straight road from the middle of the top edge to the middle of the bottom edge, centred, touching both edges |
+| `diagonal` | a perfectly straight road from the top-left corner to the bottom-right corner, touching both corners |
 
-**The same road width in every piece.** A bend is made of halves of two different
-pieces; a wide straight meeting a thin diagonal shows at every corner.
+The generator hands back a wide canvas with the tile drawn in the middle of it.
+That is fine: the pipeline crops the centre square before it does anything else.
 
-**Faint ruts.** The current pieces have two strong dark ruts, and at 32px those
-read as the planks of a boardwalk rather than a track in the mud. Asked for
-fainter.
-
-**What is there now** was cut by hand from `roads v2.jpg`, the generator's second
-sheet: the dot from row 1, the vertical and horizontal straights from rows 1 and
-2, the diagonals from rows 2 and 3. Both sheets are kept beside it for reference.
+**What is there now:** the hub is the dot from `roads v2.jpg`, the second sheet;
+`straight` and `diagonal` are from the third drop, measured at 42% and 49% of the
+tile wide and within a few pixels of dead centre. The pieces that were not used
+are kept in `art_src/terrain/roads/not used/`.
