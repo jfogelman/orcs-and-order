@@ -7336,7 +7336,8 @@ they are meant to be the current game.
 
 1. **The AI building roads.** Until it does, roads are a player-only advantage and
    invisible to every sweep. It wants its own measurement, since faster armies
-   are a balance change for whichever side uses them better.
+   are a balance change for whichever side uses them better. **Done: section
+   107**, measured over 216 games.
 2. **Trade on roads** -- section 27's third step, and Civ2's +1 on open ground.
    Moves the economy, so measured on its own.
 3. **Sections 96 and 102 now have their machinery.** A thing on a tile, laid by a
@@ -7520,3 +7521,130 @@ is the exception, and only needs the advisors to read the road layer.
 
 When it lands, the Orcpedia's gold buildings and its roads paragraph both need a
 line.
+
+## 107. The AI lays roads
+
+Section 105 put this first, for a reason that outranked everything else about
+roads: until the AI builds them, roads are an advantage only a person can take,
+no sweep can see them, and section 106's gold cannot be measured at all.
+
+### What it does
+
+- **Only once expansion is done.** When a side holds its target number of cities
+  and knows Bridge Building, a spare worker takes a road job. Below the target a
+  Peon is a settler exactly as it always was. That is how this avoids section
+  28's entanglement without splitting the unit: a Peon that exists to dig is only
+  ever built once the settler count no longer matters to expansion.
+- **Join every city to the capital.** A worker picks the nearest city not yet on
+  the capital's road network, walks there, and lays a road back with Road To --
+  the same order a person gives, so it walks over road already down and digs only
+  the gaps. The capital because that is the shape of the supply chain, and joining
+  everything to one place joins everything to everything. A city another worker
+  is already marching to is left to that one.
+- **Workers are built, not only reused.** A city builds one while there is road
+  left to lay, about one per four cities, counting the ones already queued so
+  every city does not pick one at once. Never in a city smaller than a settler
+  needs, and after garrison, expansion, calm and siege in the order of things.
+- **Soldiers do not escort road crews.** The escort rule walks a soldier beside
+  any settler that is going somewhere; a Peon digging at home is not, and pulling
+  a soldier off the front to stand beside it is section 18's chaperone problem
+  again.
+- **It decides from what its side knows.** `connectedByRoad` walks the network
+  across explored road only, the same rule as every other AI decision.
+- **All of it behind `AI_TUNING.buildRoads`**, with `citiesPerRoadWorker` beside
+  it, so roads are measured as an arm.
+
+### The control
+
+With the lever off, six games replayed on this branch came back identical, in all
+fifteen columns, to section 101's posting arm. Nothing about AI games moved except
+through roads. The full sweep then confirmed it at scale: the lever-off arm
+returned **30-24** and **28-26**, section 101's posting arm to the game.
+
+### It really builds them
+
+The first thing checked, because section 91's Posting measured zero for the
+simplest possible reason -- the AI never used it. Each outcome now carries the
+road tiles on the map at the end and the share of each side's cities, other than
+the capital, joined to the capital by road.
+
+| arm | set | orc-hum | turns | cities | pop | fights | caps | roads | joined |
+|---|---|---|---|---|---|---|---|---|---|
+| no AI roads | tuned | 30-24 | 270 | 6.20/6.11 | 45.8/43.9 | 28 | 6.8 | 0 | 0%/0% |
+| no AI roads | held-out | 28-26 | 274 | 5.57/6.80 | 41.1/46.1 | 29 | 6.9 | 0 | 0%/0% |
+| AI roads | tuned | 35-19 | 274 | 7.39/7.00 | 56.9/47.8 | 23 | 5.9 | 44 | 67%/65% |
+| AI roads | held-out | 32-22 | 263 | 6.78/7.65 | 48.6/50.6 | 25 | 6.7 | 44 | 59%/64% |
+
+216 games, 54 a cell, 39.8 minutes. Forty-four road tiles a game where there were
+none, and about six in ten of each side's outlying cities joined to its capital.
+The AI uses the thing.
+
+### What roads did to the game, seed by seed
+
+Roads do not touch worldgen, so every seed played the same map in both arms --
+checked by map fingerprint, after section 103. That makes this a paired
+comparison, 108 pairs, with a sign test on each column:
+
+| column | mean change | up / down | sign test |
+|---|---|---|---|
+| orc cities | **+1.19** | 67 / 25 | p = 0.0000 |
+| human cities | **+0.87** | 56 / 36 | p = 0.047 |
+| orc population | **+9.3** | 71 / 34 | p = 0.0004 |
+| human population | **+4.2** | 63 / 38 | p = 0.017 |
+| fights | **-4.8** | 26 / 73 | p = 0.0000 |
+| captures | -0.5 | 41 / 59 | p = 0.089 |
+| game length | -3.5 turns | 21 / 31 | p = 0.21 |
+| techs, either side | +0.3 / +0.1 | -- | p = 0.19 / 1.00 |
+
+Both sides get bigger and fight less. Bigger is the road doing its job: a worker
+that is digging is not standing still, cities reach each other, and the AI that
+holds its target city count now keeps growing instead of idling. Fighting falls
+because a third of a move is enough to get a garrison home before it is needed --
+roads favour the defender who has them, and an attack that would have caught a
+city empty now does not. Victory by dominance rose from 14 games to 19 and points
+fell from 73 to 68, which is the same story: more empires reach a dominant size.
+
+### The Horde's eight points, and why this does not ship as a finding
+
+Pooled, the Horde went from **58-50** to **67-41** -- 54% to 62%. That is the
+largest single swing any lever has produced since section 59, and it would be a
+balance problem if it were real. It is probably not, or at least not yet:
+
+- **Paired, it is 20 seeds flipping to the Horde and 11 to the Kingdom.** Sign
+  test **p = 0.15**. Seventy-seven of 108 seeds did not change winner at all.
+- **Each set on its own is weaker still**: 11-6 tuned (p = 0.33), 9-5 held-out
+  (p = 0.42). Two sets leaning the same way is the only reason to take it
+  seriously at all.
+- **The growth columns are lopsided the same way** -- the Horde gains 9.3
+  population to the Kingdom's 4.2 -- and those *are* significant. If the win
+  swing is real, this is the mechanism: the orc personality targets fewer cities,
+  so it reaches its target sooner, so it starts digging sooner, so it spends more
+  of the game growing.
+
+So: roads ship with the lever on, and the Horde's lean goes in the ledger as
+**unresolved, leaning real, not yet significant**. It wants one more look after
+section 106, which changes the economics of roads again and would make any
+re-measurement now obsolete. If it does firm up, `citiesPerRoadWorker` is the dial
+-- raising it for the orc personality delays its first digger, which is exactly
+the advantage in question -- and `PERSONALITIES.orc.targetCities` is the deeper
+one.
+
+### A cost worth writing down: the diggers pile up
+
+A six-game probe counted the settler-class units alive at the end: **21 with
+roads, 5 without**. Once every city is joined, `roadWorkToDo` stops cities
+building more, but the ones already walking around do not go away -- there is
+nothing for a worker to do in this game once the roads are done. They are not
+founding junk cities (cities founded past the target: 22 of 58 with roads, 18 of
+64 without, which is the same rate), they are simply standing there eating
+shields that were spent. The fix belongs with terraforming, whenever that
+arrives: a worker with no road left to lay should improve a tile instead. Until
+then it is a known, paid-for inefficiency on both sides.
+
+### Tests
+
+`tests/aiRoads.test.ts`: a worker takes a job once the target is met and not
+before, nothing happens without Bridge Building or with the lever off, one city
+builds a digger rather than all of them, and none do once the network is whole --
+plus `connectedByRoad` joined, broken by a gap, and blind to road the side has
+never seen. 663 pass.
