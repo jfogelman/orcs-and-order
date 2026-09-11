@@ -1306,34 +1306,53 @@ exactly this reason.
 
 ## Roads
 
-One sheet, `roads.png`. The game reads it from `public/terrain/roads.png`: nine square
-frames in a row, background already keyed out. **`prepare_art.py` has no pass for it
-yet** -- one gets added when the art exists. Until then the map draws roads itself, a
-dark-edged dirt line, so nothing is waiting on it.
+**Five pieces, each its own square picture**, in `art_src/terrain/roads/`:
 
-A road is not a tile, it is **nine pieces laid over one**: a hub for a road with
-no neighbours, and one spoke from the centre toward each of the eight neighbours.
-The map draws the spoke for every neighbour that is also a road or a city, so a
-straight road is two spokes and a crossroads is four. That is how Civ2 did it, and
-the reason is the only thing borrowed: every picture here is our own.
+| file | what it shows |
+|---|---|
+| `hub` | a small round patch of packed dirt in the exact centre, touching no edge |
+| `straight` | a road from the middle of the top edge to the middle of the bottom edge |
+| `diagonal` | a road from the top-left corner to the bottom-right corner |
+| `across` *(optional)* | a road from the middle of the left edge to the middle of the right edge |
+| `antidiagonal` *(optional)* | a road from the bottom-left corner to the top-right corner |
 
-> pixel art, top-down view, a horizontal strip of exactly 9 square frames left to
-> right, each frame the same size, each showing one piece of a rough dirt track
-> for a fantasy strategy game map. Frame one: a small round patch of packed dirt
-> in the exact centre of the frame. Frames two to nine: a single dirt track running
-> from the exact centre of the frame to the middle of one edge or corner, in this
-> order: up, up-right, right, down-right, down, down-left, left, up-left. The track
-> is the same width in every frame and meets the frame edge squarely, worn cart
-> ruts, a few pebbles, earthy browns, thick dark outline, plain solid magenta
-> background (#FF00FF) everywhere that is not track, mid-1990s fantasy strategy
-> game style, no text, no other objects, no grass, no scenery, no frame borders or
-> dividing lines -- just nine frames.
+`npm run art` turns them into `public/terrain/roads.png`, the nine frames the game
+reads. The two optional pieces are made by turning `straight` and mirroring
+`diagonal` when they are missing -- draw them when you can, because turning a
+picture turns its light with it.
 
-**The order is not negotiable.** The renderer reads frame 2 as "up" and frame 9 as
-"up-left", straight from `DIRS8`. A sheet with the spokes in any other order draws
-every road pointing the wrong way.
+**Why pieces and not a strip of spokes.** The game lays a stub from the middle of
+a tile toward each neighbour with a road. Asked for those stubs twice, the
+generator drew complete road tiles instead -- bends, S-curves, junctions -- and
+the second time it drew straight roads across a tile beautifully. So it is asked
+for straights, and `prepare_art.py` cuts each straight in half itself. That is
+also why every piece has to reach its edges or corners at full width: the halves
+meet there.
 
-**Every spoke must end exactly at the frame edge, at its middle** (or exactly at
-the corner, for the diagonals). Two neighbouring road tiles each draw half the
-track and they meet at that shared edge; a spoke that stops short leaves a gap in
-every road, and one that runs past the edge leaves a lump.
+One prompt per file, changing only the bracketed line:
+
+> pixel art, top-down view, one single square tile for a fantasy strategy game map
+> showing [PIECE]. A rough dirt road about a third as wide as the tile, faint
+> shallow cart ruts, a few pebbles, earthy browns, thick dark outline on the road
+> only, plain solid magenta background (#FF00FF) everywhere else, mid-1990s fantasy
+> strategy game style, no text, no grass, no scenery, no border, nothing else in
+> the picture -- one tile only.
+
+| file | [PIECE] |
+|---|---|
+| `hub` | only a small round patch of packed dirt in the exact centre, touching no edge |
+| `straight` | a straight road from the middle of the top edge to the middle of the bottom edge, centred, touching both edges |
+| `diagonal` | a straight road from the top-left corner to the bottom-right corner, touching both corners |
+| `across` | a straight road from the middle of the left edge to the middle of the right edge, centred, touching both edges |
+| `antidiagonal` | a straight road from the bottom-left corner to the top-right corner, touching both corners |
+
+**The same road width in every piece.** A bend is made of halves of two different
+pieces; a wide straight meeting a thin diagonal shows at every corner.
+
+**Faint ruts.** The current pieces have two strong dark ruts, and at 32px those
+read as the planks of a boardwalk rather than a track in the mud. Asked for
+fainter.
+
+**What is there now** was cut by hand from `roads v2.jpg`, the generator's second
+sheet: the dot from row 1, the vertical and horizontal straights from rows 1 and
+2, the diagonals from rows 2 and 3. Both sheets are kept beside it for reference.

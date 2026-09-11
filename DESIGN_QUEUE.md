@@ -7342,3 +7342,41 @@ they are meant to be the current game.
 3. **Sections 96 and 102 now have their machinery.** A thing on a tile, laid by a
    worker, saved, drawn, and removable is exactly what pillaging and the garrison
    post were waiting for.
+
+### The road art, and what real art changed about drawing roads
+
+The drawn line was a placeholder, and the first real art found three things it
+had been hiding.
+
+**Generators will not draw spokes.** Asked for nine stubs from the centre, the
+first sheet came back as complete road tiles -- a straight, bends, S-curves, a
+T -- in tall bordered frames; a bend joins two edges, so a set of those would need
+a piece for every combination of neighbours. The second sheet was mostly the same,
+but its straights and diagonals were clean. So the source is now **named straight
+pieces** (`hub`, `straight`, `diagonal`, and optionally `across` and
+`antidiagonal`) and `prepare_art.py` cuts each straight into two spokes itself,
+keeping half the road's width past the middle so two halves meeting at a bend
+overlap instead of notching. The renderer lays the hub under every road tile to
+round the joint. The output is still the nine-frame strip, so the loader did not
+change.
+
+**Drawing every diagonal neighbour looked wrong.** Every road tile joins all eight
+road neighbours for movement, and drawing all eight put a brace across every bend
+and a diamond around every crossroads -- tolerable as a thin line, plainly wrong as
+a textured road. `roadLinks` now draws a diagonal only when neither tile beside it
+is a road, the same test the terrain blend uses for a corner. **Movement is
+unchanged**: a diagonal step along a road still costs a third.
+
+**Diagonals pinched at every tile corner.** A diagonal crosses a corner, and a
+frame that stops at its own tile cuts the road to a point there. Frames now carry
+an 8px bleed (48px drawn centred on a 32px tile), filled with the same piece one
+tile on -- which is exactly what the neighbour draws there, so the overlap is
+seamless. That alone did not fix it: generated diagonals are clipped to their own
+square, so the copy one tile on repeats the same narrow neck. A second copy half a
+tile along the road puts its full-width middle over the corner, and because the
+ruts run along the road they still line up.
+
+Checked in a preview image first (straight, bend, crossroads, two diagonal runs
+meeting in a V, a lone road) and then in the game. The current pieces were cut by
+hand from the generator's second sheet; ART_PROMPTS now asks for the five pieces
+directly, with fainter ruts, since at 32px the strong ones read as planks.

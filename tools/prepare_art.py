@@ -779,6 +779,144 @@ VARIANTS = {
 }
 
 
+# Roads are nine pieces laid over a tile: a hub, and a spoke toward each of the
+# eight neighbours the renderer finds a road on. Image generators will not draw a
+# spoke -- asked twice, they drew complete road tiles, bends and junctions -- but
+# they draw a straight road across a square tile very well. So the source is up
+# to five straight pieces, and each straight is cut in half here.
+ROAD_PIECES = ("hub", "straight", "across", "diagonal", "antidiagonal")
+# Cut at a finer size and shrink afterwards, so the cut edge is not a staircase.
+ROAD_WORK = 96
+# Pixels each frame reaches past the tile on every side, in a 32px tile. A
+# diagonal crosses a tile corner, and a frame that stops at the tile edge pinches
+# the road to a point there; the bleed carries it across into the tiles beside.
+ROAD_BLEED = 8
+# `DIRS8` order, which the renderer reads frame by frame: up, up-right, right,
+# down-right, down, down-left, left, up-left.
+ROAD_DIRS = ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1))
+
+
+def process_roads(force: bool) -> tuple[int, list[str]]:
+    """
+    Road art: named pieces in `art_src/terrain/roads/`, out as one strip.
+
+    - `hub`: a small patch of dirt in the middle of the tile. Required.
+    - `straight`: a road from the middle of the top edge to the middle of the
+      bottom edge. Required.
+    - `diagonal`: a road from the top-left corner to the bottom-right. Required.
+    - `across` and `antidiagonal`: the other straight and the other diagonal.
+      Optional -- turned and mirrored from the two above when absent, and drawn
+      rather than derived when present, since turning a picture turns its light.
+
+    Each straight becomes two spokes by keeping the half toward one neighbour and
+    **a little past the middle** -- half the road's own width -- so two spokes
+    meeting at a bend overlap rather than leaving a notch in the outside corner.
+    The renderer lays the hub underneath every road tile to round the joint.
+
+    Out: `public/terrain/roads.png`, nine frames -- hub, then the spokes in `DIRS8`
+    order -- each 48px: the 32px tile and an 8px bleed all round, which the game
+    draws centred on the tile. The bleed is filled with the same piece continued
+    one tile on, which is exactly what the neighbour draws there, so the overlap
+    is the neighbour's own road and the two meet without a seam.
+    """
+    src = SRC / "terrain" / "roads"
+    out = OUT / "terrain"
+    target = out / "roads.png"
+    if not src.is_dir():
+        return 0, []
+
+    pieces: dict[str, Image.Image] = {}
+    problems: list[str] = []
+    newest = 0.0
+    for name in ROAD_PIECES:
+        path = find_source(src, name)
+        if path is None:
+            continue
+        newest = max(newest, path.stat().st_mtime)
+        # A road is most of a tile's background -- the hub more so -- so the
+        # sprite-calibrated ceiling on how much may be keyed out is raised.
+        keyed, cut_out = remove_background(Image.open(path), max_removed=0.99)
+        if not cut_out:
+            problems.append(f"roads/{path.name}: background would not key")
+            continue
+        pieces[name] = keyed.resize((ROAD_WORK, ROAD_WORK), Image.LANCZOS)
+
+    if "across" not in pieces and "straight" in pieces:
+        pieces["across"] = pieces["straight"].rotate(90)
+    if "antidiagonal" not in pieces and "diagonal" in pieces:
+        pieces["antidiagonal"] = pieces["diagonal"].transpose(Image.FLIP_LEFT_RIGHT)
+    missing = [n for n in ("hub", "straight", "diagonal") if n not in pieces]
+    if missing:
+        if len(missing) < 3:
+            problems.append(f"roads: missing {', '.join(missing)}")
+        for line in problems:
+            print(f"  {line}")
+        return 0, problems
+    if target.exists() and not force and target.stat().st_mtime > newest:
+        return 0, problems
+
+    # The road's own width, read off the straight where it crosses the middle.
+    alpha = pieces["straight"].getchannel("A")
+    mid = ROAD_WORK // 2
+    band = [x for x in range(ROAD_WORK) if alpha.getpixel((x, mid)) > 128]
+    overlap = (max(band) - min(band) + 1) / 2 if band else ROAD_WORK * 0.15
+
+    def source(dx: int, dy: int) -> Image.Image:
+        if dx == 0:
+            return pieces["straight"]
+        if dy == 0:
+            return pieces["across"]
+        return pieces["diagonal"] if dx == dy else pieces["antidiagonal"]
+
+    wb = ROAD_WORK * ROAD_BLEED // TERRAIN_SIZE
+    window = (ROAD_WORK - wb, ROAD_WORK - wb, 2 * ROAD_WORK + wb, 2 * ROAD_WORK + wb)
+
+    def spoke(dx: int, dy: int) -> Image.Image:
+        piece = source(dx, dy)
+        # Three tiles square, this tile in the middle: the piece, and the same
+        # piece one tile on in the spoke's direction.
+        #
+        # A diagonal also gets a copy half a tile on. Generated diagonals are
+        # clipped to their own square, so the road narrows to a neck at each
+        # corner -- and a copy one whole tile on repeats the same neck. Slid half
+        # a tile along its own length, the full-width middle of the road lands on
+        # the corner and covers it; the ruts run along the road, so they line up.
+        steps = (0, 0.5, 1) if dx and dy else (0, 1)
+        big = Image.new("RGBA", (ROAD_WORK * 3, ROAD_WORK * 3), (0, 0, 0, 0))
+        for k in steps:
+            big.alpha_composite(
+                piece,
+                (round(ROAD_WORK + k * dx * ROAD_WORK), round(ROAD_WORK + k * dy * ROAD_WORK)),
+            )
+        length = (dx * dx + dy * dy) ** 0.5
+        ux, uy = dx / length, dy / length
+        centre = ROAD_WORK * 1.5 - 0.5
+        a = big.getchannel("A")
+        ap = a.load()
+        x0, y0, x1, y1 = window
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                if (x - centre) * ux + (y - centre) * uy < -overlap:
+                    ap[x, y] = 0
+        big.putalpha(a)
+        return big.crop(window)
+
+    hub = Image.new("RGBA", (ROAD_WORK + 2 * wb, ROAD_WORK + 2 * wb), (0, 0, 0, 0))
+    hub.alpha_composite(pieces["hub"], (wb, wb))
+    frames = [hub] + [spoke(dx, dy) for dx, dy in ROAD_DIRS]
+    frame_px = TERRAIN_SIZE + 2 * ROAD_BLEED
+    strip = Image.new("RGBA", (frame_px * len(frames), frame_px), (0, 0, 0, 0))
+    for i, frame in enumerate(frames):
+        small = frame.resize((frame_px, frame_px), Image.LANCZOS)
+        strip.paste(small, (i * frame_px, 0), small)
+    out.mkdir(parents=True, exist_ok=True)
+    strip.save(target, optimize=True)
+    print(f"  terrain/roads.png (hub and 8 spokes, {frame_px}px frames with an {ROAD_BLEED}px bleed)")
+    for line in problems:
+        print(f"  {line}")
+    return 1, problems
+
+
 def seams_are_empty(img: Image.Image) -> bool:
     """
     Do the middle column and middle row of a keyed image contain nothing?
@@ -1794,6 +1932,8 @@ def main() -> int:
     failed_icons.extend(failed_specials)
     print("Terrain:")
     terrain, missing_terrain = process_terrain(force)
+    print("Roads:")
+    roads, road_problems = process_roads(force)
     print("Effects:")
     effects, failed_effects = process_effects(force)
     print("Unit attack animations:")

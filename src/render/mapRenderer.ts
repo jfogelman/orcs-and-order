@@ -4,7 +4,8 @@ import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
-import { Camera } from './camera';
+import { Camera, TILE } from './camera';
+import { roadLinks } from './roadShape';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
@@ -257,6 +258,10 @@ export class MapRenderer {
     const isRoad = (x: number, y: number) =>
       x >= 0 && y >= 0 && x < w && y < h && (roads[idx(x, y, w)] === 1 || cities.has(idx(x, y, w)));
     const art = this.roadFrames;
+    // Real art carries a bleed: frames wider than a tile, drawn centred on it, so
+    // a diagonal is not pinched to a point where it crosses a tile corner.
+    const drawn = art ? (art[0].width * size) / TILE : size;
+    const bleed = (drawn - size) / 2;
     const spokes: Array<[number, number, number, number]> = [];
     const hubs: Array<[number, number]> = [];
 
@@ -267,16 +272,19 @@ export class MapRenderer {
         const s = cam.tileToScreen(x, y);
         const cx = s.x + size / 2;
         const cy = s.y + size / 2;
-        let joined = 0;
-        DIRS8.forEach(([dx, dy], d) => {
-          if (!isRoad(x + dx, y + dy)) return;
-          joined++;
-          if (art) ctx.drawImage(art[d + 1], s.x, s.y, size, size);
-          else spokes.push([cx, cy, cx + (dx * size) / 2, cy + (dy * size) / 2]);
-        });
-        if (joined === 0) {
-          if (art) ctx.drawImage(art[0], s.x, s.y, size, size);
-          else hubs.push([cx, cy]);
+        const links = roadLinks(isRoad, x, y);
+        if (art) {
+          // The hub under every road tile, not only a lone one: the spokes are
+          // halves of straight pieces cut just past the middle, and the hub is
+          // what rounds the joint where two of them meet.
+          ctx.drawImage(art[0], s.x - bleed, s.y - bleed, drawn, drawn);
+          for (const d of links) ctx.drawImage(art[d + 1], s.x - bleed, s.y - bleed, drawn, drawn);
+        } else {
+          for (const d of links) {
+            const [dx, dy] = DIRS8[d];
+            spokes.push([cx, cy, cx + (dx * size) / 2, cy + (dy * size) / 2]);
+          }
+          if (links.length === 0) hubs.push([cx, cy]);
         }
       }
     }
