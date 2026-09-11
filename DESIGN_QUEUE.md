@@ -6823,9 +6823,9 @@ attached: we can see this one.
 
 ## 100. The game with raiders in it
 
-Every balance number in this file -- section 86's 27-27 and section 90's band
-included -- was taken with raiders off, because the sweep could not turn them
-on. Raiders are in the games actually being played now, so this is the
+Every balance number in this file -- section 94's shipping 28-26 and 24-30, and
+section 90's band -- was taken with raiders off, because the sweep could not
+turn them on. Raiders are in the games actually being played now, so this is the
 measurement of those games. Getting to the point where it meant anything turned
 up three problems, each of which would have made it describe something that
 should not exist.
@@ -6893,3 +6893,60 @@ The cap is now `halfTurnsFor(state)`, scaled by the players in the game. The
 table prints `unfin` separately from `draw`, and `runSweep` warns in capitals if
 any uncapped game runs out. The raiders-off rows of the rerun matched the first
 run to the game, so the control did not move.
+
+### What raiders do to the game, measured
+
+216 games: raiders off against raiders on, 54 seeds a set, both sets, the same
+seeds in both arms. No game unfinished.
+
+| | tuned | held-out | turns | captures | cities orc/hum |
+|---|---|---|---|---|---|
+| raiders off | 28-26 | 24-30 | 272 / 271 | 7.2 / 6.8 | 5.83/6.61, 5.13/7.33 |
+| raiders on  | 30-24 | 30-24 | 274 / 275 | 6.5 / 6.5 | 5.98/6.48, 6.00/6.69 |
+
+The raiders-off arm is section 94's shipping configuration to the game --
+28-26 and 24-30 -- for the third separate sweep running, so the harness changes
+above left the control exactly where it was.
+
+**Balance leans toward the Horde, and it is not yet established.** Pooled, 52-56
+becomes 60-48: the Horde's share goes from 48% to 56%. Same direction on both
+sets, +2 and +6. But paired seed by seed, raiders are a large disturbance with a
+small net: about a third of games change winner, 21 toward the Horde against 13
+toward the Kingdom. On 34 disagreeing seeds a fair coin splits at least that
+lopsidedly, either way, about one time in four. Worth watching in play; not
+worth a rule change on this evidence.
+
+**It stays inside the band.** 56% is well within section 90's 15-85%, and every
+cities, population and advances ratio is above the 0.45 hopeless line. Raiders
+do not need a second band.
+
+**Raiders do not make games faster.** 272 becomes 274, 271 becomes 275 -- a
+couple of turns *longer*. Whatever made played games feel quicker, it is not
+raiders as they now behave. Either the calm change did it, or the raiders being
+played against were the ones with the Horde's brain, which no longer exist.
+
+**The clearest effect is on how games end:**
+
+| ending | off | on |
+|---|---|---|
+| conquest  | 21 | 23 |
+| dominance | **17** (Kingdom 13, Horde 4) | **5** (Kingdom 4, Horde 1) |
+| points    | 70 | 80 |
+
+Dominance wins fall by more than two thirds, and they were mostly the Kingdom's.
+Those games go to points instead, where the Horde does better -- which is most of
+the balance lean above.
+
+**Why is not established, and one explanation is ruled out.** The dominance share
+counts cities, and raiders can no longer change who holds a city, so it is not
+sacks resetting the clock. Captures fall slightly on both sets, 7.2 to 6.5 and
+6.8 to 6.5. The likeliest reading is that raiders cost a runaway leader the
+momentum it needs to take three quarters of the map, and that leader is more
+often the Kingdom -- section 20 measured that it holds cities better. The
+measurement that would settle it counts captures by the would-be dominant side in
+the turns before the clock would have started.
+
+**Sacks are rare.** 37 of 108 raiders-on games saw one at all; under half a city
+a side a game on average; twelve in the worst game. Raiders mostly apply
+pressure by being there rather than by breaking things, which is what section 69
+asked of them.
