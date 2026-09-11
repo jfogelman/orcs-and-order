@@ -1,10 +1,11 @@
-import { fatCrossIndices, idx } from '../engine/grid';
+import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
 import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
-import type { City, GameState, Unit } from '../model/types';
-import { Camera } from './camera';
+import type { City, GameState, Player, Unit } from '../model/types';
+import { Camera, TILE } from './camera';
+import { roadLinks } from './roadShape';
 import { SpriteCache } from './spriteCache';
 import { buildSpecialIcon, buildTerrainTiles } from './tileArt';
 import type { TerrainTileSet } from './tileArt';
@@ -119,6 +120,8 @@ export class MapRenderer {
   private specialIcon: HTMLCanvasElement;
   /** Real art for the land specials, by terrain. Empty until it loads. */
   private specialArt = new Map<string, HTMLImageElement>();
+  /** Real road art, sliced into hub and eight spokes. Null until it loads, and for good if never drawn. */
+  private roadFrames: HTMLCanvasElement[] | null = null;
   /** Badges a settlement wears, by state. Empty until the art loads. */
   private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;
@@ -144,6 +147,9 @@ export class MapRenderer {
     // at which point the pre-rendered map has to be built again.
     this.sprites.installTerrainArt(this.tiles, TERRAIN_IDS, () => this.invalidateLayerSoon());
     this.sprites.installSpecialArt(this.specialArt, TERRAIN_IDS, () => this.invalidateLayerSoon());
+    this.sprites.installRoadArt((frames) => {
+      this.roadFrames = frames;
+    });
     // Cities are drawn every frame rather than pre-rendered, so these need no
     // invalidation -- they start appearing as soon as they have loaded.
     this.sprites.installCityOverlays(this.cityOverlays, CITY_OVERLAY_STATES);
@@ -227,6 +233,89 @@ export class MapRenderer {
     );
   }
 
+  /**
+   * A spoke from the middle of each road tile toward every neighbour that is a
+   * road too, or a city -- which is how Civ2 joined them -- and a hub for a road
+   * on its own. Two neighbours each draw half, so the track meets at the edge.
+   *
+   * Remembered on explored ground, the way cities are: section 27 asked that an
+   * enemy's roads in the fog be treated like an enemy's cities, and cities are
+   * drawn wherever the ground has ever been seen.
+   */
+  private drawRoads(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+  ): void {
+    const roads = state.roads;
+    if (!roads) return;
+    const w = state.width;
+    const h = state.height;
+    const { x0, y0, x1, y1 } = cam.visibleTileRange();
+    const cities = new Set(state.cities.map((c) => idx(c.x, c.y, w)));
+    const isRoad = (x: number, y: number) =>
+      x >= 0 && y >= 0 && x < w && y < h && (roads[idx(x, y, w)] === 1 || cities.has(idx(x, y, w)));
+    const art = this.roadFrames;
+    // Real art carries a bleed: frames wider than a tile, drawn centred on it, so
+    // a diagonal is not pinched to a point where it crosses a tile corner.
+    const drawn = art ? (art[0].width * size) / TILE : size;
+    const bleed = (drawn - size) / 2;
+    const spokes: Array<[number, number, number, number]> = [];
+    const hubs: Array<[number, number]> = [];
+
+    for (let y = Math.max(0, y0); y <= Math.min(h - 1, y1); y++) {
+      for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
+        const i = idx(x, y, w);
+        if (roads[i] !== 1 || !viewer.explored[i]) continue;
+        const s = cam.tileToScreen(x, y);
+        const cx = s.x + size / 2;
+        const cy = s.y + size / 2;
+        const links = roadLinks(isRoad, x, y);
+        if (art) {
+          // The hub under every road tile, not only a lone one: the spokes are
+          // halves of straight pieces cut just past the middle, and the hub is
+          // what rounds the joint where two of them meet.
+          ctx.drawImage(art[0], s.x - bleed, s.y - bleed, drawn, drawn);
+          for (const d of links) ctx.drawImage(art[d + 1], s.x - bleed, s.y - bleed, drawn, drawn);
+        } else {
+          for (const d of links) {
+            const [dx, dy] = DIRS8[d];
+            spokes.push([cx, cy, cx + (dx * size) / 2, cy + (dy * size) / 2]);
+          }
+          if (links.length === 0) hubs.push([cx, cy]);
+        }
+      }
+    }
+    if (spokes.length === 0 && hubs.length === 0) return;
+
+    // Drawn twice, dark then dirt, for the same reason the borders are: the map
+    // runs from dark forest to pale sand and one mid-tone line vanishes into
+    // one end or the other.
+    const pass = (colour: string, width: number) => {
+      ctx.strokeStyle = colour;
+      ctx.fillStyle = colour;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (const [ax, ay, bx, by] of spokes) {
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      for (const [hx, hy] of hubs) {
+        ctx.beginPath();
+        ctx.arc(hx, hy, width / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+    ctx.save();
+    pass('rgba(40, 26, 12, 0.85)', Math.max(3, size * 0.2));
+    pass('#b08a52', Math.max(2, size * 0.12));
+    ctx.restore();
+  }
+
   draw(state: GameState, viewerId: number, cam: Camera, overlay: MapOverlay, dt: number): void {
     this.clock += dt;
     this.animator.update(dt);
@@ -244,6 +333,11 @@ export class MapRenderer {
     // every visible tile. Unexplored ground is painted back out under fog.
     this.ensureLayer(state);
     this.blitTerrain(ctx, cam);
+
+    // --- roads -----------------------------------------------------------
+    // Over the terrain rather than baked into it: the terrain layer is built
+    // once per map, and roads are the first thing on the map that changes.
+    if (state.roads) this.drawRoads(ctx, state, viewer, cam, size);
 
     // --- grid ------------------------------------------------------------
     if (overlay.showGrid && size >= 24) {

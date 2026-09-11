@@ -12,6 +12,7 @@ import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, RAIDER } from '../sim/barbarians';
+import { ROADS } from '../sim/roads';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -363,6 +364,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           adding to it, and it is always worth having. Some are worth more to
           <strong>work</strong>; others are worth more to <strong>stand on</strong>, and
           change nothing about what the tile grows.
+        </p>
+        <p class="flavor">
+          <strong>Roads.</strong> Once you know <strong>Bridge Building</strong>, a Peon or Peasant can lay one where it stands (<kbd>R</kbd>):
+          ${ROADS.turns.grass} turns on grass or wastes, ${ROADS.turns.forest} in forest, hills or
+          swamp, ${ROADS.turns.mountains} up a mountain. Walking off abandons the job. <kbd>Shift+R</kbd> and a click lays a road all the way to that tile, digging where the ground needs it and walking over any road already down. A step from one
+          road tile to the next costs <strong>a third of a move</strong>, so a worker that has joined
+          two cities has shortened every march between them. A city counts as a road already, and a
+          road does not know whose it is &mdash; the other lot may use yours.
         </p>
         <div class="pedia-rows">${terrainList}</div>
       </div>

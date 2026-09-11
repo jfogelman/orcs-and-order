@@ -83,7 +83,7 @@ function unlockSummary(t: TechDef, player: Player): string {
 const FLAG_LABELS: Record<string, string> = {
   coordination: 'Big groups stop losing a movement point',
   mapmaking: '+1 sight for every unit',
-  bridges: 'Forest and swamp cost 1 movement',
+  bridges: 'Forest and swamp cost 1 movement; workers can lay roads',
   watchtower: 'Cities see one tile further',
   contentment: '+1 content citizen everywhere',
   berserk: '+25% attack, -25% defence, army-wide',

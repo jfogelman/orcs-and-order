@@ -54,14 +54,18 @@ interface PackedPlayer extends Omit<Player, 'explored' | 'visible'> {
   visible: string;
 }
 
-interface SaveFile extends Omit<GameState, 'players'> {
+interface SaveFile extends Omit<GameState, 'players' | 'roads'> {
   players: PackedPlayer[];
   savedAt: string;
+  /** Packed like the fog: long runs of nothing with the odd road in them. */
+  roads?: string;
 }
 
 export function serialize(state: GameState): string {
+  const { roads, ...plain } = state;
   const file: SaveFile = {
-    ...state,
+    ...plain,
+    ...(roads ? { roads: packBits(roads) } : {}),
     players: state.players.map((p) => ({
       ...p,
       explored: packBits(p.explored),
@@ -92,9 +96,11 @@ export function deserialize(text: string): GameState {
 
   const tiles = file.width * file.height;
   // Drop the save-only metadata and re-expand the packed fog bitmaps.
-  const { savedAt: _savedAt, players, ...rest } = file;
+  const { savedAt: _savedAt, players, roads, ...rest } = file;
   const state: GameState = {
     ...rest,
+    // Absent in every save from before roads, which loads as a map without any.
+    ...(typeof roads === 'string' ? { roads: unpackBits(roads, tiles) } : {}),
     players: players.map((p) => ({
       ...p,
       explored: unpackBits(p.explored, tiles),

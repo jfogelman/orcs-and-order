@@ -68,6 +68,7 @@ const POSTURE: Record<UnitOrder, string> = {
   skip: 'passed',
   sentry: 'sentry',
   fortified: 'fortified',
+  road: 'laying a road',
 };
 
 const CITIZEN_FACE = 32;

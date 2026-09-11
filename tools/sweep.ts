@@ -5,6 +5,7 @@ import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } fro
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import type { GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
+import { ROADS } from '../src/sim/roads';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
@@ -70,6 +71,7 @@ export const LEVERS: Record<string, object> = {
   POSTING,
   REGEN,
   RESETTLE,
+  ROADS,
   RUIN,
   SACKING,
   SCORE_WEIGHTS,

@@ -2,6 +2,8 @@ import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
+import { canBuildRoad, canLayRoads, formatMoves, roadTurns, startRoad } from './sim/roads';
+import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { idx } from './engine/grid';
@@ -203,6 +205,7 @@ class App {
     // across a change of unit is how you fire the wrong thing at the wrong
     // target.
     this.disarm(false);
+    this.roadArmed = false;
     if (unit && this.overlay.selectedUnitId !== unit.id) audio.play('select');
     this.overlay.selectedUnitId = unit?.id ?? null;
     this.refreshOverlays();
@@ -234,7 +237,9 @@ class App {
     // A standing order is invisible otherwise, and looks like it was forgotten.
     this.overlay.gotoPath = unit.goto
       ? this.previewTo(unit, unit.goto.x, unit.goto.y)
-      : null;
+      : unit.roadTo
+        ? this.previewTo(unit, unit.roadTo.x, unit.roadTo.y, true)
+        : null;
     this.updatePathPreview();
   }
 
@@ -249,17 +254,24 @@ class App {
       this.overlay.path = null;
       return;
     }
-    this.overlay.path = this.previewTo(unit, hover.x, hover.y);
+    // Hovering the end of a worker's own road-to previews the road, not a march
+    // to the same tile: the cursor is still sitting there the moment the order is
+    // given, and a "4" beside a sixteen-turn road reads as the road's estimate.
+    const ownRoadEnd = unit.roadTo !== undefined && hover.x === unit.roadTo.x && hover.y === unit.roadTo.y;
+    this.overlay.path = this.previewTo(unit, hover.x, hover.y, this.roadArmed || ownRoadEnd);
   }
 
   /** A route, split at the point this turn's movement runs out. */
-  private previewTo(unit: Unit, x: number, y: number): RoutePreview | null {
-    const tiles = routeTo(this.state, unit, x, y);
+  private previewTo(unit: Unit, x: number, y: number, road = false): RoutePreview | null {
+    // A road-to follows its own route and takes as long as the digging does. The
+    // march estimate here first said "4" for a road that took eight turns to lay.
+    const tiles = road ? roadRouteTo(this.state, unit, x, y) : routeTo(this.state, unit, x, y);
     if (!tiles || tiles.length < 2) return null;
     return {
       tiles,
-      thisTurn: stepsThisTurn(this.state, unit, tiles),
-      turns: estimateTurns(this.state, unit, tiles),
+      // A road-to digs before it walks, so none of the route is covered this turn.
+      thisTurn: road ? 1 : stepsThisTurn(this.state, unit, tiles),
+      turns: road ? estimateRoadTurns(this.state, unit, tiles) : estimateTurns(this.state, unit, tiles),
     };
   }
 
@@ -319,8 +331,12 @@ class App {
    */
   private orderHalt(): void {
     const unit = this.selected;
-    if (!unit?.goto) return;
+    if (!unit?.goto && !unit?.roadTo) return;
     unit.goto = null;
+    // A road-to stops where it is. Every stretch already dug stays dug, and the
+    // tile being dug right now is finished -- that is a road order of its own,
+    // the same one R gives. Walking the worker off is how to abandon that too.
+    delete unit.roadTo;
     this.overlay.gotoPath = null;
     this.refreshSidebar();
   }
@@ -380,6 +396,8 @@ class App {
     const unit = this.selected;
     if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
     if (unit.x === x && unit.y === y) return;
+    // Moving a worker by hand is a new plan, and replaces a road-to.
+    delete unit.roadTo;
 
     // Note both types up front: either combatant may not survive the call.
     const attackerType = unit.type;
@@ -475,6 +493,7 @@ class App {
     if (!unit) return;
     unit.order = unit.order === 'fortified' ? 'none' : 'fortified';
     unit.goto = null;
+    delete unit.roadTo;
     this.refreshSidebar();
   }
 
@@ -483,6 +502,7 @@ class App {
     if (!unit) return;
     unit.order = 'sentry';
     unit.goto = null;
+    delete unit.roadTo;
     this.selectNextIdle();
   }
 
@@ -507,6 +527,68 @@ class App {
     this.refreshHud();
     this.playLogCues();
     if (city) this.openCity(city);
+  }
+
+  private orderRoad(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const check = canBuildRoad(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    delete unit.roadTo;
+    startRoad(this.state, unit);
+    this.selectNextIdle();
+  }
+
+  /** Whether the next click on the map is where the selected worker's road goes. */
+  private roadArmed = false;
+
+  /**
+   * Arm "Road To": the next left click sets where the road goes.
+   *
+   * Armed the way an ability is, and for the same reason -- a left click on open
+   * ground is already a march, so the click has to know it means something else
+   * this time. Refuses up front when the worker cannot lay roads at all, rather
+   * than arming into a click that will only be refused.
+   */
+  private orderRoadTo(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (this.roadArmed) {
+      this.roadArmed = false;
+      this.refreshSidebar();
+      return;
+    }
+    const check = canLayRoads(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not this unit.');
+      return;
+    }
+    this.disarm(false);
+    this.roadArmed = true;
+    this.refreshSidebar();
+    this.notify('Road To: click where the road should go. Escape to cancel.');
+  }
+
+  /** Handle a click while Road To is armed. Returns whether the click was consumed. */
+  private clickWhileRoadArmed(x: number, y: number): boolean {
+    if (!this.roadArmed) return false;
+    this.roadArmed = false;
+    const unit = this.selected;
+    if (!unit) return true;
+    const started = startRoadTo(this.state, unit, x, y);
+    if (!started.ok) {
+      this.flash(started.reason ?? 'No road can go there.');
+    } else {
+      audio.play('move');
+      this.playLogCues();
+      if (unit.moves <= 0 || unit.order === 'road') this.selectNextIdle();
+    }
+    this.refreshOverlays();
+    this.refreshSidebar();
+    return true;
   }
 
   private openCity(city: City): void {
@@ -1218,6 +1300,7 @@ class App {
   }
 
   private onLeftClick(x: number, y: number): void {
+    if (this.clickWhileRoadArmed(x, y)) return;
     if (this.clickWhileArmed(x, y)) return;
     const unit = unitAt(this.state, x, y);
     const city = cityAt(this.state, x, y);
@@ -1353,7 +1436,10 @@ class App {
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
         // thing, not drop the selection out from under it.
-        if (this.armed !== null) this.disarm();
+        if (this.roadArmed) {
+          this.roadArmed = false;
+          this.refreshSidebar();
+        } else if (this.armed !== null) this.disarm();
         else this.select(null);
         break;
       default: {
@@ -1362,6 +1448,14 @@ class App {
         // Drain came to advertise shortcuts that did nothing.
         if (!unit) break;
         const pressed = e.key.toLowerCase();
+        // R lays a road for a worker. No worker has Ranged, so the key is free on
+        // exactly the units that can dig, and is still Ranged for everyone else.
+        if (pressed === 'r' && unitType(unit.type).settler) {
+          // Shift+R lays one all the way to a tile you click; R lays one here.
+          if (e.shiftKey) this.orderRoadTo();
+          else this.orderRoad();
+          break;
+        }
         const ability = abilitiesOf(unit).find((a) => ABILITIES[a].key === pressed);
         if (ability) this.arm(ability);
         break;
@@ -1415,6 +1509,8 @@ class App {
     if (unit) {
       const t = unitType(unit.type);
       const canSettle = t.settler && canFoundCity(this.state, unit, unit.x, unit.y).ok;
+      const canRoad = canBuildRoad(this.state, unit).ok;
+      const canRoadTo = unit.owner === this.viewerId && canLayRoads(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -1432,7 +1528,7 @@ class App {
         <div class="panel-body">
           <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${t.attack} / ${t.defense}</span></div>
           <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${t.hp}</span></div>
-          <div class="stat-row"><span class="label">Movement</span><span class="value">${unit.moves} / ${t.move}</span></div>
+          <div class="stat-row"><span class="label">Movement</span><span class="value">${formatMoves(unit.moves)} / ${t.move}</span></div>
           ${
             t.crowded
               ? `<div class="stat-row"><span class="label">Crowd</span><span class="value k-bad">${t.count} of them, nobody agreeing</span></div>`
@@ -1477,10 +1573,23 @@ class App {
               ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from any city of yours &middot; fights weakly and cannot heal</span></div>`
               : ''
           }
-          ${unit.order !== 'none' ? `<div class="chip">${unit.order}</div>` : ''}
+          ${
+            unit.order === 'road'
+              ? `<div class="chip">laying a road &middot; ${unit.work ?? '?'} ${unit.work === 1 ? 'turn' : 'turns'} left</div>`
+              : unit.order !== 'none'
+                ? `<div class="chip">${unit.order}</div>`
+                : ''
+          }
           ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
+                  this.overlay.gotoPath ? ` &middot; ~${this.overlay.gotoPath.turns} turns` : ''
+                }</div>`
+              : ''
+          }
+          ${
+            unit.roadTo
+              ? `<div class="chip">road to (${unit.roadTo.x}, ${unit.roadTo.y})${
                   this.overlay.gotoPath ? ` &middot; ~${this.overlay.gotoPath.turns} turns` : ''
                 }</div>`
               : ''
@@ -1489,6 +1598,18 @@ class App {
         </div>
         <div class="button-row">
           ${canSettle ? '<button class="small" data-act="found">Found City (B)</button>' : ''}
+          ${
+            canRoad
+              ? `<button class="small" data-act="road">Build Road (R) &middot; ${roadTurns(
+                  this.state.terrain[unit.y * this.state.width + unit.x],
+                )} turns</button>`
+              : ''
+          }
+          ${
+            canRoadTo
+              ? `<button class="small${this.roadArmed ? ' armed' : ''}" data-act="roadto">Road To&hellip; (Shift+R)</button>`
+              : ''
+          }
           ${
             cityHere
               ? `<button class="small" data-act="city">Open ${escapeHtml(cityHere.name)}</button>`
@@ -1507,7 +1628,7 @@ class App {
             })
             .join('')}
           ${
-            unit.goto ? '<button class="small" data-act="halt">Halt (X)</button>' : ''
+            unit.goto || unit.roadTo ? '<button class="small" data-act="halt">Halt (X)</button>' : ''
           }
           ${
             resupplyBlocked(this.state, unit) === null
@@ -1540,6 +1661,12 @@ class App {
               break;
             case 'found':
               this.orderFound();
+              break;
+            case 'road':
+              this.orderRoad();
+              break;
+            case 'roadto':
+              this.orderRoadTo();
               break;
             case 'halt':
               this.orderHalt();

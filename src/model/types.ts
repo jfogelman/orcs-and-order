@@ -106,7 +106,7 @@ export interface Player {
 
 // ---------------------------------------------------------------------- units
 
-export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip';
+export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road';
 
 export interface Unit {
   id: number;
@@ -174,6 +174,22 @@ export interface Unit {
    * empty mean the same thing.
    */
   statuses?: Status[];
+  /**
+   * Turns of digging left on the job this worker is doing where it stands.
+   *
+   * Only while `order` is `road`. Optional so every save and fixture from before
+   * roads loads unchanged, and absent means no job.
+   */
+  work?: number;
+  /**
+   * A road this worker is laying all the way to a tile: dig wherever the ground
+   * wants a road, walk over road that is already there, stop at the end.
+   *
+   * Beside `goto` rather than folded into it, because a march and a road-to are
+   * interrupted by different things -- a march does not stop to dig. Optional so
+   * every save from before it loads unchanged.
+   */
+  roadTo?: { x: number; y: number };
 }
 
 // --------------------------------------------------------------------- cities
@@ -397,6 +413,17 @@ export interface GameState {
   terrain: TerrainId[];
   /** 0/1 per tile: does this tile carry its terrain's special resource? */
   specials: number[];
+  /**
+   * 0/1 per tile: has somebody laid a road here? Cities count as roads without
+   * being marked.
+   *
+   * The first thing on the map that changes after world generation -- terrain
+   * and specials are still constants. Optional, and created with the first road
+   * rather than with the map, so a save from before roads loads as "no roads"
+   * and a game nobody builds in carries nothing. Saved run-length packed, like
+   * the fog.
+   */
+  roads?: number[];
   players: Player[];
   units: Unit[];
   cities: City[];

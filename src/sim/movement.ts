@@ -20,6 +20,16 @@ import {
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
 import { effectiveMove, terrainMoveCost } from './rules';
+import {
+  ROADS,
+  canBuildRoad,
+  canLayRoads,
+  hasRoad,
+  roadTurns,
+  snapMoves,
+  startRoad,
+  stepCost,
+} from './roads';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -74,7 +84,7 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     }
   }
 
-  return (x, y) => {
+  return (x, y, fromX, fromY) => {
     const i = idx(x, y, state.width);
     // Unexplored ground is assumed walkable and ordinary. If it turns out to
     // be sea or occupied, the step is refused when the unit gets there, which
@@ -87,7 +97,7 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
-    const base = type.flies ? 1 : terrainMoveCost(owner, terrain);
+    const base = type.flies ? 1 : stepCost(state, owner, fromX, fromY, x, y);
     return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
   };
 }
@@ -162,7 +172,8 @@ export function estimateTurns(
 
   for (let i = 1; i < route.length; i++) {
     const [x, y] = route[i];
-    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    const [px, py] = route[i - 1];
+    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
     if (left <= 0) {
       turns++;
       left = perTurn;
@@ -192,7 +203,8 @@ export function stepsThisTurn(
   for (; i < route.length; i++) {
     if (left <= 0) break;
     const [x, y] = route[i];
-    const cost = type.flies ? 1 : terrainMoveCost(owner, state.terrain[idx(x, y, state.width)]);
+    const [px, py] = route[i - 1];
+    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
     // Any movement left always buys one more step, however rough the ground.
     left -= Math.min(cost, left);
   }
@@ -207,6 +219,33 @@ export function routeTo(
   y: number,
 ): Array<[number, number]> | null {
   return findPath(state.width, state.height, [unit.x, unit.y], [x, y], costFnFor(state, unit));
+}
+
+/**
+ * The route a road-to follows: a march's route, with a hair's preference for
+ * going straight.
+ *
+ * On open ground many routes cost exactly the same -- three steps east can be
+ * taken as east, north-east, south-east -- and the pathfinder takes whichever it
+ * meets first. A march does not care. A road is left behind as a record of the
+ * route, and one that wanders off the straight line for no reason reads as a
+ * mistake. A thousandth of a point on every diagonal step breaks those ties
+ * toward the straight line; even sixty-four diagonals add less than one road
+ * step costs, so it never makes a longer route win. Marches keep the plain
+ * route, so no AI game changes.
+ */
+export function roadRouteTo(
+  state: GameState,
+  unit: Unit,
+  x: number,
+  y: number,
+): Array<[number, number]> | null {
+  const walk = costFnFor(state, unit);
+  const cost: CostFn = (tx, ty, fx, fy) => {
+    const c = walk(tx, ty, fx, fy);
+    return c === null ? null : c + (tx !== fx && ty !== fy ? 0.001 : 0);
+  };
+  return findPath(state.width, state.height, [unit.x, unit.y], [x, y], cost);
 }
 
 /**
@@ -605,11 +644,16 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       return { kind: 'blocked', reason: `${city.name} threw them back.`, retryable: false };
     }
   }
-  const cost = type.flies ? 1 : terrainMoveCost(owner, terrain);
+  const cost = type.flies ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
   unit.x = x;
   unit.y = y;
-  unit.moves = Math.max(0, unit.moves - cost);
-  if (unit.order === 'fortified') unit.order = 'none';
+  unit.moves = snapMoves(unit.moves - cost);
+  // Walking off abandons a road half dug, as it abandons a fortification: the
+  // work was on the tile it just left.
+  if (unit.order === 'fortified' || unit.order === 'road') {
+    unit.order = 'none';
+    delete unit.work;
+  }
   // Somewhere with a forge, and somebody to complain to about losing an axe.
   if (city && city.owner === unit.owner) rearm(state, unit, 'is handed a new axe');
   recomputeVisibility(state, unit.owner);
@@ -686,5 +730,136 @@ export function resumeGotoOrders(state: GameState, playerId: number): void {
     if (!state.units.includes(unit)) continue;
     const { x, y } = unit.goto;
     moveToward(state, unit, x, y);
+  }
+}
+
+/**
+ * Lay a road all the way to a tile -- "Build Road To".
+ *
+ * Asked for the moment roads existed, because nobody wants to place a road one
+ * tile and one order at a time. Everything after this call is `advanceRoadTo`,
+ * run now and then at the top of every turn.
+ */
+export function startRoadTo(
+  state: GameState,
+  unit: Unit,
+  x: number,
+  y: number,
+): { ok: boolean; reason?: string } {
+  const may = canLayRoads(state, unit);
+  if (!may.ok) return may;
+  if (!(unit.x === x && unit.y === y) && !roadRouteTo(state, unit, x, y)) {
+    return { ok: false, reason: 'No route to that tile.' };
+  }
+  unit.goto = null;
+  unit.roadTo = { x, y };
+  advanceRoadTo(state, unit);
+  return { ok: true };
+}
+
+/**
+ * Carry a road-to order as far as this turn allows.
+ *
+ * Dig where it stands if the ground wants a road. Otherwise walk the route,
+ * stepping over road that is already there -- which costs a third, so a worker
+ * can cross several tiles of it in one turn -- and stop to dig at the first tile
+ * that wants one. The order ends at the destination.
+ *
+ * Interrupted the way a march is: a friendly in the way is a traffic jam and
+ * waits; anything else that stops the step, or an enemy coming into view, ends
+ * the order, because a worker walking on past a waiting army is never what was
+ * meant.
+ */
+export function advanceRoadTo(state: GameState, unit: Unit): void {
+  const plan = unit.roadTo;
+  if (!plan || unit.order === 'road') return;
+  for (let guard = 0; guard < 128; guard++) {
+    if (canBuildRoad(state, unit).ok) {
+      startRoad(state, unit);
+      return;
+    }
+    if (unit.x === plan.x && unit.y === plan.y) {
+      delete unit.roadTo;
+      return;
+    }
+    if (unit.moves <= 0) return;
+    const route = roadRouteTo(state, unit, plan.x, plan.y);
+    if (!route || route.length < 2) {
+      delete unit.roadTo;
+      return;
+    }
+    const seenBefore = visibleEnemies(state, unit.owner);
+    const outcome = tryStep(state, unit, route[1][0], route[1][1]);
+    if (outcome.kind !== 'moved') {
+      if (!(outcome.kind === 'blocked' && outcome.retryable)) delete unit.roadTo;
+      return;
+    }
+    for (const id of visibleEnemies(state, unit.owner)) {
+      if (!seenBefore.has(id)) {
+        delete unit.roadTo;
+        return;
+      }
+    }
+  }
+}
+
+/**
+ * How many turns a road-to along this route will take, start to finish.
+ *
+ * Not `estimateTurns`, which is a march: walking there and laying a road there
+ * are different lengths of time, and the preview on the map said "4" for a road
+ * that took eight. This follows `advanceRoadTo` step for step instead -- every
+ * tile that wants a road costs its digging turns, both ends included; finishing
+ * a stretch refills movement, so the walk onto the next tile happens the same
+ * turn; and a stretch of road already down costs only the walk across it, a
+ * third a step, with the rule that any movement left buys one more step.
+ */
+export function estimateRoadTurns(
+  state: GameState,
+  unit: Unit,
+  route: Array<[number, number]>,
+): number {
+  if (route.length === 0) return 0;
+  const owner = state.players[unit.owner];
+  const perTurn = Math.max(1, effectiveMove(owner, unit.type));
+  const laid = new Set<number>();
+  const isRoad = (x: number, y: number) => laid.has(idx(x, y, state.width)) || hasRoad(state, x, y);
+  const wantsRoad = (x: number, y: number) => {
+    const terrain = state.terrain[idx(x, y, state.width)];
+    return !isRoad(x, y) && !TERRAIN[terrain].water && roadTurns(terrain) !== null;
+  };
+
+  let turns = 0;
+  let left = unit.moves;
+  for (let i = 0; ; i++) {
+    const [x, y] = route[i];
+    if (wantsRoad(x, y)) {
+      // The tile it is already digging costs only what is left of that job.
+      turns +=
+        i === 0 && unit.order === 'road' && unit.work !== undefined
+          ? unit.work
+          : roadTurns(state.terrain[idx(x, y, state.width)])!;
+      laid.add(idx(x, y, state.width));
+      left = perTurn;
+    }
+    if (i === route.length - 1) break;
+    const [nx, ny] = route[i + 1];
+    const ground = terrainMoveCost(owner, state.terrain[idx(nx, ny, state.width)]);
+    const cost = isRoad(x, y) && isRoad(nx, ny) ? Math.min(ground, ROADS.moveCost) : ground;
+    if (left <= 0) {
+      turns += 1;
+      left = perTurn;
+    }
+    left = snapMoves(left - Math.min(cost, left));
+  }
+  return Math.max(1, turns);
+}
+
+/** Carry every road-to order forward at the top of a turn. */
+export function resumeRoadOrders(state: GameState, playerId: number): void {
+  for (const unit of [...state.units]) {
+    if (unit.owner !== playerId || !unit.roadTo) continue;
+    if (!state.units.includes(unit)) continue;
+    advanceRoadTo(state, unit);
   }
 }

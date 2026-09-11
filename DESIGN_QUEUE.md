@@ -7254,3 +7254,269 @@ unestablished lean toward the Horde, all pointing the same way: raiders (section
 Horde is winning too easily, those are where it came from -- and section 100 says
 most of the raiders' share arrived as lost Kingdom dominance wins, which is the
 first place to look.
+
+## 105. Roads, the first slice
+
+Section 27's first two steps -- the overlay and the save, then movement -- in
+Civ2's terms, because Civ2's terms were asked for.
+
+### What shipped
+
+- **A road is a flag per tile**, `state.roads`, and the first thing on the map
+  that changes after world generation. Created with the first road rather than
+  with the map, so a game nobody builds in, and every save from before roads,
+  carries nothing. Saved run-length packed, like the fog.
+- **Peons and Peasants lay them where they stand** -- R, or the unit panel.
+  Two turns on grass or wastes, four in forest, hills or swamp, six up a
+  mountain. The job advances at the top of the owner's turn, and walking off
+  abandons it.
+- **A step from one road tile to the next costs a third of a move.** Onto a road
+  or off one is the ground's price. A city counts as a road. A road does not know
+  whose it is.
+- **Drawn over the terrain, not baked into it** -- the terrain layer is built once
+  per map -- as a spoke from each road tile toward every neighbour that is a road
+  or a city, and a hub for a road on its own.
+- The Orcpedia's terrain tab, the controls list, and ART_PROMPTS all say how.
+
+### One price for a step
+
+`stepCost` is now the only place a step is priced, and the pathfinder, the march
+estimate and the step itself all ask it. They each read `terrainMoveCost`
+directly before, which is how section 27 counted four places to change -- and
+four copies is how two of them would have disagreed about roads.
+
+Movement is snapped to whole thirds after every step. Three road steps from one
+point leave `1e-16` in floating point, and a unit with a sliver of movement reads
+as idle forever. Whole points are untouched.
+
+### Section 27's fog question
+
+Remembered on explored ground, the way cities are: an enemy's roads are drawn
+wherever the ground has ever been seen, which is exactly what an enemy's cities
+already do. If that turns out to give away too much, it gives away cities first.
+
+### The AI does not build roads, and nothing about AI games changed
+
+Deliberately, for this slice. With no road on the map `stepCost` returns the
+ground's price without looking, and a city-only "road" can never make a step
+cheaper because no two cities are ever adjacent (`MIN_CITY_SPACING = 3`).
+
+Checked rather than assumed: 24 games from the saved raiders-on run -- with and
+without Postings -- replayed on this branch came back **identical in every
+column**: turns, winner, fights, captures, cities, population, advances, ladder,
+ending, sacks.
+
+**So every earlier measurement still stands, and none can see roads.** Until the
+AI builds them, roads are an advantage only a person can take, and no sweep will
+register them.
+
+### Verified in the game
+
+The button reads "Build Road (R) · 2 turns" on grass; clicking it and pressing R
+both start the job; the panel shows "laying a road · 2 turns left"; the road is
+laid when the turn comes round and the log says "Peon finishes a road."; the
+canvas at a crossroads is the road colour to the pixel; and movement reads "⅔ / 2".
+
+Worth knowing about the look: every road tile joins **all eight** road
+neighbours, diagonals included, so a crossroads with a road beside it draws as a
+diamond. That is Civ2's rule doing what it did in Civ2. Art can soften it; the
+rule should not change for it.
+
+### Also in this change: the save fixtures
+
+`tests/fixtures.test.ts` rewrites `fixtures/*.w2c` on every run, and they had not
+been committed since section 95. The versions committed here differ a great deal
+from those -- unit counts, cities, the RNG state -- and **none of that is roads**,
+which the replay above shows leave AI games identical. It is the AI changes merged
+since, most plainly section 101's Postings, which changed what the AI builds.
+Committing them was an accident of `git add -A`; keeping them is right, because
+they are meant to be the current game.
+
+### Next, in order
+
+1. **The AI building roads.** Until it does, roads are a player-only advantage and
+   invisible to every sweep. It wants its own measurement, since faster armies
+   are a balance change for whichever side uses them better.
+2. **Trade on roads** -- section 27's third step, and Civ2's +1 on open ground.
+   Moves the economy, so measured on its own.
+3. **Sections 96 and 102 now have their machinery.** A thing on a tile, laid by a
+   worker, saved, drawn, and removable is exactly what pillaging and the garrison
+   post were waiting for.
+
+### The road art, and what real art changed about drawing roads
+
+The drawn line was a placeholder, and the first real art found three things it
+had been hiding.
+
+**Generators will not draw spokes.** Asked for nine stubs from the centre, the
+first sheet came back as complete road tiles -- a straight, bends, S-curves, a
+T -- in tall bordered frames; a bend joins two edges, so a set of those would need
+a piece for every combination of neighbours. The second sheet was mostly the same,
+but its straights and diagonals were clean. So the source is now **named straight
+pieces** (`hub`, `straight`, `diagonal`, and optionally `across` and
+`antidiagonal`) and `prepare_art.py` cuts each straight into two spokes itself,
+keeping half the road's width past the middle so two halves meeting at a bend
+overlap instead of notching. The renderer lays the hub under every road tile to
+round the joint. The output is still the nine-frame strip, so the loader did not
+change.
+
+**Drawing every diagonal neighbour looked wrong.** Every road tile joins all eight
+road neighbours for movement, and drawing all eight put a brace across every bend
+and a diamond around every crossroads -- tolerable as a thin line, plainly wrong as
+a textured road. `roadLinks` now draws a diagonal only when neither tile beside it
+is a road, the same test the terrain blend uses for a corner. **Movement is
+unchanged**: a diagonal step along a road still costs a third.
+
+**Diagonals pinched at every tile corner.** A diagonal crosses a corner, and a
+frame that stops at its own tile cuts the road to a point there. Frames now carry
+an 8px bleed (48px drawn centred on a 32px tile), filled with the same piece one
+tile on -- which is exactly what the neighbour draws there, so the overlap is
+seamless. That alone did not fix it: generated diagonals are clipped to their own
+square, so the copy one tile on repeats the same narrow neck. A second copy half a
+tile along the road puts its full-width middle over the corner, and because the
+ruts run along the road they still line up.
+
+Checked in a preview image first (straight, bend, crossroads, two diagonal runs
+meeting in a V, a lone road) and then in the game. The current pieces were cut by
+hand from the generator's second sheet; ART_PROMPTS now asks for the five pieces
+directly, with fainter ruts, since at 32px the strong ones read as planks.
+
+### Decided: Bridge Building teaches roads, and Peons keep the job
+
+Two questions from play, both settled.
+
+**Does a Peon cost a citizen?** No. The worry that it would make roads an
+expensive population sink was worth checking, because it used to be true:
+`SETTLER.costsCitizen` is off, and has been since section 17 measured it costing
+the Horde about half its wins. A Peon costs 20 shields and needs a city of size
+two to build it, and the city does not shrink. A worker sent to lay roads costs
+shields and upkeep, not people.
+
+**Who lays roads?** Peons and Peasants, still. Section 28 is the reason not to
+split out a worker yet: `settler: true` is read in eight places that each mean
+something different by it. The split becomes necessary when the AI builds roads,
+because a road-working Peon would then count toward its expansion target. Until
+then it only matters to a person, who knows which Peon they told to dig.
+
+**Which advance?** Bridge Building. Measured over six games, both sides learn
+Mapmaking by a median of turn 12 (Horde) and 15 (Kingdom) -- it is the first thing
+both AIs research, 25 beakers with no prerequisite -- so it would barely gate
+anything. Bridge Building arrives at a median of turn 21 and 24, latest 30, and is
+already the movement advance: forest and swamp cost 1, outposts and depots. Roads
+belong with it, and Mapmaking stays about sight.
+
+The gate is on **building**, not walking: anybody may still use a road somebody
+else laid. The Build Road button does not appear until the advance is known, and
+pressing R before then says what is missing. The AI does not build roads, so no
+measurement moves.
+
+### Build Road To
+
+Asked for from play the moment roads existed: laying a road one tile and one
+order at a time is not how anybody wants to join two cities.
+
+- **Shift+R, or the Road To… button, then a click.** Armed the way an ability
+  is, because a left click on open ground is already a march and has to know it
+  means something else this time.
+- **The worker follows the route a march would take**, digging on every tile
+  that wants a road -- both ends included -- and walking over road that is
+  already down, which costs a third, so it can cross several tiles of it in one
+  turn. The order ends when the destination has its road.
+- **Carried across turns at the top of the owner's turn**, after that morning's
+  digging has advanced, so a worker that finishes a stretch walks on to the next
+  one the same turn.
+- **Interrupted like a march.** A friendly in the way is a traffic jam and waits.
+  An enemy coming into view, or a step that cannot be retried, ends the order.
+  Halt (X) cancels it, any order given by hand replaces it, and a worker on a
+  road-to is not counted among the units with nothing to do.
+- **`roadTo` on the unit**, beside `goto` rather than folded into it, because a
+  march and a road-to are interrupted by different things. Optional, and saved.
+
+**One thing the first test caught.** On open ground many routes tie -- three
+steps east can be taken as east, north-east, south-east -- and the pathfinder
+takes whichever it meets first. A march does not care, but a road is left behind
+as a record of the route, and the first version laid one that bent off the
+straight line for no reason. Road-to routes now add a thousandth of a point to
+every diagonal step, which breaks those ties toward the straight line and, since
+even sixty-four diagonals add less than one road step, never makes a longer route
+win. Marches keep the plain route, so no AI game changes.
+
+## 106. A road between two treasuries
+
+**Queued, not built.** Jeremy's idea, from the first road slice: roads should pay
+for the time they take, and the natural place for that is the gold buildings.
+
+### The rule as asked
+
+- **Two of your cities joined by road** -- a continuous run of road tiles, with
+  each city tile counting as road, as it already does for movement.
+- **Both with their side's gold building standing**: the Goblin Treasury or the
+  Simple Market, which both come with **Not You Again!** (45 beakers, after
+  Mapmaking). Each already doubles a city's gold while a unit stands in it.
+- **A small gold-per-turn bonus that grows with the distance between them**, so a
+  long road is worth more than a short one -- the reward is for the digging, and
+  a long road is more digging.
+- **Normalised by the size of the map**, so a large map does not hand out absurd
+  sums just because its cities can be further apart.
+
+It is a trade route in Civ2's sense, paid for in worker-turns rather than a
+caravan, and it is the natural third step of section 27's order: overlay and
+save, then movement, then trade.
+
+### The player has to be told, and shown
+
+From Jeremy, on the same idea:
+
+- **A notification when a link is made.** Gold that simply starts arriving is a
+  rule nobody can see -- the same failure section 73 found with shortcuts that
+  existed and were never shown. When a road completes a link between two gold
+  buildings, the log says so, names both cities and what the link pays, and
+  points at the road. **And when one is lost** -- cut by pillaging once section 96
+  exists, or because one end lost its building -- it says that too.
+- **In the city view.** Each city lists its links: which city, how far, what it
+  pays, and whether it is paying right now (it will not be, if the gold building
+  is idle for want of a garrison).
+
+### The advisors should want roads
+
+Also from Jeremy. Roads are exactly the kind of thing section 76 said the
+council knows and nobody is being told:
+
+- **The war advisor wants roads toward the front.** Movement along a road costs a
+  third, so a road from the cities that build the army to the ones that face the
+  enemy turns a three-turn march into a one-turn one. This half does **not** wait
+  for trade routes -- roads already do this today -- and could come first.
+- **The trade advisor wants roads between the gold buildings.** Once links pay,
+  an unlinked pair of cities that both have a treasury is money left in the
+  ground, and a trade advisor who does not say so is not doing the job.
+
+Both are advice, not automation: the advisor names the two cities and the road
+it would like, and a worker still has to be sent. Road To makes that one order.
+
+### What it will need deciding, in order
+
+- **Distance measured how.** Straight-line (Chebyshev) distance between the two
+  cities is the one that cannot be farmed: measured along the road, a winding
+  road would pay more than a straight one, which rewards building badly.
+- **Normalised by what.** Half the map's width plus height is the obvious scale --
+  a road across the whole map is then worth about the same on every map size.
+- **How many links a city can have.** Every pair of linked cities is n-squared; a
+  web of small cities all joined to each other would multiply. A cap per city --
+  its best one or two links -- keeps it a bonus rather than an economy.
+- **Whether the garrison rule carries over.** The gold buildings pay nothing
+  without a unit standing in the city. The link could inherit that (each end must
+  be earning) or ignore it (the road is the point). Inheriting is simpler and
+  cannot pay a city that is itself paying nothing.
+- **What cuts it.** Section 96's pillaging, once it exists, is the obvious answer:
+  a raider on a road tile breaks every link through it.
+
+### What it is blocked on
+
+**The AI building roads.** Until it does, this is gold only a person can earn, and
+no sweep can see it -- the same trap as section 18's escorts. It is also an
+economy change, so it wants measuring on its own, after the AI can build roads
+and before anything else about roads changes the balance. The war advisor's half
+is the exception, and only needs the advisors to read the road layer.
+
+When it lands, the Orcpedia's gold buildings and its roads paragraph both need a
+line.
