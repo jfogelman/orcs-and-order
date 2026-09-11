@@ -7204,3 +7204,53 @@ because section 94 read one as a control.
 
 The sweeps since are unaffected: raiders and Postings act after world generation,
 and their no-change arms have reproduced exactly.
+
+## 104. The game as played: raiders and Postings together
+
+Section 100 measured raiders leaning toward the Horde with Postings still
+unreachable. Section 101 measured Postings leaning the same way with raiders off.
+The games actually being played have both, so this fills in the last cell.
+
+216 games, both seed sets. Neither raiders nor Postings touch world generation,
+so every arm below plays the same maps and can be paired seed by seed. The
+raiders-without-Postings arm reproduced section 100's raiders-on arm exactly --
+wins, cities, population and sacks to the decimal.
+
+| | no Posting | Posting |
+|---|---|---|
+| **raiders off** | 28-26, 24-30 &nbsp;**52 (48%)** | 30-24, 28-26 &nbsp;**58 (54%)** |
+| **raiders on**  | 30-24, 30-24 &nbsp;**60 (56%)** | 33-21, 29-25 &nbsp;**62 (57%)** |
+
+The leans do not add. Raiders are worth about eight games and Postings about six,
+but together they are worth ten.
+
+### Paired, one step at a time
+
+| step | same winner | toward Horde | toward Kingdom | a coin does this |
+|---|---|---|---|---|
+| Postings, raiders off | 86 | 14 | 8 | 3 times in 10 |
+| raiders, Postings unreachable | 74 | 21 | 13 | 1 time in 4 |
+| Postings on top of raiders | 94 | 8 | 6 | **8 times in 10** |
+| **the game as played, against section 94** | **72** | **23** | **13** | **1 time in 8** |
+
+- **Postings add nothing measurable once raiders are in.** Eight flips against six
+  is as close to no effect as this harness can report.
+- **Every single step is unestablished, and the whole is the nearest thing to
+  real in this file today.** From section 94's shipping game to the one being
+  played, 23 games move toward the Horde and 13 away -- the same direction on both
+  sets, 10-5 and 13-8. Not established by the usual standard, but not the kind of
+  number to wave away either.
+
+### What to do with it
+
+**Nothing yet, deliberately.** 57% is well inside section 90's band, and the arc
+of this file has been the Horde climbing *toward* even -- 34% at section 82, 50%
+after section 86's calm change. It has now drifted a few points past even, in
+small steps that were each too small to see.
+
+Worth writing down that there are now **three** shipping mechanics with an
+unestablished lean toward the Horde, all pointing the same way: raiders (section
+100), Postings (section 101), and defensive ground (section 103). If play says the
+Horde is winning too easily, those are where it came from -- and section 100 says
+most of the raiders' share arrived as lost Kingdom dominance wins, which is the
+first place to look.
