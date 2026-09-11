@@ -7380,3 +7380,32 @@ Checked in a preview image first (straight, bend, crossroads, two diagonal runs
 meeting in a V, a lone road) and then in the game. The current pieces were cut by
 hand from the generator's second sheet; ART_PROMPTS now asks for the five pieces
 directly, with fainter ruts, since at 32px the strong ones read as planks.
+
+### Decided: Bridge Building teaches roads, and Peons keep the job
+
+Two questions from play, both settled.
+
+**Does a Peon cost a citizen?** No. The worry that it would make roads an
+expensive population sink was worth checking, because it used to be true:
+`SETTLER.costsCitizen` is off, and has been since section 17 measured it costing
+the Horde about half its wins. A Peon costs 20 shields and needs a city of size
+two to build it, and the city does not shrink. A worker sent to lay roads costs
+shields and upkeep, not people.
+
+**Who lays roads?** Peons and Peasants, still. Section 28 is the reason not to
+split out a worker yet: `settler: true` is read in eight places that each mean
+something different by it. The split becomes necessary when the AI builds roads,
+because a road-working Peon would then count toward its expansion target. Until
+then it only matters to a person, who knows which Peon they told to dig.
+
+**Which advance?** Bridge Building. Measured over six games, both sides learn
+Mapmaking by a median of turn 12 (Horde) and 15 (Kingdom) -- it is the first thing
+both AIs research, 25 beakers with no prerequisite -- so it would barely gate
+anything. Bridge Building arrives at a median of turn 21 and 24, latest 30, and is
+already the movement advance: forest and swamp cost 1, outposts and depots. Roads
+belong with it, and Mapmaking stays about sight.
+
+The gate is on **building**, not walking: anybody may still use a road somebody
+else laid. The Build Road button does not appear until the advance is known, and
+pressing R before then says what is missing. The AI does not build roads, so no
+measurement moves.

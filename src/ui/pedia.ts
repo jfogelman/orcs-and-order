@@ -366,7 +366,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           change nothing about what the tile grows.
         </p>
         <p class="flavor">
-          <strong>Roads.</strong> A Peon or Peasant can lay one where it stands (<kbd>R</kbd>):
+          <strong>Roads.</strong> Once you know <strong>Bridge Building</strong>, a Peon or Peasant can lay one where it stands (<kbd>R</kbd>):
           ${ROADS.turns.grass} turns on grass or wastes, ${ROADS.turns.forest} in forest, hills or
           swamp, ${ROADS.turns.mountains} up a mountain. Walking off abandons the job. A step from one
           road tile to the next costs <strong>a third of a move</strong>, so a worker that has joined

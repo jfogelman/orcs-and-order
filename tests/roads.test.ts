@@ -26,6 +26,9 @@ function flatWorld(ground: TerrainId = 'grass'): GameState {
   for (const p of state.players) {
     p.explored.fill(1);
     p.visible.fill(1);
+    // Roads are taught by Bridge Building; every test here but the ones about
+    // that gate wants a worker who already knows how.
+    p.techs.push('bridge-building');
   }
   return state;
 }
@@ -233,5 +236,35 @@ describe('roads in a save', () => {
     const back = restored.units.find((u) => u.id === peon.id)!;
     expect(back.order).toBe('road');
     expect(back.work).toBe(1);
+  });
+});
+
+describe('the advance that teaches roads', () => {
+  const forget = (state: GameState, id: number) => {
+    state.players[id].techs = state.players[id].techs.filter((t) => t !== 'bridge-building');
+  };
+
+  it('is Bridge Building: a worker without it cannot start one, and is told why', () => {
+    const state = flatWorld('grass');
+    forget(state, 0);
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    const check = canBuildRoad(state, peon);
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/Bridge Building/);
+    expect(startRoad(state, peon)).toBe(false);
+  });
+
+  it('lets the same worker start once the advance is known', () => {
+    const state = flatWorld('grass');
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    expect(canBuildRoad(state, peon).ok).toBe(true);
+  });
+
+  it('is not needed to walk on a road somebody else laid', () => {
+    // A road does not know whose it is, and the gate is on building one.
+    const state = flatWorld('forest');
+    forget(state, 0);
+    lay(state, [5, 5], [6, 5]);
+    expect(stepCost(state, state.players[0], 5, 5, 6, 5)).toBeCloseTo(ROADS.moveCost);
   });
 });

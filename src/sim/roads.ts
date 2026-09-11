@@ -1,8 +1,9 @@
 import { idx } from '../engine/grid';
+import { TECHS } from '../model/techs';
 import { TERRAIN } from '../model/terrain';
 import type { GameState, Player, TerrainId, Unit } from '../model/types';
 import { unitType } from '../model/units';
-import { terrainMoveCost } from './rules';
+import { hasFlag, terrainMoveCost } from './rules';
 
 /**
  * Roads: the first thing on the map that somebody put there.
@@ -84,9 +85,22 @@ export function roadTurns(terrain: TerrainId): number | null {
   return ROADS.turns[terrain] ?? null;
 }
 
-/** Whether this unit could start a road where it is standing, and why not. */
+/**
+ * Whether this unit could start a road where it is standing, and why not.
+ *
+ * Roads are taught by the advance that carries the `bridges` flag -- Bridge
+ * Building, the movement advance, which a Horde learns by about turn 21 and a
+ * Kingdom by about 24. Mapmaking was the other candidate and arrives by turn 12
+ * to 15, which would barely gate anything. The gate is on laying a road, not on
+ * walking one: anybody may use a road somebody else laid. Section 105.
+ */
 export function canBuildRoad(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
   if (!unitType(unit.type).settler) return { ok: false, reason: 'Only workers lay roads.' };
+  if (!hasFlag(state.players[unit.owner], 'bridges')) {
+    // Named from the tech table, so renaming the advance cannot leave this stale.
+    const teacher = TECHS.find((t) => t.flags.includes('bridges'))?.name ?? 'the right advance';
+    return { ok: false, reason: `Roads need ${teacher}.` };
+  }
   const i = idx(unit.x, unit.y, state.width);
   const terrain = state.terrain[i];
   if (TERRAIN[terrain].water) return { ok: false, reason: 'Not on water.' };
