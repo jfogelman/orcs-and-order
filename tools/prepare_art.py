@@ -796,7 +796,21 @@ ROAD_BLEED = 8
 ROAD_DIRS = ((0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1))
 
 
-def process_roads(force: bool) -> tuple[int, list[str]]:
+def centre_square(img: Image.Image) -> Image.Image:
+    """The largest square in the middle of a picture.
+
+    Generators hand back a wide canvas with the tile drawn in the middle of it.
+    Squashing that canvas square would stretch every road sideways.
+    """
+    w, h = img.size
+    side = min(w, h)
+    left, top = (w - side) // 2, (h - side) // 2
+    return img.crop((left, top, left + side, top + side))
+
+
+def process_roads(
+    force: bool, src: Path | None = None, target: Path | None = None
+) -> tuple[int, list[str]]:
     """
     Road art: named pieces in `art_src/terrain/roads/`, out as one strip.
 
@@ -819,9 +833,10 @@ def process_roads(force: bool) -> tuple[int, list[str]]:
     one tile on, which is exactly what the neighbour draws there, so the overlap
     is the neighbour's own road and the two meet without a seam.
     """
-    src = SRC / "terrain" / "roads"
-    out = OUT / "terrain"
-    target = out / "roads.png"
+    # Both overridable, so a candidate set can be previewed without touching the
+    # art the game is using.
+    src = src or (SRC / "terrain" / "roads")
+    target = target or (OUT / "terrain" / "roads.png")
     if not src.is_dir():
         return 0, []
 
@@ -835,7 +850,7 @@ def process_roads(force: bool) -> tuple[int, list[str]]:
         newest = max(newest, path.stat().st_mtime)
         # A road is most of a tile's background -- the hub more so -- so the
         # sprite-calibrated ceiling on how much may be keyed out is raised.
-        keyed, cut_out = remove_background(Image.open(path), max_removed=0.99)
+        keyed, cut_out = remove_background(centre_square(Image.open(path)), max_removed=0.99)
         if not cut_out:
             problems.append(f"roads/{path.name}: background would not key")
             continue
@@ -909,9 +924,9 @@ def process_roads(force: bool) -> tuple[int, list[str]]:
     for i, frame in enumerate(frames):
         small = frame.resize((frame_px, frame_px), Image.LANCZOS)
         strip.paste(small, (i * frame_px, 0), small)
-    out.mkdir(parents=True, exist_ok=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
     strip.save(target, optimize=True)
-    print(f"  terrain/roads.png (hub and 8 spokes, {frame_px}px frames with an {ROAD_BLEED}px bleed)")
+    print(f"  {target.name} (hub and 8 spokes, {frame_px}px frames with an {ROAD_BLEED}px bleed)")
     for line in problems:
         print(f"  {line}")
     return 1, problems
