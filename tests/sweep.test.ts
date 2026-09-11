@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
 import { MILITIA } from '../src/sim/city';
+import { SPECIALS } from '../src/model/terrain';
 import { createGame } from '../src/sim/gamestate';
 import {
   HELD_OUT,
@@ -196,6 +197,35 @@ describe('the sweep harness', () => {
       expect(row.unfinished).toBe(row.games);
       expect(row.draws).toBe(0);
     }
+  });
+
+  it('says when the arms played different maps, and not when they did not', () => {
+    // Section 94 paired an arm without the rule tiles against one with them.
+    // Choosing between two specials draws one more number in world generation,
+    // so every starting position moved: the arms were different games.
+    const moved: string[] = [];
+    runSweep({
+      arms: [
+        { label: 'no rule tiles', apply: () => { SPECIALS.ruleTiles = false; } },
+        { label: 'rule tiles', apply: () => { SPECIALS.ruleTiles = true; } },
+      ],
+      sets: SETS,
+      halfTurns: 4,
+      say: (l) => moved.push(l),
+    });
+    expect(moved.some((l) => /different maps/.test(l))).toBe(true);
+
+    const kept: string[] = [];
+    runSweep({
+      arms: [
+        { label: 'a', apply: () => { MILITIA.perCitizen = 0.3; } },
+        { label: 'b', apply: () => { MILITIA.perCitizen = 0.6; } },
+      ],
+      sets: SETS,
+      halfTurns: 4,
+      say: (l) => kept.push(l),
+    });
+    expect(kept.some((l) => /different maps/.test(l))).toBe(false);
   });
 
   it('builds the seed sets it promises', () => {

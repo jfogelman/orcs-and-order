@@ -127,6 +127,17 @@ export interface Outcome {
    * combats are. Always zero in a game without raiders.
    */
   sacks: [number, number];
+  /**
+   * A fingerprint of the map and starting positions this game was played on.
+   *
+   * Two arms can only be compared seed by seed if they played the same map.
+   * Section 94 compared an arm with the rule tiles absent against one with them
+   * present -- and choosing between two specials draws one more random number
+   * in world generation, so the terrain came out identical and every starting
+   * position moved. More than half the games changed winner. That was two sets
+   * of different games, not one change, and it hid a real effect.
+   */
+  map: string;
 }
 
 function deepestGroup(types: string[]): number {
@@ -151,6 +162,21 @@ export function halfTurnsFor(state: GameState): number {
   return (state.settings.maxTurns + TURN_SLACK) * state.players.length;
 }
 
+/** FNV-1a over the terrain, the specials and where everybody starts. */
+export function mapSignature(state: GameState): string {
+  const text = [
+    state.terrain.join(','),
+    state.specials.join(','),
+    state.units.map((u) => `${u.owner}:${u.type}:${u.x},${u.y}`).join(' '),
+  ].join('|');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
 /**
  * One whole game, both sides played by the AI.
  *
@@ -172,6 +198,7 @@ export function playGame(
   watch?: (state: GameState) => void,
 ): Outcome {
   const state = createGame({ seed, barbarians: NEW_GAME.barbarians });
+  const map = mapSignature(state);
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
 
@@ -231,6 +258,7 @@ export function playGame(
     ladder: [deepestGroup(per(0)), deepestGroup(per(1))],
     victory: state.victory ?? null,
     sacks,
+    map,
   };
 }
 
@@ -391,6 +419,22 @@ export function runSweep(opts: SweepOptions): ArmResult[] {
         );
       }
     }
+    // Seed-by-seed pairing assumes every arm played the same map. An arm that
+    // changes what world generation draws plays different games altogether, so
+    // this is said rather than refused -- some questions cannot be asked any
+    // other way -- but it is said, because section 94 read one as a control.
+    for (const set of sets) {
+      const byArm = results.filter((r) => r.set === set.name);
+      const moved = set.seeds.filter(
+        (seed) => new Set(byArm.map((r) => r.outcomes.find((o) => o.seed === seed)?.map)).size > 1,
+      ).length;
+      if (moved > 0) {
+        say(
+          `  NOTE: on ${moved} of ${set.seeds.length} ${set.name} seeds the arms played different maps. ` +
+            'Read the totals, which include map luck; do not pair these games seed by seed.',
+        );
+      }
+    }
     const actual = (Date.now() - started) / 1000;
     say(
       `Done in ${(actual / 60).toFixed(1)} min ` +
@@ -500,7 +544,7 @@ export function rawRows(results: ArmResult[]): string {
           `${r.arm}\t${r.set}\t${o.seed}\t${o.turns}\t${o.winner ?? '-'}\t${o.combats}\t` +
           `${o.captures}\t${o.cities[0]}\t${o.cities[1]}\t${o.population[0]}\t${o.population[1]}\t` +
           `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}\t` +
-          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}`,
+          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}\t${o.map}`,
       ),
     )
     .join('\n');

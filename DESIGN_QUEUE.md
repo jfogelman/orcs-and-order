@@ -7122,3 +7122,85 @@ knowing before any tuning:
 - **Section 102 should be measured against this, not against zero.** When the
   garrison post replaces the around-the-city count, this table is the baseline
   it has to beat or match.
+
+## 103. The 46, explained: a control that played different maps
+
+Section 94 left one number recorded as odd rather than explained. Its discarded
+arm -- the rule tiles on the map with their rule switched off -- won the Horde
+**46** games of 108, worse than either shipping configuration, when section 93
+said a map with fewer useful specials should *help* the Horde.
+
+It is not odd. The arm was compared with the wrong thing.
+
+### What the three arms actually were
+
+`SPECIALS.rules` does exactly one thing anywhere in the code: `defenseOf` returns
+bare-ground defence when it is off. Nothing else reads it, and the AI reads no
+specials at all. So:
+
+| arm | tiles in the world | defensive rule | orc wins |
+|---|---|---|---|
+| absent ("no rule tiles") | no | -- | 54 |
+| inert ("no defensive ground") | yes | off | **46** |
+| shipping | yes | on | 52 |
+
+Generated six seeds all three ways and compared the results directly:
+
+- **inert and shipping are the same maps** -- identical terrain, identical
+  specials, identical starting positions, on all six. The defensive rule is the
+  only difference between them.
+- **absent is a different map** -- identical terrain, but **every starting
+  position moved, on all six seeds**, and the special counts drift by a few
+  (192 against 194, 200 against 197).
+
+The reason is one line of world generation. A terrain with a single rollable
+special takes no draw to decide which; a terrain with two takes `rng.int`. Putting
+the rule tiles in the roll gives grass, forest and desert two choices each, so
+every draw after the first special is shifted -- and starting sites are chosen
+*after* specials, because `siteScore` reads them. The terrain survives because it
+is generated before; nothing after it does.
+
+### Paired seed by seed, it is obvious
+
+| comparison | same winner | toward Horde | toward Kingdom |
+|---|---|---|---|
+| inert &rarr; shipping (same maps) | **86** / 108 | 14 | 8 |
+| absent &rarr; shipping (different maps) | **50** / 108 | 28 | 30 |
+| absent &rarr; inert (different maps) | 53 / 108 | 23 | 31 |
+
+Changing one defence rule on identical maps changes the winner of one game in
+five. Changing the starting positions changes more than half of them -- which is
+what two unrelated sets of games look like, and what "the control" actually was.
+
+### What that corrects
+
+- **The 46 is the defensive rule's effect, not an oddity.** On identical maps,
+  defensive ground takes the Horde from 46 to 52, the same direction on both sets
+  (+5 tuned, +1 held-out). Not established -- 22 flipped seeds split 14 to 8,
+  which a coin does about three times in ten -- but it is the right comparison,
+  and it points the opposite way from section 94's conclusion.
+- **Section 94's headline does not hold as written.** "A special that pays out
+  nothing does not move the faction balance" came from absent against shipping,
+  54 against 52 -- a comparison of different games in which a +6 rule effect and
+  the luck of 108 new starting positions happened to cancel. Why defensive ground
+  would favour the attacking side is not established.
+- **Section 94's control did prove what it narrowly claimed.** With the tiles
+  absent the world reproduces section 93's exactly, to the decimal. It just
+  cannot also serve as the control for the tiles being present.
+- **Section 93 carries the same caveat.** Its arms change `SPECIALS.chance`,
+  which changes every `rng.chance` in the special roll and so every starting
+  position. Its three arms still run 60, 54, 49 in order on both sets, so the
+  direction -- yield specials are a Kingdom lever -- is still evidence. The sizes
+  include map luck.
+
+### And the harness now says so
+
+The section 59 trap again, in a new coat: two arms that look paired and are not.
+Every outcome carries `map`, a fingerprint of the terrain, the specials and every
+starting position, and `runSweep` notes on each seed set how many seeds the arms
+played on different maps. Noted rather than refused, because some questions --
+anything about world generation -- cannot be asked any other way. But noted,
+because section 94 read one as a control.
+
+The sweeps since are unaffected: raiders and Postings act after world generation,
+and their no-change arms have reproduced exactly.

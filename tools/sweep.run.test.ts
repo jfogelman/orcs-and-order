@@ -50,11 +50,12 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 101: a Posting could not be switched on by anybody until it counted
-  // soldiers around the city rather than in it. Section 91 measured exactly
-  // zero; this asks whether the rule does anything now that it can be met.
-  { label: 'no posting', apply: () => { control(); POSTING.enabled = false; } },
-  { label: 'posting', apply: control },
+  // Sections 100 and 101 each measured a lean toward the Horde -- raiders with
+  // Postings unreachable, Postings with raiders off -- and the game being played
+  // has both. The first arm should reproduce section 100's raiders-on 30-24 and
+  // 30-24 exactly; the second is the one cell of the two-by-two nobody has seen.
+  { label: 'raiders, no posting', apply: () => { control(); NEW_GAME.barbarians = true; POSTING.enabled = false; } },
+  { label: 'raiders, posting', apply: () => { control(); NEW_GAME.barbarians = true; } },
 ];
 
 /**
@@ -103,7 +104,7 @@ describe('sweep', () => {
           table,
           '',
           'seed by seed:',
-          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked',
+          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap',
           rawRows(results),
           '',
         ].join('\n'),
