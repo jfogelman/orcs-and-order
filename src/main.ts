@@ -254,7 +254,11 @@ class App {
       this.overlay.path = null;
       return;
     }
-    this.overlay.path = this.previewTo(unit, hover.x, hover.y, this.roadArmed);
+    // Hovering the end of a worker's own road-to previews the road, not a march
+    // to the same tile: the cursor is still sitting there the moment the order is
+    // given, and a "4" beside a sixteen-turn road reads as the road's estimate.
+    const ownRoadEnd = unit.roadTo !== undefined && hover.x === unit.roadTo.x && hover.y === unit.roadTo.y;
+    this.overlay.path = this.previewTo(unit, hover.x, hover.y, this.roadArmed || ownRoadEnd);
   }
 
   /** A route, split at the point this turn's movement runs out. */
