@@ -1,4 +1,4 @@
-import { flagsOf } from '../sim/rules';
+import { flagsOf, hasFlag } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { UnitTypeDef } from '../model/units';
@@ -6,6 +6,7 @@ import { ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
+  SETTLER,
   SUPPLY,
   buildOptions,
   canFoundCity,
@@ -27,7 +28,15 @@ import { rankBonus } from '../sim/combat';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
-import { attackTargets, moveToward, reachableTiles, routeTo, tryStep } from '../sim/movement';
+import {
+  attackTargets,
+  moveToward,
+  reachableTiles,
+  routeTo,
+  startRoadTo,
+  tryStep,
+} from '../sim/movement';
+import { canLayRoads, connectedByRoad } from '../sim/roads';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
@@ -580,6 +589,30 @@ function chooseProduction(
     if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
   }
 
+  // 3d. Roads, once there is nothing left to found.
+  //
+  // Only after expansion is done, so a Peon built to dig can never be counted
+  // against a city that still wants founding -- the entanglement section 28
+  // warned about. Counted with the workers already being built elsewhere,
+  // because every city chooses in turn and would otherwise all pick one at once.
+  if (
+    AI_TUNING.buildRoads &&
+    cities >= personality.targetCities &&
+    city.size >= SETTLER.minCitySize &&
+    hasFlag(owner, 'bridges')
+  ) {
+    const workers =
+      settlers +
+      playerCities(state, city.owner).filter(
+        (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).settler,
+      ).length;
+    const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
+    const worker = options.units.find((u) => u.settler);
+    if (worker && workers < wanted && roadWorkToDo(state, city.owner)) {
+      return { kind: 'unit', id: worker.id };
+    }
+  }
+
   // 4. Then infrastructure. Economy buildings come before a second barracks:
   // a city that pays for its own research compounds, and a barracks does not.
   const wanted =
@@ -646,8 +679,60 @@ function guardedAt(state: GameState, playerId: number, x: number, y: number): bo
 /** What a visible attacker nearby takes off a site's score. */
 const THREAT_PENALTY = 45;
 
+/** Whether any city of this player's is not yet joined to its capital by road. */
+function roadWorkToDo(state: GameState, playerId: number): boolean {
+  const seat = capitalOf(state, playerId);
+  if (!seat) return false;
+  const joined = connectedByRoad(state, playerId, seat.x, seat.y);
+  return playerCities(state, playerId).some((c) => !joined.has(idx(c.x, c.y, state.width)));
+}
+
+/**
+ * Give a worker a road to lay: join the nearest city of ours to the capital.
+ *
+ * The capital because that is the shape of the supply chain, and joining every
+ * city to one place joins every city to every other. The nearest unjoined city
+ * because a worker walking across the empire before it starts is a worker not
+ * digging. A city another worker is already marching to is left to that one.
+ *
+ * The road itself is Road To, the same order a person gives: dig where the
+ * ground wants it, walk over road already down, stop at the capital.
+ */
+function takeRoadJob(state: GameState, unit: Unit): boolean {
+  if (!canLayRoads(state, unit).ok) return false;
+  const seat = capitalOf(state, unit.owner);
+  if (!seat) return false;
+  const joined = connectedByRoad(state, unit.owner, seat.x, seat.y);
+  const claimed = new Set(
+    playerUnits(state, unit.owner)
+      .filter((u) => u.id !== unit.id && u.goto)
+      .map((u) => idx(u.goto!.x, u.goto!.y, state.width)),
+  );
+  const open = playerCities(state, unit.owner).filter((c) => {
+    const i = idx(c.x, c.y, state.width);
+    return !joined.has(i) && !claimed.has(i);
+  });
+  if (open.length === 0) return false;
+  const target = open.reduce((a, b) =>
+    distance(unit.x, unit.y, a.x, a.y) <= distance(unit.x, unit.y, b.x, b.y) ? a : b,
+  );
+  if (!(unit.x === target.x && unit.y === target.y)) {
+    if (!routeTo(state, unit, target.x, target.y)) return false;
+    moveToward(state, unit, target.x, target.y);
+    if (!(unit.x === target.x && unit.y === target.y)) return true;
+  }
+  return startRoadTo(state, unit, seat.x, seat.y).ok;
+}
+
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
   const cities = playerCities(state, unit.owner).length;
+
+  // Once there is nothing left to found, a worker digs. Below the target it is a
+  // settler exactly as before.
+  if (AI_TUNING.buildRoads && cities >= personality.targetCities) {
+    if (unit.roadTo || unit.order === 'road') return;
+    if (takeRoadJob(state, unit)) return;
+  }
   if (cities >= personality.targetCities + 2) {
     // Enough cities; park it somewhere safe rather than wandering forever.
     unit.order = 'sentry';
@@ -868,6 +953,10 @@ function escortDuty(state: GameState, unit: Unit): boolean {
     // empire has enough cities would otherwise hold a guard beside it for the
     // rest of the game, and an army slowly evaporates into chaperones.
     if (settler.order === 'sentry' || settler.order === 'fortified') continue;
+    // Nor ones digging a road. A road crew works at home, between cities that
+    // are already ours, and pulling a soldier off the front to stand beside it
+    // is the chaperone problem above in a new coat.
+    if (settler.order === 'road' || settler.roadTo) continue;
     const guarded = state.units.some(
       (u) =>
         u.owner === unit.owner &&
@@ -1100,6 +1189,20 @@ export const AI_TUNING = {
    * *fewer* standing buildings than when it could not spend at all.
    */
   preferBuildings: false,
+
+  /**
+   * Whether the AI lays roads.
+   *
+   * Once it holds its target number of cities and knows Bridge Building, a
+   * spare worker joins the nearest city not yet on the road network to the
+   * capital, and a city builds a worker while there is still road to lay. Below
+   * the target a Peon is a settler exactly as it always was, so nothing about
+   * expansion changes. A lever so roads can be measured as an arm, which they
+   * could not be while only a person could build one. Section 107.
+   */
+  buildRoads: true,
+  /** Cities per road worker the AI keeps once expansion is done. */
+  citiesPerRoadWorker: 4,
 };
 
 /**
