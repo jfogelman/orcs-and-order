@@ -7339,7 +7339,9 @@ they are meant to be the current game.
    are a balance change for whichever side uses them better. **Done: section
    107**, measured over 216 games.
 2. **Trade on roads** -- section 27's third step, and Civ2's +1 on open ground.
-   Moves the economy, so measured on its own.
+   Moves the economy, so measured on its own. **Done: section 106**, as gold
+   between two cities that both have something to sell rather than as a tile
+   yield -- and measured at nothing, for the reason section 108 is about.
 3. **Sections 96 and 102 now have their machinery.** A thing on a tile, laid by a
    worker, saved, drawn, and removable is exactly what pillaging and the garrison
    post were waiting for.
@@ -7444,83 +7446,126 @@ win. Marches keep the plain route, so no AI game changes.
 
 ## 106. A road between two treasuries
 
-**Queued, not built.** Jeremy's idea, from the first road slice: roads should pay
-for the time they take, and the natural place for that is the gold buildings.
+**Built.** Jeremy's idea, from the first road slice: roads should pay for the
+time they take, and the natural place for that is the gold buildings. Section
+27's third step, after the overlay and the movement.
 
-### The rule as asked
+### The rule as it shipped
 
-- **Two of your cities joined by road** -- a continuous run of road tiles, with
-  each city tile counting as road, as it already does for movement.
-- **Both with their side's gold building standing**: the Goblin Treasury or the
-  Simple Market, which both come with **Not You Again!** (45 beakers, after
-  Mapmaking). Each already doubles a city's gold while a unit stands in it.
-- **A small gold-per-turn bonus that grows with the distance between them**, so a
-  long road is worth more than a short one -- the reward is for the digging, and
-  a long road is more digging.
-- **Normalised by the size of the map**, so a large map does not hand out absurd
-  sums just because its cities can be further apart.
+- **Two of your own cities joined by road** -- a continuous run of road tiles,
+  each city tile counting as road, as it already does for movement. Walked with
+  `connectedByRoad`, over road the side has explored and no other.
+- **Both ends with a gold building open**: the Goblin Treasury or the Simple
+  Market, or the larger buildings that stand on those.
+- **Gold a turn, growing with the distance between them**, measured
+  **straight** rather than along the road. Measured along the road, a winding
+  road would pay more than a direct one, which rewards building badly.
+- **Scaled by the map**: half the width plus the height, so a link spanning the
+  map is worth about the same on any map size. `goldAtFullSpan` is six.
+- **And a floor that does not move with the map**: five tiles. Cities are
+  founded three apart at the closest, and without a floor the rounding alone
+  would pay a coin for a road three tiles long -- a reward for founding
+  cities side by side rather than for digging.
+- **Two links a city**, its best two by what they pay. Every pair is n-squared,
+  and a web of small cities joined to each other would multiply into an economy
+  of its own.
+- **It pays only while both ends are earning.** Those buildings pay nothing with
+  nobody standing in the city, and a link cannot pay a city that is itself
+  paying nothing. The link is still *listed*, marked idle, because a garrison
+  that has wandered off is a thing a player should be able to see and fix.
 
-It is a trade route in Civ2's sense, paid for in worker-turns rather than a
-caravan, and it is the natural third step of section 27's order: overlay and
-save, then movement, then trade.
+All of it behind `TRADE.enabled`, so the economy is measured as an arm.
 
-### The player has to be told, and shown
+### The player is told, and shown
 
-From Jeremy, on the same idea:
+- **A route that opens says so**, names both cities and what it pays, and points
+  at one of them. A route that opens while a treasury stands unguarded says what
+  it *would* pay instead, and what to do about it -- quoting gold nobody is
+  receiving is a lie the player has no way to check.
+- **A route that is lost says so too**, whether the road was cut, a building
+  sold, or a city taken.
+- **The city view lists them**: which city, how far, what it pays, and whether it
+  is paying at all.
+- **The Orcpedia has the rule**, and the gold buildings now say that they anchor
+  one, which is worth knowing while deciding where the second one goes.
 
-- **A notification when a link is made.** Gold that simply starts arriving is a
-  rule nobody can see -- the same failure section 73 found with shortcuts that
-  existed and were never shown. When a road completes a link between two gold
-  buildings, the log says so, names both cities and what the link pays, and
-  points at the road. **And when one is lost** -- cut by pillaging once section 96
-  exists, or because one end lost its building -- it says that too.
-- **In the city view.** Each city lists its links: which city, how far, what it
-  pays, and whether it is paying right now (it will not be, if the gold building
-  is idle for want of a garrison).
+### The council wants roads, for two different reasons
 
-### The advisors should want roads
+Section 76 said the advisors know things nobody is being told, and this is one:
 
-Also from Jeremy. Roads are exactly the kind of thing section 76 said the
-council knows and nobody is being told:
+- **The war advisor** wants a road home to any town that has not got one. A
+  third of a move a step is the difference between reinforcements arriving
+  during the battle and arriving after it. This half does not need trade routes
+  at all.
+- **The trade advisor** wants a road between any two counting-houses that have
+  none. An unlinked pair is money in the ground.
 
-- **The war advisor wants roads toward the front.** Movement along a road costs a
-  third, so a road from the cities that build the army to the ones that face the
-  enemy turns a three-turn march into a one-turn one. This half does **not** wait
-  for trade routes -- roads already do this today -- and could come first.
-- **The trade advisor wants roads between the gold buildings.** Once links pay,
-  an unlinked pair of cities that both have a treasury is money left in the
-  ground, and a trade advisor who does not say so is not doing the job.
+Both are advice, not automation: they name the problem, and a worker still has
+to be sent. Road To makes that one order.
 
-Both are advice, not automation: the advisor names the two cities and the road
-it would like, and a worker still has to be sent. Road To makes that one order.
+### What it measured: almost nothing, and exactly why
 
-### What it will need deciding, in order
+216 games, two seed sets, 40 minutes, against the same game with `TRADE.enabled`
+off. The control arm reproduced section 107's numbers to the game -- 35-19 and
+32-22 -- so trade routes were the only thing that changed.
 
-- **Distance measured how.** Straight-line (Chebyshev) distance between the two
-  cities is the one that cannot be farmed: measured along the road, a winding
-  road would pay more than a straight one, which rewards building badly.
-- **Normalised by what.** Half the map's width plus height is the obvious scale --
-  a road across the whole map is then worth about the same on every map size.
-- **How many links a city can have.** Every pair of linked cities is n-squared; a
-  web of small cities all joined to each other would multiply. A cap per city --
-  its best one or two links -- keeps it a bonus rather than an economy.
-- **Whether the garrison rule carries over.** The gold buildings pay nothing
-  without a unit standing in the city. The link could inherit that (each end must
-  be earning) or ignore it (the road is the point). Inheriting is simpler and
-  cannot pay a city that is itself paying nothing.
-- **What cuts it.** Section 96's pillaging, once it exists, is the obvious answer:
-  a raider on a road tile breaks every link through it.
+| arm | set | orc-hum | cities | pop | routes | route gold |
+|---|---|---|---|---|---|---|
+| no trade routes | tuned | 35-19 | 7.39/7.00 | 56.9/47.8 | 0/0 | 0/0 |
+| no trade routes | held-out | 32-22 | 6.78/7.65 | 48.6/50.6 | 0/0 | 0/0 |
+| trade routes | tuned | 36-17-1 | 7.46/6.89 | 58.3/47.4 | 2.0/2.1 | 0.6/0.5 |
+| trade routes | held-out | 32-21-1 | 6.57/7.50 | 47.3/49.8 | 1.6/2.0 | 0.6/0.2 |
 
-### What it is blocked on
+Roads do not touch worldgen, so all 108 seeds played the same map in both arms.
+Paired: **103 of 108 games ended with the same winner**, and not one column moved
+-- cities, population, advances, fights, captures and length all sit between
+p = 0.34 and p = 1.00, with mean changes of a tenth of a city and two thirds of a
+citizen. Two seeds flipped to the Horde, one to the Kingdom, two to a draw.
 
-**The AI building roads.** Until it does, this is gold only a person can earn, and
-no sweep can see it -- the same trap as section 18's escorts. It is also an
-economy change, so it wants measuring on its own, after the AI can build roads
-and before anything else about roads changes the balance. The war advisor's half
-is the exception, and only needs the advisors to read the road layer.
+The reason is in the last two columns, and it is the interesting part. The
+routes **exist** -- 3.8 of them a game across both empires -- and they pay
+**0.95 gold a turn between the two of them**. In 62 games of 108, nothing at all
+was paying when the game ended.
 
-When it lands, the Orcpedia's gold buildings and its roads paragraph both need a
-line.
+### The AI builds treasuries and then leaves them unguarded
+
+Probed on three seeds, counting the ends rather than the links:
+
+| seed | side | cities | with a gold building | actually earning |
+|---|---|---|---|---|
+| 1 | Horde | 10 | 5 | **1** |
+| 1000003 | Horde | 8 | 7 | 5 |
+| 1000003 | Kingdom | 6 | 4 | **1** |
+| 7654321 | Kingdom | 8 | 4 | **0** |
+
+A Goblin Treasury pays nothing without a soldier standing in the city, and the
+AI counts a garrison as anybody within one tile -- which is the right rule for
+defending the place and the wrong one for the building. So it spends sixty
+shields and an upkeep on a building that earns nothing, and has been doing so
+since long before roads existed. Trade routes inherit that: a link cannot pay a
+city that is itself paying nothing.
+
+So this rule is, for now, **a rule a person can use and the AI cannot**. That is
+section 91's trap walked into with both eyes open, and the difference from
+section 91 is that the sweep now carries the two columns that say precisely
+where it stopped, the player is told about every route in the log and the city
+view, and the fix is a known AI defect with its own section rather than a
+mystery.
+
+**Section 108 is the fix**, and it is worth doing for its own sake: an AI that
+guards its treasuries is richer whether or not a single road is ever dug. This
+wants re-measuring after that lands, and the fallback if it turns out expensive
+is to let a link pay regardless of the garrison -- simpler, but it would pay a
+city that is itself earning nothing, which is why it was not the first choice.
+
+### Tests
+
+`tests/tradeRoutes.test.ts`: what a link pays and what the turn actually hands
+over; a gap in the road, an end with nothing to sell, two different sides, and
+cities too close together all pay nothing; the garrison rule listing an idle
+route rather than hiding it; the cap of two a city; the map scaling; the log
+opening and closing a route once and only once; and the lever off. Plus the
+empire report counting route gold, which it did not until a test said so.
 
 ## 107. The AI lays roads
 
@@ -7648,3 +7693,60 @@ before, nothing happens without Bridge Building or with the lever off, one city
 builds a digger rather than all of them, and none do once the network is whole --
 plus `connectedByRoad` joined, broken by a gap, and blind to road the side has
 never seen. 663 pass.
+
+## 108. The AI's treasuries stand unguarded
+
+**Queued, not built.** Found while measuring section 106, and true long before
+it: the AI builds gold buildings that earn nothing, and has been doing it since
+the buildings existed.
+
+### What is wrong
+
+A Goblin Treasury or a Simple Market pays nothing at all unless a soldier is
+standing **in** the city. The AI's production rule counts a garrison as anybody
+within one tile of the city, which is the right question for defending the place
+-- only one unit fits on a tile, so a ring of defenders is the only garrison
+worth having -- and the wrong one for the building. Nobody ever checks that
+somebody is actually home.
+
+So it spends sixty shields and an upkeep a turn on a building that does nothing,
+in most of its cities, for the whole game. Counted at the end of three games:
+
+| seed | side | cities | with a gold building | actually earning |
+|---|---|---|---|---|
+| 1 | Horde | 10 | 5 | **1** |
+| 1000003 | Horde | 8 | 7 | 5 |
+| 1000003 | Kingdom | 6 | 4 | **1** |
+| 7654321 | Kingdom | 8 | 4 | **0** |
+
+It is not that no soldier is near: `actSoldier` already has a rule that sends a
+unit with nothing better to do to stand in a city nobody is holding. It is that
+almost nobody ever reaches that rule, because attacking, escorting and sieging
+all come first.
+
+### What it would take
+
+- **Ask the building's own question.** `soldiersFor` already asks the right one
+  per building -- the city tile for a treasury, the ring for a Posting. The AI's
+  garrison count should use it where it is deciding about a building rather than
+  about defence.
+- **A keeper is a job, not a leftover.** A city with a building that pays nothing
+  for want of somebody standing in it should attract a soldier the way an
+  undefended city does, and earlier in `actSoldier` than "nothing better to do".
+  One unit, not a second army: the cost is one fighter per city with a treasury.
+- **Which is a real balance change**, so it is measured as an arm like everything
+  else. It takes soldiers off the front and puts gold in the treasury, and those
+  do not obviously cancel.
+
+### Why it is worth doing
+
+Two reasons, and the second one is the smaller:
+
+1. **The AI is paying for nothing.** Sixty shields and an upkeep, several times
+   over, for the whole game. That is a straightforward defect and it would be
+   worth fixing if trade routes had never been thought of.
+2. **Section 106 cannot be measured until it is fixed.** Trade routes pay only
+   while both ends are earning, so an empire whose treasuries stand empty earns
+   0.95 gold a turn from 3.8 routes, and the whole rule measures as nothing.
+
+Both halves want the same one-line question asked in the right place.
