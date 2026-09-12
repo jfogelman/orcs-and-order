@@ -4,6 +4,7 @@ import { TERRAIN } from '../model/terrain';
 import type { GameState, Player, TerrainId, Unit } from '../model/types';
 import { unitType } from '../model/units';
 import { hasFlag, terrainMoveCost } from './rules';
+import { log } from './gamestate';
 
 /**
  * Roads: the first thing on the map that somebody put there.
@@ -119,6 +120,75 @@ export function connectedByRoad(
     }
   }
   return seen;
+}
+
+/**
+ * Pillaging: tearing up what somebody else put on the ground.
+ *
+ * Section 96 waited on section 27 for a reason it stated plainly -- there was
+ * nothing out there to ruin. A tile carried terrain and sometimes a special, and
+ * a special is generated rather than chosen, so destroying one would be bad luck
+ * rather than a consequence of leaving a border unwatched. Roads are the first
+ * thing on the map that somebody decided to build, and section 106 made them
+ * worth money, so now there is something to lose.
+ *
+ * The rule is Civ2's and is one line: a unit spends its turn and the road is
+ * gone. What makes it interesting is not the mechanic but where it happens --
+ * the road you were relying on, between the two cities that were paying you.
+ */
+export const PILLAGE = {
+  /** Whether anything can be torn up at all. A lever, so it measures as an arm. */
+  enabled: true,
+};
+
+/**
+ * Whether this unit could tear up what it is standing on, and why not.
+ *
+ * Soldiers only: a Peon that could undo its own morning's work would be a
+ * different feature (Civ2 let settlers clear their own improvements), and the
+ * point of this one is what an enemy does to you.
+ */
+export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
+  if (!PILLAGE.enabled) return { ok: false, reason: 'Nothing can be torn up.' };
+  if (unitType(unit.type).settler) return { ok: false, reason: 'Workers build; soldiers wreck.' };
+  if (unit.moves <= 0) return { ok: false, reason: 'No movement left.' };
+  const i = idx(unit.x, unit.y, state.width);
+  // A city tile counts as a road for movement and for trade, and is not one:
+  // tearing up a city is sacking it, which is section 95 and a different rule.
+  if (state.cities.some((c) => c.x === unit.x && c.y === unit.y)) {
+    return { ok: false, reason: 'A city is not a road.' };
+  }
+  if (state.roads?.[i] !== 1) return { ok: false, reason: 'There is nothing here to tear up.' };
+  return { ok: true };
+}
+
+/**
+ * Tear up the road underfoot. Returns whether anything happened.
+ *
+ * Costs the whole turn, like laying one, and is told to everybody watching the
+ * tile. The louder half of the news is section 106's: a trade route that runs
+ * through here says so on its own, by name, the moment the link breaks.
+ */
+export function pillage(state: GameState, unit: Unit): boolean {
+  if (!canPillage(state, unit).ok) return false;
+  const i = idx(unit.x, unit.y, state.width);
+  state.roads![i] = 0;
+  unit.moves = 0;
+  unit.order = 'none';
+  const who = state.players[unit.owner];
+  const name = who?.barbarian ? 'Raiders' : who?.name ?? 'Somebody';
+  for (const p of state.players) {
+    if (p.barbarian || p.visible[i] !== 1) continue;
+    log(
+      state,
+      `${name} tear up the road.`,
+      p.id === unit.owner ? 'info' : 'bad',
+      p.id,
+      undefined,
+      [unit.x, unit.y],
+    );
+  }
+  return true;
 }
 
 /** Worker-turns to lay a road on this ground, or null if it cannot take one. */

@@ -39,7 +39,7 @@ import {
   startRoadTo,
   tryStep,
 } from '../sim/movement';
-import { canLayRoads, connectedByRoad } from '../sim/roads';
+import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
@@ -764,6 +764,27 @@ function roadStart(state: GameState, unit: Unit, city: City): { x: number; y: nu
 }
 
 /**
+ * Whether the ground here is somebody else's.
+ *
+ * The nearest city decides it, which is the same rough answer a player would
+ * give looking at the map and costs nothing to work out. Roads have no owner --
+ * a road does not know whose it is -- so "their road" can only ever mean a road
+ * in their part of the world.
+ */
+function onEnemyGround(state: GameState, unit: Unit): boolean {
+  let best: City | null = null;
+  let away = Infinity;
+  for (const c of state.cities) {
+    const d = distance(unit.x, unit.y, c.x, c.y);
+    if (d < away) {
+      away = d;
+      best = c;
+    }
+  }
+  return !!best && best.owner !== unit.owner;
+}
+
+/**
  * Whether this city has something in it that pays nothing without a soldier
  * standing in the city itself.
  *
@@ -1089,6 +1110,12 @@ function actSoldier(
     return;
   }
 
+  // Section 96: tear up the enemy's road while standing on it. Only on their
+  // ground -- ours is ours, and a road we wrecked at home is a road we dug at
+  // home -- and only now, after the attacking branches above, because a turn
+  // spent wrecking is a turn not spent fighting.
+  if (AI_TUNING.pillage && onEnemyGround(state, unit) && pillage(state, unit)) return;
+
   // A lone troll standing in a swamp, with a friend to make and the health to
   // spare. Before feeding the guns, because it is the rarer opportunity and it
   // costs the same turn.
@@ -1304,6 +1331,13 @@ export const AI_TUNING = {
    * in 108.
    */
   guardTheGold: true,
+  /**
+   * Whether the AI tears up roads it finds in enemy country.
+   *
+   * Section 96. A lever because it trades a turn of fighting for a turn of
+   * wrecking, and which of those is worth more is exactly the question.
+   */
+  pillage: true,
 };
 
 /**

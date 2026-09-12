@@ -4,6 +4,7 @@ import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
+import { PILLAGE } from '../src/sim/roads';
 import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -51,26 +52,30 @@ const control = () => {
   SPECIALS.rules = true;
   SPECIALS.ruleTiles = true;
   TRADE.enabled = true;
-  NEW_GAME.barbarians = false;
+  PILLAGE.enabled = true;
+  AI_TUNING.pillage = true;
+  // Section 96 is measured in the game raiders are in, which is where tearing up
+  // a road is supposed to hurt. Section 104 measured that game; this is the same
+  // one with something out there to ruin.
+  NEW_GAME.barbarians = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 106, asked properly at last. Trade routes were measured once before
-  // and moved nothing, for a reason that had nothing to do with them: the AI's
-  // treasuries stood unguarded, so almost no link had two paying ends. Section
-  // 108 fixed that, and 96 games in 108 now end with a route that pays -- so
-  // this is the first time the question has been worth asking.
+  // Section 96: a soldier standing on a road can tear it up, and raiders do it
+  // on their way past. It waited for section 27 to put something on a tile worth
+  // ruining and for section 106 to make it worth money.
   //
-  // The arm without should reproduce section 108's shipped numbers, 31-23 and
-  // 32-22, since the gold is the only thing switched off.
+  // Both arms play the raiders game, so neither reproduces an earlier arm: the
+  // nearest comparison is section 104, which measured the same game before there
+  // was anything to pillage.
   {
-    label: 'no trade routes',
+    label: 'no pillaging',
     apply: () => {
       control();
-      TRADE.enabled = false;
+      PILLAGE.enabled = false;
     },
   },
-  { label: 'trade routes', apply: control },
+  { label: 'pillaging', apply: control },
 ];
 
 /**

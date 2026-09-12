@@ -5,6 +5,7 @@ import type { City, GameState, Player, Unit } from '../model/types';
 import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
 import { assignWorkers, syncCitizens } from './city';
 import { tryStep } from './movement';
+import { pillage } from './roads';
 
 /**
  * Raiding parties out of the unclaimed wilds.
@@ -282,6 +283,12 @@ export function runRaiders(state: GameState, playerId: number): void {
     if (raider.moves <= 0) continue;
     const target = nearestPrey(state, raider);
     if (!target) continue;
+    // Section 96: the road underfoot, when there is nothing within reach worth
+    // hitting. Raiders who stopped to dig with a city next door would be doing
+    // the empire a favour, and a band that tore up every tile it crossed would
+    // never arrive anywhere -- so this is what they do instead of a step they
+    // were not going to profit from.
+    if (distance(raider.x, raider.y, target.x, target.y) > 1 && pillage(state, raider)) continue;
     stepToward(state, raider, target.x, target.y);
   }
 }

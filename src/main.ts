@@ -2,7 +2,15 @@ import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
-import { canBuildRoad, canLayRoads, formatMoves, roadTurns, startRoad } from './sim/roads';
+import {
+  canBuildRoad,
+  canLayRoads,
+  canPillage,
+  formatMoves,
+  pillage,
+  roadTurns,
+  startRoad,
+} from './sim/roads';
 import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
@@ -539,6 +547,30 @@ class App {
     }
     delete unit.roadTo;
     startRoad(this.state, unit);
+    this.selectNextIdle();
+  }
+
+  /**
+   * Tear up the road underfoot. Section 96.
+   *
+   * No confirmation: it costs this unit's turn and nothing else, and the road
+   * can be dug again. What it can cost is a trade route, and the log says so by
+   * name the moment it does.
+   */
+  private orderPillage(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    const check = canPillage(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    pillage(this.state, unit);
+    this.playLogCues();
+    // The log says what just happened, so the log has to be redrawn now rather
+    // than at the next turn: an order whose only visible effect is a line in the
+    // log is an order that looks like it did nothing.
+    this.refreshHud();
     this.selectNextIdle();
   }
 
@@ -1456,6 +1488,12 @@ class App {
           else this.orderRoad();
           break;
         }
+        // P tears up a road. Free on every unit that can do it: no soldier has an
+        // ability on P, and a worker cannot pillage at all.
+        if (pressed === 'p' && canPillage(this.state, unit).ok) {
+          this.orderPillage();
+          break;
+        }
         const ability = abilitiesOf(unit).find((a) => ABILITIES[a].key === pressed);
         if (ability) this.arm(ability);
         break;
@@ -1511,6 +1549,7 @@ class App {
       const canSettle = t.settler && canFoundCity(this.state, unit, unit.x, unit.y).ok;
       const canRoad = canBuildRoad(this.state, unit).ok;
       const canRoadTo = unit.owner === this.viewerId && canLayRoads(this.state, unit).ok;
+      const canWreck = unit.owner === this.viewerId && canPillage(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -1611,6 +1650,11 @@ class App {
               : ''
           }
           ${
+            canWreck
+              ? '<button class="small" data-act="pillage" title="Tear up this road. Costs the rest of this turn.">Pillage (P)</button>'
+              : ''
+          }
+          ${
             cityHere
               ? `<button class="small" data-act="city">Open ${escapeHtml(cityHere.name)}</button>`
               : ''
@@ -1667,6 +1711,9 @@ class App {
               break;
             case 'roadto':
               this.orderRoadTo();
+              break;
+            case 'pillage':
+              this.orderPillage();
               break;
             case 'halt':
               this.orderHalt();

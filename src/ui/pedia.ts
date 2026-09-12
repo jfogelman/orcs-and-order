@@ -378,6 +378,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           road does not know whose it is &mdash; the other lot may use yours.
         </p>
         <p class="flavor">
+          <strong>Pillaging.</strong> Any soldier standing on a road &mdash; yours or theirs, since a
+          road does not know whose it is &mdash; can tear it up with <kbd>P</kbd>, which costs it the
+          rest of the turn. Workers build; soldiers wreck. A cut road is a march slowed and, if it
+          was the only road between two of your counting-houses, a trade route gone: the log says
+          which one, by name, the turn it happens. Raiders do this too, which is what makes an
+          unwatched border expensive.
+        </p>
+        <p class="flavor">
           <strong>Trade routes.</strong> A road joining two of your own cities, each with a
           <strong>Goblin Treasury</strong> or <strong>Simple Market</strong> (or one of the larger
           buildings that stand on those), is a <em>trade route</em>: gold every turn, and the further
