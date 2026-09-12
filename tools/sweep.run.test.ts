@@ -63,24 +63,33 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 102: the Posting stops being a building inside the walls and becomes
-  // a hut on a tile that a soldier stands on. A replacement, so the arms are the
-  // two versions of the same idea rather than one of them against nothing.
+  // Section 109: the whole roads arc against itself.
   //
-  // Second pass. At two posts a city this was measured as a Horde mechanic --
-  // 19 games in 108 flipping their way against 7, p = 0.03 -- for the reason
-  // section 102 predicted before it was built: only the Horde riots, so only the
-  // Horde needs calm. Halved, and asked again on the same seeds.
+  // Six changes shipped between section 101 and section 102, every one of them
+  // measured as "not established" on its own and every one of them leaning the
+  // same way. Pooled, the shipping game went from 54% to 65% for the Horde. This
+  // is the one arm that can say whether that is real: section 101's settings --
+  // no roads, no trade, no keepers, no pillaging, no posts, and the Posting
+  // building back on -- against today's, on the same maps.
+  //
+  // The old arm should reproduce section 101 exactly, 30-24 and 28-26. If it
+  // does not, something outside `LEVERS` moved and the comparison is void, which
+  // is section 103's lesson.
   {
-    label: 'posting building',
+    label: 'section 101',
     apply: () => {
       control();
-      POSTING.enabled = true;
+      AI_TUNING.buildRoads = false;
+      TRADE.enabled = false;
+      AI_TUNING.guardTheGold = false;
+      PILLAGE.enabled = false;
+      AI_TUNING.pillage = false;
       POSTS.enabled = false;
       AI_TUNING.buildPosts = false;
+      POSTING.enabled = true;
     },
   },
-  { label: 'posts, one a city', apply: control },
+  { label: 'today', apply: control },
 ];
 
 /**
