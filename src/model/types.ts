@@ -64,6 +64,15 @@ export interface Player {
   rates?: TradeRates;
   /** Superseded by `rates`. Kept so old saves still open. */
   taxRate?: number;
+  /**
+   * Trade routes this player had last turn, as `linkKey` strings.
+   *
+   * Kept so the turn can say what opened and what closed rather than only
+   * handing over the gold. Optional, and deleted when there are none, so a game
+   * with no roads in it -- and every save from before trade routes -- carries
+   * nothing. Section 106.
+   */
+  tradeLinks?: string[];
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */

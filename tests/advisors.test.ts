@@ -42,6 +42,12 @@ function calm(): Situation {
     coinBuildings: 4,
     calmBuildings: 4,
     supplyPosts: 2,
+    // Section 106: a side that cannot dig yet, so no advisor mentions roads
+    // until a test says it can.
+    roadsKnown: false,
+    unjoinedCities: 0,
+    unlinkedGoldCities: 0,
+    routeGold: 0,
     calmAvailable: true,
     calmNeedsAdvance: null,
     dominance: null,
@@ -277,6 +283,40 @@ describe('advisors who talk back', () => {
       }
     }
     expect(ADVISORS.some((a) => a.retorts && Object.keys(a.retorts).length > 0)).toBe(true);
+  });
+
+  // Section 106: roads are exactly the kind of thing the council knows and
+  // nobody was being told. Both halves of it: the marching and the money.
+  it('has the war advisor ask for roads, on both sides', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const advisor = advisorsFor(faction).find((a) => a.role === 'military')!;
+      const s: Situation = { ...calm(), faction, roadsKnown: true, unjoinedCities: 3 };
+      const line = advisorConcern(advisor, s);
+      expect(line?.say(s), `${advisor.id} said nothing about roads`).toMatch(/road/i);
+    }
+  });
+
+  it('has the trade advisor ask for roads between the counting-houses', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const advisor = advisorsFor(faction).find((a) => a.role === 'trade')!;
+      const s: Situation = { ...calm(), faction, roadsKnown: true, unlinkedGoldCities: 2 };
+      const line = advisorConcern(advisor, s);
+      expect(line?.say(s), `${advisor.id} said nothing about roads`).toMatch(/road/i);
+      expect(line?.about).toBe('money');
+    }
+  });
+
+  it('says nothing about roads to a side that cannot lay one yet', () => {
+    for (const advisor of ADVISORS) {
+      const s: Situation = {
+        ...calm(),
+        faction: advisor.faction,
+        roadsKnown: false,
+        unjoinedCities: 4,
+        unlinkedGoldCities: 4,
+      };
+      expect(advisorLine(advisor, s), `${advisor.id} asked for a road`).not.toMatch(/road/i);
+    }
   });
 
   it('lets somebody argue with the arcane advisor about magic', () => {

@@ -86,6 +86,20 @@ export interface Situation {
   calmAvailable: boolean;
   /** The advance that would unlock one, when there is none. */
   calmNeedsAdvance: string | null;
+  /**
+   * Roads, as the council sees them. Section 106: the war advisor wants them for
+   * the marching and the trade advisor wants them for the money, and they are
+   * exactly the kind of thing section 76 said the council knows and nobody is
+   * being told.
+   */
+  /** Whether this side can lay a road at all yet. */
+  roadsKnown: boolean;
+  /** Our cities with no road home to the capital. */
+  unjoinedCities: number;
+  /** Our cities with something to sell that no trade route reaches. */
+  unlinkedGoldCities: number;
+  /** Gold a turn our trade routes actually pay. */
+  routeGold: number;
   /** Structures that push supply further out. */
   supplyPosts: number;
   /**
@@ -538,6 +552,17 @@ const KINGDOM: AdvisorDef[] = [
           `Now, ideally before the marching.`,
       },
       {
+        // Section 106: roads are a military matter before they are a treasurer's.
+        // A third of a move a step means reinforcements that arrive during the
+        // battle rather than after it.
+        about: 'war',
+        when: (s) => s.roadsKnown && s.unjoinedCities >= 2,
+        say: (s) =>
+          `${sentence(count(s.unjoinedCities, 'town', 'towns'))} with no road home. A column on a ` +
+          `road covers three times the ground, sire, and the enemy has never once waited at the ` +
+          `border while we waded through a field.`,
+      },
+      {
         // Soldiers are paid. A treasury that runs dry is a military problem
         // before it is anybody else's, which is a thing he will explain.
         about: 'the-treasury',
@@ -717,6 +742,14 @@ const KINGDOM: AdvisorDef[] = [
           `lying about is money spent, eventually, by somebody with worse ideas than mine.`,
       },
       {
+        about: 'money',
+        when: (s) => s.roadsKnown && s.unlinkedGoldCities >= 2,
+        say: (s) =>
+          `${sentence(count(s.unlinkedGoldCities, 'counting-house', 'counting-houses'))} with no ` +
+          `road between them. Trade does not travel by hope. A road, and each pair of them pays ` +
+          `every turn, forever, for one season of digging.`,
+      },
+      {
         when: (s) => s.gold > 400,
         say: (s) =>
           `${spell(s.gold)} in the vault. Beautiful. Do not touch it. I shall know.`,
@@ -832,6 +865,15 @@ const HORDE: AdvisorDef[] = [
         say: (s) =>
           `${spell(s.enemiesSeen)} of them. Standing there. Being alive. I do not know what else ` +
           `you want me to say about it.`,
+      },
+      {
+        // Section 106, his half of it: a road is the difference between arriving
+        // at the fight and arriving at the aftermath.
+        about: 'war',
+        when: (s) => s.roadsKnown && s.unjoinedCities >= 2,
+        say: (s) =>
+          `${sentence(count(s.unjoinedCities, 'town', 'towns'))} with no road to them. Lads run ` +
+          `faster on flat ground. Lads who arrive after the fighting are just witnesses.`,
       },
       {
         when: (s) => s.army < s.cities * 2,
@@ -1076,6 +1118,16 @@ const HORDE: AdvisorDef[] = [
               `${sentence(count(s.dominance!.turnsLeft, 'turn'))} left and there is nothing to count.`
             : `Both heads counted the world. Most of it is ours. ` +
               `${sentence(count(s.dominance!.turnsLeft, 'turn'))} more and we stop counting.`,
+      },
+      {
+        // Section 106: two piles of gold and no road between them, which is the
+        // kind of arithmetic both heads can agree about.
+        about: 'money',
+        when: (s) => s.roadsKnown && s.unlinkedGoldCities >= 2,
+        say: (s) =>
+          `${sentence(count(s.unlinkedGoldCities, 'pile of gold', 'piles of gold'))}. No road ` +
+          `between them. Left head says gold does not visit itself. Right head has gone to find a ` +
+          `shovel, which for once is the correct answer.`,
       },
       {
         when: (s) => s.goldPerTurn < 0,

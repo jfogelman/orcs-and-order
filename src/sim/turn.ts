@@ -19,6 +19,7 @@ import { contenders, log, playerCities, playerUnits, recomputeVisibility } from 
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
+import { updateTradeLinks } from './trade';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
 
@@ -196,6 +197,12 @@ function runEconomy(state: GameState, player: Player): void {
       );
     }
   }
+
+  // Section 106: a road between two cities that both have something to sell pays
+  // for the digging. Through `updateTradeLinks` rather than `tradeGold`, because
+  // a route that opens or closes has to be said out loud -- gold that simply
+  // starts arriving is a rule nobody can see.
+  goldIncome += updateTradeLinks(state, player);
 
   player.gold += goldIncome - upkeep;
   addBeakers(state, player, beakerIncome);
