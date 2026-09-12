@@ -40,6 +40,7 @@ import {
   tryStep,
 } from '../sim/movement';
 import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
+import { POSTS, startPost } from '../sim/posts';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 
 /**
@@ -611,7 +612,12 @@ function chooseProduction(
       ).length;
     const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
     const worker = options.units.find((u) => u.settler);
-    if (worker && workers < wanted && roadWorkToDo(state, city.owner)) {
+    if (
+      worker &&
+      workers < wanted &&
+      (roadWorkToDo(state, city.owner) ||
+        (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)))
+    ) {
       return { kind: 'unit', id: worker.id };
     }
   }
@@ -683,6 +689,80 @@ function guardedAt(state: GameState, playerId: number, x: number, y: number): bo
 const THREAT_PENALTY = 45;
 
 /** Whether any city of this player's is not yet joined to its capital by road. */
+/**
+ * Cities of ours that want a garrison post and have not got enough.
+ *
+ * Only cities that are actually unhappy -- at their content limit or one short
+ * of it. Section 108's lesson applied before it had to be learned twice: a rule
+ * that spends workers and pins soldiers everywhere costs more than it can
+ * possibly pay, so this only fires where there is a riot to stop.
+ */
+function cityWantsPost(state: GameState, city: City): boolean {
+  if (!POSTS.enabled) return false;
+  if (city.size < contentLimit(state, city) - 1) return false;
+  return postsAround(state, city) < POSTS.maxPerCity;
+}
+
+/** Garrison posts standing on this city's own land, manned or not. */
+function postsAround(state: GameState, city: City): number {
+  if (!state.posts) return 0;
+  let n = 0;
+  for (const i of fatCrossIndices(city.x, city.y, state.width, state.height)) {
+    if (state.posts[i] === 1) n++;
+  }
+  return n;
+}
+
+/** Whether any city of ours is short of a post, which is what a worker is for. */
+function postWorkToDo(state: GameState, playerId: number): boolean {
+  return playerCities(state, playerId).some((c) => cityWantsPost(state, c));
+}
+
+/**
+ * Give a worker a post to build: the nearest unhappy city of ours that wants
+ * one, on the free tile beside it.
+ *
+ * Beside it rather than out at the edge of its land, because a soldier has to
+ * walk there too and every tile further out is another turn of somebody not
+ * fighting. A city another worker is already walking to is left to that one.
+ */
+function takePostJob(state: GameState, unit: Unit): boolean {
+  if (!POSTS.enabled || !unitType(unit.type).settler) return false;
+  const claimed = playerUnits(state, unit.owner)
+    .filter((u) => u.id !== unit.id && u.goto && unitType(u.type).settler)
+    .map((u) => u.goto!);
+  const wanting = playerCities(state, unit.owner)
+    .filter((c) => cityWantsPost(state, c))
+    .filter((c) => !claimed.some((g) => distance(g.x, g.y, c.x, c.y) <= 1))
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) || a.id - b.id,
+    )[0];
+  if (!wanting) return false;
+
+  const spot = DIRS8.map(([dx, dy]) => ({ x: wanting.x + dx, y: wanting.y + dy }))
+    .filter((t) => {
+      if (t.x < 0 || t.y < 0 || t.x >= state.width || t.y >= state.height) return false;
+      const i = idx(t.x, t.y, state.width);
+      if (TERRAIN[state.terrain[i]].water || state.posts?.[i] === 1) return false;
+      if (state.cities.some((c) => c.x === t.x && c.y === t.y)) return false;
+      return !state.units.some((u) => u.x === t.x && u.y === t.y && u.id !== unit.id);
+    })
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) ||
+        a.y - b.y ||
+        a.x - b.x,
+    )[0];
+  if (!spot) return false;
+  if (unit.x !== spot.x || unit.y !== spot.y) {
+    if (!routeTo(state, unit, spot.x, spot.y)) return false;
+    moveToward(state, unit, spot.x, spot.y);
+    if (unit.x !== spot.x || unit.y !== spot.y) return true;
+  }
+  return startPost(state, unit);
+}
+
 function roadWorkToDo(state: GameState, playerId: number): boolean {
   const seat = capitalOf(state, playerId);
   if (!seat) return false;
@@ -764,6 +844,47 @@ function roadStart(state: GameState, unit: Unit, city: City): { x: number; y: nu
 }
 
 /**
+ * Whether this city would be over its limit if this soldier walked off the post
+ * it is standing on.
+ *
+ * Asked that way round because the calm the post pays is already inside the
+ * limit: "is the city unhappy" is false precisely because the soldier is doing
+ * its job, so it would walk off and the riot would start.
+ */
+function needsUsHere(state: GameState, city: City, unit: Unit): boolean {
+  const onIts = fatCrossIndices(city.x, city.y, state.width, state.height).includes(
+    idx(unit.x, unit.y, state.width),
+  );
+  return onIts && city.size >= contentLimit(state, city) - POSTS.contentBonus;
+}
+
+/** The nearest empty post on the land of a city of ours that is close to rioting. */
+function emptyPostFor(
+  state: GameState,
+  unit: Unit,
+  mine: City[],
+): { x: number; y: number } | null {
+  if (!state.posts) return null;
+  let best: { x: number; y: number } | null = null;
+  let away = Infinity;
+  for (const city of mine) {
+    if (city.size < contentLimit(state, city)) continue;
+    for (const i of fatCrossIndices(city.x, city.y, state.width, state.height)) {
+      if (state.posts[i] !== 1) continue;
+      const x = i % state.width;
+      const y = Math.floor(i / state.width);
+      if (state.units.some((u) => u.x === x && u.y === y)) continue;
+      const d = distance(unit.x, unit.y, x, y);
+      if (d < away) {
+        away = d;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * Whether the ground here is somebody else's.
  *
  * The nearest city decides it, which is the same rough answer a player would
@@ -807,6 +928,12 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
   if (AI_TUNING.buildRoads && cities >= personality.targetCities) {
     if (unit.roadTo || unit.order === 'road') return;
     if (takeRoadJob(state, unit)) return;
+  }
+  // Section 102: a post for a city that is about to riot. After roads, which are
+  // worth more and are wanted by every city rather than only the unhappy ones.
+  if (AI_TUNING.buildPosts && cities >= personality.targetCities) {
+    if (unit.order === 'post') return;
+    if (takePostJob(state, unit)) return;
   }
   if (cities >= personality.targetCities + 2) {
     // Enough cities; park it somewhere safe rather than wandering forever.
@@ -1176,6 +1303,25 @@ function actSoldier(
     }
   }
 
+  // Section 102: stand on a post, which is what a post is for. The same shape as
+  // the gold above and the same narrowness -- only where a city is about to
+  // riot, and one soldier a post, since one is all a tile holds.
+  if (AI_TUNING.buildPosts && POSTS.enabled && state.posts) {
+    const onPost = state.posts[idx(unit.x, unit.y, state.width)] === 1;
+    const mine = playerCities(state, unit.owner);
+    if (onPost && mine.some((c) => needsUsHere(state, c, unit))) {
+      unit.order = 'fortified';
+      return;
+    }
+    const empty = emptyPostFor(state, unit, mine);
+    if (empty && distance(unit.x, unit.y, empty.x, empty.y) <= 8) {
+      if (routeTo(state, unit, empty.x, empty.y)) {
+        moveToward(state, unit, empty.x, empty.y);
+        return;
+      }
+    }
+  }
+
   // Hold undefended home cities.
   const bare = ownCities.find(
     (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
@@ -1338,6 +1484,14 @@ export const AI_TUNING = {
    * wrecking, and which of those is worth more is exactly the question.
    */
   pillage: true,
+  /**
+   * Whether the AI builds garrison posts and stands soldiers on them.
+   *
+   * Section 102. Both halves behind one lever, because half of it is useless: a
+   * post nobody stands on calms nothing, and a soldier standing in a field is a
+   * soldier standing in a field.
+   */
+  buildPosts: true,
 };
 
 /**

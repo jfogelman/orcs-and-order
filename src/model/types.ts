@@ -115,7 +115,7 @@ export interface Player {
 
 // ---------------------------------------------------------------------- units
 
-export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road';
+export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road' | 'post';
 
 export interface Unit {
   id: number;
@@ -433,6 +433,15 @@ export interface GameState {
    * the fog.
    */
   roads?: number[];
+  /**
+   * 0/1 per tile: is there a garrison post here?
+   *
+   * Section 102's answer to section 101: somewhere for a soldier to stand that
+   * is not the city tile. Optional and created with the first post, like the
+   * roads layer, so a save from before them loads as a map without any, and
+   * packed the same way.
+   */
+  posts?: number[];
   players: Player[];
   units: Unit[];
   cities: City[];

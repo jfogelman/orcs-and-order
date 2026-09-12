@@ -2,6 +2,7 @@ import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN, specialAt } from '../model/terrain';
+import { postCalm } from './posts';
 import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
@@ -270,6 +271,10 @@ export function contentLimit(state: GameState, city: City): number {
   // list, so a posting would have calmed a city with nobody standing in it --
   // the gate existed and this was not asking it.
   let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
+  // Section 102: a hut with a soldier standing in it, out on the city's own
+  // land. The building version could never have the two soldiers it asked for;
+  // this one gives each of them a tile to stand on.
+  limit += postCalm(state, city);
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
   // What the empire spends on keeping this particular city calm.
