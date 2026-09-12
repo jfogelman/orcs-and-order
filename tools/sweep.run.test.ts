@@ -48,7 +48,7 @@ const control = () => {
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
   AI_TUNING.guardTheGold = true;
-  POSTING.enabled = true;
+  POSTING.enabled = false;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
   SPECIALS.ruleTiles = true;
@@ -67,23 +67,20 @@ const ARMS: Arm[] = [
   // a hut on a tile that a soldier stands on. A replacement, so the arms are the
   // two versions of the same idea rather than one of them against nothing.
   //
-  // The building arm should reproduce section 106's guarded numbers -- 31-23 and
-  // 32-22 -- since nothing else has changed for a game without raiders in it.
+  // Second pass. At two posts a city this was measured as a Horde mechanic --
+  // 19 games in 108 flipping their way against 7, p = 0.03 -- for the reason
+  // section 102 predicted before it was built: only the Horde riots, so only the
+  // Horde needs calm. Halved, and asked again on the same seeds.
   {
     label: 'posting building',
     apply: () => {
       control();
+      POSTING.enabled = true;
       POSTS.enabled = false;
       AI_TUNING.buildPosts = false;
     },
   },
-  {
-    label: 'garrison posts',
-    apply: () => {
-      control();
-      POSTING.enabled = false;
-    },
-  },
+  { label: 'posts, one a city', apply: control },
 ];
 
 /**

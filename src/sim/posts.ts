@@ -33,10 +33,17 @@ export const POSTS = {
   /**
    * Manned posts a city is paid for.
    *
-   * Two, which is section 101's number: the Posting wanted two soldiers and
-   * could not have them. Now it can, and each one needs its own hut.
+   * One, and it was two. Two was section 101's number -- the Posting wanted two
+   * soldiers and could never have them, and two huts can. It was also measured:
+   * 19 of 108 games flipped to the Horde against 7 the other way, p = 0.03, with
+   * the Horde four citizens and a whole advance ahead. Calm is worth more to the
+   * side that riots, which is the Horde and was always going to be, so a calm
+   * mechanic priced for both sides pays one of them.
+   *
+   * At one, the post is still what the building could not be -- somewhere to
+   * stand that is not the gate -- and worth half of what it was.
    */
-  maxPerCity: 2,
+  maxPerCity: 1,
 };
 
 /** Whether there is a post on this tile. */

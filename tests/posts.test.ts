@@ -139,8 +139,11 @@ describe('what a post is worth', () => {
     expect(contentLimit(state, city)).toBe(before + POSTS.contentBonus);
   });
 
-  it('counts two soldiers, which the building it replaces never could', () => {
+  it('can count two soldiers, which the building it replaces never could', () => {
+    // What the cap is for: the rule can hold two, and is currently paid for
+    // one. Two was measured and was a Horde mechanic -- see `POSTS.maxPerCity`.
     const { state, city } = town();
+    POSTS.maxPerCity = 2;
     post(state, 11, 10);
     post(state, 9, 10);
     spawnUnit(state, 0, 'orc', 11, 10, false);

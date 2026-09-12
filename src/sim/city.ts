@@ -63,8 +63,13 @@ export const CALM = { base: 6 };
  * 59: emulate a control by moving a constant, never by stashing the source.
  * Off, a Posting is not offered and grants nothing, which is what a game
  * without the building looks like.
+ *
+ * **Off since section 102**, which replaced it with a hut on a tile. The
+ * building and the post are the same idea twice, and a game with both would pay
+ * for the same two soldiers in two places. The buildings stay defined so that a
+ * save carrying one still loads; it simply stops paying and stops being offered.
  */
-export const POSTING = { enabled: true };
+export const POSTING = { enabled: false };
 
 /** Soldiers this building wants standing in the city before it does anything. */
 export function garrisonNeededBy(b: { garrisonNeeded?: number; needsGarrison?: boolean }): number {
@@ -930,6 +935,10 @@ export function buildOptions(
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
     .filter((b) => !b.suppliesArmy || seat?.id !== city.id)
+    // A Posting with the lever off pays nothing, so it is not offered: a
+    // building in the list that can never do anything is a trap, and section 102
+    // turned this one off for good.
+    .filter((b) => POSTING.enabled || !(b.garrisonNeeded && b.contentBonus))
     // Shared infrastructure only while resettling: a granary is a shed for
     // food and does not care whose food it is, but nobody is raising a totem
     // to the new owner's gods in a town that is still half the old owner's.
