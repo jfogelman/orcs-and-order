@@ -38,83 +38,109 @@ export const PALACE_TIERS = 3;
 /**
  * Which line in a piece of art it is hung from.
  *
- * The lesson of every mistake made getting this to look right: **anchor by the
- * meaningful structural line, not by the bounding box.** A picture's middle is
- * an accident of what else the artist drew into the frame.
+ * Anchor by the meaningful structural line, never by the bounding box: a
+ * picture's middle is an accident of what else the artist drew into the frame.
  *
- * - `foot` -- the middle of its lowest row of pixels, which for an isometric box
- *   is its near corner. Right for anything that stands on the ground.
- * - `mid` -- the middle of the picture. Right for the gate, whose lowest row is
- *   a wall stub off to one side: foot-anchored, it walks into the corner.
- * - `seam` -- the outer edge on the side it joins from, which is the flat
- *   unfinished wall the wings were drawn with on purpose. Anchoring anywhere
- *   else lets a wide wing overlap the hall by however much of itself sits past
- *   the seam.
+ * - `foot` -- where the structure meets the ground, measured off the art into
+ *   `palaceArt.ts` (the first row that is structure rather than fringe, so a
+ *   tower stands on its base logs and not on the stakes in front of them).
+ * - `mid` -- the middle of the picture, for the gate: its lowest row is a wall
+ *   stub off to one side.
+ * - `seam` -- the flat unfinished wall a wing was drawn with, read off the art.
  */
 export type PalaceAnchor = 'foot' | 'mid' | 'seam';
 
 /**
- * Which side of the chassis a wing hangs off, for this side's art.
+ * A named place on a chassis where a piece hangs.
  *
- * Read from the art rather than decided here: the wings were generated with a
- * flat unfinished wall on the side they join along, and which edge that came out
- * on is not guaranteed -- so the piece is docked by whichever edge it actually
- * is, and a re-rolled wing that comes back the other way round still lands
- * right. A seam on the *right* of the picture means the wing sits to the *left*
- * of the hall, with that edge hidden against it.
+ * **This is the half the first versions were missing.** They fixed where on each
+ * *module* the anchor sits, and then aimed it at a percentage of the box -- and
+ * the Warcamp and the Grand Hall have their doors, corner posts and roofs in
+ * different places, so one formula served neither. These are marked by hand,
+ * once per chassis, off a pixel grid of the art as drawn: there are only two
+ * chassis, they never change, and no measurement can tell a door from a window.
  */
-export function wingSide(faction: FactionId): -1 | 1 {
-  const art = PALACE_ART[`${faction}-wing-1`];
-  return art?.seam === 'left' ? 1 : -1;
-}
+export type PalacePoint = 'door' | 'corner' | 'side' | 'roof' | 'yard';
 
-export interface PalacePlacement {
+export interface PalaceChassis {
+  /** Drawn flipped left to right. Its points are marked on the art as drawn. */
+  mirror?: boolean;
   /**
-   * Drawn size at tier two, as a share of the whole picture's box.
+   * Drawn width, as a share of the box, before the composition is fitted.
    *
-   * A share of the *box* and not of the chassis, so that a piece's size and the
-   * chassis's size are independent numbers: "a smaller hall with grander wings"
-   * is a thing somebody can ask for and get.
-   *
-   * Nothing in the art says how big anything is -- every asset was drawn one
-   * subject to a frame, each filling its frame, so a tower sprite and a hall
-   * sprite are the same size on disk. These numbers are a judgement, and they
-   * were made by looking at the three of them side by side.
+   * What matters is this against the modules' sizes -- the whole picture is
+   * then scaled to fit, so there is no position to set.
    */
-  size: number;
-  /** Measured across rather than up: the hall and the yard are wider than tall. */
-  wide?: boolean;
-  /** Placed by its middle: a top-down slab has no foot to stand on. */
-  vmid?: boolean;
-  anchor: PalaceAnchor;
-  /**
-   * Marks the piece that takes the corner opposite the wing.
-   *
-   * The wing's side is decided by its own seam, so the tower cannot have a side
-   * written down: it has to be told to take the other one.
-   */
-  side?: 'tower';
-  /**
-   * Where its anchor lands, from the chassis's foot, in box fractions.
-   *
-   * For the two pieces that hang off the sides, `dx` is a distance rather than a
-   * direction: the wing's side comes from its seam and the tower takes the other
-   * corner, so neither has a left or a right written down here.
-   */
-  dx: number;
-  dy: number;
-  /** Instead of `dy`: this far up the chassis's own height. For the roofline. */
-  roof?: number;
+  width: number;
+  /** Where each kind of piece hangs, in the chassis art's own pixels. */
+  points: Record<PalacePoint, [number, number]>;
 }
 
 /**
- * How a module's size moves with its tier.
+ * The two chassis, and where things hang off them.
  *
- * A first totem should not fill the same space as a blazing altar wing, and a
- * lashed-log lookout should not stand as tall as an iron-plated tower. The
- * numbers in `PALACE_MODULES` are the middle tier, and this drifts either side
- * of it -- so the capital of an empire that has finished something reads as
- * grander without every module being retuned by hand.
+ * Chosen at the worst case -- every module at its biggest tier -- so the tower,
+ * the wing and the banner do not collide when all three are as large as they
+ * get: the wing hangs off the far side and is drawn behind, the tower stands at
+ * the other corner in front, and the banner takes a corner of the roof away from
+ * both.
+ */
+export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
+  orc: {
+    width: 0.46,
+    points: {
+      // The left-hand door, which faces the way the gate arch opens.
+      door: [37, 103],
+      // The right corner post, at its foot.
+      corner: [121, 92],
+      // Behind the back-right wall, well along it towards the back corner: the
+      // corner tower rises straight up from [121, 92], and at its biggest tier
+      // a wing hung any nearer that corner disappears behind it.
+      side: [80, 28],
+      // The left corner of the roof, away from the tower and the wing.
+      roof: [14, 36],
+      // The near corner: the yard is centred just in front of it.
+      yard: [64, 116],
+    },
+  },
+  human: {
+    mirror: true,
+    width: 0.46,
+    points: {
+      door: [38, 91],
+      corner: [122, 80],
+      // Tucked behind the left wall, so the hall is drawn over the cathedral's
+      // seam rather than the cathedral floating beside it.
+      side: [34, 58],
+      roof: [64, 22],
+      yard: [76, 98],
+    },
+  },
+};
+
+export interface PalacePlacement {
+  /** Which place on the chassis it hangs from. */
+  point: PalacePoint;
+  /** Which line of its own art is hung there. */
+  anchor: PalaceAnchor;
+  /**
+   * Drawn size at tier two, as a share of the box: height for things that stand
+   * up, width for things marked `wide`. Independent of the chassis's size, and
+   * a judgement -- the art is drawn one subject to a frame, each filling it, so
+   * nothing on disk says a tower is bigger than a gate.
+   */
+  size: number;
+  /** Measured across rather than up. */
+  wide?: boolean;
+  /** Placed by its middle: a top-down slab has no foot. */
+  vmid?: boolean;
+  /** A small correction from the point, in chassis pixels. */
+  nudge?: [number, number];
+}
+
+/**
+ * How a module's size moves with its tier: the numbers below are the middle
+ * tier, so a first totem does not fill the space a blazing altar wing does.
  */
 export const PALACE_TIER_SCALE = [0.84, 1, 1.16];
 
@@ -125,19 +151,14 @@ export interface PalaceModuleDef {
   /** The three tiers, per faction, cheapest first. */
   tiers: Record<FactionId, [string, string, string]>;
   at: PalacePlacement;
-  /** Drawn before the chassis, so the chassis is drawn over where they join. */
+  /** Where it differs on one side's chassis. */
+  per?: Partial<Record<FactionId, Partial<PalacePlacement>>>;
+  /** Drawn before the chassis, so the chassis covers the join. */
   behind?: boolean;
   blurb: string;
 }
 
-/**
- * Drawn in the order of this list: the yard first, because it is the ground the
- * rest stands in, then the hall, then what hangs off it.
- *
- * The numbers are written for the Warcamp. The Grand Hall's chassis faces the
- * other way -- so it is drawn mirrored, and every `dx` is negated with it, which
- * swaps the tower and the wing onto the sides their art expects.
- */
+/** Drawn in the order of this list, behind pieces first. */
 export const PALACE_MODULES: PalaceModuleDef[] = [
   {
     id: 'grounds',
@@ -146,24 +167,11 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
     },
-    // Tucked under: its middle sits above the chassis's foot by enough that the
-    // hall is drawn over its back edge. Flush underneath, the two read as two
-    // stacked stickers with a seam between them rather than a building standing
-    // in its own yard.
-    at: { size: 0.5, wide: true, vmid: true, anchor: 'mid', dx: 0, dy: 0.03 },
+    // Centred a little behind the near corner, so the hall's foundation is
+    // drawn over the yard's back edge: ground the hall stands in, not a rug.
+    at: { point: 'yard', anchor: 'mid', size: 0.5, wide: true, vmid: true, nudge: [0, -6] },
     behind: true,
     blurb: 'What is out the front, and therefore what everybody judges the place by.',
-  },
-  {
-    id: 'tower',
-    name: 'Watchtower',
-    tiers: {
-      human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
-      orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
-    },
-    // At a front corner, which is half a chassis width out and a quarter up.
-    at: { size: 0.44, anchor: 'foot', side: 'tower', dx: 0.24, dy: -0.115 },
-    blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
   {
     id: 'wing',
@@ -172,9 +180,27 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
     },
-    // Hung from its seam against the hall's other side, and a little forward.
-    at: { size: 0.38, anchor: 'seam', dx: 0.02, dy: 0.058 },
+    // Behind the chassis, with its seam against the hall's side: the hall is
+    // drawn over the join, which is what hides the flat unfinished wall.
+    at: { point: 'side', anchor: 'seam', size: 0.38 },
+    // The cathedral's tracery reaches well above its roof, so it is drawn
+    // smaller than a totem to sit at the same visual height.
+    // The Warcamp's wing hangs behind the hall's far corner, where the seam
+    // is hidden whichever way it faces, so it is centred on the point; the
+    // Grand Hall's docks its seam against the wall.
+    per: { orc: { anchor: 'mid' }, human: { size: 0.3 } },
+    behind: true,
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
+  },
+  {
+    id: 'tower',
+    name: 'Watchtower',
+    tiers: {
+      human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
+      orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
+    },
+    at: { point: 'corner', anchor: 'foot', size: 0.44 },
+    blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
   {
     id: 'gate',
@@ -183,7 +209,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
     },
-    at: { size: 0.23, anchor: 'mid', dx: 0, dy: 0.01 },
+    at: { point: 'door', anchor: 'mid', size: 0.23 },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
@@ -193,25 +219,115 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
     },
-    // On the roofline, which is measured up the chassis rather than in box
-    // fractions: the two halls are different heights.
-    at: { size: 0.19, anchor: 'foot', dx: 0, dy: 0, roof: 0.55 },
+    at: { point: 'roof', anchor: 'foot', size: 0.19 },
     blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];
 
+/** One sprite of the composed capital, in pixels of a box `box` wide. */
+export interface PlacedPiece {
+  art: string;
+  left: number;
+  top: number;
+  width: number;
+  flip: boolean;
+}
+
 /**
- * Where each side's chassis stands, and which way round it faces.
+ * The capital, as a list of sprites to draw in order.
  *
- * `width` is a share of the box and `ground` is how far down the box its near
- * corner sits -- low enough that a tier-three spire fits above it. The Kingdom's
- * hall is drawn facing the other way, so it is flipped and the pieces that hang
- * off its sides swap with it.
+ * The one place the arrangement is worked out, so the city view and anything
+ * that renders it offline cannot disagree about where a piece goes.
+ *
+ * **Fitted at the worst case.** The composition is laid out with every module at
+ * its biggest tier, that is scaled and centred to fit the box, and the same
+ * transform is then applied to whatever is actually standing. Two things follow:
+ * nothing can be clipped by the frame however much has been built, and the hall
+ * does not jump about or shrink as pieces are added -- a capital that got smaller
+ * every time it got grander would be a strange reward.
  */
-export const PALACE_BASE: Record<FactionId, { width: number; ground: number; mirror?: boolean }> = {
-  orc: { width: 0.46, ground: 0.66 },
-  human: { width: 0.46, ground: 0.66, mirror: true },
-};
+export function palaceLayout(
+  faction: FactionId,
+  standing: Array<{ module: PalaceModuleDef; tier: number }>,
+  box: number,
+): PlacedPiece[] {
+  const worst = arrange(
+    faction,
+    PALACE_MODULES.map((module) => ({ module, tier: PALACE_TIERS })),
+    box,
+  );
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const p of worst) {
+    const shape = PALACE_ART[p.art];
+    const h = (p.width * shape.h) / shape.w;
+    minX = Math.min(minX, p.left);
+    minY = Math.min(minY, p.top);
+    maxX = Math.max(maxX, p.left + p.width);
+    maxY = Math.max(maxY, p.top + h);
+  }
+  const margin = box * 0.03;
+  const room = box - 2 * margin;
+  const scale = Math.min(room / (maxX - minX), room / (maxY - minY));
+  const offX = margin + (room - (maxX - minX) * scale) / 2 - minX * scale;
+  const offY = margin + (room - (maxY - minY) * scale) / 2 - minY * scale;
+  return arrange(faction, standing, box).map((p) => ({
+    ...p,
+    left: p.left * scale + offX,
+    top: p.top * scale + offY,
+    width: p.width * scale,
+  }));
+}
+
+/** The arrangement before fitting: the chassis at the origin, pieces hung off it. */
+function arrange(
+  faction: FactionId,
+  standing: Array<{ module: PalaceModuleDef; tier: number }>,
+  box: number,
+): PlacedPiece[] {
+  const chassis = PALACE_CHASSIS[faction];
+  const baseArt = PALACE_ART[`${faction}-base`];
+  const baseW = chassis.width * box;
+  const scale = baseW / baseArt.w;
+
+  const place = (module: PalaceModuleDef, tier: number): PlacedPiece | null => {
+    const at: PalacePlacement = { ...module.at, ...(module.per?.[faction] ?? {}) };
+    const art = palaceArt(faction, module.id, tier);
+    const shape = PALACE_ART[art];
+    if (!shape) return null;
+    const size = at.size * PALACE_TIER_SCALE[tier - 1] * box;
+    const w = at.wide ? size : (size * shape.w) / shape.h;
+    const h = at.wide ? (size * shape.h) / shape.w : size;
+    const [px, py] = chassis.points[at.point];
+    const [nx, ny] = at.nudge ?? [0, 0];
+    const tx = (px + nx) * scale;
+    const ty = (py + ny) * scale;
+    const hold =
+      at.anchor === 'mid' ? 0.5 : at.anchor === 'seam' ? (shape.seam === 'right' ? 1 : 0) : shape.foot;
+    return {
+      art,
+      left: tx - hold * w,
+      top: ty - (at.vmid ? h / 2 : h * shape.base),
+      width: w,
+      flip: false,
+    };
+  };
+
+  const out: PlacedPiece[] = [];
+  const add = (behind: boolean) => {
+    for (const { module, tier } of standing) {
+      if (!!module.behind !== behind) continue;
+      const piece = place(module, tier);
+      if (piece) out.push(piece);
+    }
+  };
+  add(true);
+  out.push({ art: `${faction}-base`, left: 0, top: 0, width: baseW, flip: !!chassis.mirror });
+  add(false);
+  return out;
+}
 
 export const PALACE_BY_ID = new Map(PALACE_MODULES.map((m) => [m.id, m]));
 

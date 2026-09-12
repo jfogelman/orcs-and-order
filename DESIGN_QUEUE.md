@@ -4710,6 +4710,37 @@ loop rather than a browser round trip each time, and it is what the ratios were
 chosen from. Both sides were then checked in the running game against what it
 drew.
 
+### Where pieces hang: marked by hand, on each chassis
+
+Every fix before this one corrected where on a *module* its anchor sat -- foot,
+middle, seam, structural base -- and then aimed that anchor at a percentage of
+the box. The Warcamp and the Grand Hall have their doors, corner posts and roofs
+in different places, so one formula put the gate beside the Warcamp's door and
+past the Grand Hall's, and floated both towers. The anchor on the module was
+right; the target on the chassis did not exist.
+
+So each chassis now carries five points, **marked by hand off a pixel grid of
+the art as drawn**: `door`, `corner`, `side`, `roof` and `yard`, in the chassis's
+own pixels (`PALACE_CHASSIS`). Hand-marked because there are two chassis, they
+never change, and no measurement can tell a door from a window.
+
+The points were chosen at the **worst case** -- every module at its biggest tier
+-- because that is where pieces collide. On the Warcamp the wing hangs well back
+along the back-right wall and is drawn behind the hall, so the tier-three
+iron-plated tower rising from the corner post no longer swallows it; the banner
+takes the left roof corner, away from both. On the Grand Hall the cathedral sits
+behind the left wall and the flipped hall is drawn over its seam.
+
+And the composition is **fitted at the worst case too**: laid out with everything
+at tier three, scaled and centred into the box, and that one transform applied to
+whatever is actually standing. Nothing can be clipped by the frame, and the hall
+does not shrink or jump as pieces are added.
+
+`palaceLayout` is the only place this arithmetic lives. The city view draws its
+output, and `tools/palace-layout.run.test.ts` dumps the same output so the capital
+can be looked at offline -- which is how every arrangement in this section was
+checked, against the game's own numbers rather than a second copy of them.
+
 ### What is left
 
 - **Yields, if ever.** Deliberately not now. If a module is ever worth something

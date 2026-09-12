@@ -1,13 +1,5 @@
 import { idx } from '../engine/grid';
-import {
-  PALACE_BASE,
-  PALACE_TIER_SCALE,
-  palaceArt,
-  palacePieces,
-  wingSide,
-} from '../model/palace';
-import type { PalacePlacement } from '../model/palace';
-import { PALACE_ART } from '../model/palaceArt';
+import { palaceLayout, palacePieces } from '../model/palace';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -86,87 +78,26 @@ const POSTURE: Record<UnitOrder, string> = {
 /**
  * The capital, composited from what the empire has been given.
  *
- * Layered rather than one picture per combination: five modules at three tiers
- * is more combinations than anybody wants to generate, and an image model cannot
- * reliably edit its own last output.
- *
- * Two rules carry the whole thing, and both were learned by getting them wrong:
- *
- * - **Anchor by the meaningful line, never the bounding box.** A piece that
- *   stands on the ground hangs from its foot, an arch with a wall stub down one
- *   side hangs from its middle, and a wing hangs from the flat seam it was drawn
- *   with. `palaceArt.ts` measures the foot off the art itself.
- * - **Sizes are shares of the box, not of each other.** The chassis can shrink
- *   without dragging the wings down with it, and a module grows with its tier.
+ * The arrangement itself is `palaceLayout`, which hangs every piece from a
+ * hand-marked place on the chassis. This only turns its list into pictures.
  */
 function palaceView(state: GameState, city: City): string {
   const player = state.players[city.owner];
   const faction = player.faction;
   const BOX = 210;
-
-  const base = PALACE_BASE[faction];
-  const baseArt = PALACE_ART[`${faction}-base`];
-  const baseW = base.width * BOX;
-  const baseH = (baseW * baseArt.h) / baseArt.w;
-  const footX = BOX / 2;
-  const footY = base.ground * BOX;
-
-  // Wings dock by the seam their art was drawn with; the tower takes the other
-  // corner, so the two never fight for the same side.
-  const wing = wingSide(faction);
-
-  const piece = (name: string, at: PalacePlacement, tier = 2) => {
-    const art = PALACE_ART[name];
-    if (!art) return '';
-    const size = at.size * PALACE_TIER_SCALE[tier - 1] * BOX;
-    const w = at.wide ? size : (size * art.w) / art.h;
-    const h = at.wide ? (size * art.h) / art.w : size;
-    // Only the chassis is flipped; the modules keep the way they were drawn.
-    const flip = !!base.mirror && name.endsWith('-base');
-    const foot = flip ? 1 - art.foot : art.foot;
-    const towards = at.anchor === 'seam' ? wing : at.side === 'tower' ? -wing : 1;
-    const dx = towards * at.dx;
-    // Where along its own width the piece is held: see `PalaceAnchor`. A seam
-    // piece is held by the seam edge itself, which is what docks it flush.
-    const hold =
-      at.anchor === 'mid'
-        ? 0.5
-        : at.anchor === 'foot'
-          ? foot
-          : art.seam === 'right'
-            ? 1
-            : 0;
-    const x = footX + dx * BOX - hold * w;
-    const dy = at.roof !== undefined ? -baseH * at.roof : at.dy * BOX;
-    // `base` and not the bottom of the picture: a tower with stakes planted past
-    // its base logs stands on the logs, and anchoring the lowest stake to the
-    // ground line lifts the whole tower off it.
-    const y = footY + dy - (at.vmid ? h / 2 : h * art.base);
-    return `<img class="palace-piece${flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(name))}" alt=""
-      style="left:${Math.round(x)}px; top:${Math.round(y)}px; width:${Math.round(w)}px" />`;
-  };
-
   const standing = palacePieces(player);
-  const layer = (behind: boolean) =>
-    standing
-      .filter(({ module }) => !!module.behind === behind)
-      .map(({ module, tier }) => piece(palaceArt(faction, module.id, tier), module.at, tier))
-      .join('');
+  const sprites = palaceLayout(faction, standing, BOX)
+    .map(
+      (p) =>
+        `<img class="palace-piece${p.flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(p.art))}" alt=""
+          style="left:${Math.round(p.left)}px; top:${Math.round(p.top)}px; width:${Math.round(p.width)}px" />`,
+    )
+    .join('');
 
   return `
         <div class="panel-title">The Capital</div>
         <div class="panel-body palace-body">
-          <div class="palace" style="width:${BOX}px; height:${BOX}px">
-            ${layer(true)}
-            ${piece(`${faction}-base`, {
-              size: base.width,
-              wide: true,
-              anchor: 'foot',
-              dx: 0,
-              dy: 0,
-            })}
-            ${layer(false)}
-          </div>
+          <div class="palace" style="width:${BOX}px; height:${BOX}px">${sprites}</div>
           <div class="palace-parts">
             ${
               standing.length === 0
