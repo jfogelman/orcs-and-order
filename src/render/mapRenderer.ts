@@ -242,6 +242,54 @@ export class MapRenderer {
    * enemy's roads in the fog be treated like an enemy's cities, and cities are
    * drawn wherever the ground has ever been seen.
    */
+  /**
+   * Garrison posts: a hut with a spear leaning on it. Section 102.
+   *
+   * Drawn rather than blitted, like the roads were before they had art: three
+   * shapes and two colours read clearly at every zoom the map allows, and a
+   * post has to be legible against forest, sand and snow alike.
+   */
+  private drawPosts(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+  ): void {
+    const posts = state.posts;
+    if (!posts) return;
+    const w = state.width;
+    const { x0, y0, x1, y1 } = cam.visibleTileRange();
+    for (let y = Math.max(0, y0); y <= Math.min(state.height - 1, y1); y++) {
+      for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
+        const i = idx(x, y, w);
+        if (posts[i] !== 1 || !viewer.explored[i]) continue;
+        const s = cam.tileToScreen(x, y);
+        const u = size / 8;
+        const left = s.x + u * 2;
+        const top = s.y + u * 3;
+        // The hut: a dark body with a paler roof over it.
+        ctx.fillStyle = '#3b2a18';
+        ctx.fillRect(left, top + u, u * 4, u * 3.5);
+        ctx.fillStyle = '#6b4a26';
+        ctx.beginPath();
+        ctx.moveTo(left - u * 0.5, top + u);
+        ctx.lineTo(left + u * 2, top - u * 0.6);
+        ctx.lineTo(left + u * 4.5, top + u);
+        ctx.closePath();
+        ctx.fill();
+        // The spear leaning on it, which is the whole joke and also the thing
+        // that makes a post read as a post and not as a hut.
+        ctx.strokeStyle = '#d8cbb0';
+        ctx.lineWidth = Math.max(1, u * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(left + u * 4.4, top + u * 4.5);
+        ctx.lineTo(left + u * 5.2, top - u * 0.4);
+        ctx.stroke();
+      }
+    }
+  }
+
   private drawRoads(
     ctx: CanvasRenderingContext2D,
     state: GameState,
@@ -338,6 +386,11 @@ export class MapRenderer {
     // Over the terrain rather than baked into it: the terrain layer is built
     // once per map, and roads are the first thing on the map that changes.
     if (state.roads) this.drawRoads(ctx, state, viewer, cam, size);
+
+    // --- garrison posts --------------------------------------------------
+    // Over the road, because a post beside a crossroads should read as standing
+    // on it rather than under it.
+    if (state.posts) this.drawPosts(ctx, state, viewer, cam, size);
 
     // --- grid ------------------------------------------------------------
     if (overlay.showGrid && size >= 24) {

@@ -158,7 +158,11 @@ export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?
   if (state.cities.some((c) => c.x === unit.x && c.y === unit.y)) {
     return { ok: false, reason: 'A city is not a road.' };
   }
-  if (state.roads?.[i] !== 1) return { ok: false, reason: 'There is nothing here to tear up.' };
+  // Section 102's garrison posts are the second customer this rule was promised.
+  // Anything somebody chose to put here counts.
+  if (state.roads?.[i] !== 1 && state.posts?.[i] !== 1) {
+    return { ok: false, reason: 'There is nothing here to tear up.' };
+  }
   return { ok: true };
 }
 
@@ -172,7 +176,12 @@ export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?
 export function pillage(state: GameState, unit: Unit): boolean {
   if (!canPillage(state, unit).ok) return false;
   const i = idx(unit.x, unit.y, state.width);
-  state.roads![i] = 0;
+  // Whatever is here, in one turn's work: standing on a post beside a road and
+  // being made to choose which to ruin is bookkeeping, not a decision.
+  const hadPost = state.posts?.[i] === 1;
+  const hadRoad = state.roads?.[i] === 1;
+  if (hadRoad) state.roads![i] = 0;
+  if (hadPost) state.posts![i] = 0;
   unit.moves = 0;
   unit.order = 'none';
   const who = state.players[unit.owner];
@@ -181,7 +190,11 @@ export function pillage(state: GameState, unit: Unit): boolean {
     if (p.barbarian || p.visible[i] !== 1) continue;
     log(
       state,
-      `${name} tear up the road.`,
+      hadPost && hadRoad
+        ? `${name} tear up the road and the post with it.`
+        : hadPost
+          ? `${name} tear down the garrison post.`
+          : `${name} tear up the road.`,
       p.id === unit.owner ? 'info' : 'bad',
       p.id,
       undefined,

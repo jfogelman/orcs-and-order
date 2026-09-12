@@ -70,6 +70,7 @@ const POSTURE: Record<UnitOrder, string> = {
   sentry: 'sentry',
   fortified: 'fortified',
   road: 'laying a road',
+  post: 'building a post',
 };
 
 const CITIZEN_FACE = 32;

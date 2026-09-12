@@ -7112,94 +7112,96 @@ Taken as a stopgap, and chosen as one. The better answer is section 102.
 
 ## 102. A garrison you build on a tile
 
-**After roads (section 27), with the other tile improvements.** Jeremy's idea,
-from section 101's decision.
+**Built**, at half the payout it was first built with, and the halving is the
+interesting part.
 
 Section 101 found that a Posting cannot count soldiers standing *in* a city,
-because the game is one unit to a tile, and settled for now on counting the ones
-standing around it. That works, but it is a patch on the rule rather than a
-reason for it. The better version makes the posting a **thing on the map**:
+because the game is one unit to a tile, and settled for counting the ones
+standing around it. That works and is a patch on the rule rather than a reason
+for it. This is the reason: the Posting becomes a **thing on the map**.
 
-- **A small garrison post built on a tile near a city** -- a guardhouse, a
-  watchtower, a hut with a spear leaning on it -- rather than a building inside
-  the walls.
-- **Built by a worker**, the way roads will be. Peon or Peasant today, or a new
-  name for the worker unit if roads bring one in.
-- **Soldiers standing on the post** are what pays out, which gives two soldiers a
-  place to stand that is not the city tile and is not just "nearby".
+### What it is
 
-Why after roads and not before, for the same reasons as section 96's pillaging:
+- **A hut with a spear leaning on it**, built by a worker on any dry tile
+  (`G`, `POSTS.turns` turns), the way a road is built and saved and drawn.
+- **A soldier of the city's owner standing on one** that sits on that city's own
+  land -- the same twenty-one tiles it works -- keeps `POSTS.contentBonus` more
+  citizen content there.
+- **No owner**, for the same reason a road has none. What matters is who is
+  standing on it.
+- **Settlers do not count.** A Peon standing in a guardhouse is a Peon hiding.
+- **Torn down by section 96's pillaging**, which is the third customer that
+  section was promised, and it cost one line to honour.
+- **`POSTS.maxPerCity` a city**, which is where the measurement comes in.
 
-- **Tile improvements have to exist first.** Roads are the nearest candidate and
-  bring the machinery -- something on a tile, built by somebody, that can be
-  present or absent, drawn on the map and saved.
-- **And it wants a worker with orders.** Nothing in the game can currently be
-  told to build on a tile rather than found a city on one.
+The Posting buildings stay in the game but stop paying when posts are on: the
+arms are the two versions of the same idea, which is what this section asked for
+-- "measured against this, not against zero".
 
-It also gives section 96 a third customer. A garrison post is exactly the sort of
-thing a raider should be able to pillage -- something chosen, built, and relied
-on -- which is the test section 96 set for what is worth losing.
+### The first version was a Horde mechanic
 
-When this lands, **revisit section 101's decision**: the around-the-city count
-should probably go, and the Posting either becomes this improvement or stops
-existing as a city building.
+At **two** posts a city -- section 101's number, since the Posting wanted two
+soldiers and two huts can hold them:
 
-### Measured, now that it can be switched on
+| arm | tuned | held-out | pooled |
+|---|---|---|---|
+| posting building | 30-24 | 33-21 | 63-45 (58%) |
+| garrison posts, two | **38-16** | **37-17** | **75-33 (69%)** |
 
-216 games, both seed sets, the same seeds in both arms, none unfinished.
+Paired on the same 108 maps: **19 games flipped to the Horde against 7 the other
+way, p = 0.029**, with orc population +4.9 (p = 0.010) and **orc advances +1.0
+(p = 0.00002)**.
 
-| arm | tuned | held-out | cities orc/hum | population orc/hum |
-|---|---|---|---|---|
-| no posting | 28-26 | 24-30 | 5.83/6.61, 5.13/7.33 | 42.3/45.4, 36.8/52.0 |
-| posting    | 30-24 | 28-26 | 6.20/6.11, 5.57/6.80 | 45.8/43.9, 41.1/46.1 |
+The mechanism was written down in this section before the code existed, quoting
+section 101's probe: **only the Horde ever builds a Posting, because only the
+Horde riots.** Its cities spend nearly twice as long at their content limit and
+more than twice as long in disorder. A calm mechanic priced the same for both
+sides is, in play, paid to one of them -- and posts made that worse than the
+building did, because they are cheaper: three worker-turns against thirty
+shields, an upkeep, and a barracks first.
 
-The no-posting arm is section 94's shipping 28-26 and 24-30 for the fourth
-sweep running -- which it has to be, since until this change a Posting never
-paid out and the shipping game *was* the game without one.
+### Halved, and asked again
 
-**A lean toward the Horde, and not established.** Pooled, 52-56 becomes 58-50:
-the Horde's share goes from 48% to 54%, +2 and +4 on the two sets. The city and
-population columns move with it on both sets -- the Horde up, the Kingdom down --
-which is what a real effect would look like. But paired seed by seed, 14 games
-flip toward the Horde against 8 the other way, and a fair coin splits 22 that
-lopsidedly about three times in ten. Inside section 90's band either way.
+`maxPerCity` is **one**. The post is still what the building could never be --
+somewhere to stand that is not the gate -- and worth half of what it was.
 
-Pace and endings barely move: 272 and 271 turns become 270 and 274, conquest is
-unchanged, and dominance slips 11 to 8 on the held-out set only.
+| arm | tuned | held-out | pooled |
+|---|---|---|---|
+| posting building | 30-24 | 33-21 | 63-45 (58%) |
+| posts, one a city | 36-17-1 | 34-20 | 70-37 (65%) |
 
-**Why it leans that way is established, and it is the interesting part.** The
-same six probe games, split by side:
+Paired: **14 to the Horde against 7, p = 0.19** -- no longer a finding, and the
+same direction. Cities +0.23 (p = 0.09) and population +1.75 (p = 0.10) are both
+short of saying anything. **Advances are not**: orc +0.50, p = 0.002, which is
+the one column that survived the halving, and it is the one that says the Horde's
+cities are working rather than rioting.
 
-| | Horde | Kingdom |
-|---|---|---|
-| cities that built a Posting | 11 | **0** |
-| city-turns it was paying out | 1,203 | 0 |
-| city-turns at or over the content limit | 22.7% | 12.1% |
-| city-turns in disorder | 13.4% | 5.9% |
+**Shipped at one**, on the reading that this matches section 101's baseline on
+the only column that decides games and keeps the rule that section 102 was for.
+The lean is small, unestablished, and pointed the same way as everything else in
+this arc -- which is section 109's problem now, not this one's.
 
-**Only the Horde ever builds one.** Its cities spend nearly twice as long at
-their limit and more than twice as long rioting -- section 85's finding, still
-true -- and the AI only looks for a calming building when a city is at its
-limit, where a Posting is the cheapest thing on the list. The Kingdom rarely
-gets there, so it rarely asks.
+### What it cost to build, which is worth knowing
 
-So a mechanic available to both sides at the same price is, in AI play, a Horde
-mechanic, because only the Horde has the problem it solves. That is in character
--- a Horde that keeps order by having two orcs stand about looking at everybody
-is the building's own blurb -- and it is the same shape as section 23's warning:
-a mechanic denominated in X favours whoever needs X most.
+Nothing about the AI was easy in this arc, and this was the easy one: the AI
+builds a post only for a city at or one short of its content limit, only after
+expansion is done (section 28's gate, the same one roads sit behind), and stands
+exactly one soldier on each. Section 108's lesson applied before it had to be
+learned twice. A probe over six games: four to twenty posts built, four to
+fifteen manned.
 
-**Not changed on this evidence.** The lean is small, unestablished, and pointed
-at the side section 82 measured losing a third of its games. Two things worth
-knowing before any tuning:
+### Two things noted rather than fixed
 
-- **It stacks with raiders, unmeasured.** Section 100 measured raiders leaning
-  toward the Horde too, 48% to 56% -- with Postings still unreachable. Both are in
-  the game now, and the games being played have both. A raiders-on arm against
-  this would say whether the two leans add up.
-- **Section 102 should be measured against this, not against zero.** When the
-  garrison post replaces the around-the-city count, this table is the baseline
-  it has to beat or match.
+- **A post on land shared by two cities calms both**, for one soldier. It reads
+  right -- a garrison between two towns watches both -- and it is a real
+  generosity. If posts are ever worth more than a content citizen, this is where
+  to look first.
+- **The Posting buildings are switched off rather than deleted.**
+  `POSTING.enabled` is now false by default: they pay nothing and are no longer
+  offered, since a building in the list that can never do anything is a trap.
+  They stay defined so a save carrying one still loads, and so section 101's
+  tests can still pin the rule they measured. Deleting them for good is a
+  save-compatibility question rather than a design one.
 
 ## 103. The 46, explained: a control that played different maps
 
@@ -7946,3 +7948,44 @@ all this: the routes are real -- two more links a side, 96 games in 108 ending
 with one that pays -- and the gold changes nothing, 98 of 108 games keeping the
 same winner at p = 0.75. Written up under section 106, along with what that
 means for what the rule is for.
+
+## 109. The Horde's drift, across the whole roads arc
+
+**Queued, and the reason nothing in sections 96 to 108 was tuned for it.**
+
+Every measurement in the roads arc leaned the same way, and none of them leaned
+far enough on its own to act on. Together they are not nothing:
+
+| section | change | pooled | Horde share | paired sign test |
+|---|---|---|---|---|
+| 101 (baseline) | Postings, no roads | 58-50 | 54% | -- |
+| 107 | the AI lays roads | 67-41 | 62% | 20 to 11, p = 0.15 |
+| 106 | trade routes | -- | unchanged | 6 to 4, p = 0.75 |
+| 108 | guarded treasuries | 63-45 | 58% | 12 to 17, p = 0.46 |
+| 96 | pillaging (raiders on) | -- | unchanged | 8 to 2, p = 0.11 |
+| 102 | garrison posts, one a city | 70-37 | 65% | 14 to 7, p = 0.19 |
+
+Read one at a time, every one of those is "not established" and each was shipped
+on that reading, which was right each time. Read together, the shipping game has
+gone from **54% to 65%** for the Horde over one arc of work, and the only change
+in the list that moved a column with a p below 0.01 was section 102's advances.
+
+Three things worth saying before anybody tunes anything:
+
+- **The leans have a common cause, and it is not roads.** Section 107's roads
+  helped the Horde because it reaches its target city count sooner and starts
+  digging sooner. Section 102's posts helped the Horde because only the Horde
+  riots. Both are the same shape as section 23's warning: **a mechanic
+  denominated in X favours whoever needs X most**, and this arc added four
+  mechanics denominated in worker-turns and calm.
+- **A drift of eleven points is worth one deliberate measurement**, not six
+  retunings. The arm to run is the whole arc against itself: section 101's
+  settings against today's, on both seed sets, which is one sweep and answers
+  whether the pooled figure is real.
+- **And if it is, the dial is not any of these rules.** They are each defensible
+  on their own terms. `PERSONALITIES.orc.targetCities` and section 90's band are
+  where a balance change belongs, because the question is how good the Horde
+  should be and not whether a road should be worth a third of a move.
+
+Worth doing before the next mechanic rather than after, since another mechanic
+denominated in the same things would compound it.

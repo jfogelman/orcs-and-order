@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cityGoldBonus, postedAround } from '../src/sim/city';
 import { tryStep } from '../src/sim/movement';
 import { BUILDINGS } from '../src/model/buildings';
@@ -6,6 +6,7 @@ import type { City, GameState } from '../src/model/types';
 import { techsForFaction } from '../src/model/techs';
 import {
   CALM,
+  POSTING,
   assignWorkers,
   buildOptions,
   contentLimit,
@@ -16,6 +17,19 @@ import {
 import { unlockedBuildings } from '../src/sim/research';
 import { defenseStrength } from '../src/sim/combat';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
+
+/**
+ * Section 102 turned the building off for good -- it was replaced by a hut on a
+ * tile -- so these tests switch it back on. The rule they pin is still in the
+ * game behind the lever, and it is the baseline section 102 had to beat.
+ */
+const savedPosting = { ...POSTING };
+beforeEach(() => {
+  POSTING.enabled = true;
+});
+afterEach(() => {
+  Object.assign(POSTING, savedPosting);
+});
 
 function board(): GameState {
   const state = createGame({ seed: 20260910, width: 24, height: 18 });

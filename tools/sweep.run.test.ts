@@ -5,6 +5,7 @@ import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
+import { POSTS } from '../src/sim/posts';
 import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -47,35 +48,39 @@ const control = () => {
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
   AI_TUNING.guardTheGold = true;
-  POSTING.enabled = true;
+  POSTING.enabled = false;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
   SPECIALS.ruleTiles = true;
   TRADE.enabled = true;
   PILLAGE.enabled = true;
   AI_TUNING.pillage = true;
-  // Section 96 is measured in the game raiders are in, which is where tearing up
-  // a road is supposed to hurt. Section 104 measured that game; this is the same
-  // one with something out there to ruin.
-  NEW_GAME.barbarians = true;
+  POSTS.enabled = true;
+  AI_TUNING.buildPosts = true;
+  // Back to the quiet game for section 102: the baseline it has to beat is
+  // section 101's Posting table, which was measured without raiders.
+  NEW_GAME.barbarians = false;
 };
 
 const ARMS: Arm[] = [
-  // Section 96: a soldier standing on a road can tear it up, and raiders do it
-  // on their way past. It waited for section 27 to put something on a tile worth
-  // ruining and for section 106 to make it worth money.
+  // Section 102: the Posting stops being a building inside the walls and becomes
+  // a hut on a tile that a soldier stands on. A replacement, so the arms are the
+  // two versions of the same idea rather than one of them against nothing.
   //
-  // Both arms play the raiders game, so neither reproduces an earlier arm: the
-  // nearest comparison is section 104, which measured the same game before there
-  // was anything to pillage.
+  // Second pass. At two posts a city this was measured as a Horde mechanic --
+  // 19 games in 108 flipping their way against 7, p = 0.03 -- for the reason
+  // section 102 predicted before it was built: only the Horde riots, so only the
+  // Horde needs calm. Halved, and asked again on the same seeds.
   {
-    label: 'no pillaging',
+    label: 'posting building',
     apply: () => {
       control();
-      PILLAGE.enabled = false;
+      POSTING.enabled = true;
+      POSTS.enabled = false;
+      AI_TUNING.buildPosts = false;
     },
   },
-  { label: 'pillaging', apply: control },
+  { label: 'posts, one a city', apply: control },
 ];
 
 /**

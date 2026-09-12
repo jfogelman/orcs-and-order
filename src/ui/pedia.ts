@@ -14,6 +14,7 @@ import { controlsMarkup } from './controls';
 import { BARBARIANS, RAIDER } from '../sim/barbarians';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
+import { POSTS } from '../sim/posts';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -376,6 +377,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           road tile to the next costs <strong>a third of a move</strong>, so a worker that has joined
           two cities has shortened every march between them. A city counts as a road already, and a
           road does not know whose it is &mdash; the other lot may use yours.
+        </p>
+        <p class="flavor">
+          <strong>Garrison posts.</strong> A worker can put up a post on any dry tile (<kbd>G</kbd>,
+          ${POSTS.turns} turns): a hut with a spear leaning on it. A soldier of yours standing on one
+          that sits on a city's own land keeps ${POSTS.contentBonus} more citizen content there, up
+          to ${POSTS.maxPerCity} posts a city. It is somewhere to stand that is not the city gate,
+          which matters because only one unit fits on a tile &mdash; two soldiers watching a city now
+          need two huts, which is what the old Posting always meant and could never arrange.
         </p>
         <p class="flavor">
           <strong>Pillaging.</strong> Any soldier standing on a road &mdash; yours or theirs, since a

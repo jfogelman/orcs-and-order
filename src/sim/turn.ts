@@ -19,6 +19,7 @@ import { contenders, log, playerCities, playerUnits, recomputeVisibility } from 
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
+import { advancePostWork } from './posts';
 import { updateTradeLinks } from './trade';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
@@ -108,6 +109,17 @@ function refreshUnits(state: GameState, player: Player): void {
           unit.x,
           unit.y,
         ]);
+      }
+    } else if (unit.order === 'post') {
+      if (advancePostWork(state, unit) === 'done') {
+        log(
+          state,
+          `${unitType(unit.type).name} finishes a garrison post.`,
+          'good',
+          player.id,
+          undefined,
+          [unit.x, unit.y],
+        );
       }
     } else if (unit.work !== undefined) {
       delete unit.work;

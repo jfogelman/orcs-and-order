@@ -2,6 +2,7 @@ import { flagsOf } from './sim/rules';
 import './style.css';
 
 import { runAiTurn } from './ai/ai';
+import { POSTS, canBuildPost, startPost } from './sim/posts';
 import {
   canBuildRoad,
   canLayRoads,
@@ -550,6 +551,20 @@ class App {
     this.selectNextIdle();
   }
 
+  /** Put up a garrison post where the worker stands. Section 102. */
+  private orderPost(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const check = canBuildPost(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    delete unit.roadTo;
+    startPost(this.state, unit);
+    this.selectNextIdle();
+  }
+
   /**
    * Tear up the road underfoot. Section 96.
    *
@@ -616,7 +631,7 @@ class App {
     } else {
       audio.play('move');
       this.playLogCues();
-      if (unit.moves <= 0 || unit.order === 'road') this.selectNextIdle();
+      if (unit.moves <= 0 || unit.order === 'road' || unit.order === 'post') this.selectNextIdle();
     }
     this.refreshOverlays();
     this.refreshSidebar();
@@ -1488,6 +1503,12 @@ class App {
           else this.orderRoad();
           break;
         }
+        // G puts up a garrison post, on the units that can build one. No
+        // ability uses G, and no soldier can build one anyway.
+        if (pressed === 'g' && canBuildPost(this.state, unit).ok) {
+          this.orderPost();
+          break;
+        }
         // P tears up a road. Free on every unit that can do it: no soldier has an
         // ability on P, and a worker cannot pillage at all.
         if (pressed === 'p' && canPillage(this.state, unit).ok) {
@@ -1550,6 +1571,7 @@ class App {
       const canRoad = canBuildRoad(this.state, unit).ok;
       const canRoadTo = unit.owner === this.viewerId && canLayRoads(this.state, unit).ok;
       const canWreck = unit.owner === this.viewerId && canPillage(this.state, unit).ok;
+      const canPost = unit.owner === this.viewerId && canBuildPost(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -1613,8 +1635,10 @@ class App {
               : ''
           }
           ${
-            unit.order === 'road'
-              ? `<div class="chip">laying a road &middot; ${unit.work ?? '?'} ${unit.work === 1 ? 'turn' : 'turns'} left</div>`
+            unit.order === 'road' || unit.order === 'post'
+              ? `<div class="chip">${
+                  unit.order === 'road' ? 'laying a road' : 'building a post'
+                } &middot; ${unit.work ?? '?'} ${unit.work === 1 ? 'turn' : 'turns'} left</div>`
               : unit.order !== 'none'
                 ? `<div class="chip">${unit.order}</div>`
                 : ''
@@ -1647,6 +1671,11 @@ class App {
           ${
             canRoadTo
               ? `<button class="small${this.roadArmed ? ' armed' : ''}" data-act="roadto">Road To&hellip; (Shift+R)</button>`
+              : ''
+          }
+          ${
+            canPost
+              ? `<button class="small" data-act="post" title="A hut with a spear leaning on it. A soldier standing here calms the nearest city of yours.">Build Post (G) &middot; ${POSTS.turns} turns</button>`
               : ''
           }
           ${
@@ -1714,6 +1743,9 @@ class App {
               break;
             case 'pillage':
               this.orderPillage();
+              break;
+            case 'post':
+              this.orderPost();
               break;
             case 'halt':
               this.orderHalt();

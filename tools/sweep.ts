@@ -6,6 +6,7 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import type { GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
+import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
 import { capitalOf } from '../src/sim/city';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
@@ -74,6 +75,7 @@ export const LEVERS: Record<string, object> = {
   REGEN,
   RESETTLE,
   PILLAGE,
+  POSTS,
   ROADS,
   TRADE,
   RUIN,
