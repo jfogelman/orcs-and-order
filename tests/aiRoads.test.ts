@@ -62,6 +62,25 @@ describe('the AI laying roads', () => {
     expect(peon.roadTo).toEqual({ x: 3, y: 5 });
   });
 
+  it('starts beside the gate when a garrison is standing in it', () => {
+    // Section 108 keeps a soldier in every city, and one unit to a tile means
+    // the crew cannot walk into the gate any more. A road to the doorstep joins
+    // the city all the same.
+    const state = empire(target);
+    const peon = spawnUnit(state, 0, 'peon', 10, 5, false);
+
+    // A couple of turns, because the crew has to walk the last tile or two and
+    // an escort may be shuffling about in front of it. Movement is handed back
+    // by hand, since this drives the AI without the rest of the turn.
+    for (let turn = 0; turn < 3; turn++) {
+      runAiTurn(state, 0);
+      for (const u of state.units) u.moves = 1;
+    }
+
+    expect(peon.roadTo).toEqual({ x: 3, y: 5 });
+    expect(Math.max(Math.abs(peon.x - 8), Math.abs(peon.y - 5))).toBeLessThanOrEqual(1);
+  });
+
   it('digs nothing while there are still cities to found', () => {
     const state = empire(3);
     const peon = spawnUnit(state, 0, 'peon', 9, 6, false);

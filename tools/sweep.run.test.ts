@@ -45,6 +45,7 @@ const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
+  AI_TUNING.holdCities = true;
   POSTING.enabled = true;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
@@ -54,12 +55,29 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 106: a road between two cities that both have something to sell pays
-  // gold a turn. An economy change, so it is measured on its own against the same
-  // game with the gold switched off -- which is section 107's arm, and should
-  // reproduce its 35-19 and 32-22 exactly.
-  { label: 'no trade routes', apply: () => { control(); TRADE.enabled = false; } },
-  { label: 'trade routes', apply: control },
+  // Section 108: the AI keeps a soldier standing in its cities, so the buildings
+  // that pay nothing without one finally pay. Three arms, because this also
+  // re-asks section 106's question -- trade routes measured at nothing there for
+  // exactly this reason, so the third arm is the first honest measurement of
+  // them.
+  //
+  // The first arm should reproduce section 106's shipped numbers, 36-17-1 and
+  // 32-21-1, since keepers are the only thing added since.
+  {
+    label: 'no keepers',
+    apply: () => {
+      control();
+      AI_TUNING.holdCities = false;
+    },
+  },
+  {
+    label: 'keepers, no trade',
+    apply: () => {
+      control();
+      TRADE.enabled = false;
+    },
+  },
+  { label: 'keepers', apply: control },
 ];
 
 /**

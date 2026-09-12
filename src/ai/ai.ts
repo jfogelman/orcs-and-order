@@ -14,6 +14,7 @@ import {
   POSTING,
   contentLimit,
   garrisonNeededBy,
+  garrisonSize,
   soldiersFor,
   foundCity,
   rushBlocked,
@@ -703,25 +704,61 @@ function takeRoadJob(state: GameState, unit: Unit): boolean {
   const seat = capitalOf(state, unit.owner);
   if (!seat) return false;
   const joined = connectedByRoad(state, unit.owner, seat.x, seat.y);
-  const claimed = new Set(
-    playerUnits(state, unit.owner)
-      .filter((u) => u.id !== unit.id && u.goto)
-      .map((u) => idx(u.goto!.x, u.goto!.y, state.width)),
-  );
+  // Other road crews only. This used to be every unit of ours with a goto, which
+  // quietly included a soldier marching to hold that same city -- and since
+  // section 108 a claim covers the doorstep too, so counting soldiers would have
+  // made half the empire look taken.
+  const claimed = playerUnits(state, unit.owner)
+    .filter((u) => u.id !== unit.id && u.goto && unitType(u.type).settler)
+    .map((u) => u.goto!);
   const open = playerCities(state, unit.owner).filter((c) => {
-    const i = idx(c.x, c.y, state.width);
-    return !joined.has(i) && !claimed.has(i);
+    if (joined.has(idx(c.x, c.y, state.width))) return false;
+    // Claimed by somebody walking to the city or to a tile beside it: since
+    // section 108 a crew often cannot stand in the gate, so a claim is a claim
+    // on the neighbourhood.
+    return !claimed.some((g) => distance(g.x, g.y, c.x, c.y) <= 1);
   });
   if (open.length === 0) return false;
   const target = open.reduce((a, b) =>
     distance(unit.x, unit.y, a.x, a.y) <= distance(unit.x, unit.y, b.x, b.y) ? a : b,
   );
-  if (!(unit.x === target.x && unit.y === target.y)) {
-    if (!routeTo(state, unit, target.x, target.y)) return false;
-    moveToward(state, unit, target.x, target.y);
-    if (!(unit.x === target.x && unit.y === target.y)) return true;
+  const spot = roadStart(state, unit, target);
+  if (!spot) return false;
+  if (!(unit.x === spot.x && unit.y === spot.y)) {
+    if (!routeTo(state, unit, spot.x, spot.y)) return false;
+    moveToward(state, unit, spot.x, spot.y);
+    if (!(unit.x === spot.x && unit.y === spot.y)) return true;
   }
   return startRoadTo(state, unit, seat.x, seat.y).ok;
+}
+
+/**
+ * Where a road crew stands to start a job at this city.
+ *
+ * The gate itself when it is free, and otherwise the nearest open tile beside
+ * it. Since section 108 a soldier stands in every city and one unit to a tile
+ * means the crew can no longer walk in -- and it does not need to. A road that
+ * ends beside a city is joined to it: `connectedByRoad` counts a city tile as
+ * road and walks diagonals, so a road to the doorstep is a road to the door.
+ */
+function roadStart(state: GameState, unit: Unit, city: City): { x: number; y: number } | null {
+  const free = (x: number, y: number) =>
+    x >= 0 &&
+    y >= 0 &&
+    x < state.width &&
+    y < state.height &&
+    !TERRAIN[state.terrain[idx(x, y, state.width)]].water &&
+    !state.units.some((u) => u.x === x && u.y === y && u.id !== unit.id);
+  if (free(city.x, city.y)) return { x: city.x, y: city.y };
+  const around = DIRS8.map(([dx, dy]) => ({ x: city.x + dx, y: city.y + dy }))
+    .filter((t) => free(t.x, t.y))
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) ||
+        a.y - b.y ||
+        a.x - b.x,
+    );
+  return around[0] ?? null;
 }
 
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
@@ -1058,10 +1095,41 @@ function actSoldier(
   if (escortDuty(state, unit)) return;
 
   // Hold undefended home cities.
+  //
+  // Section 108. Three things were wrong with this, and together they meant the
+  // AI's cities were empty most of the time while its buildings waited for
+  // somebody to stand in them:
+  //
+  // - **Nothing ever kept a unit there.** The "already standing on it" branch
+  //   below could not fire: a unit on the city tile made the city look held, so
+  //   the city was never the one picked. A garrison walked in one turn and
+  //   marched back out to the war the next.
+  // - **The first bare city, not the nearest.** A city nine tiles off was given
+  //   up on and the ones behind it in the list were never looked at, so a
+  //   soldier could stand next to an empty city and march past it.
+  // - **"Bare" meant no unit at all.** A Peon in the gate made the city look
+  //   held while the treasury beside it went on paying nothing -- settlers are
+  //   not a garrison, which is the rule the building itself asks.
   const ownCities = playerCities(state, unit.owner);
-  const bare = ownCities.find(
-    (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
-  );
+  if (AI_TUNING.holdCities) {
+    const here = ownCities.find((c) => c.x === unit.x && c.y === unit.y);
+    // The only soldier in one of our own cities is the garrison, and stays. A
+    // second one passing through is free to carry on to the war.
+    if (here && garrisonSize(state, here) <= 1) {
+      unit.order = 'fortified';
+      return;
+    }
+  }
+  const bare = AI_TUNING.holdCities
+    ? ownCities
+        .filter((c) => garrisonSize(state, c) === 0)
+        .sort(
+          (a, b) =>
+            distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) || a.id - b.id,
+        )[0]
+    : ownCities.find(
+        (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
+      );
   if (bare) {
     if (unit.x === bare.x && unit.y === bare.y) {
       unit.order = 'fortified';
@@ -1203,6 +1271,17 @@ export const AI_TUNING = {
   buildRoads: true,
   /** Cities per road worker the AI keeps once expansion is done. */
   citiesPerRoadWorker: 4,
+  /**
+   * Whether a soldier holds a city rather than passing through it.
+   *
+   * Section 108: with this off, the AI walks a unit toward an empty city and
+   * then marches it out again the next turn, so its treasuries and markets --
+   * which pay nothing without somebody standing in the city -- earn nothing for
+   * the whole game. A lever, because keeping one soldier at home in every city
+   * is soldiers off the front, and that is a balance change whatever it does to
+   * the books.
+   */
+  holdCities: true,
 };
 
 /**

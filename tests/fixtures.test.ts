@@ -89,10 +89,15 @@ function garrison(state: GameState, city: City): Unit {
  * player's own file during one session for want of these.
  *
  * One game, two snapshots, because playing it twice would cost twice as much
- * and give the same answer. Seed 22 was picked by scouting: most games end in
+ * and give the same answer. The seed is picked by scouting: most games end in
  * conquest well before the deadline, and this one has both sides alive at 299.
+ *
+ * It has to be re-scouted whenever the AI changes, which is the price of a real
+ * board rather than a built one. Seed 22 served until section 108 put a garrison
+ * in every city; that game now ends in conquest at turn 205, and seed 25 is the
+ * nearest one that still runs to the deadline with both sides standing.
  */
-const LATE_SEED = 22;
+const LATE_SEED = 25;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];
