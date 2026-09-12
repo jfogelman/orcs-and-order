@@ -11,6 +11,7 @@ import {
   updateTradeLinks,
 } from '../src/sim/trade';
 import { beginPlayerTurn } from '../src/sim/turn';
+import { empireIncome } from '../src/ui/hordeReport';
 
 /**
  * Section 106: a road between two cities that both have something to sell pays
@@ -94,6 +95,17 @@ describe('trade routes', () => {
     // Identical empires on the same seed, so the only difference between them is
     // the road. Two gold, exactly what the link says.
     expect(gained(withRoad.state) - gained(without.state)).toBe(2);
+  });
+
+  it('is counted in the empire report, not only in the treasury', () => {
+    const withRoad = empire();
+    road(withRoad.state, 4, 12);
+    const without = empire();
+    // Two identical empires, one with the road. The report has to show the
+    // difference, or it quotes a number the treasury then beats every turn.
+    expect(
+      empireIncome(withRoad.state, 0).gold - empireIncome(without.state, 0).gold,
+    ).toBe(2);
   });
 
   it('pays nothing across a gap in the road', () => {
