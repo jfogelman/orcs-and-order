@@ -13,6 +13,7 @@ import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, RAIDER } from '../sim/barbarians';
 import { ROADS } from '../sim/roads';
+import { TRADE } from '../sim/trade';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -188,6 +189,9 @@ function buildingEffects(b: BuildingDef): string[] {
     );
   }
   if (b.goldBonus) out.push(`+${pct(b.goldBonus)} gold from this city`);
+  // Section 106: a gold building is also one end of a trade route, which is
+  // worth knowing while deciding where the second one goes.
+  if (b.goldBonus) out.push('anchors a trade route: a road to another city with one pays gold');
   if (b.scienceBonus) out.push(`+${pct(b.scienceBonus)} research from this city`);
   if (b.contentBonus) {
     out.push(`${b.contentBonus} more content citizens, holding off disorder`);
@@ -372,6 +376,15 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           road tile to the next costs <strong>a third of a move</strong>, so a worker that has joined
           two cities has shortened every march between them. A city counts as a road already, and a
           road does not know whose it is &mdash; the other lot may use yours.
+        </p>
+        <p class="flavor">
+          <strong>Trade routes.</strong> A road joining two of your own cities, each with a
+          <strong>Goblin Treasury</strong> or <strong>Simple Market</strong> (or one of the larger
+          buildings that stand on those), is a <em>trade route</em>: gold every turn, and the further
+          apart the two cities the more it pays, measured straight and scaled to the size of the map.
+          A city is paid for its best ${TRADE.maxLinksPerCity}. Both ends must actually be earning
+          &mdash; those buildings pay nothing with nobody standing in the city &mdash; and the city
+          view lists every route a city has, what it pays, and whether it is paying at all.
         </p>
         <div class="pedia-rows">${terrainList}</div>
       </div>

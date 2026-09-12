@@ -1,4 +1,5 @@
 import { idx } from '../engine/grid';
+import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
 import type {
@@ -280,6 +281,12 @@ export function openCityPanel(
     // for a Posting, the city tile for a treasury.
     return def ? garrisonNeededBy(def) > soldiersFor(state, city, def) : false;
   });
+  // Section 106: roads that join this city to another that has something to
+  // sell. Listed even when there are none, as long as this city could have one,
+  // because an unlinked treasury is money left in the ground and nothing else
+  // in the interface says so.
+  const sells = goldBuildingIn(state, city);
+  const routes = linksForCity(state, city);
   const netShields = yields.shields - upkeep;
   const eta = turnsLeft(city, netShields);
 
@@ -412,6 +419,27 @@ export function openCityPanel(
                   .join('')
           }
         </div>
+        ${
+          sells || routes.length > 0
+            ? `<div class="panel-title">Trade Routes</div>
+        <div class="panel-body">
+          ${
+            routes.length === 0
+              ? '<span class="muted">Nothing joined yet. A road to another city that also has something to sell pays gold every turn, and the longer the road the more it pays.</span>'
+              : routes
+                  .map((l) => {
+                    const far = otherEnd(state, l, city.id);
+                    return `<div class="stat-row"><span class="label">${escapeHtml(far?.name ?? 'somewhere')}</span><span class="value">${l.gold}g/turn <span class="muted">&middot; ${l.distance} tiles</span>${
+                      l.paying
+                        ? ''
+                        : ' <span class="k-bad">&middot; paying nothing while a gold building stands unguarded</span>'
+                    }</span></div>`;
+                  })
+                  .join('')
+          }
+        </div>`
+            : ''
+        }
       </div>
 
       <div>
