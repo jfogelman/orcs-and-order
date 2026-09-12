@@ -6527,35 +6527,113 @@ Off by default, so nothing that has been measured is disturbed. What a game with
 raiders in it plays like is a question for a person, and what it does to the
 faction balance is a sweep arm for when somebody wants the answer.
 
-## 96. Pillaging, once there is anything on a tile to pillage
+## 96. Pillaging, now that there is something on a tile to ruin
 
-Raiders in section 95 sack **cities** -- a building, or people when there are no
-buildings left. What they cannot do is the other half of what a raiding band is
-for in this kind of game: ruin the ground on the way past.
+**Built.** This section spent a long time saying why it could not be built:
+raiders sacked cities, and out on the map there was nothing to ruin -- terrain
+and the odd special, and a special is generated rather than chosen, so losing one
+would be bad luck rather than a consequence of leaving a border unwatched.
+Section 27 put roads on the ground and section 106 made them worth money, so
+there is now something out there that somebody decided to build.
 
-**There is nothing out there to ruin.** A tile carries terrain, and sometimes a
-special, and that is the whole of it. No roads, no irrigation, no mines, no
-improvements of any kind -- section 27's roads are drafted and unbuilt, and
-without them a raider crossing your best farmland does it no harm at all.
+### The rule
 
-So this is blocked on the same thing twice over:
+- **A soldier standing on a road can tear it up**, and it costs the rest of that
+  unit's turn. The same price as laying one, from the other direction.
+- **Workers build; soldiers wreck.** A Peon undoing its own morning's work would
+  be a different feature -- Civ2 let settlers clear their own improvements -- and
+  the point of this one is what somebody else does to you.
+- **A city is not a road.** It counts as one for movement and for trade, and
+  wrecking a city is sacking it, which is section 95's rule and stays there.
+- **Anybody's road.** A road does not know whose it is, so neither does this.
+- **Behind `PILLAGE.enabled`,** with `AI_TUNING.pillage` beside it.
 
-- **Tile improvements have to exist first.** Section 27 (roads) is the nearest
-  candidate and would bring the machinery -- something on a tile, built by
-  somebody, that can be present or absent.
-- **And a special is not a substitute.** Land specials are generated, not built.
-  A raider destroying A Very Deep Hole would be destroying a fact about the
-  world rather than somebody's work, and losing it would be bad luck rather
-  than a consequence of not garrisoning a border. Pillaging is only interesting
-  when what is lost was *chosen*.
+### Being told about it
 
-**What it would want when it lands:** a raider spending its turn on an improved
-tile removes the improvement and the owner is told where. That is the entire
-mechanic; the interest is in it happening to ground you were relying on.
+Two notices, and the quiet one matters less than it looks:
 
-Worth doing after roads and not before, and worth noting now so that whoever
-builds roads knows there is a second customer for them.
+- **Everybody who can see the tile is told**, and the line points at it. Which
+  means that a raider tearing up a road in the fog says nothing to anybody --
+  correct, and worth knowing: roads are lost silently out where you are not
+  looking.
+- **A trade route says its own name.** Section 106's bookkeeping already
+  announces a link that has gone, by both cities, the turn it breaks. That is the
+  notice that matters, because it is the one attached to money.
 
+### Who does it without being asked
+
+- **Raiders, on their way past**, but only with nothing in reach worth hitting. A
+  band that stopped to dig beside a city would be doing the empire a favour, and
+  one that tore up every tile it crossed would never arrive anywhere.
+- **The empire AI, on enemy ground only** -- ours is ours -- and after every
+  branch that might fight, since a turn spent wrecking is a turn not spent
+  fighting.
+
+### What it measured
+
+216 games in the raiders game, which is where an unwatched border is supposed to
+cost something. Section 104 measured that same game before there was anything to
+pillage.
+
+| arm | set | orc-hum | cities | roads | routes | route gold |
+|---|---|---|---|---|---|---|
+| no pillaging | tuned | 29-25 | 6.46/7.52 | 45 | 1.7/2.4 | 1.7/2.4 |
+| no pillaging | held-out | 27-27 | 6.28/7.39 | 48 | 2.1/2.6 | 2.1/2.7 |
+| pillaging | tuned | 33-20-1 | 6.78/7.11 | 44 | 2.0/2.4 | 2.1/2.4 |
+| pillaging | held-out | 29-25 | 6.15/7.26 | 45 | 1.9/2.4 | 1.9/2.4 |
+
+Paired over the same 108 maps, **one column moves**: road tiles, **-1.85**
+(p = 0.004), down in 44 games and up in 20. Everything else is flat -- cities,
+population, captures, length, the joined share, route gold, cities sacked, all
+p > 0.07 -- and **97 of 108 games ended with the same winner**. Eight flipped to
+the Horde and two to the Kingdom, which is a lean and not a finding: p = 0.11.
+
+Two oddities worth recording rather than smoothing over:
+
+- **Fights and sackings were identical in all 108 pairs.** Not nearly identical:
+  the same number in every game. Whatever pillaging changes, it is not who meets
+  whom.
+- **The road count went *up* in 20 games.** Two games that have diverged are two
+  different games, and a raider that stops to dig is a raider that arrives
+  somewhere a turn later; the count at the end is not only a count of what was
+  torn up.
+
+### Who actually used it, which is the part section 91 taught us to check
+
+Counted off the board rather than the log -- a raider tearing up a road nobody
+can see writes no line -- over six full games:
+
+| seed | roads at their peak | torn up |
+|---|---|---|
+| 1 | 47 | 0 |
+| 7919 | 43 | 2 |
+| 15838 | 66 | 2 |
+| 1000003 | 35 | 4 |
+| 7654321 | 40 | 4 |
+| 8000011 | 57 | 1 |
+
+About two tiles a game, and **all of it raiders**: not one empire pillage was
+logged in those six games, and an empire tearing up a road always writes a line
+to itself. The opportunistic branch is real -- it is unit-tested, and it fires
+when a soldier is standing on their road with nothing to hit -- but in a played
+game an invader is nearly always either fighting or walking toward something to
+fight.
+
+So, plainly: **this is a raider's tool and a player's tool.** For the player it is
+a real one, because a player can send a unit to cut a road on purpose, which is
+the thing the AI never decides to do.
+
+### What would make it matter more
+
+Not to be done now, and worth writing down while the measurement is fresh:
+
+- **A deliberate raid.** The empire AI would need to *choose* to cut a road --
+  pick the link that pays the enemy most, send somebody, and accept the turns it
+  costs. That is a plan, not a branch, and it wants its own section.
+- **A bigger prize.** Section 106's `goldAtFullSpan` is six, which is deliberately
+  small; cutting a route worth two gold a turn is not worth a soldier's week. If
+  roads are ever made to matter economically, this becomes worth doing on its own
+  and should be re-measured then -- the two levers belong in the same arm.
 
 ## 97. Turns left, and the raiders get their faces
 
