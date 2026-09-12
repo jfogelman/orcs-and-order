@@ -1,6 +1,7 @@
 import { flagsOf, hasFlag } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
+import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
 import { ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
@@ -14,7 +15,9 @@ import {
   POSTING,
   contentLimit,
   garrisonNeededBy,
+  garrisonSize,
   soldiersFor,
+  workingBuildings,
   foundCity,
   rushBlocked,
   rushBuy,
@@ -703,25 +706,76 @@ function takeRoadJob(state: GameState, unit: Unit): boolean {
   const seat = capitalOf(state, unit.owner);
   if (!seat) return false;
   const joined = connectedByRoad(state, unit.owner, seat.x, seat.y);
-  const claimed = new Set(
-    playerUnits(state, unit.owner)
-      .filter((u) => u.id !== unit.id && u.goto)
-      .map((u) => idx(u.goto!.x, u.goto!.y, state.width)),
-  );
+  // Other road crews only. This used to be every unit of ours with a goto, which
+  // quietly included a soldier marching to hold that same city -- and since
+  // section 108 a claim covers the doorstep too, so counting soldiers would have
+  // made half the empire look taken.
+  const claimed = playerUnits(state, unit.owner)
+    .filter((u) => u.id !== unit.id && u.goto && unitType(u.type).settler)
+    .map((u) => u.goto!);
   const open = playerCities(state, unit.owner).filter((c) => {
-    const i = idx(c.x, c.y, state.width);
-    return !joined.has(i) && !claimed.has(i);
+    if (joined.has(idx(c.x, c.y, state.width))) return false;
+    // Claimed by somebody walking to the city or to a tile beside it: since
+    // section 108 a crew often cannot stand in the gate, so a claim is a claim
+    // on the neighbourhood.
+    return !claimed.some((g) => distance(g.x, g.y, c.x, c.y) <= 1);
   });
   if (open.length === 0) return false;
   const target = open.reduce((a, b) =>
     distance(unit.x, unit.y, a.x, a.y) <= distance(unit.x, unit.y, b.x, b.y) ? a : b,
   );
-  if (!(unit.x === target.x && unit.y === target.y)) {
-    if (!routeTo(state, unit, target.x, target.y)) return false;
-    moveToward(state, unit, target.x, target.y);
-    if (!(unit.x === target.x && unit.y === target.y)) return true;
+  const spot = roadStart(state, unit, target);
+  if (!spot) return false;
+  if (!(unit.x === spot.x && unit.y === spot.y)) {
+    if (!routeTo(state, unit, spot.x, spot.y)) return false;
+    moveToward(state, unit, spot.x, spot.y);
+    if (!(unit.x === spot.x && unit.y === spot.y)) return true;
   }
   return startRoadTo(state, unit, seat.x, seat.y).ok;
+}
+
+/**
+ * Where a road crew stands to start a job at this city.
+ *
+ * The gate itself when it is free, and otherwise the nearest open tile beside
+ * it. Since section 108 a soldier stands in every city and one unit to a tile
+ * means the crew can no longer walk in -- and it does not need to. A road that
+ * ends beside a city is joined to it: `connectedByRoad` counts a city tile as
+ * road and walks diagonals, so a road to the doorstep is a road to the door.
+ */
+function roadStart(state: GameState, unit: Unit, city: City): { x: number; y: number } | null {
+  const free = (x: number, y: number) =>
+    x >= 0 &&
+    y >= 0 &&
+    x < state.width &&
+    y < state.height &&
+    !TERRAIN[state.terrain[idx(x, y, state.width)]].water &&
+    !state.units.some((u) => u.x === x && u.y === y && u.id !== unit.id);
+  if (free(city.x, city.y)) return { x: city.x, y: city.y };
+  const around = DIRS8.map(([dx, dy]) => ({ x: city.x + dx, y: city.y + dy }))
+    .filter((t) => free(t.x, t.y))
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) ||
+        a.y - b.y ||
+        a.x - b.x,
+    );
+  return around[0] ?? null;
+}
+
+/**
+ * Whether this city has something in it that pays nothing without a soldier
+ * standing in the city itself.
+ *
+ * The treasury's question, not the Posting's: `garrisonNeeded` counts the ring
+ * around the city and is somebody else's problem, while `needsGarrison` means
+ * one body in the gate, which is a job a single soldier can finish.
+ */
+function wantsKeeper(state: GameState, city: City): boolean {
+  return workingBuildings(state, city).some((b) => {
+    const def = BUILDINGS[b];
+    return !!def && def.needsGarrison && def.garrisonNeeded === undefined;
+  });
 }
 
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
@@ -1057,8 +1111,45 @@ function actSoldier(
   // Somebody has to walk with the settlers.
   if (escortDuty(state, unit)) return;
 
-  // Hold undefended home cities.
+  // Somebody has to mind the gold.
+  //
+  // Section 108: a Goblin Treasury or a Simple Market pays nothing at all
+  // unless a soldier is standing in the city, and the AI's cities were empty
+  // most of the time -- the rule below could walk a unit to a city, but nothing
+  // ever kept it there, so a garrison walked in one turn and marched out to the
+  // war the next.
+  //
+  // Deliberately narrow, and the narrowness is the whole design. Keeping a
+  // soldier in *every* city was tried and measured: 36 of 108 games flipped to
+  // the Kingdom, the Horde lost two cities and twenty citizens a game, fights
+  // rose by twenty and road building collapsed, because the side that wins by
+  // attacking had its army standing at home. So this is only the cities that
+  // have something in them waiting on a body, which is a handful of them and
+  // only once the building has been paid for.
   const ownCities = playerCities(state, unit.owner);
+  if (AI_TUNING.guardTheGold) {
+    const here = ownCities.find((c) => c.x === unit.x && c.y === unit.y);
+    // The only soldier in a city whose building is waiting on one stays. A
+    // second one passing through is free to carry on.
+    if (here && wantsKeeper(state, here) && garrisonSize(state, here) <= 1) {
+      unit.order = 'fortified';
+      return;
+    }
+    const wanting = ownCities
+      .filter((c) => garrisonSize(state, c) === 0 && wantsKeeper(state, c))
+      .sort(
+        (a, b) =>
+          distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) || a.id - b.id,
+      )[0];
+    if (wanting && distance(unit.x, unit.y, wanting.x, wanting.y) <= 8) {
+      if (routeTo(state, unit, wanting.x, wanting.y)) {
+        moveToward(state, unit, wanting.x, wanting.y);
+        return;
+      }
+    }
+  }
+
+  // Hold undefended home cities.
   const bare = ownCities.find(
     (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
   );
@@ -1203,6 +1294,16 @@ export const AI_TUNING = {
   buildRoads: true,
   /** Cities per road worker the AI keeps once expansion is done. */
   citiesPerRoadWorker: 4,
+  /**
+   * Whether a soldier stays in a city whose buildings are waiting on one.
+   *
+   * Section 108: with this off, the AI's treasuries and markets -- which pay
+   * nothing without somebody standing in the city -- earn nothing for the whole
+   * game, because a garrison walks in one turn and marches out the next. Narrow
+   * on purpose: holding *every* city was measured and cost the Horde 36 games
+   * in 108.
+   */
+  guardTheGold: true,
 };
 
 /**

@@ -7553,10 +7553,15 @@ view, and the fix is a known AI defect with its own section rather than a
 mystery.
 
 **Section 108 is the fix**, and it is worth doing for its own sake: an AI that
-guards its treasuries is richer whether or not a single road is ever dug. This
-wants re-measuring after that lands, and the fallback if it turns out expensive
-is to let a link pay regardless of the garrison -- simpler, but it would pay a
-city that is itself earning nothing, which is why it was not the first choice.
+guards its treasuries is richer whether or not a single road is ever dug. It has
+since been built, and it works: 96 games in 108 now end with a route actually
+paying, against 46 here, and route gold went from 0.95 a game across both
+empires to about two a turn each. **What is still not measured is whether that
+gold changes who wins**, which wants an arm of its own rather than an assumption.
+
+The fallback, if the keeper rule had turned out expensive, was to let a link pay
+regardless of the garrison -- simpler, but it would pay a city that is itself
+earning nothing, which is why it was not the first choice. It was not needed.
 
 ### Tests
 
@@ -7694,23 +7699,32 @@ builds a digger rather than all of them, and none do once the network is whole -
 plus `connectedByRoad` joined, broken by a gap, and blind to road the side has
 never seen. 663 pass.
 
-## 108. The AI's treasuries stand unguarded
+## 108. Somebody stays with the gold
 
-**Queued, not built.** Found while measuring section 106, and true long before
-it: the AI builds gold buildings that earn nothing, and has been doing it since
-the buildings existed.
+**Built**, on the second attempt. Found while measuring section 106, and true
+long before it: the AI built gold buildings that earned nothing, and had been
+doing it since the buildings existed.
 
-### What is wrong
+### What was wrong, which turned out to be three things
 
-A Goblin Treasury or a Simple Market pays nothing at all unless a soldier is
-standing **in** the city. The AI's production rule counts a garrison as anybody
-within one tile of the city, which is the right question for defending the place
--- only one unit fits on a tile, so a ring of defenders is the only garrison
-worth having -- and the wrong one for the building. Nobody ever checks that
-somebody is actually home.
+A Goblin Treasury or a Simple Market pays nothing unless a soldier is standing
+**in** the city. The AI had a rule meant to cover that -- a unit with nothing
+better to do goes and holds a city nobody is holding -- and it did not work, for
+three separate reasons, any one of which was enough on its own:
 
-So it spends sixty shields and an upkeep a turn on a building that does nothing,
-in most of its cities, for the whole game. Counted at the end of three games:
+- **Nothing ever kept a unit there.** The branch that fortified a unit already
+  standing in the city could not fire: "bare" meant no unit of ours on the tile,
+  so a city with our own unit in it was never the city picked. A garrison walked
+  in one turn and marched out to the war the next, every time.
+- **The first bare city, not the nearest.** `find` over the city list and then an
+  eight-tile range check: a city nine tiles off was given up on **and the cities
+  behind it in the list were never looked at**, so a soldier could stand beside
+  an empty city and march past it because a distant one came first.
+- **A Peon in the gate counted.** Any unit of ours on the tile made the city look
+  held, while the treasury beside it went on paying nothing. Settlers are not a
+  garrison, which is exactly what the building asks.
+
+Counted at the end of three games, before any of this changed:
 
 | seed | side | cities | with a gold building | actually earning |
 |---|---|---|---|---|
@@ -7719,34 +7733,87 @@ in most of its cities, for the whole game. Counted at the end of three games:
 | 1000003 | Kingdom | 6 | 4 | **1** |
 | 7654321 | Kingdom | 8 | 4 | **0** |
 
-It is not that no soldier is near: `actSoldier` already has a rule that sends a
-unit with nothing better to do to stand in a city nobody is holding. It is that
-almost nobody ever reaches that rule, because attacking, escorting and sieging
-all come first.
+### The first attempt, and why it is written down rather than deleted
 
-### What it would take
+The obvious fix -- **keep a soldier in every city** -- was built, and measured,
+and was a disaster. 324 games, three arms, paired on identical maps:
 
-- **Ask the building's own question.** `soldiersFor` already asks the right one
-  per building -- the city tile for a treasury, the ring for a Posting. The AI's
-  garrison count should use it where it is deciding about a building rather than
-  about defence.
-- **A keeper is a job, not a leftover.** A city with a building that pays nothing
-  for want of somebody standing in it should attract a soldier the way an
-  undefended city does, and earlier in `actSoldier` than "nothing better to do".
-  One unit, not a second army: the cost is one fighter per city with a treasury.
-- **Which is a real balance change**, so it is measured as an arm like everything
-  else. It takes soldiers off the front and puts gold in the treasury, and those
-  do not obviously cancel.
+| column | with a keeper in every city | sign test |
+|---|---|---|
+| games flipping to the Kingdom | **36**, against 9 to the Horde | p = 0.00007 |
+| orc cities | **-2.07** | p = 1e-8 |
+| orc population | **-19.5** | p = 6e-9 |
+| fights | **+20.5** | p = 3e-27 |
+| road tiles | **-41** | p = 7e-31 |
+| game length | -41 turns | p = 6e-10 |
 
-### Why it is worth doing
+The Horde wins by attacking, and this parked its army at home. It was overrun,
+stayed small, and -- because road building is gated on reaching the target city
+count -- never got far enough to dig: road tiles fell from 52 to 10 and cities
+joined by road from 80% to 16%. **The change built to make section 106
+measurable destroyed section 107 instead**, which is the kind of thing only a
+measurement finds. Trade routes in that arm still paid almost nothing, because
+the empire that was supposed to be earning them no longer existed.
 
-Two reasons, and the second one is the smaller:
+### What it does now
 
-1. **The AI is paying for nothing.** Sixty shields and an upkeep, several times
-   over, for the whole game. That is a straightforward defect and it would be
-   worth fixing if trade routes had never been thought of.
-2. **Section 106 cannot be measured until it is fixed.** Trade routes pay only
-   while both ends are earning, so an empire whose treasuries stand empty earns
-   0.95 gold a turn from 3.8 routes, and the whole rule measures as nothing.
+- **A soldier stays only where a building is waiting on one.** The building's own
+  question: `needsGarrison` with no ring requirement, so a treasury or a market
+  counts and a Posting -- which wants two soldiers around the city -- stays
+  somebody else's problem.
+- **The only soldier in such a city stays.** A second one passing through carries
+  on to the war, so this is one keeper per counting-house, not a home army.
+- **And it will walk to one** within eight tiles that has nobody in it, nearest
+  first, where "nobody" means no *soldier*.
+- **Behind `AI_TUNING.guardTheGold`.**
 
-Both halves want the same one-line question asked in the right place.
+That is a handful of cities, and only once a sixty-shield building has been paid
+for, which is the whole difference from the first attempt.
+
+### What the narrow rule measured
+
+216 games, two seed sets, against the same game with the lever off:
+
+| arm | set | orc-hum | cities | roads | joined | routes | route gold |
+|---|---|---|---|---|---|---|---|
+| gold unguarded | tuned | 32-22 | 6.65/7.44 | 52 | 81%/80% | 1.7/2.3 | 1.0/0.2 |
+| gold unguarded | held-out | 36-18 | 6.98/6.57 | 50 | 80%/73% | 2.0/2.0 | 0.9/0.4 |
+| gold guarded | tuned | 31-23 | 6.07/7.44 | 44 | 75%/81% | 2.0/2.6 | **2.0/2.5** |
+| gold guarded | held-out | 32-22 | 6.63/6.20 | 41 | 70%/60% | 2.2/2.0 | **2.4/2.0** |
+
+Paired over the same 108 maps:
+
+- **It does what it was for.** Orc route gold **+1.24** (p = 6e-8), human
+  **+1.95** (p = 3e-19), and **96 games in 108 end with a route actually
+  paying**, against 46 before. Section 106 is a real rule in AI games at last.
+- **And it does not break the balance.** 79 of 108 games ended with the same
+  winner, 12 flipping to the Horde and 17 to the Kingdom: **p = 0.46**. No other
+  column moved either -- cities, population and length are all p > 0.08.
+- **It costs some road.** Road tiles **-8.6** (p = 5e-5) and the joined share
+  drifts down a few points, because a keeper standing in the gate is one more
+  tile a crew has to walk around and one fewer spare body. Worth the gold, and
+  worth watching if section 106's economics are ever widened.
+
+### Two fixes that came with it and are not behind the lever
+
+Both were forced by the first attempt and are right regardless:
+
+- **Road crews start beside the gate.** A crew used to walk *into* the city to
+  start a job, which with a garrison standing there is impossible -- one unit to
+  a tile. A road that ends beside a city is joined to it, since `connectedByRoad`
+  counts a city tile as road and walks diagonals, so the job is the same job.
+- **A road job is claimed by other crews**, not by any unit of ours with
+  somewhere to be. It always should have been: a soldier marching to hold that
+  same city would claim it and send the crew somewhere else.
+
+Measured together, in the control arms of the two sweeps: **road tiles 45 to 52,
+and cities joined to the capital from about 66% to about 80%**, with the win
+split unchanged. Section 107 got quietly better while section 108 was being
+argued about.
+
+### What is left
+
+**Section 106 has still not been measured with the gold guarded.** Routes now pay
+about two gold a turn a side, which is real money and a small share of an
+empire's income; whether it changes who wins is the next question, and it wants
+its own arm rather than an assumption.

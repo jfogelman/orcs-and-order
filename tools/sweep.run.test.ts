@@ -45,6 +45,7 @@ const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
+  AI_TUNING.guardTheGold = true;
   POSTING.enabled = true;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
@@ -54,12 +55,23 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 106: a road between two cities that both have something to sell pays
-  // gold a turn. An economy change, so it is measured on its own against the same
-  // game with the gold switched off -- which is section 107's arm, and should
-  // reproduce its 35-19 and 32-22 exactly.
-  { label: 'no trade routes', apply: () => { control(); TRADE.enabled = false; } },
-  { label: 'trade routes', apply: control },
+  // Section 108, second attempt. The first kept a soldier in every city and was
+  // a disaster -- 36 of 108 games flipped to the Kingdom, the Horde lost two
+  // cities and twenty citizens a game, and road building collapsed with the
+  // empire that was meant to be doing it. This one keeps a soldier only where a
+  // building is waiting on one, which is a handful of cities and only after the
+  // building is paid for.
+  //
+  // The arm without should reproduce the last sweep's control exactly -- 32-22
+  // and 36-18 -- since the narrow rule is the only thing added since.
+  {
+    label: 'gold unguarded',
+    apply: () => {
+      control();
+      AI_TUNING.guardTheGold = false;
+    },
+  },
+  { label: 'gold guarded', apply: control },
 ];
 
 /**
