@@ -4666,26 +4666,49 @@ each piece to its own picture and keeps its shape, and the renderer stands each
 one on a ground line at a height measured against the box. Widths come from the
 pictures.
 
-Three things had to be worked out by looking, and the bible was right that they
-had to be looked at rather than reasoned about:
+**Anchor by the meaningful structural line, never by the bounding box.** That is
+the whole lesson, and it took three wrong versions to arrive at:
 
-- **The first pass squared every piece and placed it by its centre**, which threw
-  away the only thing that lines them up. A gate with a wall stub down one side
-  has its middle somewhere in the wall.
-- **They stand on a shared ground line.** Each piece is now placed by its *foot*
-  -- the middle of its lowest row of pixels, measured off the art itself into
-  `palaceArt.ts` -- against the chassis's foot, which is the near corner of an
-  isometric box.
-- **Nothing in the files says how big anything is.** Every asset was drawn one
-  subject to a frame with the subject *filling* the frame, so a tower sprite and
-  a hall sprite are the same size on disk. Drawing them at one scale makes the
-  tower as big as the hall and hides the hall behind it, which was tried. The
-  sizes are a judgement, written down as a share of the chassis: height for
-  things that stand up, width for the yard that lies flat.
+- `foot` -- the middle of a piece's lowest row of pixels, which for an isometric
+  box is its near corner. Right for anything standing on the ground, and
+  measured off the art itself into the generated `palaceArt.ts`.
+- `mid` -- the middle of the picture. Right for the **gate**, whose lowest row is
+  a wall stub off to one side: foot-anchored, it walks into the corner of the
+  frame, which is exactly what it did.
+- `seam` -- the outer edge on the side a piece joins from, which is the flat
+  unfinished wall the **wings** were generated with on purpose. Anchored any
+  other way, a wide wing overlaps the hall by however much of itself sits past
+  that seam. Same class of bug as the gate, wearing a vertical disguise.
 
-An offline compositor that draws the same arrangement from the same numbers made
-that a five-minute loop rather than a browser round trip each time. Both sides
-were then checked in the running game, at mixed tiers, against what it drew.
+Two more things the arrangement needed:
+
+- **Sizes are shares of the box, not of each other.** The chassis's size and a
+  module's size are independent numbers, which is what makes "a smaller hall with
+  grander wings" a thing somebody can ask for. Nothing in the art says how big
+  anything is: every asset was drawn one subject to a frame with each *filling*
+  its frame, so a tower sprite and a hall sprite are the same size on disk.
+  Drawn at one scale the tower is as big as the hall and hides it -- tried, and
+  wrong.
+- **A module grows with its tier.** `PALACE_TIER_SCALE` drifts a piece either
+  side of its middle-tier size, so a first totem does not fill the space a
+  blazing altar wing does, and the ratio is a mid-state default rather than a
+  constant every module is locked to.
+- **The yard is tucked, not abutted.** A top-down slab laid flush below the hall
+  reads as two stacked stickers with a seam between them; slid up so the hall's
+  own foundation is drawn over its back edge, it reads as ground the hall stands
+  in. (A shared dirt tone at the join would sell it further, and is an art note
+  rather than a code one.)
+
+The ratio between chassis and modules was picked by drawing three of them side by
+side -- big hall, even, modest hall -- and choosing the middle one for both
+sides: at that ratio no single piece is fighting for dominance, which is what the
+bible asked for when it said the base should stay neutral and the modules should
+carry the personality.
+
+An offline compositor that reads the game's own numbers made this a one-minute
+loop rather than a browser round trip each time, and it is what the ratios were
+chosen from. Both sides were then checked in the running game against what it
+drew.
 
 ### What is left
 

@@ -34,67 +34,80 @@ export type PalaceModuleId = 'wing' | 'tower' | 'banners' | 'gate' | 'grounds';
 /** Tiers a module can reach. Three, everywhere, since the art comes in threes. */
 export const PALACE_TIERS = 3;
 
+/**
+ * Which line in a piece of art it is hung from.
+ *
+ * The lesson of every mistake made getting this to look right: **anchor by the
+ * meaningful structural line, not by the bounding box.** A picture's middle is
+ * an accident of what else the artist drew into the frame.
+ *
+ * - `foot` -- the middle of its lowest row of pixels, which for an isometric box
+ *   is its near corner. Right for anything that stands on the ground.
+ * - `mid` -- the middle of the picture. Right for the gate, whose lowest row is
+ *   a wall stub off to one side: foot-anchored, it walks into the corner.
+ * - `seam` -- the outer edge on the side it joins from, which is the flat
+ *   unfinished wall the wings were drawn with on purpose. Anchoring anywhere
+ *   else lets a wide wing overlap the hall by however much of itself sits past
+ *   the seam.
+ */
+export type PalaceAnchor = 'foot' | 'mid' | 'seam';
+
 export interface PalacePlacement {
   /**
-   * How big to draw it, against the chassis.
+   * Drawn size at tier two, as a share of the whole picture's box.
    *
-   * `tall` is a share of the chassis's drawn height and `wide` a share of its
-   * width; a piece gives one or the other and the picture's own shape supplies
-   * the rest. Two of them because the yard is a flat slab that wants measuring
-   * across and everything else stands up and wants measuring by how high it is:
-   * sizing a narrow tower by width makes it three storeys taller than the hall.
+   * A share of the *box* and not of the chassis, so that a piece's size and the
+   * chassis's size are independent numbers: "a smaller hall with grander wings"
+   * is a thing somebody can ask for and get.
    *
-   * The numbers are all well under one. The art is drawn one subject to a frame
-   * with each *filling* its frame, so a tower sprite and a hall sprite are the
-   * same size on disk and nothing about the files says which is bigger in the
-   * world. That judgement is here, and it was made by looking.
+   * Nothing in the art says how big anything is -- every asset was drawn one
+   * subject to a frame, each filling its frame, so a tower sprite and a hall
+   * sprite are the same size on disk. These numbers are a judgement, and they
+   * were made by looking at the three of them side by side.
    */
-  tall?: number;
-  wide?: number;
-  /** Where its foot goes from the chassis's foot, in chassis widths. */
+  size: number;
+  /** Measured across rather than up: the hall and the yard are wider than tall. */
+  wide?: boolean;
+  /** Placed by its middle: a top-down slab has no foot to stand on. */
+  vmid?: boolean;
+  anchor: PalaceAnchor;
+  /** Where its anchor lands, from the chassis's foot, in box fractions. */
   dx: number;
   dy: number;
+  /** Instead of `dy`: this far up the chassis's own height. For the roofline. */
+  roof?: number;
 }
+
+/**
+ * How a module's size moves with its tier.
+ *
+ * A first totem should not fill the same space as a blazing altar wing, and a
+ * lashed-log lookout should not stand as tall as an iron-plated tower. The
+ * numbers in `PALACE_MODULES` are the middle tier, and this drifts either side
+ * of it -- so the capital of an empire that has finished something reads as
+ * grander without every module being retuned by hand.
+ */
+export const PALACE_TIER_SCALE = [0.84, 1, 1.16];
 
 export interface PalaceModuleDef {
   id: PalaceModuleId;
-  /** What both sides call the category, for the build list and the pedia. */
+  /** What both sides call the category, for the offer and the pedia. */
   name: string;
   /** The three tiers, per faction, cheapest first. */
   tiers: Record<FactionId, [string, string, string]>;
-  /**
-   * Where the piece stands, against the chassis it hangs off.
-   *
-   * The art is isometric at one locked angle, so the chassis is a diamond whose
-   * near corner is the point it stands on, and every other piece is placed by
-   * **its own near corner** -- `foot` in the generated art table -- offset from
-   * that one. In chassis widths: the diamond is one wide and half a chassis
-   * width deep, so its right corner is (+0.5, -0.25), its left corner is
-   * (-0.5, -0.25), and the ground in front of it is straight down.
-   *
-   * `width` is how much of the chassis's width the piece covers; the height
-   * follows from the picture, which is why nothing here says how tall anything
-   * is.
-   */
   at: PalacePlacement;
-  /**
-   * Where it goes on a particular side's chassis, when that differs.
-   *
-   * The two wings are mirror images: the Totem Wing's open seam is on its upper
-   * left, so it hangs off the Warcamp's lower right, and the Chapel Wing's is on
-   * its upper right, so it hangs off the Grand Hall's lower left. The towers
-   * then take the opposite corner from the wing, for room.
-   */
-  per?: Partial<Record<FactionId, PalacePlacement>>;
-  /** Drawn before the chassis, so the chassis overlaps where they join. */
+  /** Drawn before the chassis, so the chassis is drawn over where they join. */
   behind?: boolean;
   blurb: string;
 }
 
 /**
- * Drawn in the order of this list, which is why it is not alphabetical: the yard
- * first because it is the ground, then the two pieces that stand behind the
- * hall, then the hall, then what is in front of it and what is on top of it.
+ * Drawn in the order of this list: the yard first, because it is the ground the
+ * rest stands in, then the hall, then what hangs off it.
+ *
+ * The numbers are written for the Warcamp. The Grand Hall's chassis faces the
+ * other way -- so it is drawn mirrored, and every `dx` is negated with it, which
+ * swaps the tower and the wing onto the sides their art expects.
  */
 export const PALACE_MODULES: PalaceModuleDef[] = [
   {
@@ -104,25 +117,13 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
     },
-    at: { wide: 1.15, dx: 0, dy: 0.26 },
-    // Under everything: a yard is the ground, and the hall stands at the back
-    // of it rather than on top of it.
+    // Tucked under: its middle sits above the chassis's foot by enough that the
+    // hall is drawn over its back edge. Flush underneath, the two read as two
+    // stacked stickers with a seam between them rather than a building standing
+    // in its own yard.
+    at: { size: 0.5, wide: true, vmid: true, anchor: 'mid', dx: 0, dy: 0.03 },
     behind: true,
     blurb: 'What is out the front, and therefore what everybody judges the place by.',
-  },
-  {
-    id: 'wing',
-    name: 'Wing',
-    tiers: {
-      human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
-      orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
-    },
-    at: { tall: 0.58, dx: 0.42, dy: 0.1 },
-    per: {
-      orc: { tall: 0.58, dx: 0.42, dy: 0.1 },
-      human: { tall: 0.58, dx: -0.42, dy: 0.1 },
-    },
-    blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
   {
     id: 'tower',
@@ -131,12 +132,20 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
     },
-    at: { tall: 0.72, dx: -0.44, dy: -0.12 },
-    per: {
-      orc: { tall: 0.72, dx: -0.44, dy: -0.12 },
-      human: { tall: 0.72, dx: 0.44, dy: -0.12 },
-    },
+    // At a front corner, which is half a chassis width out and a quarter up.
+    at: { size: 0.44, anchor: 'foot', dx: -0.24, dy: -0.115 },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
+  },
+  {
+    id: 'wing',
+    name: 'Wing',
+    tiers: {
+      human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
+      orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
+    },
+    // Hung from its seam against the hall's other side, and a little forward.
+    at: { size: 0.38, anchor: 'seam', dx: 0.02, dy: 0.058 },
+    blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
   {
     id: 'gate',
@@ -145,7 +154,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
     },
-    at: { tall: 0.44, dx: 0, dy: 0.06 },
+    at: { size: 0.23, anchor: 'mid', dx: 0, dy: 0.01 },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
@@ -155,21 +164,25 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
     },
-    at: { tall: 0.32, dx: 0, dy: -0.3 },
+    // On the roofline, which is measured up the chassis rather than in box
+    // fractions: the two halls are different heights.
+    at: { size: 0.19, anchor: 'foot', dx: 0, dy: 0, roof: 0.55 },
     blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];
 
-
 /**
- * Where the chassis stands in the box, and how wide it is drawn.
+ * Where each side's chassis stands, and which way round it faces.
  *
- * Everything else is placed against this, so these two numbers are the scale of
- * the whole picture: `width` as a share of the box, and `ground` as where its
- * near corner sits down the box. Room is left to the right and left for a wing
- * and a tower, above for a banner, and below for a yard.
+ * `width` is a share of the box and `ground` is how far down the box its near
+ * corner sits -- low enough that a tier-three spire fits above it. The Kingdom's
+ * hall is drawn facing the other way, so it is flipped and the pieces that hang
+ * off its sides swap with it.
  */
-export const PALACE_BASE = { width: 0.52, ground: 0.62 };
+export const PALACE_BASE: Record<FactionId, { width: number; ground: number; mirror?: boolean }> = {
+  orc: { width: 0.46, ground: 0.66 },
+  human: { width: 0.46, ground: 0.66, mirror: true },
+};
 
 export const PALACE_BY_ID = new Map(PALACE_MODULES.map((m) => [m.id, m]));
 

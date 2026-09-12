@@ -1,5 +1,5 @@
 import { idx } from '../engine/grid';
-import { PALACE_BASE, palaceArt, palacePieces } from '../model/palace';
+import { PALACE_BASE, PALACE_TIER_SCALE, palaceArt, palacePieces } from '../model/palace';
 import type { PalacePlacement } from '../model/palace';
 import { PALACE_ART } from '../model/palaceArt';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
@@ -84,35 +84,48 @@ const POSTURE: Record<UnitOrder, string> = {
  * is more combinations than anybody wants to generate, and an image model cannot
  * reliably edit its own last output.
  *
- * Every piece is placed by its **foot** -- the middle of its lowest row of
- * pixels, measured off the art itself and kept in `palaceArt.ts` -- against the
- * chassis's foot. That is the near corner of an isometric box, which is the one
- * point two pieces can agree on: a gate with a wall stub down one side has its
- * middle somewhere in the wall, so lining two pieces up by their middles lines
- * up nothing.
+ * Two rules carry the whole thing, and both were learned by getting them wrong:
+ *
+ * - **Anchor by the meaningful line, never the bounding box.** A piece that
+ *   stands on the ground hangs from its foot, an arch with a wall stub down one
+ *   side hangs from its middle, and a wing hangs from the flat seam it was drawn
+ *   with. `palaceArt.ts` measures the foot off the art itself.
+ * - **Sizes are shares of the box, not of each other.** The chassis can shrink
+ *   without dragging the wings down with it, and a module grows with its tier.
  */
 function palaceView(state: GameState, city: City): string {
   const player = state.players[city.owner];
   const faction = player.faction;
   const BOX = 210;
 
-  // The chassis: its drawn width sets the scale, and its foot is the origin
-  // every other piece is measured from.
-  const baseW = PALACE_BASE.width * BOX;
+  const base = PALACE_BASE[faction];
+  const baseArt = PALACE_ART[`${faction}-base`];
+  const baseW = base.width * BOX;
+  const baseH = (baseW * baseArt.h) / baseArt.w;
   const footX = BOX / 2;
-  const footY = PALACE_BASE.ground * BOX;
+  const footY = base.ground * BOX;
+  // The Grand Hall faces the other way, so it is flipped and everything that
+  // hangs off its sides swaps with it.
+  const side = base.mirror ? -1 : 1;
 
-  const baseH = (baseW * PALACE_ART[`${faction}-base`].h) / PALACE_ART[`${faction}-base`].w;
-  const piece = (name: string, at: PalacePlacement) => {
+  const piece = (name: string, at: PalacePlacement, tier = 2) => {
     const art = PALACE_ART[name];
     if (!art) return '';
-    // Standing things are sized by height and the yard by width; see the note on
-    // `PalacePlacement`.
-    const h = at.tall !== undefined ? at.tall * baseH : ((at.wide ?? 1) * baseW * art.h) / art.w;
-    const w = (h * art.w) / art.h;
-    const x = footX + at.dx * baseW - art.foot * w;
-    const y = footY + at.dy * baseW - h;
-    return `<img class="palace-piece" src="${escapeHtml(palacePath(name))}" alt=""
+    const size = at.size * PALACE_TIER_SCALE[tier - 1] * BOX;
+    const w = at.wide ? size : (size * art.w) / art.h;
+    const h = at.wide ? (size * art.h) / art.w : size;
+    const dx = side * at.dx;
+    // Only the chassis is flipped; the modules keep the way they were drawn and
+    // simply swap sides with it. So only the chassis's foot moves across.
+    const flip = !!base.mirror && name.endsWith('-base');
+    const foot = flip ? 1 - art.foot : art.foot;
+    // Where along its own width the piece is held: see `PalaceAnchor`.
+    const hold =
+      at.anchor === 'mid' ? 0.5 : at.anchor === 'foot' ? foot : side * dx < 0 ? 1 : 0;
+    const x = footX + dx * BOX - hold * w;
+    const dy = at.roof !== undefined ? -baseH * at.roof : at.dy * BOX;
+    const y = footY + dy - (at.vmid ? h / 2 : h);
+    return `<img class="palace-piece${flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(name))}" alt=""
       style="left:${Math.round(x)}px; top:${Math.round(y)}px; width:${Math.round(w)}px" />`;
   };
 
@@ -120,9 +133,7 @@ function palaceView(state: GameState, city: City): string {
   const layer = (behind: boolean) =>
     standing
       .filter(({ module }) => !!module.behind === behind)
-      .map(({ module, tier }) =>
-        piece(palaceArt(faction, module.id, tier), module.per?.[faction] ?? module.at),
-      )
+      .map(({ module, tier }) => piece(palaceArt(faction, module.id, tier), module.at, tier))
       .join('');
 
   return `
@@ -130,7 +141,13 @@ function palaceView(state: GameState, city: City): string {
         <div class="panel-body palace-body">
           <div class="palace" style="width:${BOX}px; height:${BOX}px">
             ${layer(true)}
-            ${piece(`${faction}-base`, { wide: 1, dx: 0, dy: 0 })}
+            ${piece(`${faction}-base`, {
+              size: base.width,
+              wide: true,
+              anchor: 'foot',
+              dx: 0,
+              dy: 0,
+            })}
             ${layer(false)}
           </div>
           <div class="palace-parts">

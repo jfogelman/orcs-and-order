@@ -1693,10 +1693,12 @@ kbd {
 
 .palace-piece {
   position: absolute;
-  /* Placed by the ground under it and the middle of it, so the width can be
-     whatever the picture is. */
-  transform: translateX(-50%);
   image-rendering: pixelated;
+}
+
+/* The Kingdom's hall faces the other way from the Horde's. */
+.palace-piece.flipped {
+  transform: scaleX(-1);
 }
 
 .palace-parts {
