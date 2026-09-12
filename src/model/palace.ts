@@ -1,4 +1,5 @@
 import type { FactionId, Player } from './types';
+import { PALACE_ART } from './palaceArt';
 
 /**
  * Civic Pride: the capital, built a piece at a time.
@@ -52,6 +53,21 @@ export const PALACE_TIERS = 3;
  */
 export type PalaceAnchor = 'foot' | 'mid' | 'seam';
 
+/**
+ * Which side of the chassis a wing hangs off, for this side's art.
+ *
+ * Read from the art rather than decided here: the wings were generated with a
+ * flat unfinished wall on the side they join along, and which edge that came out
+ * on is not guaranteed -- so the piece is docked by whichever edge it actually
+ * is, and a re-rolled wing that comes back the other way round still lands
+ * right. A seam on the *right* of the picture means the wing sits to the *left*
+ * of the hall, with that edge hidden against it.
+ */
+export function wingSide(faction: FactionId): -1 | 1 {
+  const art = PALACE_ART[`${faction}-wing-1`];
+  return art?.seam === 'left' ? 1 : -1;
+}
+
 export interface PalacePlacement {
   /**
    * Drawn size at tier two, as a share of the whole picture's box.
@@ -71,7 +87,20 @@ export interface PalacePlacement {
   /** Placed by its middle: a top-down slab has no foot to stand on. */
   vmid?: boolean;
   anchor: PalaceAnchor;
-  /** Where its anchor lands, from the chassis's foot, in box fractions. */
+  /**
+   * Marks the piece that takes the corner opposite the wing.
+   *
+   * The wing's side is decided by its own seam, so the tower cannot have a side
+   * written down: it has to be told to take the other one.
+   */
+  side?: 'tower';
+  /**
+   * Where its anchor lands, from the chassis's foot, in box fractions.
+   *
+   * For the two pieces that hang off the sides, `dx` is a distance rather than a
+   * direction: the wing's side comes from its seam and the tower takes the other
+   * corner, so neither has a left or a right written down here.
+   */
   dx: number;
   dy: number;
   /** Instead of `dy`: this far up the chassis's own height. For the roofline. */
@@ -133,7 +162,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
     },
     // At a front corner, which is half a chassis width out and a quarter up.
-    at: { size: 0.44, anchor: 'foot', dx: -0.24, dy: -0.115 },
+    at: { size: 0.44, anchor: 'foot', side: 'tower', dx: 0.24, dy: -0.115 },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
   {

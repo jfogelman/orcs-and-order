@@ -1,5 +1,11 @@
 import { idx } from '../engine/grid';
-import { PALACE_BASE, PALACE_TIER_SCALE, palaceArt, palacePieces } from '../model/palace';
+import {
+  PALACE_BASE,
+  PALACE_TIER_SCALE,
+  palaceArt,
+  palacePieces,
+  wingSide,
+} from '../model/palace';
 import type { PalacePlacement } from '../model/palace';
 import { PALACE_ART } from '../model/palaceArt';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
@@ -104,9 +110,10 @@ function palaceView(state: GameState, city: City): string {
   const baseH = (baseW * baseArt.h) / baseArt.w;
   const footX = BOX / 2;
   const footY = base.ground * BOX;
-  // The Grand Hall faces the other way, so it is flipped and everything that
-  // hangs off its sides swaps with it.
-  const side = base.mirror ? -1 : 1;
+
+  // Wings dock by the seam their art was drawn with; the tower takes the other
+  // corner, so the two never fight for the same side.
+  const wing = wingSide(faction);
 
   const piece = (name: string, at: PalacePlacement, tier = 2) => {
     const art = PALACE_ART[name];
@@ -114,17 +121,27 @@ function palaceView(state: GameState, city: City): string {
     const size = at.size * PALACE_TIER_SCALE[tier - 1] * BOX;
     const w = at.wide ? size : (size * art.w) / art.h;
     const h = at.wide ? (size * art.h) / art.w : size;
-    const dx = side * at.dx;
-    // Only the chassis is flipped; the modules keep the way they were drawn and
-    // simply swap sides with it. So only the chassis's foot moves across.
+    // Only the chassis is flipped; the modules keep the way they were drawn.
     const flip = !!base.mirror && name.endsWith('-base');
     const foot = flip ? 1 - art.foot : art.foot;
-    // Where along its own width the piece is held: see `PalaceAnchor`.
+    const towards = at.anchor === 'seam' ? wing : at.side === 'tower' ? -wing : 1;
+    const dx = towards * at.dx;
+    // Where along its own width the piece is held: see `PalaceAnchor`. A seam
+    // piece is held by the seam edge itself, which is what docks it flush.
     const hold =
-      at.anchor === 'mid' ? 0.5 : at.anchor === 'foot' ? foot : side * dx < 0 ? 1 : 0;
+      at.anchor === 'mid'
+        ? 0.5
+        : at.anchor === 'foot'
+          ? foot
+          : art.seam === 'right'
+            ? 1
+            : 0;
     const x = footX + dx * BOX - hold * w;
     const dy = at.roof !== undefined ? -baseH * at.roof : at.dy * BOX;
-    const y = footY + dy - (at.vmid ? h / 2 : h);
+    // `base` and not the bottom of the picture: a tower with stakes planted past
+    // its base logs stands on the logs, and anchoring the lowest stake to the
+    // ground line lifts the whole tower off it.
+    const y = footY + dy - (at.vmid ? h / 2 : h * art.base);
     return `<img class="palace-piece${flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(name))}" alt=""
       style="left:${Math.round(x)}px; top:${Math.round(y)}px; width:${Math.round(w)}px" />`;
   };
