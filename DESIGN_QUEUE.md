@@ -8024,6 +8024,67 @@ None of the six changes is wrong on its own terms. The sum of them moved the
 game, which is what a sum of six unestablished leans in one direction was always
 at risk of doing, and is the reason to check.
 
+
+### The first dial tried: `CALM.base` 6 to 5
+
+Jeremy picked the most targeted of the three, and it is targeted: it works, it
+overshoots, and it costs more than the thing it fixed.
+
+| arm | set | orc-hum | cities | population | advances | fights |
+|---|---|---|---|---|---|---|
+| calm 6, today | tuned | 36-17-1 | 6.80/6.89 | 54.5/50.0 | 28.4/24.9 | 25 |
+| calm 6, today | held-out | 34-20 | 6.41/6.63 | 49.5/46.9 | 26.5/24.3 | 27 |
+| calm 5 | tuned | **22-32** | 5.44/8.24 | 41.5/55.0 | 26.9/24.5 | 21 |
+| calm 5 | held-out | 29-25 | 6.15/7.19 | 43.4/47.3 | 24.7/23.7 | 22 |
+
+Paired on the same 108 maps: **24 games flipped to the Kingdom against 5,
+p = 0.0005** -- the strongest single result in the arc, and the tuned set alone
+carries it at p = 0.0013. Pooled, the Horde goes **70-37 to 51-57: 65% to 47%**.
+
+**Eleven points of drift, corrected by eighteen.** That is the first problem.
+The second is what it cost:
+
+| column | change at calm 5 | sign test |
+|---|---|---|
+| orc advances | **-1.60** | p = 0.00000017 |
+| orc population | **-9.50** | p = 0.002 |
+| orc cities | -0.81 | p = 0.018 |
+| human cities | +0.95 | p = 0.034 |
+| human population | +2.69 | p = 0.55 |
+| human advances | -0.48 | p = 0.080 |
+| fights | -4.12 | p = 0.00000000002 |
+
+The Horde loses a city, nine and a half citizens and **a whole advance and a
+half**, and the Kingdom gains a city without gaining significant population. The
+asymmetry that made the arc a Horde arc runs in reverse here for the same reason:
+calm is what the Horde uses most, so scarcity takes most from the Horde.
+
+**Not shipped on this evidence.** Balance bought by making the Horde smaller is a
+bad trade in this particular game: the counting ladder *is* the joke, and the
+side whose entire gag is discovering that more than one orc can stand in the same
+place should not be finishing games a citizen short and an advance and a half
+behind. Section 86 moved this lever once and the game grew; moving it back costs
+more than the eleven points are worth.
+
+### Where that leaves it
+
+Three readings, and the numbers now exist for all of them:
+
+- **The drift is +11 and posts are about +7 of it.** Section 102 measured 14
+  games to 7 on its own. Turning posts off would land the game near 58%, which is
+  where it sat after roads and before posts, and would cost nobody any size --
+  but it would mean shipping a rule and then not using it.
+- **Calm 5 lands at 47%**, which is even, and is available at the price above
+  whenever a smaller, tighter game is the preferred one.
+- **65% with everything on** is the game as it stands: bigger, longer, less
+  bloody, and one-sided.
+
+What has not been tried is a dial that takes size off the Horde without taking
+calm off everybody -- `PERSONALITIES.orc.targetCities` at five is the obvious
+one, since nearly three quarters of these games now end on points and points are
+mostly size. That is one arm, and it is the next thing to run if 65% is not
+acceptable and 47% is not either.
+
 ### What to do about it, which is a decision and not a measurement
 
 The question is not which rule to undo -- each is defensible -- but **how good
@@ -8046,4 +8107,6 @@ what each would actually do:
    drift nobody chose.
 
 Whichever is picked, it is one arm against today's settings, both seed sets, and
-the pooled figure to beat is **70-37**.
+the pooled figure to beat is **70-37**. The first one was tried and is written up
+above: it works, it overshoots, and it shrinks the Horde by more than the drift
+was worth.

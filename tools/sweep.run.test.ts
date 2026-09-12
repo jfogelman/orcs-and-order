@@ -63,33 +63,24 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 109: the whole roads arc against itself.
+  // Section 109's answer: the arc is worth eleven points to the Horde, 24 games
+  // in 108 against 11, p = 0.04. This is the first dial tried against it.
   //
-  // Six changes shipped between section 101 and section 102, every one of them
-  // measured as "not established" on its own and every one of them leaning the
-  // same way. Pooled, the shipping game went from 54% to 65% for the Horde. This
-  // is the one arm that can say whether that is real: section 101's settings --
-  // no roads, no trade, no keepers, no pillaging, no posts, and the Posting
-  // building back on -- against today's, on the same maps.
+  // `CALM.base` is the most targeted lever available. Calm is exactly what the
+  // Horde needs more of -- sections 85 and 101 measured its cities at their
+  // content limit nearly twice as often as the Kingdom's -- so making calm
+  // scarcer takes most from whoever was using most of it. Section 86 moved this
+  // lever once already, on 432 games, so the ground is known.
   //
-  // The old arm should reproduce section 101 exactly, 30-24 and 28-26. If it
-  // does not, something outside `LEVERS` moved and the comparison is void, which
-  // is section 103's lesson.
+  // The arm at six should reproduce section 109's `today`: 36-17-1 and 34-20.
+  { label: 'calm 6, today', apply: control },
   {
-    label: 'section 101',
+    label: 'calm 5',
     apply: () => {
       control();
-      AI_TUNING.buildRoads = false;
-      TRADE.enabled = false;
-      AI_TUNING.guardTheGold = false;
-      PILLAGE.enabled = false;
-      AI_TUNING.pillage = false;
-      POSTS.enabled = false;
-      AI_TUNING.buildPosts = false;
-      POSTING.enabled = true;
+      CALM.base = 5;
     },
   },
-  { label: 'today', apply: control },
 ];
 
 /**
