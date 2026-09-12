@@ -1673,3 +1673,32 @@ kbd {
   margin-top: 3px;
   flex: 0 0 auto;
 }
+
+/* Section 67: the capital, drawn in layers. Absolute inside a fixed box, so a
+   piece's position is the one the art was drawn for whatever else is built. */
+.palace-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.palace {
+  position: relative;
+  image-rendering: pixelated;
+  /* The grounds hang below the box and the wing past its left edge, which is
+     what makes the thing read as built rather than boxed. Room for both. */
+  margin: 4px 0 22px;
+}
+
+.palace-piece {
+  position: absolute;
+  image-rendering: pixelated;
+}
+
+.palace-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}

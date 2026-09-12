@@ -511,7 +511,7 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
 # be called.
 # "2x2" describes how the frames are laid out, which is worked out from the
 # picture, not from the name.
-REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new", "2x2")
+REROLL_WORDS = ("magenta", "bg", "v2", "v2.1", "v3", "redo", "reroll", "new", "2x2")
 
 
 def normalise_stem(stem: str) -> tuple[str, str]:
@@ -1868,6 +1868,107 @@ def adopt_raw_files() -> list[str]:
     return adopted
 
 
+PALACE_SIZE = 128
+
+# Section 67's Civic Pride: a base chassis per side and five modules of three
+# tiers each, drawn to be layered rather than drawn as one picture. The names on
+# the left are what the game calls them; the names on the right are what the
+# generator called the files, which is `art_src/palace/capital_building_bible
+# (2).md` and is not going to match.
+#
+# Filed flat rather than per faction: one folder of thirty-two pieces is easier
+# to look through than ten folders of three, and the id already says whose it is.
+PALACE: dict[str, str] = {
+    "human-base": "the grand hall - base chassis",
+    "human-tower-1": "wooden lookout",
+    "human-tower-2": "stone tower",
+    "human-tower-3": "gilded spire tower",
+    # Tier one was re-rolled with its archway put back; the first attempt is
+    # still in the folder under its own name and is deliberately not used.
+    "human-gate-1": "wooden gate",
+    "human-gate-2": "reinforced stone gate",
+    "human-gate-3": "ornamental grand gate",
+    "human-wing-1": "shrine annex",
+    "human-wing-2": "stained-glass chapel",
+    "human-wing-3": "cathedral wing",
+    "human-grounds-1": "dirt yard",
+    "human-grounds-2": "cobbled courtyard",
+    "human-grounds-3": "manicured garden",
+    "human-banners-1": "single cloth banner",
+    "human-banners-2": "matched banner set",
+    "human-banners-3": "gold-trimmed heraldic banners",
+    "orc-base": "the warcamp - base chassis",
+    "orc-tower-1": "lashed-log lookout",
+    "orc-tower-2": "bone-reinforced tower",
+    "orc-tower-3": "iron-plated tower",
+    "orc-gate-1": "crude palisade gate",
+    "orc-gate-2": "spiked iron gate",
+    "orc-gate-3": "trophy-flanked warfort gate",
+    "orc-wing-1": "single totem",
+    "orc-wing-2": "totem cluster",
+    "orc-wing-3": "ritual altar wing",
+    "orc-grounds-1": "trampled dirt yard",
+    "orc-grounds-2": "weapon racks",
+    "orc-grounds-3": "forge yard",
+    "orc-banners-1": "single torn banner",
+    "orc-banners-2": "chained banner set",
+    "orc-banners-3": "massive blackened war-banners",
+}
+
+
+def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    The capital's parts, keyed and squared but *not* floored.
+
+    Everything else in this file sits its subject on the bottom of the canvas,
+    which is right for a unit standing on a tile and wrong for a thing that has
+    to line up with another thing. A banner belongs at the roofline and a yard
+    belongs at the front, so each piece is centred in its square and the
+    renderer decides where the square goes.
+    """
+    src = SRC / "palace"
+    out = OUT / "palace"
+    if not src.exists():
+        return 0, list(PALACE), []
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    failed: list[str] = []
+    for out_id, source_name in PALACE.items():
+        path = find_source(src, source_name)
+        if path is None:
+            missing.append(out_id)
+            continue
+        target = out / f"{out_id}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        img = Image.open(path)
+        img, cut_out = remove_background(img)
+        img = centre_in_square(img, PALACE_SIZE)
+        img.save(target, optimize=True)
+        flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        print(f"  palace/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            failed.append(out_id)
+        done += 1
+    return done, missing, failed
+
+
+def centre_in_square(img: Image.Image, size: int) -> Image.Image:
+    """Crop to content and centre it, keeping its shape. No floor, no margin."""
+    bbox = img.getbbox()
+    if bbox:
+        img = img.crop(bbox)
+    scale = min(size / img.width, size / img.height)
+    scaled = img.resize(
+        (max(1, round(img.width * scale)), max(1, round(img.height * scale))),
+        Image.LANCZOS,
+    )
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    canvas.paste(scaled, ((size - scaled.width) // 2, (size - scaled.height) // 2), scaled)
+    return canvas
+
+
 def main() -> int:
     force = "--force" in sys.argv
     if not SRC.exists():
@@ -1893,6 +1994,8 @@ def main() -> int:
     failed_units.extend(failed_wilds)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    print("Capital parts:")
+    palace, missing_palace, failed_palace = process_palace(force)
     print("Advisor bubbles:")
     bubbles, missing_bubbles, _failed_bubbles = process_aliased(
         "advisors", ADVISOR_BUBBLES, force, ICON_SIZE

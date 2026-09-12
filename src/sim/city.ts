@@ -71,6 +71,31 @@ export const CALM = { base: 6 };
  */
 export const POSTING = { enabled: false };
 
+/**
+ * Whether this empire is doing well enough to start decorating.
+ *
+ * Section 67 asked for "especially well off and content", which nothing in the
+ * game expressed: `contentLimit` and disorder are per city. Three plain
+ * conditions, all of them things a player can see and fix:
+ *
+ * - **Nobody is rioting.** A capital growing a garden while a town burns is a
+ *   different game's joke.
+ * - **Nobody is starving**, for the same reason.
+ * - **Three cities and fifty gold**, so this is a thing an empire does once it
+ *   is an empire rather than a first-turn distraction.
+ */
+export function civicPride(state: GameState, playerId: number): boolean {
+  // Filtered here rather than through `playerCities`, which lives in
+  // `gamestate` and imports this file back.
+  const cities = state.cities.filter((c) => c.owner === playerId);
+  if (cities.length < CIVIC_PRIDE.cities) return false;
+  if (state.players[playerId].gold < CIVIC_PRIDE.gold) return false;
+  return !cities.some((c) => c.disorder || foodSurplus(state, c) < 0);
+}
+
+/** What "doing well" means, in the two numbers it is worth arguing about. */
+export const CIVIC_PRIDE = { cities: 3, gold: 50 };
+
 /** Soldiers this building wants standing in the city before it does anything. */
 export function garrisonNeededBy(b: { garrisonNeeded?: number; needsGarrison?: boolean }): number {
   return b.garrisonNeeded ?? (b.needsGarrison ? 1 : 0);
@@ -935,6 +960,11 @@ export function buildOptions(
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
     .filter((b) => !b.suppliesArmy || seat?.id !== city.id)
+    // Section 67: the capital's own pieces, and only while the empire is worth
+    // being proud of. Civic Pride is a reward for doing well and deliberately
+    // not a way of doing well, so it is the one thing in the list gated on how
+    // the whole empire is going rather than on an advance.
+    .filter((b) => !b.civic || (seat?.id === city.id && civicPride(state, city.owner)))
     // A Posting with the lever off pays nothing, so it is not offered: a
     // building in the list that can never do anything is a trap, and section 102
     // turned this one off for good.

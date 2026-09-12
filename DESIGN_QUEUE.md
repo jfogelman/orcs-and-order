@@ -4611,35 +4611,72 @@ sweep becomes unreadable, which sections 17 and 21 both learned the hard way.
 
 ## 67. Civic Pride: a capital that shows how well it is going
 
-Design and art both drafted already -- see `art_src/palace/capital_building_bible
-(2).md` and the thirty-four images beside it. The idea is Civ2's palace wings:
-the capital is a **base chassis plus five independent modules** (watchtower,
-gate, side wing, grounds, banners), each with its own two or three tiers, and
-the player picks which to invest in. Both factions get the same five categories
-with different materials, so they stay mechanically symmetrical.
+**Built, and decorative on purpose.** The design and the art were both drafted
+before any code existed -- `art_src/palace/capital_building_bible (2).md` and the
+thirty-four images beside it -- and this section's own sequencing note said what
+order to do it in: decorative first, measured second, and only then a word about
+yields.
 
-The art is deliberately built for **compositing rather than one evolving
-picture**, because image models cannot reliably edit a previous image, and
-generating every combination is combinatorial. Each module is a standalone
-sprite designed to slot onto a fixed attachment point.
+### What shipped
 
-**What is actually new work here**, since the art is done:
+- **A base chassis per side and five modules of three tiers each**: a watchtower
+  at one corner, a gate at the front, a wing at one side, grounds out front and
+  banners along the roofline. Thirty pieces, and both sides get the same five
+  categories in their own materials, so neither has a module the other cannot
+  answer.
+- **They are buildings.** Generated from the module table rather than typed out,
+  and inserted into `BUILDINGS` before `BUILDING_IDS` is taken -- so queueing,
+  costing, finishing, saving and the build list all work without a second kind
+  of thing to build. Each tier `needs` the one under it, which is the same rule
+  the economy buildings use.
+- **Offered in the capital, and only while the empire is worth being proud of.**
+  `civicPride` is the new reading this section said nothing expressed: three
+  cities, fifty gold, nobody rioting and nobody starving. Every condition is
+  something a player can see and fix.
+- **They do nothing.** No yields, no defence, no content, no upkeep. A module is
+  a picture of how well it is going.
+- **The city view draws the capital**, composited from whatever has been built
+  onto it -- the pieces layered at anchors that live with the modules rather than
+  in the panel, since they are a property of the art.
 
-- **A compositing layer in the renderer.** Nothing in the game currently stacks
-  sprites at named attachment points. `cities` art is one image per size tier.
-  This is the largest part and it is renderer work, not simulation work.
-- **The trigger.** The intent is that this unlocks when the empire is
-  *especially well off and content*, which is a condition nothing currently
-  expresses. `contentLimit` and disorder are per-city; this wants an empire-wide
-  reading, and section 64's advisors already compute something close to it in
-  `Situation`.
-- **What a module is worth.** A palace that is only decorative is a screensaver;
-  one that grants real yields is a per-city multiplier on the capital, which is
-  the class of thing sections 4c and 4e measured as amplifying whoever is
-  already ahead. Worth deciding deliberately, and probably worth being small.
+### Why nothing, and why the AI never builds one
 
-**Sequencing:** this is a reward for doing well, so it should not also be *how*
-you do well. Decorative first, measured second, and only then consider yields.
+A palace that pays is a per-city multiplier on the capital, and sections 4c and
+4e measured that class of thing amplifying whoever is already ahead. Section 109
+had just finished establishing that this game had drifted eleven points to the
+Horde through six changes that each looked harmless, which is not the week to add
+a multiplier to the side that is winning.
+
+And because a module is worth nothing, **the AI is filtered away from them**: an
+AI queueing a hundred and forty shields of scenery would be handing the other
+side a hundred and forty shields, which is a balance change wearing a hat. The
+filter is in `chooseProduction` rather than in the build list, so a person can
+still see the whole list in their own capital.
+
+### The compositing, which was the actual work
+
+Nothing in the game stacked sprites at named points before this: city art was one
+picture per size tier. The pieces come out of the art pipeline **centred in their
+own square** rather than sat on the floor like everything else -- a banner belongs
+at the roofline and a yard belongs at the front -- so placing one is a left, a top
+and a width, and the anchors are five numbers per module.
+
+The bible asked for an in-engine composite test on mixed tiers before trusting
+the attachment points, and it was right to: at the first attempt the chassis was
+drawn at the full size of the box and swallowed every module behind it. The
+chassis now takes about two thirds, and both sides were checked in the running
+game with a wing, a tower, banners, a gate and grounds at mixed tiers.
+
+### What is left
+
+- **Yields, if ever.** Deliberately not now. If a module is ever worth something,
+  it wants its own arm and section 109's table is the baseline.
+- **The map.** The capital still draws as a city like any other; the palace lives
+  in the city view. A tile is thirty-two pixels and a palace is a picture, so
+  this is a deliberate stop rather than an omission.
+- **The two stylistic calls the bible left open**: the orc banner line jumps in
+  material between tier one and two, and the orc chassis is busier than the human
+  one. Both are visible now that they composite, and both are still fine.
 
 ## 68. Unit upgrade branches: thirty-six advances, and one unsolved problem
 

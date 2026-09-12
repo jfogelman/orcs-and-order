@@ -1,4 +1,5 @@
 import type { BuildingId, FactionId } from './types';
+import { palaceBuildings } from './palace';
 
 export interface BuildingDef {
   id: BuildingId;
@@ -21,6 +22,15 @@ export interface BuildingDef {
   negatedBySiege?: boolean;
   /** Extra content citizens, offsetting disorder. */
   contentBonus?: number;
+  /**
+   * A piece of the capital rather than a building: section 67's Civic Pride.
+   *
+   * It does nothing at all, which is the point of it, and the flag is how
+   * everything else knows: the build list only offers these in the capital and
+   * only while the empire is doing well, and the AI never touches them, because
+   * an AI spending shields on a view would be a balance change wearing a hat.
+   */
+  civic?: boolean;
   /** Fraction of the food box kept when the city grows. */
   foodKept?: number;
   /** New land units are built as veterans. */
@@ -343,6 +353,16 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'turns out to have been written down wrong.',
   },
 };
+
+// Section 67's capital pieces, generated rather than typed out: five modules,
+// three tiers, two sides, and every one of them the same shape. They are real
+// buildings so that queueing, costing, finishing and saving all work already.
+//
+// Added here rather than at the end of the file, because `BUILDING_IDS` is a
+// snapshot taken the moment this module loads: thirty buildings added after it
+// exist in the table and in nobody's list, which is exactly as useful as not
+// adding them.
+for (const part of palaceBuildings()) BUILDINGS[part.id] = part;
 
 export const BUILDING_IDS = Object.keys(BUILDINGS) as BuildingId[];
 

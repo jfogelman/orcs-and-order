@@ -46,6 +46,11 @@ export function unlockedBuildings(player: Player): BuildingDef[] {
     if (!t) continue;
     for (const b of t.buildings) ids.add(b);
   }
+  // Section 67's capital pieces are not taught by anybody. Civic Pride is a
+  // reward for an empire doing well rather than for an empire that has read
+  // about it, so the gate is in `buildOptions` -- the capital, and only while
+  // things are going well -- and there is no advance to wait for.
+  for (const b of Object.values(BUILDINGS)) if (b.civic) ids.add(b.id);
   return [...ids]
     .map((id) => BUILDINGS[id])
     .filter((b): b is BuildingDef => b !== undefined)

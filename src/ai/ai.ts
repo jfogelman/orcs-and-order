@@ -521,7 +521,11 @@ function chooseProduction(
   personality: AiPersonality,
 ): ProductionItem {
   const owner = state.players[city.owner];
-  const options = buildOptions(state, city);
+  const offered = buildOptions(state, city);
+  // Section 67: the capital's decorations are not for the AI. They do nothing,
+  // so an AI that queued one would be handing the other side thirty to a hundred
+  // and forty shields, which is a balance change and not a feature.
+  const options = { units: offered.units, buildings: offered.buildings.filter((b) => !b.civic) };
   if (options.units.length === 0) return { kind: 'coin' };
 
   // A garrison is whoever is standing on or beside the city. Counting only the
