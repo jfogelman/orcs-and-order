@@ -1,6 +1,7 @@
 import { flagsOf, hasFlag } from '../sim/rules';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
+import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
 import { ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
@@ -16,6 +17,7 @@ import {
   garrisonNeededBy,
   garrisonSize,
   soldiersFor,
+  workingBuildings,
   foundCity,
   rushBlocked,
   rushBuy,
@@ -761,6 +763,21 @@ function roadStart(state: GameState, unit: Unit, city: City): { x: number; y: nu
   return around[0] ?? null;
 }
 
+/**
+ * Whether this city has something in it that pays nothing without a soldier
+ * standing in the city itself.
+ *
+ * The treasury's question, not the Posting's: `garrisonNeeded` counts the ring
+ * around the city and is somebody else's problem, while `needsGarrison` means
+ * one body in the gate, which is a job a single soldier can finish.
+ */
+function wantsKeeper(state: GameState, city: City): boolean {
+  return workingBuildings(state, city).some((b) => {
+    const def = BUILDINGS[b];
+    return !!def && def.needsGarrison && def.garrisonNeeded === undefined;
+  });
+}
+
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
   const cities = playerCities(state, unit.owner).length;
 
@@ -1094,42 +1111,48 @@ function actSoldier(
   // Somebody has to walk with the settlers.
   if (escortDuty(state, unit)) return;
 
-  // Hold undefended home cities.
+  // Somebody has to mind the gold.
   //
-  // Section 108. Three things were wrong with this, and together they meant the
-  // AI's cities were empty most of the time while its buildings waited for
-  // somebody to stand in them:
+  // Section 108: a Goblin Treasury or a Simple Market pays nothing at all
+  // unless a soldier is standing in the city, and the AI's cities were empty
+  // most of the time -- the rule below could walk a unit to a city, but nothing
+  // ever kept it there, so a garrison walked in one turn and marched out to the
+  // war the next.
   //
-  // - **Nothing ever kept a unit there.** The "already standing on it" branch
-  //   below could not fire: a unit on the city tile made the city look held, so
-  //   the city was never the one picked. A garrison walked in one turn and
-  //   marched back out to the war the next.
-  // - **The first bare city, not the nearest.** A city nine tiles off was given
-  //   up on and the ones behind it in the list were never looked at, so a
-  //   soldier could stand next to an empty city and march past it.
-  // - **"Bare" meant no unit at all.** A Peon in the gate made the city look
-  //   held while the treasury beside it went on paying nothing -- settlers are
-  //   not a garrison, which is the rule the building itself asks.
+  // Deliberately narrow, and the narrowness is the whole design. Keeping a
+  // soldier in *every* city was tried and measured: 36 of 108 games flipped to
+  // the Kingdom, the Horde lost two cities and twenty citizens a game, fights
+  // rose by twenty and road building collapsed, because the side that wins by
+  // attacking had its army standing at home. So this is only the cities that
+  // have something in them waiting on a body, which is a handful of them and
+  // only once the building has been paid for.
   const ownCities = playerCities(state, unit.owner);
-  if (AI_TUNING.holdCities) {
+  if (AI_TUNING.guardTheGold) {
     const here = ownCities.find((c) => c.x === unit.x && c.y === unit.y);
-    // The only soldier in one of our own cities is the garrison, and stays. A
-    // second one passing through is free to carry on to the war.
-    if (here && garrisonSize(state, here) <= 1) {
+    // The only soldier in a city whose building is waiting on one stays. A
+    // second one passing through is free to carry on.
+    if (here && wantsKeeper(state, here) && garrisonSize(state, here) <= 1) {
       unit.order = 'fortified';
       return;
     }
+    const wanting = ownCities
+      .filter((c) => garrisonSize(state, c) === 0 && wantsKeeper(state, c))
+      .sort(
+        (a, b) =>
+          distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) || a.id - b.id,
+      )[0];
+    if (wanting && distance(unit.x, unit.y, wanting.x, wanting.y) <= 8) {
+      if (routeTo(state, unit, wanting.x, wanting.y)) {
+        moveToward(state, unit, wanting.x, wanting.y);
+        return;
+      }
+    }
   }
-  const bare = AI_TUNING.holdCities
-    ? ownCities
-        .filter((c) => garrisonSize(state, c) === 0)
-        .sort(
-          (a, b) =>
-            distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) || a.id - b.id,
-        )[0]
-    : ownCities.find(
-        (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
-      );
+
+  // Hold undefended home cities.
+  const bare = ownCities.find(
+    (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
+  );
   if (bare) {
     if (unit.x === bare.x && unit.y === bare.y) {
       unit.order = 'fortified';
@@ -1272,16 +1295,15 @@ export const AI_TUNING = {
   /** Cities per road worker the AI keeps once expansion is done. */
   citiesPerRoadWorker: 4,
   /**
-   * Whether a soldier holds a city rather than passing through it.
+   * Whether a soldier stays in a city whose buildings are waiting on one.
    *
-   * Section 108: with this off, the AI walks a unit toward an empty city and
-   * then marches it out again the next turn, so its treasuries and markets --
-   * which pay nothing without somebody standing in the city -- earn nothing for
-   * the whole game. A lever, because keeping one soldier at home in every city
-   * is soldiers off the front, and that is a balance change whatever it does to
-   * the books.
+   * Section 108: with this off, the AI's treasuries and markets -- which pay
+   * nothing without somebody standing in the city -- earn nothing for the whole
+   * game, because a garrison walks in one turn and marches out the next. Narrow
+   * on purpose: holding *every* city was measured and cost the Horde 36 games
+   * in 108.
    */
-  holdCities: true,
+  guardTheGold: true,
 };
 
 /**

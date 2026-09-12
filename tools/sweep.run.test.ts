@@ -45,7 +45,7 @@ const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
-  AI_TUNING.holdCities = true;
+  AI_TUNING.guardTheGold = true;
   POSTING.enabled = true;
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
@@ -55,29 +55,23 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 108: the AI keeps a soldier standing in its cities, so the buildings
-  // that pay nothing without one finally pay. Three arms, because this also
-  // re-asks section 106's question -- trade routes measured at nothing there for
-  // exactly this reason, so the third arm is the first honest measurement of
-  // them.
+  // Section 108, second attempt. The first kept a soldier in every city and was
+  // a disaster -- 36 of 108 games flipped to the Kingdom, the Horde lost two
+  // cities and twenty citizens a game, and road building collapsed with the
+  // empire that was meant to be doing it. This one keeps a soldier only where a
+  // building is waiting on one, which is a handful of cities and only after the
+  // building is paid for.
   //
-  // The first arm should reproduce section 106's shipped numbers, 36-17-1 and
-  // 32-21-1, since keepers are the only thing added since.
+  // The arm without should reproduce the last sweep's control exactly -- 32-22
+  // and 36-18 -- since the narrow rule is the only thing added since.
   {
-    label: 'no keepers',
+    label: 'gold unguarded',
     apply: () => {
       control();
-      AI_TUNING.holdCities = false;
+      AI_TUNING.guardTheGold = false;
     },
   },
-  {
-    label: 'keepers, no trade',
-    apply: () => {
-      control();
-      TRADE.enabled = false;
-    },
-  },
-  { label: 'keepers', apply: control },
+  { label: 'gold guarded', apply: control },
 ];
 
 /**

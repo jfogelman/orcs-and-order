@@ -5,12 +5,16 @@ import { cityGoldBonus } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 
 /**
- * Section 108: the AI keeps somebody standing in its cities.
+ * Section 108: the AI keeps somebody standing in the cities that are waiting on
+ * one.
  *
  * It never did. A unit walked to an empty city one turn and marched back out to
  * the war the next, so every building that pays nothing without a garrison --
  * the Goblin Treasury, the Simple Market -- earned nothing for whole games at a
  * time, and section 106's trade routes measured at nothing because of it.
+ *
+ * Only those cities, and that is the design rather than an economy: a keeper in
+ * every city was measured, and it cost the Horde 36 of 108 games.
  */
 
 const saved = { ...AI_TUNING };
@@ -75,7 +79,7 @@ describe('somebody stays in the city', () => {
   });
 
   it('marched straight back out again before this, which is the defect', () => {
-    AI_TUNING.holdCities = false;
+    AI_TUNING.guardTheGold = false;
     const { state, cities } = empire(1);
     const orc = spawnUnit(state, 0, 'orc', cities[0].x, cities[0].y, false);
     runAiTurn(state, 0);
@@ -103,6 +107,19 @@ describe('somebody stays in the city', () => {
     // soldier is still wanted. It cannot share the tile, so it comes as close as
     // it can and the Peon moves on in its own time.
     expect(Math.max(Math.abs(orc.x - cities[0].x), Math.abs(orc.y - cities[0].y))).toBeLessThan(2);
+  });
+
+  it('does not keep a soldier in a city with nothing to mind', () => {
+    // The narrowness is the design. Holding every city was measured and cost
+    // the Horde 36 games in 108: the side that wins by attacking had its army
+    // standing at home.
+    const { state, cities } = empire(1);
+    cities[0].buildings = [];
+    const orc = spawnUnit(state, 0, 'orc', cities[0].x, cities[0].y, false);
+
+    runAiTurn(state, 0);
+
+    expect([orc.x, orc.y]).not.toEqual([cities[0].x, cities[0].y]);
   });
 
   it('lets a second soldier carry on to the war', () => {
