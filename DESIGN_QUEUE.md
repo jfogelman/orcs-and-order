@@ -7556,12 +7556,62 @@ mystery.
 guards its treasuries is richer whether or not a single road is ever dug. It has
 since been built, and it works: 96 games in 108 now end with a route actually
 paying, against 46 here, and route gold went from 0.95 a game across both
-empires to about two a turn each. **What is still not measured is whether that
-gold changes who wins**, which wants an arm of its own rather than an assumption.
+empires to about two a turn each. Whether that gold changes who wins was then
+measured on its own, below: it does not.
 
 The fallback, if the keeper rule had turned out expensive, was to let a link pay
 regardless of the garrison -- simpler, but it would pay a city that is itself
 earning nothing, which is why it was not the first choice. It was not needed.
+
+### Asked again, with the gold guarded
+
+Section 108 landed, so the question was finally worth asking: 216 games, two seed
+sets, both arms with a keeper standing in every counting-house, differing only in
+whether the routes pay.
+
+| arm | set | orc-hum | cities | roads | routes | route gold |
+|---|---|---|---|---|---|---|
+| no trade routes | tuned | 28-26 | 6.00/7.74 | 45 | 0/0 | 0/0 |
+| no trade routes | held-out | 33-21 | 7.07/6.04 | 41 | 0/0 | 0/0 |
+| trade routes | tuned | 31-23 | 6.07/7.44 | 44 | 2.0/2.6 | 2.0/2.5 |
+| trade routes | held-out | 32-22 | 6.63/6.20 | 41 | 2.2/2.0 | 2.4/2.0 |
+
+The paying arm reproduced section 108's shipped numbers to the game -- 31-23 and
+32-22 -- so the gold was the only thing that moved.
+
+**The routes are real this time.** Links at the end went up by 2.1 for the Horde
+and 2.3 for the Kingdom, in 76 and 77 of 108 games and down in none
+(p = 3e-23), and 96 games in 108 ended with a route actually paying: about **two
+and a quarter gold a turn each side**.
+
+**And the gold changes nothing.** 98 of 108 games ended with the same winner, six
+flipping to the Horde and four to the Kingdom, p = 0.75. Cities, population,
+advances, fights, captures and length all sit between p = 0.10 and p = 0.89, with
+means inside a quarter of a city or citizen.
+
+### So what is this rule for
+
+It is worth being plain about it rather than dressing up a null result:
+
+- **At six gold a turn at full span, a trade route is flavour with a coin
+  attached.** Two and a quarter gold a turn against an empire earning tens of
+  them is a rounding error, and the sweep says so.
+- **That is not nothing.** The rule exists so that a road a player digs between
+  two counting-houses pays them back, and it does: it is visible in the log, in
+  the city view and in the Orcpedia, and nobody has to take it on faith. Section
+  73's complaint was about rules that existed and were never shown, not about
+  rules that are small.
+- **It is also proof the economics are safe.** An economy rule that measured at
+  nothing cannot be destabilising anything, which is exactly the licence needed
+  to turn it up later.
+- **The dial, if it should matter, is `goldAtFullSpan`.** Six is the shipped
+  value. Anything materially larger is a different rule -- roads become an
+  economic strategy rather than a convenience -- and it wants its own arm, since
+  the side that digs first would compound it.
+
+The recommendation is to leave it where it is until something else wants roads to
+matter economically -- section 96's pillaging is the obvious candidate, since
+cutting a road nobody notices is not much of a raid.
 
 ### Tests
 
@@ -7813,7 +7863,8 @@ argued about.
 
 ### What is left
 
-**Section 106 has still not been measured with the gold guarded.** Routes now pay
-about two gold a turn a side, which is real money and a small share of an
-empire's income; whether it changes who wins is the next question, and it wants
-its own arm rather than an assumption.
+Section 106 has now been measured with the gold guarded, which was the point of
+all this: the routes are real -- two more links a side, 96 games in 108 ending
+with one that pays -- and the gold changes nothing, 98 of 108 games keeping the
+same winner at p = 0.75. Written up under section 106, along with what that
+means for what the rule is for.

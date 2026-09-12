@@ -55,23 +55,22 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 108, second attempt. The first kept a soldier in every city and was
-  // a disaster -- 36 of 108 games flipped to the Kingdom, the Horde lost two
-  // cities and twenty citizens a game, and road building collapsed with the
-  // empire that was meant to be doing it. This one keeps a soldier only where a
-  // building is waiting on one, which is a handful of cities and only after the
-  // building is paid for.
+  // Section 106, asked properly at last. Trade routes were measured once before
+  // and moved nothing, for a reason that had nothing to do with them: the AI's
+  // treasuries stood unguarded, so almost no link had two paying ends. Section
+  // 108 fixed that, and 96 games in 108 now end with a route that pays -- so
+  // this is the first time the question has been worth asking.
   //
-  // The arm without should reproduce the last sweep's control exactly -- 32-22
-  // and 36-18 -- since the narrow rule is the only thing added since.
+  // The arm without should reproduce section 108's shipped numbers, 31-23 and
+  // 32-22, since the gold is the only thing switched off.
   {
-    label: 'gold unguarded',
+    label: 'no trade routes',
     apply: () => {
       control();
-      AI_TUNING.guardTheGold = false;
+      TRADE.enabled = false;
     },
   },
-  { label: 'gold guarded', apply: control },
+  { label: 'trade routes', apply: control },
 ];
 
 /**
