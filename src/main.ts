@@ -595,7 +595,7 @@ class App {
   private roadArmed = false;
 
   /**
-   * Arm "Road To": the next left click sets where the road goes.
+   * Arm "Road To": the next click on the map sets where the road goes.
    *
    * Armed the way an ability is, and for the same reason -- a left click on open
    * ground is already a march, so the click has to know it means something else
@@ -618,7 +618,7 @@ class App {
     this.disarm(false);
     this.roadArmed = true;
     this.refreshSidebar();
-    this.notify('Road To: click where the road should go. Escape to cancel.');
+    this.notify('Road To: click where the road should go — either button. Escape to cancel.');
   }
 
   /** Handle a click while Road To is armed. Returns whether the click was consumed. */
@@ -1116,6 +1116,12 @@ class App {
     this.canvas.addEventListener('pointerdown', (e) => {
       if (e.button === 2) {
         const t = this.tileFromEvent(e);
+        // Road To is answered by whichever button the player reaches for.
+        // Right-click is *this game's* gesture for "go there", so a player who
+        // arms Road To and then right-clicks has said exactly what they meant --
+        // and used to get a plain march, because only the left button was
+        // listening. Reported from a real game at turn 31.
+        if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
         if (t) this.actOn(t.x, t.y);
         return;
       }
