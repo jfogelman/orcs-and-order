@@ -1314,6 +1314,30 @@ export function autoBuildOf(city: City): AutoBuild {
  * meant changing what the AI builds in order to change what a player's cities
  * do, and those are not the same question.
  */
+/**
+ * Whether what this city is "building" is a standing choice rather than a
+ * project: Coin, Study or Placating.
+ *
+ * None of the three ever finishes, which is the whole point of them -- they are
+ * what a city does when it has not been given anything to do. Asked as one
+ * question because the alternative was asking about Coin and forgetting the
+ * other two, which is exactly what happened: a city set to **Ask me** and parked
+ * on Study was never asked again, because only Coin counted as idle.
+ */
+export function isStanding(item: ProductionItem): boolean {
+  return item.kind === 'coin' || item.kind === 'beakers' || item.kind === 'calm';
+}
+
+/**
+ * Cities waiting to be told what to do: set to **Ask me**, and building nothing
+ * in particular.
+ */
+export function needsOrders(state: GameState, playerId: number): City[] {
+  return state.cities.filter(
+    (c) => c.owner === playerId && c.size > 0 && isStanding(c.producing) && autoBuildOf(c) === 'ask',
+  );
+}
+
 export function nextProduction(state: GameState, city: City): ProductionItem {
   const units = buildOptions(state, city).units;
   const again = city.lastUnit && units.find((u) => u.id === city.lastUnit);

@@ -122,6 +122,8 @@ export class MapRenderer {
   private specialArt = new Map<string, HTMLImageElement>();
   /** Real road art, sliced into hub and eight spokes. Null until it loads, and for good if never drawn. */
   private roadFrames: HTMLCanvasElement[] | null = null;
+  /** Section 102's posts, per faction, once somebody draws them. */
+  private postArt = new Map<string, HTMLImageElement>();
   /** Badges a settlement wears, by state. Empty until the art loads. */
   private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;
@@ -150,6 +152,9 @@ export class MapRenderer {
     this.sprites.installRoadArt((frames) => {
       this.roadFrames = frames;
     });
+    for (const faction of ['orc', 'human']) {
+      this.sprites.installPostArt(faction, (img) => this.postArt.set(faction, img));
+    }
     // Cities are drawn every frame rather than pre-rendered, so these need no
     // invalidation -- they start appearing as soon as they have loaded.
     this.sprites.installCityOverlays(this.cityOverlays, CITY_OVERLAY_STATES);
@@ -249,6 +254,27 @@ export class MapRenderer {
    * shapes and two colours read clearly at every zoom the map allows, and a
    * post has to be legible against forest, sand and snow alike.
    */
+  /**
+   * Which side's hut to draw, for a thing that has no owner.
+   *
+   * A post belongs to nobody, like a road -- what matters is who stands on it.
+   * But it has to be drawn as *something*, so it is drawn in the style of the
+   * nearest city, which is the same rough answer the AI uses for whose ground
+   * it is standing on.
+   */
+  private postOwner(state: GameState, x: number, y: number): string | null {
+    let best: string | null = null;
+    let away = Infinity;
+    for (const c of state.cities) {
+      const d = Math.max(Math.abs(c.x - x), Math.abs(c.y - y));
+      if (d < away) {
+        away = d;
+        best = state.players[c.owner]?.faction ?? null;
+      }
+    }
+    return best;
+  }
+
   private drawPosts(
     ctx: CanvasRenderingContext2D,
     state: GameState,
@@ -265,6 +291,13 @@ export class MapRenderer {
         const i = idx(x, y, w);
         if (posts[i] !== 1 || !viewer.explored[i]) continue;
         const s = cam.tileToScreen(x, y);
+        // Real art if it has been drawn, and the three shapes below if not.
+        const owner = this.postOwner(state, x, y);
+        const drawn = owner ? this.postArt.get(owner) : undefined;
+        if (drawn) {
+          ctx.drawImage(drawn, s.x, s.y, size, size);
+          continue;
+        }
         const u = size / 8;
         const left = s.x + u * 2;
         const top = s.y + u * 3;

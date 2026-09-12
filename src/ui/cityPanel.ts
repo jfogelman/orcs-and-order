@@ -1,5 +1,7 @@
 import { idx } from '../engine/grid';
 import { PALACE_BASE, palaceArt, palacePieces } from '../model/palace';
+import type { PalacePlacement } from '../model/palace';
+import { PALACE_ART } from '../model/palaceArt';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -80,24 +82,44 @@ const POSTURE: Record<UnitOrder, string> = {
  *
  * Layered rather than one picture per combination: five modules at three tiers
  * is more combinations than anybody wants to generate, and an image model cannot
- * reliably edit its own last output. Each piece is trimmed to its own picture and
- * stood on a shared ground line -- the art is one isometric angle over one
- * horizon, so pieces that share a ground line read as one scene. The anchors live
- * with the modules rather than here, because they are a property of the art.
+ * reliably edit its own last output.
+ *
+ * Every piece is placed by its **foot** -- the middle of its lowest row of
+ * pixels, measured off the art itself and kept in `palaceArt.ts` -- against the
+ * chassis's foot. That is the near corner of an isometric box, which is the one
+ * point two pieces can agree on: a gate with a wall stub down one side has its
+ * middle somewhere in the wall, so lining two pieces up by their middles lines
+ * up nothing.
  */
 function palaceView(state: GameState, city: City): string {
   const player = state.players[city.owner];
   const faction = player.faction;
-  const BOX = 200;
-  const piece = (art: string, at: { x: number; ground: number; height: number }) =>
-    `<img class="palace-piece" src="${escapeHtml(palacePath(art))}" alt=""
-      style="left:${Math.round(at.x * BOX)}px; bottom:${Math.round((1 - at.ground) * BOX)}px; height:${Math.round(at.height * BOX)}px" />`;
+  const BOX = 210;
+
+  // The chassis: its drawn width sets the scale, and its foot is the origin
+  // every other piece is measured from.
+  const baseW = PALACE_BASE.width * BOX;
+  const footX = BOX / 2;
+  const footY = PALACE_BASE.ground * BOX;
+
+  const piece = (name: string, at: PalacePlacement) => {
+    const art = PALACE_ART[name];
+    if (!art) return '';
+    const w = at.width * baseW;
+    const h = (w * art.h) / art.w;
+    const x = footX + at.dx * baseW - art.foot * w;
+    const y = footY + at.dy * baseW - h;
+    return `<img class="palace-piece" src="${escapeHtml(palacePath(name))}" alt=""
+      style="left:${Math.round(x)}px; top:${Math.round(y)}px; width:${Math.round(w)}px" />`;
+  };
 
   const standing = palacePieces(player);
   const layer = (behind: boolean) =>
     standing
       .filter(({ module }) => !!module.behind === behind)
-      .map(({ module, tier }) => piece(palaceArt(faction, module.id, tier), module.at))
+      .map(({ module, tier }) =>
+        piece(palaceArt(faction, module.id, tier), module.per?.[faction] ?? module.at),
+      )
       .join('');
 
   return `
@@ -105,7 +127,7 @@ function palaceView(state: GameState, city: City): string {
         <div class="panel-body palace-body">
           <div class="palace" style="width:${BOX}px; height:${BOX}px">
             ${layer(true)}
-            ${piece(`${faction}-base`, PALACE_BASE)}
+            ${piece(`${faction}-base`, { width: 1, dx: 0, dy: 0 })}
             ${layer(false)}
           </div>
           <div class="palace-parts">

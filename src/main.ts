@@ -28,7 +28,7 @@ import type { EffectId } from './render/effects';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
 import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
-import { autoBuildOf, canFoundCity, foundCity, inSupply, productionName } from './sim/city';
+import { canFoundCity, foundCity, inSupply, needsOrders, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
 import { cityAt, createGame, log, playerCities, playerUnits, unitAt } from './sim/gamestate';
 import {
@@ -918,12 +918,12 @@ class App {
    */
   private promptBuildIfIdle(): void {
     if (isModalOpen() || isOver(this.state)) return;
-    const city = playerCities(this.state, this.viewerId).find(
-      (c) =>
-        c.size > 0 &&
-        c.producing.kind === 'coin' &&
-        autoBuildOf(c) === 'ask' &&
-        !this.askedCities.has(c.id),
+    // Coin, Study and Placating all mean "nothing in particular", and a city on
+    // any of them is a city waiting to be told. This used to ask about Coin
+    // alone, so a city parked on Study under Ask me was never asked again --
+    // reported from a real game.
+    const city = needsOrders(this.state, this.viewerId).find(
+      (c) => !this.askedCities.has(c.id),
     );
     if (!city) return;
     // Remembered whether or not anything is chosen, so that closing the panel

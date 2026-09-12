@@ -34,6 +34,14 @@ export type PalaceModuleId = 'wing' | 'tower' | 'banners' | 'gate' | 'grounds';
 /** Tiers a module can reach. Three, everywhere, since the art comes in threes. */
 export const PALACE_TIERS = 3;
 
+export interface PalacePlacement {
+  /** Drawn width, as a share of the chassis's drawn width. */
+  width: number;
+  /** Where its foot goes from the chassis's foot, in chassis widths. */
+  dx: number;
+  dy: number;
+}
+
 export interface PalaceModuleDef {
   id: PalaceModuleId;
   /** What both sides call the category, for the build list and the pedia. */
@@ -41,15 +49,29 @@ export interface PalaceModuleDef {
   /** The three tiers, per faction, cheapest first. */
   tiers: Record<FactionId, [string, string, string]>;
   /**
-   * Where the piece stands, in fractions of the box.
+   * Where the piece stands, against the chassis it hangs off.
    *
-   * `x` is the middle of it, `ground` is the line it stands on measured from the
-   * top of the box, and `height` is how tall it is drawn. The art is isometric
-   * at one fixed angle over one horizon, so pieces that share a ground line read
-   * as one scene -- which is the whole trick, and is why this is a ground line
-   * and not a centre point. Widths come from the pictures themselves.
+   * The art is isometric at one locked angle, so the chassis is a diamond whose
+   * near corner is the point it stands on, and every other piece is placed by
+   * **its own near corner** -- `foot` in the generated art table -- offset from
+   * that one. In chassis widths: the diamond is one wide and half a chassis
+   * width deep, so its right corner is (+0.5, -0.25), its left corner is
+   * (-0.5, -0.25), and the ground in front of it is straight down.
+   *
+   * `width` is how much of the chassis's width the piece covers; the height
+   * follows from the picture, which is why nothing here says how tall anything
+   * is.
    */
-  at: { x: number; ground: number; height: number };
+  at: PalacePlacement;
+  /**
+   * Where it goes on a particular side's chassis, when that differs.
+   *
+   * The two wings are mirror images: the Totem Wing's open seam is on its upper
+   * left, so it hangs off the Warcamp's lower right, and the Chapel Wing's is on
+   * its upper right, so it hangs off the Grand Hall's lower left. The towers
+   * then take the opposite corner from the wing, for room.
+   */
+  per?: Partial<Record<FactionId, PalacePlacement>>;
   /** Drawn before the chassis, so the chassis overlaps where they join. */
   behind?: boolean;
   blurb: string;
@@ -68,7 +90,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
     },
-    at: { x: 0.5, ground: 0.94, height: 0.24 },
+    at: { width: 1.05, dx: 0, dy: 0.3 },
     // Under everything: a yard is the ground, and the hall stands at the back
     // of it rather than on top of it.
     behind: true,
@@ -81,8 +103,11 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
     },
-    at: { x: 0.235, ground: 0.69, height: 0.4 },
-    behind: true,
+    at: { width: 0.66, dx: 0.46, dy: 0.2 },
+    per: {
+      orc: { width: 0.66, dx: 0.46, dy: 0.2 },
+      human: { width: 0.66, dx: -0.46, dy: 0.2 },
+    },
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
   {
@@ -92,8 +117,11 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
     },
-    at: { x: 0.78, ground: 0.69, height: 0.54 },
-    behind: true,
+    at: { width: 0.5, dx: -0.52, dy: -0.2 },
+    per: {
+      orc: { width: 0.5, dx: -0.52, dy: -0.2 },
+      human: { width: 0.5, dx: 0.52, dy: -0.2 },
+    },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
   {
@@ -103,7 +131,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
     },
-    at: { x: 0.5, ground: 0.78, height: 0.28 },
+    at: { width: 0.52, dx: 0, dy: 0.04 },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
@@ -113,21 +141,21 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
     },
-    at: { x: 0.44, ground: 0.34, height: 0.22 },
-    behind: true,
+    at: { width: 0.34, dx: 0, dy: -0.44 },
     blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];
 
 
 /**
- * Where the chassis stands, and therefore where everything else does.
+ * Where the chassis stands in the box, and how wide it is drawn.
  *
- * The hall is deliberately not the tallest thing in the picture -- a tower is --
- * so it takes a little under half the height, leaving room above it for a spire
- * and below it for a yard.
+ * Everything else is placed against this, so these two numbers are the scale of
+ * the whole picture: `width` as a share of the box, and `ground` as where its
+ * near corner sits down the box. Room is left to the right and left for a wing
+ * and a tower, above for a banner, and below for a yard.
  */
-export const PALACE_BASE = { x: 0.5, ground: 0.72, height: 0.44 };
+export const PALACE_BASE = { width: 0.62, ground: 0.6 };
 
 export const PALACE_BY_ID = new Map(PALACE_MODULES.map((m) => [m.id, m]));
 

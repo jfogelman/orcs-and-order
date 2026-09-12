@@ -304,6 +304,47 @@ should be conspicuously one stall selling one thing.
 
 ---
 
+## Garrison posts — 0 of 2 done
+
+Section 102's answer to the Posting: a hut on a tile, out on a city's own land,
+that a soldier stands in. It is **drawn on the map**, over the terrain and beside
+the roads, so it wants the same treatment roads got rather than the icon
+treatment: a small structure seen from the same angle as everything else on the
+map, not a picture of one on a card.
+
+Two of them, one a side, at `art_src/posts/<faction>.png` — `orc.png` and
+`human.png`. Until they exist the game draws a placeholder hut with three canvas
+shapes, which is legible and obviously temporary.
+
+**Size and framing.** 64×64, the structure filling the frame with a little air
+around it, **no ground under it** — it is drawn onto whatever tile it stands on,
+so a patch of grass baked into the sprite will sit on a desert.
+
+> Pixel art of a small wooden guard post, 64x64, plain solid magenta background
+> (#FF00FF), seen from directly above at a slight angle in the same top-down map
+> view as a tile of terrain, no ground or grass under it, thick dark outline,
+> limited palette, flat shading with one light source from the upper left,
+> mid-1990s fantasy strategy game style, no text, no logos, no border, no
+> characters, no shadow on the ground.
+
+| id | Faction | Subject |
+|---|---|---|
+| `orc` | orc | a crude lashed-log lean-to with a hide roof, a spear leaning against one post and a skull on a stake beside it |
+| `human` | human | a tidy timber guardhouse with a shingled roof, a shuttered window and a spear leaning against the wall |
+
+**The joke is the difference in tidiness, not the difference in menace**: both are
+one soldier's worth of shelter, and the Kingdom's has been built properly while
+the Horde's has been built quickly. Keep them the same *size* — a post is a post,
+and the rule pays both sides the same.
+
+**What matters for the game**, in order: it must read at 32 pixels; it must not
+look like a city (cities are the other structure on the map, and confusing the
+two is worse than either looking plain); and it must read as *occupied or not*
+being somebody else's problem — the soldier standing on it is drawn separately,
+on top.
+
+---
+
 ## Effect animations — all 10 done
 
 Short bursts played over the map when something happens: a sapper going up, an arrow
