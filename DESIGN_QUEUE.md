@@ -4611,72 +4611,78 @@ sweep becomes unreadable, which sections 17 and 21 both learned the hard way.
 
 ## 67. Civic Pride: a capital that shows how well it is going
 
-**Built, and decorative on purpose.** The design and the art were both drafted
-before any code existed -- `art_src/palace/capital_building_bible (2).md` and the
-thirty-four images beside it -- and this section's own sequencing note said what
-order to do it in: decorative first, measured second, and only then a word about
-yields.
+**Built.** The design and the art were both drafted before any code existed --
+`art_src/palace/capital_building_bible (2).md` and the thirty-four images beside
+it -- and this section's own sequencing note said what order to do it in:
+decorative first, measured second, and only then a word about yields.
 
-### What shipped
+### What it is
 
 - **A base chassis per side and five modules of three tiers each**: a watchtower
   at one corner, a gate at the front, a wing at one side, grounds out front and
-  banners along the roofline. Thirty pieces, and both sides get the same five
-  categories in their own materials, so neither has a module the other cannot
-  answer.
-- **They are buildings.** Generated from the module table rather than typed out,
-  and inserted into `BUILDINGS` before `BUILDING_IDS` is taken -- so queueing,
-  costing, finishing, saving and the build list all work without a second kind
-  of thing to build. Each tier `needs` the one under it, which is the same rule
-  the economy buildings use.
-- **Offered in the capital, and only while the empire is worth being proud of.**
-  `civicPride` is the new reading this section said nothing expressed: three
-  cities, fifty gold, nobody rioting and nobody starving. Every condition is
-  something a player can see and fix.
-- **They do nothing.** No yields, no defence, no content, no upkeep. A module is
-  a picture of how well it is going.
-- **The city view draws the capital**, composited from whatever has been built
-  onto it -- the pieces layered at anchors that live with the modules rather than
-  in the panel, since they are a property of the art.
+  banners along the roofline. Both sides get the same five categories in their
+  own materials, so nobody has a module the other cannot answer.
+- **It is offered, never bought.** When the empire's score passes another
+  milestone -- and only while nobody is rioting and nobody is hungry -- the
+  council asks which piece to add, and the answer is the whole of the mechanic.
+  No shields, no queue, no turn spent, and no way to decline: the choice is
+  which, not whether.
+- **It does nothing.** No yields, no defence, no content, no upkeep.
+- **It belongs to the empire**, not to the city. A capital that falls is still an
+  empire that built all that, and the palace is drawn in whichever city is the
+  capital now.
 
-### Why nothing, and why the AI never builds one
+### The thing this got wrong first, which is worth writing down
 
-A palace that pays is a per-city multiplier on the capital, and sections 4c and
-4e measured that class of thing amplifying whoever is already ahead. Section 109
-had just finished establishing that this game had drifted eleven points to the
-Horde through six changes that each looked harmless, which is not the week to add
-a multiplier to the side that is winning.
+The first build made the modules **buildings you queue with shields**, thirty of
+them, gated to the capital. It passed its tests and it was wrong, for a reason
+this section had already written down: *"this is a reward for doing well, so it
+should not also be how you do well."* A wing that costs a hundred and forty
+shields is not a reward -- it is an army you did not build, with a picture
+attached, and a player who takes it is paying for the privilege of having done
+well. Civ2's throne room never charged for a curtain.
 
-And because a module is worth nothing, **the AI is filtered away from them**: an
-AI queueing a hundred and forty shields of scenery would be handing the other
-side a hundred and forty shields, which is a balance change wearing a hat. The
-filter is in `chooseProduction` rather than in the build list, so a person can
-still see the whole list in their own capital.
+So the mechanic is the asking. `prideDue` owns when: a score milestone
+(`PRIDE.step`, thirty-five points of population, advances and buildings together,
+which is about a dozen pieces in a strong game and the full fifteen only in an
+excellent one), and an empire that is content and fed *at that moment*. Earning
+one while rioting does not lose it -- milestones are counted against pieces
+taken, so it is waiting when the riots stop.
+
+The AI is not asked at all, which is also the answer to "what does this do to
+balance": nothing, in either direction.
 
 ### The compositing, which was the actual work
 
 Nothing in the game stacked sprites at named points before this: city art was one
-picture per size tier. The pieces come out of the art pipeline **centred in their
-own square** rather than sat on the floor like everything else -- a banner belongs
-at the roofline and a yard belongs at the front -- so placing one is a left, a top
-and a width, and the anchors are five numbers per module.
+picture per size tier.
+
+The first attempt squared every piece and placed it by its centre, which threw
+away the one thing that makes the pieces line up. **They are a scene on a shared
+ground line**: a hall, a taller tower standing beside it, an arch in front of it,
+a flat courtyard lying at the front. The art is isometric at one fixed angle over
+one horizon -- the bible locked that deliberately -- so the pipeline now trims
+each piece to its own picture and keeps its shape, and the renderer stands each
+one on a ground line at a height measured against the box. Widths come from the
+pictures.
 
 The bible asked for an in-engine composite test on mixed tiers before trusting
-the attachment points, and it was right to: at the first attempt the chassis was
-drawn at the full size of the box and swallowed every module behind it. The
-chassis now takes about two thirds, and both sides were checked in the running
-game with a wing, a tower, banners, a gate and grounds at mixed tiers.
+the attachment points, and it was right twice over: the first pass drew the
+chassis at the full size of the box and swallowed every module behind it, and the
+second put the gate through the middle of the hall's front wall. Both sides were
+then checked in the running game with a wing, a tower, banners, a gate and
+grounds at mixed tiers.
 
 ### What is left
 
-- **Yields, if ever.** Deliberately not now. If a module is ever worth something,
-  it wants its own arm and section 109's table is the baseline.
+- **Yields, if ever.** Deliberately not now. If a module is ever worth something
+  it wants its own arm, and section 109's table is the baseline it has to beat.
 - **The map.** The capital still draws as a city like any other; the palace lives
   in the city view. A tile is thirty-two pixels and a palace is a picture, so
   this is a deliberate stop rather than an omission.
 - **The two stylistic calls the bible left open**: the orc banner line jumps in
-  material between tier one and two, and the orc chassis is busier than the human
-  one. Both are visible now that they composite, and both are still fine.
+  material between tier one and tier two, and the orc chassis is busier than the
+  human one. Both are visible now that they composite, and both still look fine.
 
 ## 68. Unit upgrade branches: thirty-six advances, and one unsolved problem
 

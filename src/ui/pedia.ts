@@ -311,9 +311,6 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
   const buildingList = BUILDING_IDS.map((id) => BUILDINGS[id])
     .filter((b) => b.faction === 'both' || b.faction === faction)
-    // Section 67's capital pieces are thirty entries that all say the same
-    // thing, and the paragraph above the list says it once instead.
-    .filter((b) => !b.civic)
     .map(
       (b) => `
       <div class="pedia-tech-row" id="pedia-b-${escapeHtml(b.id)}">
@@ -364,13 +361,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       </div>
       <div class="pedia-pane" data-pane="buildings" hidden>
         <p class="flavor">
-          <strong>Civic Pride.</strong> Your <strong>capital</strong> is built a piece at a time:
-          a watchtower at one corner, a gate at the front, a wing at one side, grounds out front and
-          banners along the roof, each of them three tiers deep and each tier needing the one under
-          it. The pieces are offered in the capital only, and only while the empire is worth being
-          proud of &mdash; ${CIVIC_PRIDE.cities} cities, ${CIVIC_PRIDE.gold} gold, nobody rioting and
-          nobody starving. They do <em>nothing</em>: no yields, no defence, no upkeep. It is a
-          picture of how well it is going, and the city view draws it.
+          <strong>Civic Pride.</strong> Your <strong>capital</strong> grows a piece at a time: a
+          watchtower at one corner, a gate at the front, a wing at one side, grounds out front and
+          banners along the roof, three tiers each. You never build these and they never cost
+          anything &mdash; when the empire has done well enough, and while nobody is rioting and
+          nobody is hungry (${CIVIC_PRIDE.cities} cities and ${CIVIC_PRIDE.gold} gold at the least),
+          the council asks which piece to add. They do <em>nothing</em> whatsoever: no yields, no
+          defence, no upkeep. The capital is a picture of how the game has gone, and the city view
+          draws it.
         </p>
         <div class="pedia-rows">${buildingList}</div>
       </div>

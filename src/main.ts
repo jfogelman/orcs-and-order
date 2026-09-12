@@ -58,6 +58,8 @@ import {
   resupplyBlocked,
 } from './sim/combat';
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
+import { openPrideOffer } from './ui/pride';
+import { prideDue } from './sim/turn';
 import { openHordeReport } from './ui/hordeReport';
 import {
   afterModalCloses,
@@ -811,6 +813,9 @@ class App {
     this.promptPerkIfOwed();
     if (isModalOpen()) return chain();
 
+    this.promptPrideIfDue();
+    if (isModalOpen()) return chain();
+
     if (!this.askedResearch) {
       this.askedResearch = true;
       this.promptResearchIfIdle();
@@ -856,6 +861,23 @@ class App {
       // Passed through, so the room talks about what it interrupted for.
       openAdvisors(this.state, this.viewerId, raise),
     );
+  }
+
+  /**
+   * Section 67: ask what to add to the capital, when the empire has earned one.
+   *
+   * Offered rather than sold, and asked at the top of the turn beside the other
+   * things the council wants a decision about. `prideDue` owns when -- a score
+   * milestone, and an empire that is content and fed right now -- so this only
+   * has to put the question.
+   */
+  private promptPrideIfDue(): void {
+    if (isModalOpen() || isOver(this.state)) return;
+    if (!prideDue(this.state, this.viewerId)) return;
+    openPrideOffer(this.state, this.viewerId, () => {
+      this.playLogCues();
+      this.refreshHud();
+    });
   }
 
   /**

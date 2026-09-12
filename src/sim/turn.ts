@@ -5,6 +5,7 @@ import { BUILDINGS } from '../model/buildings';
 import type { GameState, Player, Unit } from '../model/types';
 import {
   buildingUpkeep,
+  civicPride,
   workingBuildings,
   cityIncome,
   supplyQuality,
@@ -21,6 +22,7 @@ import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
 import { updateTradeLinks } from './trade';
+import { prideOffer } from '../model/palace';
 import { addBeakers, techCost } from './research';
 import { effectiveMove } from './rules';
 
@@ -279,6 +281,35 @@ export function scoreBreakdown(state: GameState, playerId: number): ScoreBreakdo
 
 export function playerScore(state: GameState, playerId: number): number {
   return scoreBreakdown(state, playerId).total;
+}
+
+/**
+ * Section 67: how good a game has to be going before the capital grows.
+ *
+ * Counted in score, which is the number the game already uses for "how well is
+ * this going" -- population, advances and buildings together -- so this cannot
+ * be farmed by any one of them. A step of thirty-five puts a dozen pieces in a
+ * strong game and the full fifteen only in an excellent one, which is the point:
+ * a finished palace should mean something happened.
+ */
+export const PRIDE = { step: 35 };
+
+/**
+ * Whether the council owes this empire a piece of its capital.
+ *
+ * Two conditions and they are different in kind. **Earned**: the score has
+ * passed another milestone since the last piece was taken. **Deserved**: the
+ * empire is content and fed right now, because a capital growing a garden while
+ * a town riots is a different game's joke. An empire that earns a piece while
+ * rioting has not lost it -- the milestone is counted against what has been
+ * taken, so it is waiting whenever the riots stop.
+ */
+export function prideDue(state: GameState, playerId: number): boolean {
+  const player = state.players[playerId];
+  if (!player || player.barbarian) return false;
+  if (prideOffer(player).length === 0) return false;
+  if (!civicPride(state, playerId)) return false;
+  return Math.floor(playerScore(state, playerId) / PRIDE.step) > (player.prideTaken ?? 0);
 }
 
 /** Grace period before losing your last city counts as losing the game. */

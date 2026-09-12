@@ -1,5 +1,4 @@
-import type { BuildingDef } from './buildings';
-import type { BuildingId, FactionId } from './types';
+import type { FactionId, Player } from './types';
 
 /**
  * Civic Pride: the capital, built a piece at a time.
@@ -11,13 +10,17 @@ import type { BuildingId, FactionId } from './types';
  * the same five categories in their own materials, so nobody has a module the
  * other cannot answer.
  *
- * **It does nothing.** No yields, no defence, no content, no upkeep: a module is
- * a picture of how well it is going. Section 67 asked for it in that order --
- * decorative first, measured second, and only then a word about yields -- because
- * a palace that pays is a multiplier on the capital, and sections 4c and 4e
- * measured that class of thing amplifying whoever is already ahead. It is also
- * the reason the AI never builds one: shields spent on a view are shields, and an
- * AI doing that would be a balance change wearing a hat.
+ * **It is a reward, not a purchase.** Nothing here is queued, costs shields or
+ * takes a turn: when the empire is doing especially well the council asks which
+ * piece to add, and the answer is the whole of the mechanic. Section 67 was firm
+ * about this -- "a reward for doing well, so it should not also be *how* you do
+ * well" -- and a wing that costs a hundred and forty shields is a wing that
+ * competes with an army, which makes it a cost with a picture attached.
+ *
+ * **And it does nothing.** No yields, no defence, no content, no upkeep: a
+ * module is a picture of how well it is going. A palace that pays is a
+ * multiplier on the capital, and sections 4c and 4e measured that class of thing
+ * amplifying whoever is already ahead.
  *
  * The art is built for compositing rather than as one evolving picture, because
  * an image model cannot reliably edit its own last output and every combination
@@ -28,29 +31,49 @@ import type { BuildingId, FactionId } from './types';
  */
 export type PalaceModuleId = 'wing' | 'tower' | 'banners' | 'gate' | 'grounds';
 
+/** Tiers a module can reach. Three, everywhere, since the art comes in threes. */
+export const PALACE_TIERS = 3;
+
 export interface PalaceModuleDef {
   id: PalaceModuleId;
   /** What both sides call the category, for the build list and the pedia. */
   name: string;
   /** The three tiers, per faction, cheapest first. */
   tiers: Record<FactionId, [string, string, string]>;
-  /** Shields per tier. */
-  cost: [number, number, number];
   /**
-   * Where the piece's own centre sits, in fractions of the chassis box, and how
-   * wide it is drawn against that box.
+   * Where the piece stands, in fractions of the box.
    *
-   * Every piece arrives centred in a square of its own, so placing one is two
-   * numbers and a size rather than a hand-cut atlas.
+   * `x` is the middle of it, `ground` is the line it stands on measured from the
+   * top of the box, and `height` is how tall it is drawn. The art is isometric
+   * at one fixed angle over one horizon, so pieces that share a ground line read
+   * as one scene -- which is the whole trick, and is why this is a ground line
+   * and not a centre point. Widths come from the pictures themselves.
    */
-  at: { x: number; y: number; scale: number };
+  at: { x: number; ground: number; height: number };
   /** Drawn before the chassis, so the chassis overlaps where they join. */
   behind?: boolean;
   blurb: string;
 }
 
-/** Drawn in this order, which is why the list is not alphabetical. */
+/**
+ * Drawn in the order of this list, which is why it is not alphabetical: the yard
+ * first because it is the ground, then the two pieces that stand behind the
+ * hall, then the hall, then what is in front of it and what is on top of it.
+ */
 export const PALACE_MODULES: PalaceModuleDef[] = [
+  {
+    id: 'grounds',
+    name: 'Grounds',
+    tiers: {
+      human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
+      orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
+    },
+    at: { x: 0.5, ground: 0.94, height: 0.24 },
+    // Under everything: a yard is the ground, and the hall stands at the back
+    // of it rather than on top of it.
+    behind: true,
+    blurb: 'What is out the front, and therefore what everybody judges the place by.',
+  },
   {
     id: 'wing',
     name: 'Wing',
@@ -58,8 +81,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
     },
-    cost: [40, 80, 140],
-    at: { x: 0.19, y: 0.5, scale: 0.42 },
+    at: { x: 0.235, ground: 0.69, height: 0.4 },
     behind: true,
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
@@ -70,22 +92,9 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
     },
-    cost: [40, 80, 140],
-    at: { x: 0.8, y: 0.36, scale: 0.4 },
+    at: { x: 0.78, ground: 0.69, height: 0.54 },
     behind: true,
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
-  },
-  {
-    id: 'banners',
-    name: 'Regalia',
-    tiers: {
-      human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
-      orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
-    },
-    cost: [30, 60, 110],
-    at: { x: 0.5, y: 0.08, scale: 0.3 },
-    behind: true,
-    blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
   {
     id: 'gate',
@@ -94,95 +103,78 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
     },
-    cost: [40, 80, 140],
-    at: { x: 0.5, y: 0.72, scale: 0.36 },
+    at: { x: 0.5, ground: 0.78, height: 0.28 },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
-    id: 'grounds',
-    name: 'Grounds',
+    id: 'banners',
+    name: 'Regalia',
     tiers: {
-      human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
-      orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
+      human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
+      orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
     },
-    cost: [30, 60, 110],
-    at: { x: 0.5, y: 0.92, scale: 0.56 },
-    blurb: 'What is out the front, and therefore what everybody judges the place by.',
+    at: { x: 0.44, ground: 0.34, height: 0.22 },
+    behind: true,
+    blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];
 
+
 /**
- * Where the chassis itself sits in the box.
+ * Where the chassis stands, and therefore where everything else does.
  *
- * Not the whole box: the modules hang off its corners and its roofline, so it
- * has to leave room on every side or they are drawn behind a wall and lost. Two
- * thirds, found by looking at it.
+ * The hall is deliberately not the tallest thing in the picture -- a tower is --
+ * so it takes a little under half the height, leaving room above it for a spire
+ * and below it for a yard.
  */
-export const PALACE_BASE = { x: 0.5, y: 0.44, scale: 0.62 };
+export const PALACE_BASE = { x: 0.5, ground: 0.72, height: 0.44 };
 
 export const PALACE_BY_ID = new Map(PALACE_MODULES.map((m) => [m.id, m]));
 
-/**
- * The building id for one module at one tier.
- *
- * The faction is in the id because the two sides' versions are different
- * buildings with different names -- a Gilded Spire is not an Iron-Plated Tower
- * -- and a building id is a key in one table. It also makes the id the art file
- * name with `palace-` taken off, which is one fewer thing to keep in step.
- */
-export function palaceId(faction: FactionId, module: PalaceModuleId, tier: number): BuildingId {
-  return `palace-${faction}-${module}-${tier}`;
+/** What the art for one piece is called, under `public/palace/`. */
+export function palaceArt(faction: FactionId, module: PalaceModuleId, tier: number): string {
+  return `${faction}-${module}-${tier}`;
 }
 
-/** Whether this building is a piece of the capital rather than a building. */
-export function isPalace(id: BuildingId): boolean {
-  return id.startsWith('palace-');
-}
+/** The tiers an empire has raised, which is a thing the empire owns. */
+export type PalaceTiers = Partial<Record<PalaceModuleId, number>>;
 
-/** The module and tier a palace building id names, if it is one. */
-export function palacePart(
-  id: BuildingId,
-): { faction: FactionId; module: PalaceModuleDef; tier: number } | null {
-  if (!isPalace(id)) return null;
-  const [, faction, name, tier] = id.split('-');
-  const module = PALACE_BY_ID.get(name as PalaceModuleId);
-  const n = Number(tier);
-  if (!module || !(n >= 1 && n <= 3)) return null;
-  if (faction !== 'orc' && faction !== 'human') return null;
-  return { faction, module, tier: n };
-}
-
-/** Where the art for a piece lives, under `public/palace/`. */
-export function palaceArt(id: BuildingId): string {
-  return id.replace(/^palace-/, '');
+/** What this empire has built onto its capital so far. */
+export function palaceOf(player: Player): PalaceTiers {
+  return player.palace ?? {};
 }
 
 /**
- * The thirty modules as buildings, so that everything a building already knows
- * how to do -- be queued, cost shields, finish, sit in a save, show in a list --
- * works without a second kind of thing to build.
+ * What the council can offer: every module that is not already at the top.
  *
- * `needs` chains each tier to the one under it, which is what makes a tier a
- * tier rather than a parallel choice, and is the same rule the economy buildings
- * use.
+ * Five choices at the start and fewer later, which is the shape Civ2's throne
+ * room had -- the interesting decision is early, when everything is possible and
+ * the empire is small enough that any of it would be a boast.
  */
-export function palaceBuildings(): BuildingDef[] {
-  const out: BuildingDef[] = [];
-  for (const module of PALACE_MODULES) {
-    for (const faction of ['orc', 'human'] as const) {
-      for (let tier = 1; tier <= 3; tier++) {
-        out.push({
-          id: palaceId(faction, module.id, tier),
-          name: module.tiers[faction][tier - 1],
-          faction,
-          cost: module.cost[tier - 1],
-          upkeep: 0,
-          civic: true,
-          needs: tier > 1 ? palaceId(faction, module.id, tier - 1) : undefined,
-          blurb: module.blurb,
-        });
-      }
-    }
-  }
-  return out;
+export function prideOffer(player: Player): Array<{ module: PalaceModuleDef; tier: number }> {
+  const have = palaceOf(player);
+  return PALACE_MODULES.map((module) => ({ module, tier: (have[module.id] ?? 0) + 1 })).filter(
+    (o) => o.tier <= PALACE_TIERS,
+  );
+}
+
+/** Accept one. Returns whether it was a thing that could be accepted. */
+export function takePride(player: Player, module: PalaceModuleId): boolean {
+  const have = { ...palaceOf(player) };
+  const tier = (have[module] ?? 0) + 1;
+  if (tier > PALACE_TIERS) return false;
+  have[module] = tier;
+  player.palace = have;
+  return true;
+}
+
+/** Pieces standing, in the order they are drawn. */
+export function palacePieces(
+  player: Player,
+): Array<{ module: PalaceModuleDef; tier: number }> {
+  const have = palaceOf(player);
+  return PALACE_MODULES.filter((m) => (have[m.id] ?? 0) > 0).map((module) => ({
+    module,
+    tier: have[module.id]!,
+  }));
 }

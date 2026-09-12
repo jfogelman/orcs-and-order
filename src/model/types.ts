@@ -65,6 +65,19 @@ export interface Player {
   /** Superseded by `rates`. Kept so old saves still open. */
   taxRate?: number;
   /**
+   * Section 67's Civic Pride: which piece of the capital stands at which tier.
+   *
+   * Held by the empire rather than by the city, because a capital that falls is
+   * still an empire that built all that. Optional, so a game where nobody has
+   * been offered anything carries nothing.
+   */
+  palace?: Record<string, number>;
+  /**
+   * How many pieces this empire has been offered, which is what the next
+   * milestone is counted against.
+   */
+  prideTaken?: number;
+  /**
    * Trade routes this player had last turn, as `linkKey` strings.
    *
    * Kept so the turn can say what opened and what closed rather than only

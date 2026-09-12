@@ -1920,11 +1920,10 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
     """
     The capital's parts, keyed and squared but *not* floored.
 
-    Everything else in this file sits its subject on the bottom of the canvas,
-    which is right for a unit standing on a tile and wrong for a thing that has
-    to line up with another thing. A banner belongs at the roofline and a yard
-    belongs at the front, so each piece is centred in its square and the
-    renderer decides where the square goes.
+    Everything else in this file pads its subject out to a square, which is
+    right for an icon and wrong for a piece that has to line up with another
+    piece. These are trimmed to the picture and no more: the renderer stands
+    them on a shared ground line, so it needs their real shapes.
     """
     src = SRC / "palace"
     out = OUT / "palace"
@@ -1944,7 +1943,7 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
             continue
         img = Image.open(path)
         img, cut_out = remove_background(img)
-        img = centre_in_square(img, PALACE_SIZE)
+        img = fit_within(img, PALACE_SIZE)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
         print(f"  palace/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
@@ -1954,19 +1953,28 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
     return done, missing, failed
 
 
-def centre_in_square(img: Image.Image, size: int) -> Image.Image:
-    """Crop to content and centre it, keeping its shape. No floor, no margin."""
+def fit_within(img: Image.Image, size: int) -> Image.Image:
+    """
+    Crop to content and scale to fit, keeping the shape it was drawn in.
+
+    Deliberately *not* squared. Everything else in this file pads its subject
+    out to a square, which is right for an icon in a row and wrong for a piece
+    that has to stand on the same ground as another piece: a tower is taller
+    than the hall it stands beside and a courtyard is wider than it is deep, and
+    padding both to squares throws away the one thing the compositor needs. The
+    renderer places these by the ground under them, so what it wants is the
+    picture and nothing else.
+    """
     bbox = img.getbbox()
     if bbox:
         img = img.crop(bbox)
     scale = min(size / img.width, size / img.height)
-    scaled = img.resize(
-        (max(1, round(img.width * scale)), max(1, round(img.height * scale))),
-        Image.LANCZOS,
-    )
-    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    canvas.paste(scaled, ((size - scaled.width) // 2, (size - scaled.height) // 2), scaled)
-    return canvas
+    if scale < 1:
+        img = img.resize(
+            (max(1, round(img.width * scale)), max(1, round(img.height * scale))),
+            Image.LANCZOS,
+        )
+    return img
 
 
 def main() -> int:

@@ -960,11 +960,6 @@ export function buildOptions(
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
     .filter((b) => !b.suppliesArmy || seat?.id !== city.id)
-    // Section 67: the capital's own pieces, and only while the empire is worth
-    // being proud of. Civic Pride is a reward for doing well and deliberately
-    // not a way of doing well, so it is the one thing in the list gated on how
-    // the whole empire is going rather than on an advance.
-    .filter((b) => !b.civic || (seat?.id === city.id && civicPride(state, city.owner)))
     // A Posting with the lever off pays nothing, so it is not offered: a
     // building in the list that can never do anything is a trap, and section 102
     // turned this one off for good.

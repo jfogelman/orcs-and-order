@@ -1693,6 +1693,9 @@ kbd {
 
 .palace-piece {
   position: absolute;
+  /* Placed by the ground under it and the middle of it, so the width can be
+     whatever the picture is. */
+  transform: translateX(-50%);
   image-rendering: pixelated;
 }
 
@@ -1701,4 +1704,37 @@ kbd {
   flex-wrap: wrap;
   gap: 4px;
   justify-content: center;
+}
+
+/* Section 67: the choice of what to add to the capital. */
+.pride-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.pride-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pride-art {
+  height: 88px;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.pride-name {
+  font-weight: 600;
+}
+
+.pride-blurb {
+  font-style: italic;
+  opacity: 0.75;
 }

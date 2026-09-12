@@ -1,5 +1,5 @@
 import { idx } from '../engine/grid';
-import { PALACE_BASE, PALACE_MODULES, isPalace, palaceArt, palaceId } from '../model/palace';
+import { PALACE_BASE, palaceArt, palacePieces } from '../model/palace';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -76,38 +76,30 @@ const POSTURE: Record<UnitOrder, string> = {
 };
 
 /**
- * The capital, composited from what has been built onto it.
+ * The capital, composited from what the empire has been given.
  *
  * Layered rather than one picture per combination: five modules at three tiers
  * is more combinations than anybody wants to generate, and an image model cannot
- * reliably edit its own last output. Each piece arrives centred in its own
- * square, so placing one is a left, a top and a width -- and the anchors live
- * with the modules in `model/palace.ts` rather than here, because they are a
- * property of the art and not of this panel.
+ * reliably edit its own last output. Each piece is trimmed to its own picture and
+ * stood on a shared ground line -- the art is one isometric angle over one
+ * horizon, so pieces that share a ground line read as one scene. The anchors live
+ * with the modules rather than here, because they are a property of the art.
  */
 function palaceView(state: GameState, city: City): string {
-  const faction = state.players[city.owner].faction;
-  const built = new Map(
-    PALACE_MODULES.map((m) => {
-      let tier = 0;
-      for (let n = 1; n <= 3; n++) if (city.buildings.includes(palaceId(faction, m.id, n))) tier = n;
-      return [m.id, tier] as const;
-    }),
-  );
-  const BOX = 190;
-  const piece = (src: string, at: { x: number; y: number; scale: number }) => {
-    const w = Math.round(at.scale * BOX);
-    return `<img class="palace-piece" src="${escapeHtml(palacePath(src))}" alt=""
-      style="left:${Math.round(at.x * BOX - w / 2)}px; top:${Math.round(at.y * BOX - w / 2)}px; width:${w}px" />`;
-  };
+  const player = state.players[city.owner];
+  const faction = player.faction;
+  const BOX = 200;
+  const piece = (art: string, at: { x: number; ground: number; height: number }) =>
+    `<img class="palace-piece" src="${escapeHtml(palacePath(art))}" alt=""
+      style="left:${Math.round(at.x * BOX)}px; bottom:${Math.round((1 - at.ground) * BOX)}px; height:${Math.round(at.height * BOX)}px" />`;
+
+  const standing = palacePieces(player);
   const layer = (behind: boolean) =>
-    PALACE_MODULES.filter((m) => !!m.behind === behind && (built.get(m.id) ?? 0) > 0)
-      .map((m) => piece(palaceArt(palaceId(faction, m.id, built.get(m.id)!)), m.at))
+    standing
+      .filter(({ module }) => !!module.behind === behind)
+      .map(({ module, tier }) => piece(palaceArt(faction, module.id, tier), module.at))
       .join('');
 
-  const names = PALACE_MODULES.filter((m) => (built.get(m.id) ?? 0) > 0).map(
-    (m) => `${escapeHtml(m.tiers[faction][built.get(m.id)! - 1])}`,
-  );
   return `
         <div class="panel-title">The Capital</div>
         <div class="panel-body palace-body">
@@ -118,9 +110,14 @@ function palaceView(state: GameState, city: City): string {
           </div>
           <div class="palace-parts">
             ${
-              names.length === 0
-                ? '<span class="muted">Four walls and a roof. Whether it stays that way is a matter of civic pride.</span>'
-                : names.map((n) => `<span class="chip">${n}</span>`).join('')
+              standing.length === 0
+                ? '<span class="muted">Four walls and a roof. Whether it stays that way is a matter of civic pride, and of how the empire is doing.</span>'
+                : standing
+                    .map(
+                      ({ module, tier }) =>
+                        `<span class="chip">${escapeHtml(module.tiers[faction][tier - 1])}</span>`,
+                    )
+                    .join('')
             }
           </div>
         </div>`;
@@ -474,7 +471,6 @@ export function openCityPanel(
             city.buildings.length === 0
               ? '<span class="muted">Nothing but tents and optimism.</span>'
               : city.buildings
-                  .filter((b) => !isPalace(b))
                   .map(
                     (b) =>
                       `<a href="#" class="chip building-chip pedia-link" data-pedia="${escapeHtml(b)}"
