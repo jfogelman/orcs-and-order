@@ -18,6 +18,11 @@ import {
   isGarrisoned,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
+import { capitalOf } from '../sim/city';
+import { connectedByRoad } from '../sim/roads';
+import { goldBuildingIn, tradeLinks } from '../sim/trade';
+import { hasFlag } from '../sim/rules';
+import { idx } from '../engine/grid';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
 import { TECHS } from '../model/techs';
@@ -92,6 +97,26 @@ export function situationOf(state: GameState, playerId: number): Situation {
       if (def.suppliesArmy) supplyPosts++;
     }
   }
+
+  // Section 106: what the council knows about roads. The capital because that
+  // is where the army is raised and where the roads are dug from; a town off the
+  // network is a town reinforcements reach late.
+  const roadsKnown = hasFlag(player, 'bridges');
+  const seat = capitalOf(state, playerId);
+  const network = seat ? connectedByRoad(state, playerId, seat.x, seat.y) : new Set<number>();
+  const unjoinedCities = seat
+    ? cities.filter((c) => c.id !== seat.id && !network.has(idx(c.x, c.y, state.width))).length
+    : 0;
+  const routes = tradeLinks(state, playerId);
+  const linked = new Set(routes.flatMap((l) => [l.a, l.b]));
+  const unlinkedGoldCities = cities.filter(
+    (c) => goldBuildingIn(state, c) && !linked.has(c.id),
+  ).length;
+  const routeGold = routes.reduce((sum, l) => sum + (l.paying ? l.gold : 0), 0);
+
+  // Counted with the cities' own income, because the treasury does not care
+  // which of the two it came from and neither does the Ledger-Thane.
+  goldPerTurn += routeGold;
 
   const seen = player.visible;
   const w = state.width;
@@ -179,6 +204,10 @@ export function situationOf(state: GameState, playerId: number): Situation {
     coinBuildings,
     calmBuildings,
     supplyPosts,
+    roadsKnown,
+    unjoinedCities,
+    unlinkedGoldCities,
+    routeGold,
     dominance,
   };
 }

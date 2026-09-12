@@ -15,6 +15,7 @@ import {
   supplyQuality,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
+import { tradeGold } from '../sim/trade';
 import { TRADE_STEPS, tradeRates } from '../sim/research';
 import { techCost } from '../sim/research';
 import { escapeHtml, openModal } from './dom';
@@ -37,8 +38,14 @@ import { escapeHtml, openModal } from './dom';
  * be forty dismissals a game.
  */
 
-/** What the empire earns and spends in a turn, computed the way the turn does. */
-function economy(state: GameState, playerId: number) {
+/**
+ * What the empire earns and spends in a turn, computed the way the turn does.
+ *
+ * Exported so a test can pin it to what actually reaches the treasury. The
+ * report's numbers are only worth having if they are the real ones, and there
+ * are now two sources of gold rather than one.
+ */
+export function empireIncome(state: GameState, playerId: number) {
   const player = state.players[playerId];
   let gold = 0;
   let beakers = 0;
@@ -49,6 +56,10 @@ function economy(state: GameState, playerId: number) {
     beakers += income.beakers;
     upkeep += buildingUpkeep(state, city);
   }
+  // Section 106: trade routes are paid to the empire rather than to any one
+  // city, so they are added here rather than in `cityIncome`. Left out, the
+  // report would quote a number the treasury then failed to match.
+  gold += tradeGold(state, playerId);
   return { gold: gold - upkeep, beakers, upkeep };
 }
 
@@ -194,7 +205,7 @@ export function openHordeReport(
   const cities = playerCities(state, playerId);
   const units = playerUnits(state, playerId);
   const capital = capitalOf(state, playerId);
-  const { gold, beakers, upkeep } = economy(state, playerId);
+  const { gold, beakers, upkeep } = empireIncome(state, playerId);
   const rates = tradeRates(player);
   const eta = researchEta(state, playerId, beakers);
   const researching = player.researching ? TECHS_BY_ID[player.researching] : null;

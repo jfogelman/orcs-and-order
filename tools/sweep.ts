@@ -6,6 +6,7 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import type { GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
 import { ROADS, connectedByRoad } from '../src/sim/roads';
+import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
 import { capitalOf } from '../src/sim/city';
 import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { SACKING } from '../src/sim/movement';
@@ -73,6 +74,7 @@ export const LEVERS: Record<string, object> = {
   REGEN,
   RESETTLE,
   ROADS,
+  TRADE,
   RUIN,
   SACKING,
   SCORE_WEIGHTS,
@@ -149,6 +151,15 @@ export interface Outcome {
    * reason section 91 did: because the AI never used the thing at all.
    */
   joined: [number, number];
+  /**
+   * Trade routes standing at the end, orc and human, and what they pay a turn.
+   *
+   * Section 106 is an economy change, and these are the same guard as the roads
+   * columns: an arm that moves nothing because no AI ever earned a route should
+   * say so here rather than read as "no effect".
+   */
+  links: [number, number];
+  routeGold: [number, number];
 }
 
 function deepestGroup(types: string[]): number {
@@ -286,6 +297,8 @@ export function playGame(
     map,
     roadTiles: (state.roads ?? []).reduce((n, r) => n + r, 0),
     joined: [joinedShare(state, 0), joinedShare(state, 1)],
+    links: [tradeLinks(state, 0).length, tradeLinks(state, 1).length],
+    routeGold: [tradeGold(state, 0), tradeGold(state, 1)],
   };
 }
 
@@ -506,6 +519,9 @@ export interface Summary {
   roadTiles: number;
   /** Mean share of cities joined to the capital by road, orc and human. */
   joined: [number, number];
+  /** Mean trade routes standing at the end, and mean gold a turn from them. */
+  links: [number, number];
+  routeGold: [number, number];
 }
 
 export function summarise(results: ArmResult[]): Summary[] {
@@ -530,6 +546,11 @@ export function summarise(results: ArmResult[]): Summary[] {
     sacks: [mean(r.outcomes.map((o) => o.sacks[0])), mean(r.outcomes.map((o) => o.sacks[1]))],
     roadTiles: mean(r.outcomes.map((o) => o.roadTiles)),
     joined: [mean(r.outcomes.map((o) => o.joined[0])), mean(r.outcomes.map((o) => o.joined[1]))],
+    links: [mean(r.outcomes.map((o) => o.links[0])), mean(r.outcomes.map((o) => o.links[1]))],
+    routeGold: [
+      mean(r.outcomes.map((o) => o.routeGold[0])),
+      mean(r.outcomes.map((o) => o.routeGold[1])),
+    ],
   }));
 }
 
@@ -546,7 +567,7 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}`;
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -565,7 +586,9 @@ export function report(results: ArmResult[]): string {
       pad(`${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}`, 10) +
       pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +
       pad(r.roadTiles.toFixed(0), 7) +
-      pad(`${Math.round(r.joined[0] * 100)}%/${Math.round(r.joined[1] * 100)}%`, 11),
+      pad(`${Math.round(r.joined[0] * 100)}%/${Math.round(r.joined[1] * 100)}%`, 11) +
+      pad(`${r.links[0].toFixed(1)}/${r.links[1].toFixed(1)}`, 10) +
+      pad(`${r.routeGold[0].toFixed(1)}/${r.routeGold[1].toFixed(1)}`, 9),
   );
   return [head, '-'.repeat(head.length), ...body].join('\n');
 }
@@ -580,7 +603,8 @@ export function rawRows(results: ArmResult[]): string {
           `${o.captures}\t${o.cities[0]}\t${o.cities[1]}\t${o.population[0]}\t${o.population[1]}\t` +
           `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}\t` +
           `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}\t${o.map}\t` +
-          `${o.roadTiles}\t${o.joined[0].toFixed(2)}\t${o.joined[1].toFixed(2)}`,
+          `${o.roadTiles}\t${o.joined[0].toFixed(2)}\t${o.joined[1].toFixed(2)}\t` +
+          `${o.links[0]}\t${o.links[1]}\t${o.routeGold[0]}\t${o.routeGold[1]}`,
       ),
     )
     .join('\n');

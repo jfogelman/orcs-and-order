@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { AI_TUNING } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
+import { TRADE } from '../src/sim/trade';
 import { SPECIALS } from '../src/model/terrain';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -48,15 +49,17 @@ const control = () => {
   SPECIALS.chance = 0.06;
   SPECIALS.rules = true;
   SPECIALS.ruleTiles = true;
+  TRADE.enabled = true;
   NEW_GAME.barbarians = false;
 };
 
 const ARMS: Arm[] = [
-  // Section 107: the AI lays roads. Until now only a person could, so no sweep
-  // could see them. The arm without should reproduce section 101's posting arm
-  // -- 30-24 and 28-26 -- exactly, since roads were the only thing added.
-  { label: 'no AI roads', apply: () => { control(); AI_TUNING.buildRoads = false; } },
-  { label: 'AI roads', apply: control },
+  // Section 106: a road between two cities that both have something to sell pays
+  // gold a turn. An economy change, so it is measured on its own against the same
+  // game with the gold switched off -- which is section 107's arm, and should
+  // reproduce its 35-19 and 32-22 exactly.
+  { label: 'no trade routes', apply: () => { control(); TRADE.enabled = false; } },
+  { label: 'trade routes', apply: control },
 ];
 
 /**
@@ -105,7 +108,7 @@ describe('sweep', () => {
           table,
           '',
           'seed by seed:',
-          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap\troadTiles\torcJoined\thumJoined',
+          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap\troadTiles\torcJoined\thumJoined\torcLinks\thumLinks\torcRouteGold\thumRouteGold',
           rawRows(results),
           '',
         ].join('\n'),
