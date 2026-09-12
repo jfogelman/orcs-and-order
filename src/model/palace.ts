@@ -35,8 +35,22 @@ export type PalaceModuleId = 'wing' | 'tower' | 'banners' | 'gate' | 'grounds';
 export const PALACE_TIERS = 3;
 
 export interface PalacePlacement {
-  /** Drawn width, as a share of the chassis's drawn width. */
-  width: number;
+  /**
+   * How big to draw it, against the chassis.
+   *
+   * `tall` is a share of the chassis's drawn height and `wide` a share of its
+   * width; a piece gives one or the other and the picture's own shape supplies
+   * the rest. Two of them because the yard is a flat slab that wants measuring
+   * across and everything else stands up and wants measuring by how high it is:
+   * sizing a narrow tower by width makes it three storeys taller than the hall.
+   *
+   * The numbers are all well under one. The art is drawn one subject to a frame
+   * with each *filling* its frame, so a tower sprite and a hall sprite are the
+   * same size on disk and nothing about the files says which is bigger in the
+   * world. That judgement is here, and it was made by looking.
+   */
+  tall?: number;
+  wide?: number;
   /** Where its foot goes from the chassis's foot, in chassis widths. */
   dx: number;
   dy: number;
@@ -90,7 +104,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
     },
-    at: { width: 1.05, dx: 0, dy: 0.3 },
+    at: { wide: 1.15, dx: 0, dy: 0.26 },
     // Under everything: a yard is the ground, and the hall stands at the back
     // of it rather than on top of it.
     behind: true,
@@ -103,10 +117,10 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
     },
-    at: { width: 0.66, dx: 0.46, dy: 0.2 },
+    at: { tall: 0.58, dx: 0.42, dy: 0.1 },
     per: {
-      orc: { width: 0.66, dx: 0.46, dy: 0.2 },
-      human: { width: 0.66, dx: -0.46, dy: 0.2 },
+      orc: { tall: 0.58, dx: 0.42, dy: 0.1 },
+      human: { tall: 0.58, dx: -0.42, dy: 0.1 },
     },
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
@@ -117,10 +131,10 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
     },
-    at: { width: 0.5, dx: -0.52, dy: -0.2 },
+    at: { tall: 0.72, dx: -0.44, dy: -0.12 },
     per: {
-      orc: { width: 0.5, dx: -0.52, dy: -0.2 },
-      human: { width: 0.5, dx: 0.52, dy: -0.2 },
+      orc: { tall: 0.72, dx: -0.44, dy: -0.12 },
+      human: { tall: 0.72, dx: 0.44, dy: -0.12 },
     },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
@@ -131,7 +145,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
     },
-    at: { width: 0.52, dx: 0, dy: 0.04 },
+    at: { tall: 0.44, dx: 0, dy: 0.06 },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
@@ -141,7 +155,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
     },
-    at: { width: 0.34, dx: 0, dy: -0.44 },
+    at: { tall: 0.32, dx: 0, dy: -0.3 },
     blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];
@@ -155,7 +169,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
  * near corner sits down the box. Room is left to the right and left for a wing
  * and a tower, above for a banner, and below for a yard.
  */
-export const PALACE_BASE = { width: 0.62, ground: 0.6 };
+export const PALACE_BASE = { width: 0.52, ground: 0.62 };
 
 export const PALACE_BY_ID = new Map(PALACE_MODULES.map((m) => [m.id, m]));
 

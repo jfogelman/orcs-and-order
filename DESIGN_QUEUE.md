@@ -4666,12 +4666,26 @@ each piece to its own picture and keeps its shape, and the renderer stands each
 one on a ground line at a height measured against the box. Widths come from the
 pictures.
 
-The bible asked for an in-engine composite test on mixed tiers before trusting
-the attachment points, and it was right twice over: the first pass drew the
-chassis at the full size of the box and swallowed every module behind it, and the
-second put the gate through the middle of the hall's front wall. Both sides were
-then checked in the running game with a wing, a tower, banners, a gate and
-grounds at mixed tiers.
+Three things had to be worked out by looking, and the bible was right that they
+had to be looked at rather than reasoned about:
+
+- **The first pass squared every piece and placed it by its centre**, which threw
+  away the only thing that lines them up. A gate with a wall stub down one side
+  has its middle somewhere in the wall.
+- **They stand on a shared ground line.** Each piece is now placed by its *foot*
+  -- the middle of its lowest row of pixels, measured off the art itself into
+  `palaceArt.ts` -- against the chassis's foot, which is the near corner of an
+  isometric box.
+- **Nothing in the files says how big anything is.** Every asset was drawn one
+  subject to a frame with the subject *filling* the frame, so a tower sprite and
+  a hall sprite are the same size on disk. Drawing them at one scale makes the
+  tower as big as the hall and hides the hall behind it, which was tried. The
+  sizes are a judgement, written down as a share of the chassis: height for
+  things that stand up, width for the yard that lies flat.
+
+An offline compositor that draws the same arrangement from the same numbers made
+that a five-minute loop rather than a browser round trip each time. Both sides
+were then checked in the running game, at mixed tiers, against what it drew.
 
 ### What is left
 

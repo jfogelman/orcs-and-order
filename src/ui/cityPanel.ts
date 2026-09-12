@@ -102,11 +102,14 @@ function palaceView(state: GameState, city: City): string {
   const footX = BOX / 2;
   const footY = PALACE_BASE.ground * BOX;
 
+  const baseH = (baseW * PALACE_ART[`${faction}-base`].h) / PALACE_ART[`${faction}-base`].w;
   const piece = (name: string, at: PalacePlacement) => {
     const art = PALACE_ART[name];
     if (!art) return '';
-    const w = at.width * baseW;
-    const h = (w * art.h) / art.w;
+    // Standing things are sized by height and the yard by width; see the note on
+    // `PalacePlacement`.
+    const h = at.tall !== undefined ? at.tall * baseH : ((at.wide ?? 1) * baseW * art.h) / art.w;
+    const w = (h * art.w) / art.h;
     const x = footX + at.dx * baseW - art.foot * w;
     const y = footY + at.dy * baseW - h;
     return `<img class="palace-piece" src="${escapeHtml(palacePath(name))}" alt=""
@@ -127,7 +130,7 @@ function palaceView(state: GameState, city: City): string {
         <div class="panel-body palace-body">
           <div class="palace" style="width:${BOX}px; height:${BOX}px">
             ${layer(true)}
-            ${piece(`${faction}-base`, { width: 1, dx: 0, dy: 0 })}
+            ${piece(`${faction}-base`, { wide: 1, dx: 0, dy: 0 })}
             ${layer(false)}
           </div>
           <div class="palace-parts">
