@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import { AI_TUNING } from '../src/ai/ai';
+import { AI_TUNING, PERSONALITIES } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
@@ -43,6 +43,8 @@ declare const process: { env: Record<string, string | undefined> };
  */
 const control = () => {
   CALM.base = 6;
+  PERSONALITIES.orc.targetCities = 5;
+  PERSONALITIES.human.targetCities = 6;
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
@@ -63,22 +65,23 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 109's answer: the arc is worth eleven points to the Horde, 24 games
-  // in 108 against 11, p = 0.04. This is the first dial tried against it.
+  // Section 109's second dial. The first -- `CALM.base` at five -- corrected
+  // eleven points of drift with eighteen and took an advance and a half off the
+  // Horde doing it, which is too high a price in a game whose joke is the
+  // counting ladder.
   //
-  // `CALM.base` is the most targeted lever available. Calm is exactly what the
-  // Horde needs more of -- sections 85 and 101 measured its cities at their
-  // content limit nearly twice as often as the Kingdom's -- so making calm
-  // scarcer takes most from whoever was using most of it. Section 86 moved this
-  // lever once already, on 432 games, so the ground is known.
+  // This one aims at the winning condition instead of at the growth that feeds
+  // it: about three quarters of these games now end on points, points are mostly
+  // size, and size is mostly cities. One fewer city for the Horde takes score
+  // off it without making anybody's calm scarcer.
   //
   // The arm at six should reproduce section 109's `today`: 36-17-1 and 34-20.
-  { label: 'calm 6, today', apply: control },
+  { label: 'orc targets 6', apply: control },
   {
-    label: 'calm 5',
+    label: 'orc targets 5',
     apply: () => {
       control();
-      CALM.base = 5;
+      PERSONALITIES.orc.targetCities = 5;
     },
   },
 ];

@@ -8085,6 +8085,54 @@ one, since nearly three quarters of these games now end on points and points are
 mostly size. That is one arm, and it is the next thing to run if 65% is not
 acceptable and 47% is not either.
 
+### The second dial, and the one that shipped: the Horde targets five cities
+
+Aimed at the winning condition rather than at the growth behind it. About three
+quarters of these games end on points, points are mostly size, and size is mostly
+cities -- so one fewer city takes score off the Horde without making calm scarcer
+for anybody.
+
+| arm | set | orc-hum | cities | population | advances | fights |
+|---|---|---|---|---|---|---|
+| orc targets 6 | tuned | 36-17-1 | 6.80/6.89 | 54.5/50.0 | 28.4/24.9 | 25 |
+| orc targets 6 | held-out | 34-20 | 6.41/6.63 | 49.5/46.9 | 26.5/24.3 | 27 |
+| orc targets 5 | tuned | 29-25 | 5.41/7.41 | 45.9/53.9 | 27.3/24.4 | 29 |
+| orc targets 5 | held-out | 27-27 | 5.74/6.72 | 45.5/47.6 | 26.2/24.8 | 32 |
+
+Paired: **19 games to the Kingdom against 5, p = 0.0066**, ten to three and nine
+to two on the two sets. Pooled, **65% to 52%** -- eleven points of drift answered
+with thirteen, landing on even rather than past it.
+
+Against the calm dial, on the columns that decide whether the correction is worth
+having:
+
+| | `CALM.base` 5 | orc targets 5 |
+|---|---|---|
+| Horde share | 47% | **52%** |
+| orc advances | **-1.60**, p = 0.0000002 | -0.66, p = 0.09 |
+| orc population | -9.50 | -6.28 |
+| fights | **-4.12** | **+4.45** |
+
+The advance column is the one that settles it. Calm at five took an advance and a
+half off the side whose entire joke is the counting ladder; targeting five cities
+takes two thirds of one and cannot be distinguished from noise. And it hands back
+four and a half fights a game: a Horde with one fewer city sends more of what it
+has out of the gate, which undoes a little of the quiet the arc had settled into.
+
+**Shipped**, and it is the only balance change in the whole arc.
+
+### What it cost elsewhere: the per-commit band
+
+Section 90's six-seed guard failed on this change, reporting the Horde at 37% of
+the Kingdom's cities where 216 games say 73% and eighteen seeds say the band is
+fine. A side that founds fewer cities carries more of its score in each one, so
+the spread between games widened and six games stopped being enough.
+
+**The sample grew to twelve rather than the band widening**, which costs about a
+minute a run. Widening a band to admit a change is how section 90 described the
+guard it replaced -- one that "passed happily through the whole 34% stretch" --
+and doing it the same day as a balance change is how that happens.
+
 ### What to do about it, which is a decision and not a measurement
 
 The question is not which rule to undo -- each is defensible -- but **how good

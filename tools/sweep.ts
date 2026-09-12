@@ -1,4 +1,4 @@
-import { AI_TUNING, runAiTurn } from '../src/ai/ai';
+import { AI_TUNING, PERSONALITIES, runAiTurn } from '../src/ai/ai';
 import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
 import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
@@ -74,6 +74,7 @@ export const LEVERS: Record<string, object> = {
   POSTING,
   REGEN,
   RESETTLE,
+  PERSONALITIES,
   PILLAGE,
   POSTS,
   ROADS,
