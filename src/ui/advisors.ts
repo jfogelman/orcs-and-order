@@ -114,6 +114,10 @@ export function situationOf(state: GameState, playerId: number): Situation {
   ).length;
   const routeGold = routes.reduce((sum, l) => sum + (l.paying ? l.gold : 0), 0);
 
+  // Counted with the cities' own income, because the treasury does not care
+  // which of the two it came from and neither does the Ledger-Thane.
+  goldPerTurn += routeGold;
+
   const seen = player.visible;
   const w = state.width;
   const enemiesSeen = state.units.filter(
