@@ -11,15 +11,26 @@ import { playGame } from '../tools/sweep';
  */
 
 /**
- * Six seeds is enough to catch a faction being hopeless, but far too few to
- * read a win rate from -- four wins out of six is well inside chance. Set
- * BALANCE_SEEDS=20 when the question is actually "which side is stronger".
+ * Twelve seeds, and it was six.
+ *
+ * Six was enough to catch a faction being hopeless until section 109 set the
+ * Horde's target at five cities. A side that founds fewer cities carries more of
+ * its score in each one, so the spread between games widened, and the six-seed
+ * sample started reporting the Horde at 37% of the Kingdom's cities where 216
+ * games say 73% and eighteen seeds say the band is fine. A guard that fails on a
+ * change the evidence says is sound is a guard that will be widened until it
+ * means nothing -- which is exactly what section 90 caught the last one doing --
+ * so the sample grew instead of the band.
+ *
+ * Still far too few to read a win rate from: four wins out of six, or eight out
+ * of twelve, is well inside chance. Set BALANCE_SEEDS=20 when the question is
+ * actually "which side is stronger".
  */
 // Declared rather than pulled in via @types/node: this is the only place the
 // project touches `process`, and it is not worth a dependency for one env var.
 declare const process: { env: Record<string, string | undefined> };
 
-const SEED_COUNT = Number(process.env.BALANCE_SEEDS ?? 6);
+const SEED_COUNT = Number(process.env.BALANCE_SEEDS ?? 12);
 const SEEDS = Array.from({ length: SEED_COUNT }, (_, i) => 1 + i * 7919);
 /**
  * The game runner lives in `tools/sweep` now, so this regression and every

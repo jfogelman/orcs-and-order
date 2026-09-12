@@ -7801,6 +7801,12 @@ balance problem if it were real. It is probably not, or at least not yet:
   so it reaches its target sooner, so it starts digging sooner, so it spends more
   of the game growing.
 
+  **Struck by section 109.** Both personalities target six cities; that guess was
+  simply wrong, and it survived three sections because nobody checked a number
+  that was easy to check. The mechanism section 109 measured is the one sections
+  85 and 101 had already found: the Horde is the side held back by disorder, and
+  relief is worth most to whoever was constrained.
+
 So: roads ship with the lever on, and the Horde's lean goes in the ledger as
 **unresolved, leaning real, not yet significant**. It wants one more look after
 section 106, which changes the economics of roads again and would make any
@@ -7951,41 +7957,204 @@ means for what the rule is for.
 
 ## 109. The Horde's drift, across the whole roads arc
 
-**Queued, and the reason nothing in sections 96 to 108 was tuned for it.**
+**Measured.** Six changes shipped between section 101 and section 102, each one
+measured as "not established" on its own, every one leaning the same way. This is
+the arm that asks whether the sum of them is real.
 
-Every measurement in the roads arc leaned the same way, and none of them leaned
-far enough on its own to act on. Together they are not nothing:
+### The comparison
 
-| section | change | pooled | Horde share | paired sign test |
-|---|---|---|---|---|
-| 101 (baseline) | Postings, no roads | 58-50 | 54% | -- |
-| 107 | the AI lays roads | 67-41 | 62% | 20 to 11, p = 0.15 |
-| 106 | trade routes | -- | unchanged | 6 to 4, p = 0.75 |
-| 108 | guarded treasuries | 63-45 | 58% | 12 to 17, p = 0.46 |
-| 96 | pillaging (raiders on) | -- | unchanged | 8 to 2, p = 0.11 |
-| 102 | garrison posts, one a city | 70-37 | 65% | 14 to 7, p = 0.19 |
+216 games, both seed sets, the same maps in both arms. The old arm switches off
+everything the arc added -- no AI roads, no trade routes, no guarded treasuries,
+no pillaging, no posts -- and puts the Posting building back.
 
-Read one at a time, every one of those is "not established" and each was shipped
-on that reading, which was right each time. Read together, the shipping game has
-gone from **54% to 65%** for the Horde over one arc of work, and the only change
-in the list that moved a column with a p below 0.01 was section 102's advances.
+| arm | set | orc-hum | cities | population | fights | captures |
+|---|---|---|---|---|---|---|
+| section 101 | tuned | 30-24 | 6.20/6.11 | 45.8/43.9 | 28 | 6.8 |
+| section 101 | held-out | 28-26 | 5.57/6.80 | 41.1/46.1 | 29 | 6.9 |
+| today | tuned | 36-17-1 | 6.80/6.89 | 54.5/50.0 | 25 | 3.9 |
+| today | held-out | 34-20 | 6.41/6.63 | 49.5/46.9 | 27 | 4.7 |
 
-Three things worth saying before anybody tunes anything:
+**The old arm reproduced section 101 to the game** -- 30-24 and 28-26 -- so
+nothing outside `LEVERS` has moved in the whole arc, and the comparison stands.
+That check was the first thing asked of it, after section 103.
 
-- **The leans have a common cause, and it is not roads.** Section 107's roads
-  helped the Horde because it reaches its target city count sooner and starts
-  digging sooner. Section 102's posts helped the Horde because only the Horde
-  riots. Both are the same shape as section 23's warning: **a mechanic
-  denominated in X favours whoever needs X most**, and this arc added four
-  mechanics denominated in worker-turns and calm.
-- **A drift of eleven points is worth one deliberate measurement**, not six
-  retunings. The arm to run is the whole arc against itself: section 101's
-  settings against today's, on both seed sets, which is one sweep and answers
-  whether the pooled figure is real.
-- **And if it is, the dial is not any of these rules.** They are each defensible
-  on their own terms. `PERSONALITIES.orc.targetCities` and section 90's band are
-  where a balance change belongs, because the question is how good the Horde
-  should be and not whether a road should be worth a third of a move.
+### It is real, and it is about eleven points
 
-Worth doing before the next mechanic rather than after, since another mechanic
-denominated in the same things would compound it.
+Paired seed by seed: **24 games flipped to the Horde against 11 to the Kingdom,
+p = 0.041.** Twelve to five on the tuned set and twelve to six on the held-out
+one: the same direction on both, neither significant alone, and significant
+together. The Horde's share of 108 games goes **58 to 70, which is 54% to 65%**.
+
+The rest of the board moved too, and this is the part worth reading:
+
+| column | change | sign test |
+|---|---|---|
+| orc population | **+8.5** | p = 0.003 |
+| human population | +3.4 | p = 0.042 |
+| orc cities | +0.71 | p = 0.015 |
+| human cities | +0.31 | p = 0.18 |
+| orc advances | +0.47 | p = 0.014 |
+| **fights** | **-2.7** | p = 0.0001 |
+| **captures** | **-2.5** | p = 0.00001 |
+
+Both sides are bigger and richer than they were, and there is markedly less
+fighting: the arc made this a builder's game. The Horde gained about two and a
+half times the population the Kingdom did out of the same six changes.
+
+### Why, and it is not what section 107 guessed
+
+Section 107 explained its own lean by saying the orc personality targets fewer
+cities and therefore reaches its target sooner. **That is wrong and should be
+struck**: both personalities target six. The mechanism the whole arc points at is
+simpler and was already in the queue twice:
+
+- **Section 85 and section 101:** the Horde's cities spend nearly twice as long
+  at their content limit and more than twice as long in disorder. Disorder was
+  the Horde's specific constraint, and this arc spent six changes loosening
+  constraints -- calm from posts, growth from roads and trade, garrisons that
+  stay home. **Relief is worth most to whoever was constrained.**
+- **Section 23's warning, again:** a mechanic denominated in X favours whoever
+  needs X most. The arc added four mechanics denominated in worker-turns and
+  calm, and the Horde needed both more than the Kingdom did.
+- **Less fighting suits the side that was losing cities.** Captures fell by two
+  and a half a game; roads get a garrison home and section 108 keeps one there.
+  A quieter game is a game where an early Horde stumble is no longer fatal.
+
+None of the six changes is wrong on its own terms. The sum of them moved the
+game, which is what a sum of six unestablished leans in one direction was always
+at risk of doing, and is the reason to check.
+
+
+### The first dial tried: `CALM.base` 6 to 5
+
+Jeremy picked the most targeted of the three, and it is targeted: it works, it
+overshoots, and it costs more than the thing it fixed.
+
+| arm | set | orc-hum | cities | population | advances | fights |
+|---|---|---|---|---|---|---|
+| calm 6, today | tuned | 36-17-1 | 6.80/6.89 | 54.5/50.0 | 28.4/24.9 | 25 |
+| calm 6, today | held-out | 34-20 | 6.41/6.63 | 49.5/46.9 | 26.5/24.3 | 27 |
+| calm 5 | tuned | **22-32** | 5.44/8.24 | 41.5/55.0 | 26.9/24.5 | 21 |
+| calm 5 | held-out | 29-25 | 6.15/7.19 | 43.4/47.3 | 24.7/23.7 | 22 |
+
+Paired on the same 108 maps: **24 games flipped to the Kingdom against 5,
+p = 0.0005** -- the strongest single result in the arc, and the tuned set alone
+carries it at p = 0.0013. Pooled, the Horde goes **70-37 to 51-57: 65% to 47%**.
+
+**Eleven points of drift, corrected by eighteen.** That is the first problem.
+The second is what it cost:
+
+| column | change at calm 5 | sign test |
+|---|---|---|
+| orc advances | **-1.60** | p = 0.00000017 |
+| orc population | **-9.50** | p = 0.002 |
+| orc cities | -0.81 | p = 0.018 |
+| human cities | +0.95 | p = 0.034 |
+| human population | +2.69 | p = 0.55 |
+| human advances | -0.48 | p = 0.080 |
+| fights | -4.12 | p = 0.00000000002 |
+
+The Horde loses a city, nine and a half citizens and **a whole advance and a
+half**, and the Kingdom gains a city without gaining significant population. The
+asymmetry that made the arc a Horde arc runs in reverse here for the same reason:
+calm is what the Horde uses most, so scarcity takes most from the Horde.
+
+**Not shipped on this evidence.** Balance bought by making the Horde smaller is a
+bad trade in this particular game: the counting ladder *is* the joke, and the
+side whose entire gag is discovering that more than one orc can stand in the same
+place should not be finishing games a citizen short and an advance and a half
+behind. Section 86 moved this lever once and the game grew; moving it back costs
+more than the eleven points are worth.
+
+### Where that leaves it
+
+Three readings, and the numbers now exist for all of them:
+
+- **The drift is +11 and posts are about +7 of it.** Section 102 measured 14
+  games to 7 on its own. Turning posts off would land the game near 58%, which is
+  where it sat after roads and before posts, and would cost nobody any size --
+  but it would mean shipping a rule and then not using it.
+- **Calm 5 lands at 47%**, which is even, and is available at the price above
+  whenever a smaller, tighter game is the preferred one.
+- **65% with everything on** is the game as it stands: bigger, longer, less
+  bloody, and one-sided.
+
+What has not been tried is a dial that takes size off the Horde without taking
+calm off everybody -- `PERSONALITIES.orc.targetCities` at five is the obvious
+one, since nearly three quarters of these games now end on points and points are
+mostly size. That is one arm, and it is the next thing to run if 65% is not
+acceptable and 47% is not either.
+
+### The second dial, and the one that shipped: the Horde targets five cities
+
+Aimed at the winning condition rather than at the growth behind it. About three
+quarters of these games end on points, points are mostly size, and size is mostly
+cities -- so one fewer city takes score off the Horde without making calm scarcer
+for anybody.
+
+| arm | set | orc-hum | cities | population | advances | fights |
+|---|---|---|---|---|---|---|
+| orc targets 6 | tuned | 36-17-1 | 6.80/6.89 | 54.5/50.0 | 28.4/24.9 | 25 |
+| orc targets 6 | held-out | 34-20 | 6.41/6.63 | 49.5/46.9 | 26.5/24.3 | 27 |
+| orc targets 5 | tuned | 29-25 | 5.41/7.41 | 45.9/53.9 | 27.3/24.4 | 29 |
+| orc targets 5 | held-out | 27-27 | 5.74/6.72 | 45.5/47.6 | 26.2/24.8 | 32 |
+
+Paired: **19 games to the Kingdom against 5, p = 0.0066**, ten to three and nine
+to two on the two sets. Pooled, **65% to 52%** -- eleven points of drift answered
+with thirteen, landing on even rather than past it.
+
+Against the calm dial, on the columns that decide whether the correction is worth
+having:
+
+| | `CALM.base` 5 | orc targets 5 |
+|---|---|---|
+| Horde share | 47% | **52%** |
+| orc advances | **-1.60**, p = 0.0000002 | -0.66, p = 0.09 |
+| orc population | -9.50 | -6.28 |
+| fights | **-4.12** | **+4.45** |
+
+The advance column is the one that settles it. Calm at five took an advance and a
+half off the side whose entire joke is the counting ladder; targeting five cities
+takes two thirds of one and cannot be distinguished from noise. And it hands back
+four and a half fights a game: a Horde with one fewer city sends more of what it
+has out of the gate, which undoes a little of the quiet the arc had settled into.
+
+**Shipped**, and it is the only balance change in the whole arc.
+
+### What it cost elsewhere: the per-commit band
+
+Section 90's six-seed guard failed on this change, reporting the Horde at 37% of
+the Kingdom's cities where 216 games say 73% and eighteen seeds say the band is
+fine. A side that founds fewer cities carries more of its score in each one, so
+the spread between games widened and six games stopped being enough.
+
+**The sample grew to twelve rather than the band widening**, which costs about a
+minute a run. Widening a band to admit a change is how section 90 described the
+guard it replaced -- one that "passed happily through the whole 34% stretch" --
+and doing it the same day as a balance change is how that happens.
+
+### What to do about it, which is a decision and not a measurement
+
+The question is not which rule to undo -- each is defensible -- but **how good
+the Horde ought to be**, and that is Jeremy's call. Three candidate dials, with
+what each would actually do:
+
+1. **`CALM.base` 6 to 5.** The most targeted: calm is the thing the Horde needs
+   most, so making it scarcer costs the Horde most. It is also the lever section
+   86 already moved once on 432 games, so the ground is known. Risk: it makes
+   every city's early game harder, and the Kingdom's too.
+2. **`PERSONALITIES.human.caution` 0.48 to about 0.35.** The Kingdom attacks at
+   worse odds than it does now, which suits a game with fewer captures in it.
+   Leaves every economic rule alone and changes only how the Kingdom plays.
+   Risk: a bolder Kingdom throwing units away could make it worse, which is what
+   caution 0.45 was measured to do once before.
+3. **Nothing, and say so.** 65% is outside anything this project has called even,
+   but the arc also made the game longer, bigger and less bloody, which is a
+   better game to look at. If the Horde being ahead is acceptable flavour, the
+   honest move is to write that down as a decision rather than leave it as a
+   drift nobody chose.
+
+Whichever is picked, it is one arm against today's settings, both seed sets, and
+the pooled figure to beat is **70-37**. The first one was tried and is written up
+above: it works, it overshoots, and it shrinks the Horde by more than the drift
+was worth.

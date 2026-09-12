@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import { AI_TUNING } from '../src/ai/ai';
+import { AI_TUNING, PERSONALITIES } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
@@ -43,6 +43,8 @@ declare const process: { env: Record<string, string | undefined> };
  */
 const control = () => {
   CALM.base = 6;
+  PERSONALITIES.orc.targetCities = 5;
+  PERSONALITIES.human.targetCities = 6;
   AI_TUNING.calmBuildAhead = 1;
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
@@ -63,24 +65,25 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 102: the Posting stops being a building inside the walls and becomes
-  // a hut on a tile that a soldier stands on. A replacement, so the arms are the
-  // two versions of the same idea rather than one of them against nothing.
+  // Section 109's second dial. The first -- `CALM.base` at five -- corrected
+  // eleven points of drift with eighteen and took an advance and a half off the
+  // Horde doing it, which is too high a price in a game whose joke is the
+  // counting ladder.
   //
-  // Second pass. At two posts a city this was measured as a Horde mechanic --
-  // 19 games in 108 flipping their way against 7, p = 0.03 -- for the reason
-  // section 102 predicted before it was built: only the Horde riots, so only the
-  // Horde needs calm. Halved, and asked again on the same seeds.
+  // This one aims at the winning condition instead of at the growth that feeds
+  // it: about three quarters of these games now end on points, points are mostly
+  // size, and size is mostly cities. One fewer city for the Horde takes score
+  // off it without making anybody's calm scarcer.
+  //
+  // The arm at six should reproduce section 109's `today`: 36-17-1 and 34-20.
+  { label: 'orc targets 6', apply: control },
   {
-    label: 'posting building',
+    label: 'orc targets 5',
     apply: () => {
       control();
-      POSTING.enabled = true;
-      POSTS.enabled = false;
-      AI_TUNING.buildPosts = false;
+      PERSONALITIES.orc.targetCities = 5;
     },
   },
-  { label: 'posts, one a city', apply: control },
 ];
 
 /**

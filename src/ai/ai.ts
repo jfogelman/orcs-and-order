@@ -108,7 +108,23 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     // Worth noting how far the individual sets swing: six returns 7-11, 11-5
     // and 7-8 on the three sets. Any one of them alone would have argued
     // something different, which is the argument for all three.
-    targetCities: 6,
+    //
+    // **Five since section 109**, and it is the only balance change in the whole
+    // roads arc. Six changes between sections 101 and 102 each measured as "not
+    // established" and all leaned the same way; together they moved the game from
+    // 54% to 65% for the Horde, 24 seeds flipping its way against 11 at
+    // p = 0.04. Nearly three quarters of games now end on points, points are
+    // mostly size, and size is mostly cities -- so this takes score off the Horde
+    // where it was winning rather than taking calm off everybody, which is what
+    // `CALM.base` at five did: that corrected eleven points with eighteen and
+    // cost an advance and a half at p = 0.0000002, in a game whose joke is the
+    // counting ladder.
+    //
+    // At five, over 216 games: 19 seeds to the Kingdom against 5 (p = 0.007),
+    // pooled 65% to 52%, advances down 0.66 and **not** significant (p = 0.09),
+    // and fights up four and a half a game -- a Horde with one fewer city sends
+    // more of it out. Even, and still the louder side.
+    targetCities: 5,
     // See the note on the Kingdom's copy of this field: one defender per city
     // is right for both sides, for opposite reasons.
     garrisonPerCity: 1,
