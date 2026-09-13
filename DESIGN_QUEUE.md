@@ -4655,91 +4655,93 @@ balance": nothing, in either direction.
 ### The compositing, which was the actual work
 
 Nothing in the game stacked sprites at named points before this: city art was one
-picture per size tier.
+picture per size tier. Getting the capital to read as one building took about
+twenty rounds of looking at composites, and nearly everything learned was about
+*where to hang things*, so it is written down at some length.
 
-The first attempt squared every piece and placed it by its centre, which threw
-away the one thing that makes the pieces line up. **They are a scene on a shared
-ground line**: a hall, a taller tower standing beside it, an arch in front of it,
-a flat courtyard lying at the front. The art is isometric at one fixed angle over
-one horizon -- the bible locked that deliberately -- so the pipeline now trims
-each piece to its own picture and keeps its shape, and the renderer stands each
-one on a ground line at a height measured against the box. Widths come from the
-pictures.
+**The pieces are a scene, not stickers.** The art is isometric at one fixed angle
+over one horizon, so the pipeline trims each piece to its own picture, keeps its
+shape, and measures the points it will be hung by into the generated
+`palaceArt.ts`. Nothing is centred in a square.
 
-**Anchor by the meaningful structural line, never by the bounding box.** That is
-the whole lesson, and it took three wrong versions to arrive at:
+**Hang a module by a structural point of its own art, on a hand-marked point of
+the chassis.** Every broken version got one half of that wrong.
 
-- `foot` -- the middle of a piece's lowest row of pixels, which for an isometric
-  box is its near corner. Right for anything standing on the ground, and
-  measured off the art itself into the generated `palaceArt.ts`.
-- `mid` -- the middle of the picture. Right for the **gate**, whose lowest row is
-  a wall stub off to one side: foot-anchored, it walks into the corner of the
-  frame, which is exactly what it did.
-- `seam` -- the outer edge on the side a piece joins from, which is the flat
-  unfinished wall the **wings** were generated with on purpose. Anchored any
-  other way, a wide wing overlaps the hall by however much of itself sits past
-  that seam. Same class of bug as the gate, wearing a vertical disguise.
+On the module (`PalaceAnchor`):
 
-Two more things the arrangement needed:
+- `foot` -- the middle of the first row that is structure rather than fringe. The
+  banners, on the roof.
+- `mid` -- the middle of the picture: the gate, whose lowest row is a wall stub
+  off to one side, and the grounds.
+- `plinth` -- for a tower, the corner where its base meets the ground on the left
+  (the lowest pixel of its leftmost column). Hung on the hall's nearest corner,
+  the tower stands on that corner and its skirt wall runs along the hall's wall.
+  Centring towers on a corner, hanging them by their front tip, and setting their
+  height from the gate's ground line all floated them one way or another; the
+  towers that read right had landed on this point by luck.
+- `tip` -- for a wing, its lowest point, which is its nearest corner: where its
+  front wall meets the blank wall it joins by. Hung on the hall's left-hand
+  corner, the wing's front carries on from the hall's and the blank wall runs back
+  behind the hall, which is drawn over it. This replaced a chain of seam detection
+  -- which edge is flat, which column the wall stands in, how wide its blank face
+  is -- that every new piece of art broke: flying buttresses make an edge as
+  straight as a seam, a gable reaches past its wall, and a slanted wall has no
+  one width.
 
-- **Sizes are shares of the box, not of each other.** The chassis's size and a
-  module's size are independent numbers, which is what makes "a smaller hall with
-  grander wings" a thing somebody can ask for. Nothing in the art says how big
-  anything is: every asset was drawn one subject to a frame with each *filling*
-  its frame, so a tower sprite and a hall sprite are the same size on disk.
-  Drawn at one scale the tower is as big as the hall and hides it -- tried, and
-  wrong.
-- **A module grows with its tier.** `PALACE_TIER_SCALE` drifts a piece either
-  side of its middle-tier size, so a first totem does not fill the space a
-  blazing altar wing does, and the ratio is a mid-state default rather than a
-  constant every module is locked to.
-- **The yard is tucked, not abutted.** A top-down slab laid flush below the hall
-  reads as two stacked stickers with a seam between them; slid up so the hall's
-  own foundation is drawn over its back edge, it reads as ground the hall stands
-  in. (A shared dirt tone at the join would sell it further, and is an art note
-  rather than a code one.)
+On the chassis (`PALACE_CHASSIS`), five points in each hall's own pixels: `door`,
+`tower` (the nearest corner), `side` (the left-hand corner), `roof` and `yard`.
+Marked by hand, because there are two chassis, they never change, and no
+measurement can tell a door from a window -- but the corners are read off the
+hall's own silhouette, where the walls meet the ground. The first hand-marked
+corner stood ten pixels out in the yard.
 
-The ratio between chassis and modules was picked by drawing three of them side by
-side -- big hall, even, modest hall -- and choosing the middle one for both
-sides: at that ratio no single piece is fighting for dominance, which is what the
-bible asked for when it said the base should stay neutral and the modules should
-carry the personality.
+**Sizes are shares of the box, and a judgement.** Every asset was drawn filling
+its own frame, so nothing on disk says a tower is bigger than a gate, and a tower
+sprite includes its skirt walls, so its width follows its height.
+`PALACE_TIER_SCALE` grows a module with its tier. The Kingdom's wings grow faster,
+because the cathedral is meant to tower over the hall; the Horde's towers are set
+by eye, because the Iron-Plated Tower's art is a solid block to its crown and read
+far taller than a timber lookout drawn at the same height.
 
-An offline compositor that reads the game's own numbers made this a one-minute
-loop rather than a browser round trip each time, and it is what the ratios were
-chosen from. Both sides were then checked in the running game against what it
-drew.
+**Fitted at the worst case.** The building and what hangs on it are laid out with
+every module at its top tier and scaled into the box, and that one transform is
+applied to whatever is standing -- so nothing is clipped, and the hall does not
+shrink or jump as pieces are added.
 
-### Where pieces hang: marked by hand, on each chassis
+**The grounds get a frame of their own.** Fitting the yard in with the building
+made every bit of yard cost the hall its size. The yard is centred on the hall's
+`yard` point, sized against the finished box, never narrower than what stands on
+it (anything past its edge reads as floating), and at the top tier as big as
+anything that could ever stand on it -- or the forge yard comes out smaller than
+the weapon racks it replaced. The frame grows down and sideways to take it, and
+the city view lays the capital out smaller if that frame would pass 250 pixels.
 
-Every fix before this one corrected where on a *module* its anchor sat -- foot,
-middle, seam, structural base -- and then aimed that anchor at a percentage of
-the box. The Warcamp and the Grand Hall have their doors, corner posts and roofs
-in different places, so one formula put the gate beside the Warcamp's door and
-past the Grand Hall's, and floated both towers. The anchor on the module was
-right; the target on the chassis did not exist.
+**Wings are drawn behind the hall, whole.** Drawing the top of a tall wing in
+front of the hall was tried, and read as a wing half on the building and half off.
 
-So each chassis now carries five points, **marked by hand off a pixel grid of
-the art as drawn**: `door`, `corner`, `side`, `roof` and `yard`, in the chassis's
-own pixels (`PALACE_CHASSIS`). Hand-marked because there are two chassis, they
-never change, and no measurement can tell a door from a window.
+### What the art needed
 
-The points were chosen at the **worst case** -- every module at its biggest tier
--- because that is where pieces collide. On the Warcamp the wing hangs well back
-along the back-right wall and is drawn behind the hall, so the tier-three
-iron-plated tower rising from the corner post no longer swallows it; the banner
-takes the left roof corner, away from both. On the Grand Hall the cathedral sits
-behind the left wall and the flipped hall is drawn over its seam.
+The bible's prompts were checked side by side on magenta, and several failed only
+once composited. They are written up as QA round 4 in the bible:
 
-And the composition is **fitted at the worst case too**: laid out with everything
-at tier three, scaled and centred into the box, and that one transform applied to
-whatever is actually standing. Nothing can be clipped by the frame, and the hall
-does not shrink or jump as pieces are added.
+- Wing roofs that "continue past the frame" show as a hard cut edge wherever a
+  wing rises above the hall's roof. The totems and the cathedral were re-rolled
+  without them.
+- "Blank flat wall" wording blanked every wall, not just the joining one.
+- A blank attachment wall taller than the hall shows above the hall's roof, where
+  nothing covers it.
+
+Two notes for whoever drops in the next file. The pipeline takes the newest file
+whose name, minus any note in brackets, is the module's name -- "Cathedral (half
+wall)" is not "Cathedral wing", and was silently ignored twice. And a re-drawn
+chassis moves every hand-marked point unless it is the same picture: the Grand
+Hall's horizontally swapped art was compared against the old art flipped, pixel
+for pixel, before it replaced it and the layout stopped flipping it.
 
 `palaceLayout` is the only place this arithmetic lives. The city view draws its
 output, and `tools/palace-layout.run.test.ts` dumps the same output so the capital
-can be looked at offline -- which is how every arrangement in this section was
-checked, against the game's own numbers rather than a second copy of them.
+can be looked at offline -- every arrangement here was judged from that dump,
+against the game's own numbers rather than a second copy of them.
 
 ### What is left
 
@@ -4751,6 +4753,9 @@ checked, against the game's own numbers rather than a second copy of them.
 - **The two stylistic calls the bible left open**: the orc banner line jumps in
   material between tier one and tier two, and the orc chassis is busier than the
   human one. Both are visible now that they composite, and both still look fine.
+- **The Chapel Wing prompts** still carry the roof-past-the-frame wording. The
+  shrine annex and the chapel composite well enough; a re-roll should borrow the
+  totems' rewritten prompts rather than repeat the round.
 
 ## 68. Unit upgrade branches: thirty-six advances, and one unsolved problem
 

@@ -1686,9 +1686,8 @@ kbd {
 .palace {
   position: relative;
   image-rendering: pixelated;
-  /* The grounds hang below the box and the wing past its left edge, which is
-     what makes the thing read as built rather than boxed. Room for both. */
-  margin: 4px 0 22px;
+  /* The layout makes the frame as tall as the grounds need. */
+  margin: 4px 0 6px;
 }
 
 .palace-piece {

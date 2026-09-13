@@ -84,9 +84,14 @@ const POSTURE: Record<UnitOrder, string> = {
 function palaceView(state: GameState, city: City): string {
   const player = state.players[city.owner];
   const faction = player.faction;
-  const BOX = 210;
   const standing = palacePieces(player);
-  const sprites = palaceLayout(faction, standing, BOX)
+  // The frame can grow past the box for a big yard, and the column is not much
+  // wider than 250 -- so a frame that would pass that is laid out smaller.
+  const ROOM = 250;
+  const wide = palaceLayout(faction, standing, 210);
+  const layout =
+    wide.width > ROOM ? palaceLayout(faction, standing, Math.floor((210 * ROOM) / wide.width)) : wide;
+  const sprites = layout.pieces
     .map(
       (p) =>
         `<img class="palace-piece${p.flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(p.art))}" alt=""
@@ -97,7 +102,7 @@ function palaceView(state: GameState, city: City): string {
   return `
         <div class="panel-title">The Capital</div>
         <div class="panel-body palace-body">
-          <div class="palace" style="width:${BOX}px; height:${BOX}px">${sprites}</div>
+          <div class="palace" style="width:${layout.width}px; height:${layout.height}px">${sprites}</div>
           <div class="palace-parts">
             ${
               standing.length === 0

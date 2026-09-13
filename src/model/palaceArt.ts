@@ -4,40 +4,42 @@
 //
 // `foot` is where it stands across its own width and `base` how far down it,
 // both measured from the first row that is structure rather than decoration --
-// a tower with stakes planted past its base logs stands on the logs. `seam` is
-// the edge a wing joins along, when the art has one.
+// a tower with stakes planted past its base logs stands on the logs. `plinth`
+// and `tip` are the corners a tower and a wing are hung by.
 export interface PalacePieceArt {
   w: number;
   h: number;
   foot: number;
   /** How far down the picture the structure meets the ground. */
   base: number;
-  /** Which edge is the flat unfinished wall, for a piece that has one. */
-  seam?: 'left' | 'right';
+  /** A tower's base corner on its left, as shares of the width and height. */
+  plinth?: [number, number];
+  /** A wing's lowest point, its nearest corner, as shares of the width and height. */
+  tip?: [number, number];
   /** Share of its own frame the piece filled before trimming. */
   frame: number;
 }
 
 export const PALACE_ART: Record<string, PalacePieceArt> = {
-  'human-banners-1': { w: 93, h: 128, foot: 0.424, base: 0.930, seam: 'right', frame: 0.938 },
-  'human-banners-2': { w: 113, h: 128, foot: 0.488, base: 0.898, seam: 'right', frame: 0.938 },
-  'human-banners-3': { w: 113, h: 128, foot: 0.488, base: 0.898, seam: 'right', frame: 0.938 },
-  'human-base': { w: 128, h: 99, foot: 0.520, base: 0.929, frame: 0.918 },
-  'human-gate-1': { w: 113, h: 128, foot: 0.593, base: 0.930, seam: 'left', frame: 0.942 },
-  'human-gate-2': { w: 121, h: 128, foot: 0.769, base: 0.898, seam: 'right', frame: 0.928 },
+  'human-banners-1': { w: 93, h: 128, foot: 0.424, base: 0.930, frame: 0.938 },
+  'human-banners-2': { w: 113, h: 128, foot: 0.488, base: 0.898, frame: 0.938 },
+  'human-banners-3': { w: 113, h: 128, foot: 0.488, base: 0.898, frame: 0.938 },
+  'human-base': { w: 128, h: 99, foot: 0.473, base: 0.929, frame: 0.917 },
+  'human-gate-1': { w: 113, h: 128, foot: 0.593, base: 0.930, frame: 0.942 },
+  'human-gate-2': { w: 121, h: 128, foot: 0.769, base: 0.898, frame: 0.928 },
   'human-gate-3': { w: 113, h: 128, foot: 0.737, base: 0.820, frame: 0.973 },
   'human-grounds-1': { w: 128, h: 94, foot: 0.496, base: 1.000, frame: 0.797 },
   'human-grounds-2': { w: 128, h: 108, foot: 0.496, base: 1.000, frame: 0.756 },
   'human-grounds-3': { w: 128, h: 107, foot: 0.496, base: 1.000, frame: 0.955 },
-  'human-tower-1': { w: 104, h: 128, foot: 0.490, base: 0.914, frame: 0.958 },
-  'human-tower-2': { w: 78, h: 128, foot: 0.494, base: 0.945, frame: 0.979 },
-  'human-tower-3': { w: 63, h: 128, foot: 0.492, base: 0.969, frame: 0.933 },
-  'human-wing-1': { w: 121, h: 128, foot: 0.455, base: 0.898, seam: 'right', frame: 0.989 },
-  'human-wing-2': { w: 121, h: 128, foot: 0.455, base: 0.898, seam: 'right', frame: 0.989 },
-  'human-wing-3': { w: 124, h: 128, foot: 0.468, base: 0.906, seam: 'right', frame: 0.969 },
-  'orc-banners-1': { w: 72, h: 128, foot: 0.446, base: 0.789, seam: 'right', frame: 0.908 },
-  'orc-banners-2': { w: 102, h: 128, foot: 0.378, base: 0.805, seam: 'right', frame: 0.974 },
-  'orc-banners-3': { w: 101, h: 128, foot: 0.351, base: 0.805, seam: 'right', frame: 0.976 },
+  'human-tower-1': { w: 104, h: 128, foot: 0.490, base: 0.914, plinth: [0.000, 0.805], frame: 0.958 },
+  'human-tower-2': { w: 78, h: 128, foot: 0.494, base: 0.945, plinth: [0.000, 0.820], frame: 0.979 },
+  'human-tower-3': { w: 63, h: 128, foot: 0.492, base: 0.969, plinth: [0.000, 0.852], frame: 0.933 },
+  'human-wing-1': { w: 121, h: 128, foot: 0.455, base: 0.898, tip: [0.467, 1.000], frame: 0.989 },
+  'human-wing-2': { w: 121, h: 128, foot: 0.455, base: 0.898, tip: [0.467, 1.000], frame: 0.989 },
+  'human-wing-3': { w: 120, h: 128, foot: 0.487, base: 0.898, tip: [0.508, 1.000], frame: 0.931 },
+  'orc-banners-1': { w: 72, h: 128, foot: 0.446, base: 0.789, frame: 0.908 },
+  'orc-banners-2': { w: 102, h: 128, foot: 0.378, base: 0.805, frame: 0.974 },
+  'orc-banners-3': { w: 101, h: 128, foot: 0.351, base: 0.805, frame: 0.976 },
   'orc-base': { w: 128, h: 117, foot: 0.496, base: 0.872, frame: 0.838 },
   'orc-gate-1': { w: 113, h: 128, foot: 0.687, base: 0.953, frame: 0.943 },
   'orc-gate-2': { w: 113, h: 128, foot: 0.692, base: 0.953, frame: 0.943 },
@@ -45,10 +47,10 @@ export const PALACE_ART: Record<string, PalacePieceArt> = {
   'orc-grounds-1': { w: 128, h: 128, foot: 0.496, base: 1.000, frame: 0.863 },
   'orc-grounds-2': { w: 128, h: 119, foot: 0.496, base: 1.000, frame: 0.932 },
   'orc-grounds-3': { w: 128, h: 121, foot: 0.491, base: 1.000, frame: 0.887 },
-  'orc-tower-1': { w: 105, h: 128, foot: 0.490, base: 0.906, frame: 0.952 },
-  'orc-tower-2': { w: 104, h: 128, foot: 0.490, base: 0.914, frame: 0.958 },
-  'orc-tower-3': { w: 104, h: 128, foot: 0.490, base: 0.914, seam: 'left', frame: 0.957 },
-  'orc-wing-1': { w: 119, h: 128, foot: 0.534, base: 0.930, seam: 'right', frame: 0.979 },
-  'orc-wing-2': { w: 128, h: 125, foot: 0.574, base: 0.928, seam: 'right', frame: 1.000 },
-  'orc-wing-3': { w: 128, h: 125, foot: 0.574, base: 0.928, seam: 'right', frame: 1.000 },
+  'orc-tower-1': { w: 105, h: 128, foot: 0.490, base: 0.906, plinth: [0.000, 0.805], frame: 0.952 },
+  'orc-tower-2': { w: 104, h: 128, foot: 0.490, base: 0.914, plinth: [0.000, 0.805], frame: 0.958 },
+  'orc-tower-3': { w: 104, h: 128, foot: 0.490, base: 0.914, plinth: [0.000, 0.805], frame: 0.957 },
+  'orc-wing-1': { w: 128, h: 127, foot: 0.482, base: 0.913, tip: [0.512, 1.000], frame: 0.818 },
+  'orc-wing-2': { w: 128, h: 126, foot: 0.429, base: 0.929, tip: [0.520, 1.000], frame: 0.827 },
+  'orc-wing-3': { w: 128, h: 126, foot: 0.430, base: 0.929, tip: [0.512, 1.000], frame: 0.826 },
 };

@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS } from '../src/model/buildings';
 import {
+  PALACE_BY_ID,
+  PALACE_CHASSIS,
   PALACE_MODULES,
   PALACE_TIERS,
   palaceArt,
+  palaceLayout,
   palaceOf,
   palacePieces,
   prideOffer,
   takePride,
 } from '../src/model/palace';
-import type { City, GameState } from '../src/model/types';
+import type { PalaceModuleId, PlacedPiece } from '../src/model/palace';
+import { PALACE_ART } from '../src/model/palaceArt';
+import type { City, FactionId, GameState } from '../src/model/types';
 import { runAiTurn } from '../src/ai/ai';
 import { CIVIC_PRIDE, assignWorkers, buildOptions, civicPride } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
@@ -206,5 +211,109 @@ describe('what it costs, and what it does', () => {
     for (const p of state.players) p.controller = 'ai';
     for (let turn = 0; turn < 3; turn++) runAiTurn(state, 0);
     expect(state.players[0].palace).toBeUndefined();
+  });
+});
+
+/**
+ * Where the pieces hang. Each of these was judged by eye off rendered composites
+ * first; the tests keep the arrangement that was approved from drifting.
+ */
+describe('how the capital is put together', () => {
+  const FACTIONS: FactionId[] = ['orc', 'human'];
+  const BOX = 380;
+
+  function layout(faction: FactionId, tiers: Partial<Record<PalaceModuleId, number>>) {
+    const standing = PALACE_MODULES.filter((m) => tiers[m.id]).map((module) => ({
+      module,
+      tier: tiers[module.id]!,
+    }));
+    return palaceLayout(faction, standing, BOX);
+  }
+
+  function height(p: PlacedPiece): number {
+    const shape = PALACE_ART[p.art];
+    return (p.width * shape.h) / shape.w;
+  }
+
+  /** A chassis point, in the laid-out box. */
+  function onChassis(pieces: PlacedPiece[], faction: FactionId, point: 'tower' | 'side') {
+    const hall = pieces.find((p) => p.art === `${faction}-base`)!;
+    const scale = hall.width / PALACE_ART[hall.art].w;
+    const [x, y] = PALACE_CHASSIS[faction].points[point];
+    return [hall.left + x * scale, hall.top + y * scale];
+  }
+
+  it("stands every tower's base corner on the hall's nearest corner", () => {
+    for (const faction of FACTIONS) {
+      for (let tier = 1; tier <= PALACE_TIERS; tier++) {
+        const { pieces } = layout(faction, { tower: tier });
+        const tower = pieces.find((p) => p.art === palaceArt(faction, 'tower', tier))!;
+        const [px, py] = PALACE_ART[tower.art].plinth!;
+        const [cx, cy] = onChassis(pieces, faction, 'tower');
+        expect(tower.left + px * tower.width).toBeCloseTo(cx, 6);
+        expect(tower.top + py * height(tower)).toBeCloseTo(cy, 6);
+      }
+    }
+  });
+
+  it("hangs every wing by its nearest corner on the hall's left-hand corner, behind the hall", () => {
+    for (const faction of FACTIONS) {
+      for (let tier = 1; tier <= PALACE_TIERS; tier++) {
+        const { pieces } = layout(faction, { wing: tier });
+        const at = pieces.findIndex((p) => p.art === palaceArt(faction, 'wing', tier));
+        const wing = pieces[at];
+        const [tx, ty] = PALACE_ART[wing.art].tip!;
+        const [cx, cy] = onChassis(pieces, faction, 'side');
+        expect(wing.left + tx * wing.width).toBeCloseTo(cx, 6);
+        expect(wing.top + ty * height(wing)).toBeCloseTo(cy, 6);
+        expect(at).toBeLessThan(pieces.findIndex((p) => p.art === `${faction}-base`));
+      }
+    }
+  });
+
+  it('never leaves anything standing past the edge of its yard, at any tier', () => {
+    for (const faction of FACTIONS) {
+      for (let yard = 1; yard <= PALACE_TIERS; yard++) {
+        for (let rest = 1; rest <= PALACE_TIERS; rest++) {
+          const { pieces } = layout(faction, {
+            grounds: yard,
+            wing: rest,
+            tower: rest,
+            gate: rest,
+            banners: rest,
+          });
+          const ground = pieces.find((p) => p.art === palaceArt(faction, 'grounds', yard))!;
+          for (const p of pieces) {
+            if (p === ground) continue;
+            expect(p.left).toBeGreaterThanOrEqual(ground.left);
+            expect(p.left + p.width).toBeLessThanOrEqual(ground.left + ground.width);
+          }
+        }
+      }
+    }
+  });
+
+  it('gives the top-tier yard at least the room of any lower one', () => {
+    for (const faction of FACTIONS) {
+      const width = (tier: number) =>
+        layout(faction, { grounds: tier }).pieces.find((p) => p.art.includes('-grounds-'))!.width;
+      expect(width(3)).toBeGreaterThanOrEqual(width(2));
+      expect(width(2)).toBeGreaterThanOrEqual(width(1));
+    }
+  });
+
+  it('keeps every piece inside the frame, with everything at the top tier', () => {
+    const all = Object.fromEntries(PALACE_MODULES.map((m) => [m.id, PALACE_TIERS]));
+    for (const faction of FACTIONS) {
+      const { pieces, width, height: tall } = layout(faction, all);
+      expect(width).toBeGreaterThanOrEqual(BOX);
+      for (const p of pieces) {
+        expect(p.left).toBeGreaterThanOrEqual(0);
+        expect(p.top).toBeGreaterThanOrEqual(0);
+        expect(p.left + p.width).toBeLessThanOrEqual(width);
+        expect(p.top + height(p)).toBeLessThanOrEqual(tall);
+      }
+    }
+    expect(PALACE_BY_ID.get('grounds')!.behind).toBe(true);
   });
 });
