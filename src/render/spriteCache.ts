@@ -332,6 +332,19 @@ export class SpriteCache {
       .catch(() => {});
   }
 
+  /**
+   * Section 102's garrison posts, one picture a side, if anybody has drawn them.
+   *
+   * The same bargain as every other sprite in this file: the game draws its own
+   * until a file turns up at the name the prompt in `ART_PROMPTS.md` gives, and
+   * nothing has to change for it to be used.
+   */
+  installPostArt(faction: string, onLoaded: (img: HTMLImageElement) => void): void {
+    loadImage(`${this.base}posts/${faction}.png`)
+      .then(onLoaded)
+      .catch(() => {});
+  }
+
   installSpecialArt(
     into: Map<string, HTMLImageElement>,
     ids: TerrainId[],

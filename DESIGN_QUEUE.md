@@ -4611,35 +4611,151 @@ sweep becomes unreadable, which sections 17 and 21 both learned the hard way.
 
 ## 67. Civic Pride: a capital that shows how well it is going
 
-Design and art both drafted already -- see `art_src/palace/capital_building_bible
-(2).md` and the thirty-four images beside it. The idea is Civ2's palace wings:
-the capital is a **base chassis plus five independent modules** (watchtower,
-gate, side wing, grounds, banners), each with its own two or three tiers, and
-the player picks which to invest in. Both factions get the same five categories
-with different materials, so they stay mechanically symmetrical.
+**Built.** The design and the art were both drafted before any code existed --
+`art_src/palace/capital_building_bible (2).md` and the thirty-four images beside
+it -- and this section's own sequencing note said what order to do it in:
+decorative first, measured second, and only then a word about yields.
 
-The art is deliberately built for **compositing rather than one evolving
-picture**, because image models cannot reliably edit a previous image, and
-generating every combination is combinatorial. Each module is a standalone
-sprite designed to slot onto a fixed attachment point.
+### What it is
 
-**What is actually new work here**, since the art is done:
+- **A base chassis per side and five modules of three tiers each**: a watchtower
+  at one corner, a gate at the front, a wing at one side, grounds out front and
+  banners along the roofline. Both sides get the same five categories in their
+  own materials, so nobody has a module the other cannot answer.
+- **It is offered, never bought.** When the empire's score passes another
+  milestone -- and only while nobody is rioting and nobody is hungry -- the
+  council asks which piece to add, and the answer is the whole of the mechanic.
+  No shields, no queue, no turn spent, and no way to decline: the choice is
+  which, not whether.
+- **It does nothing.** No yields, no defence, no content, no upkeep.
+- **It belongs to the empire**, not to the city. A capital that falls is still an
+  empire that built all that, and the palace is drawn in whichever city is the
+  capital now.
 
-- **A compositing layer in the renderer.** Nothing in the game currently stacks
-  sprites at named attachment points. `cities` art is one image per size tier.
-  This is the largest part and it is renderer work, not simulation work.
-- **The trigger.** The intent is that this unlocks when the empire is
-  *especially well off and content*, which is a condition nothing currently
-  expresses. `contentLimit` and disorder are per-city; this wants an empire-wide
-  reading, and section 64's advisors already compute something close to it in
-  `Situation`.
-- **What a module is worth.** A palace that is only decorative is a screensaver;
-  one that grants real yields is a per-city multiplier on the capital, which is
-  the class of thing sections 4c and 4e measured as amplifying whoever is
-  already ahead. Worth deciding deliberately, and probably worth being small.
+### The thing this got wrong first, which is worth writing down
 
-**Sequencing:** this is a reward for doing well, so it should not also be *how*
-you do well. Decorative first, measured second, and only then consider yields.
+The first build made the modules **buildings you queue with shields**, thirty of
+them, gated to the capital. It passed its tests and it was wrong, for a reason
+this section had already written down: *"this is a reward for doing well, so it
+should not also be how you do well."* A wing that costs a hundred and forty
+shields is not a reward -- it is an army you did not build, with a picture
+attached, and a player who takes it is paying for the privilege of having done
+well. Civ2's throne room never charged for a curtain.
+
+So the mechanic is the asking. `prideDue` owns when: a score milestone
+(`PRIDE.step`, thirty-five points of population, advances and buildings together,
+which is about a dozen pieces in a strong game and the full fifteen only in an
+excellent one), and an empire that is content and fed *at that moment*. Earning
+one while rioting does not lose it -- milestones are counted against pieces
+taken, so it is waiting when the riots stop.
+
+The AI is not asked at all, which is also the answer to "what does this do to
+balance": nothing, in either direction.
+
+### The compositing, which was the actual work
+
+Nothing in the game stacked sprites at named points before this: city art was one
+picture per size tier. Getting the capital to read as one building took about
+twenty rounds of looking at composites, and nearly everything learned was about
+*where to hang things*, so it is written down at some length.
+
+**The pieces are a scene, not stickers.** The art is isometric at one fixed angle
+over one horizon, so the pipeline trims each piece to its own picture, keeps its
+shape, and measures the points it will be hung by into the generated
+`palaceArt.ts`. Nothing is centred in a square.
+
+**Hang a module by a structural point of its own art, on a hand-marked point of
+the chassis.** Every broken version got one half of that wrong.
+
+On the module (`PalaceAnchor`):
+
+- `foot` -- the middle of the first row that is structure rather than fringe. The
+  banners, on the roof.
+- `mid` -- the middle of the picture: the gate, whose lowest row is a wall stub
+  off to one side, and the grounds.
+- `plinth` -- for a tower, the corner where its base meets the ground on the left
+  (the lowest pixel of its leftmost column). Hung on the hall's nearest corner,
+  the tower stands on that corner and its skirt wall runs along the hall's wall.
+  Centring towers on a corner, hanging them by their front tip, and setting their
+  height from the gate's ground line all floated them one way or another; the
+  towers that read right had landed on this point by luck.
+- `tip` -- for a wing, its lowest point, which is its nearest corner: where its
+  front wall meets the blank wall it joins by. Hung on the hall's left-hand
+  corner, the wing's front carries on from the hall's and the blank wall runs back
+  behind the hall, which is drawn over it. This replaced a chain of seam detection
+  -- which edge is flat, which column the wall stands in, how wide its blank face
+  is -- that every new piece of art broke: flying buttresses make an edge as
+  straight as a seam, a gable reaches past its wall, and a slanted wall has no
+  one width.
+
+On the chassis (`PALACE_CHASSIS`), five points in each hall's own pixels: `door`,
+`tower` (the nearest corner), `side` (the left-hand corner), `roof` and `yard`.
+Marked by hand, because there are two chassis, they never change, and no
+measurement can tell a door from a window -- but the corners are read off the
+hall's own silhouette, where the walls meet the ground. The first hand-marked
+corner stood ten pixels out in the yard.
+
+**Sizes are shares of the box, and a judgement.** Every asset was drawn filling
+its own frame, so nothing on disk says a tower is bigger than a gate, and a tower
+sprite includes its skirt walls, so its width follows its height.
+`PALACE_TIER_SCALE` grows a module with its tier. The Kingdom's wings grow faster,
+because the cathedral is meant to tower over the hall; the Horde's towers are set
+by eye, because the Iron-Plated Tower's art is a solid block to its crown and read
+far taller than a timber lookout drawn at the same height.
+
+**Fitted at the worst case.** The building and what hangs on it are laid out with
+every module at its top tier and scaled into the box, and that one transform is
+applied to whatever is standing -- so nothing is clipped, and the hall does not
+shrink or jump as pieces are added.
+
+**The grounds get a frame of their own.** Fitting the yard in with the building
+made every bit of yard cost the hall its size. The yard is centred on the hall's
+`yard` point, sized against the finished box, never narrower than what stands on
+it (anything past its edge reads as floating), and at the top tier as big as
+anything that could ever stand on it -- or the forge yard comes out smaller than
+the weapon racks it replaced. The frame grows down and sideways to take it, and
+the city view lays the capital out smaller if that frame would pass 250 pixels.
+
+**Wings are drawn behind the hall, whole.** Drawing the top of a tall wing in
+front of the hall was tried, and read as a wing half on the building and half off.
+
+### What the art needed
+
+The bible's prompts were checked side by side on magenta, and several failed only
+once composited. They are written up as QA round 4 in the bible:
+
+- Wing roofs that "continue past the frame" show as a hard cut edge wherever a
+  wing rises above the hall's roof. The totems and the cathedral were re-rolled
+  without them.
+- "Blank flat wall" wording blanked every wall, not just the joining one.
+- A blank attachment wall taller than the hall shows above the hall's roof, where
+  nothing covers it.
+
+Two notes for whoever drops in the next file. The pipeline takes the newest file
+whose name, minus any note in brackets, is the module's name -- "Cathedral (half
+wall)" is not "Cathedral wing", and was silently ignored twice. And a re-drawn
+chassis moves every hand-marked point unless it is the same picture: the Grand
+Hall's horizontally swapped art was compared against the old art flipped, pixel
+for pixel, before it replaced it and the layout stopped flipping it.
+
+`palaceLayout` is the only place this arithmetic lives. The city view draws its
+output, and `tools/palace-layout.run.test.ts` dumps the same output so the capital
+can be looked at offline -- every arrangement here was judged from that dump,
+against the game's own numbers rather than a second copy of them.
+
+### What is left
+
+- **Yields, if ever.** Deliberately not now. If a module is ever worth something
+  it wants its own arm, and section 109's table is the baseline it has to beat.
+- **The map.** The capital still draws as a city like any other; the palace lives
+  in the city view. A tile is thirty-two pixels and a palace is a picture, so
+  this is a deliberate stop rather than an omission.
+- **The two stylistic calls the bible left open**: the orc banner line jumps in
+  material between tier one and tier two, and the orc chassis is busier than the
+  human one. Both are visible now that they composite, and both still look fine.
+- **The Chapel Wing prompts** still carry the roof-past-the-frame wording. The
+  shrine annex and the chapel composite well enough; a re-roll should borrow the
+  totems' rewritten prompts rather than repeat the round.
 
 ## 68. Unit upgrade branches: thirty-six advances, and one unsolved problem
 

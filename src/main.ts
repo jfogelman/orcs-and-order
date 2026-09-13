@@ -28,7 +28,7 @@ import type { EffectId } from './render/effects';
 import { EMPTY_OVERLAY, MapRenderer } from './render/mapRenderer';
 import type { MapOverlay, RoutePreview } from './render/mapRenderer';
 import { Minimap } from './render/minimap';
-import { autoBuildOf, canFoundCity, foundCity, inSupply, productionName } from './sim/city';
+import { canFoundCity, foundCity, inSupply, needsOrders, productionName } from './sim/city';
 import type { NewGameOptions } from './sim/gamestate';
 import { cityAt, createGame, log, playerCities, playerUnits, unitAt } from './sim/gamestate';
 import {
@@ -58,6 +58,8 @@ import {
   resupplyBlocked,
 } from './sim/combat';
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
+import { openPrideOffer } from './ui/pride';
+import { prideDue } from './sim/turn';
 import { openHordeReport } from './ui/hordeReport';
 import {
   afterModalCloses,
@@ -593,7 +595,7 @@ class App {
   private roadArmed = false;
 
   /**
-   * Arm "Road To": the next left click sets where the road goes.
+   * Arm "Road To": the next click on the map sets where the road goes.
    *
    * Armed the way an ability is, and for the same reason -- a left click on open
    * ground is already a march, so the click has to know it means something else
@@ -616,7 +618,7 @@ class App {
     this.disarm(false);
     this.roadArmed = true;
     this.refreshSidebar();
-    this.notify('Road To: click where the road should go. Escape to cancel.');
+    this.notify('Road To: click where the road should go — either button. Escape to cancel.');
   }
 
   /** Handle a click while Road To is armed. Returns whether the click was consumed. */
@@ -811,6 +813,9 @@ class App {
     this.promptPerkIfOwed();
     if (isModalOpen()) return chain();
 
+    this.promptPrideIfDue();
+    if (isModalOpen()) return chain();
+
     if (!this.askedResearch) {
       this.askedResearch = true;
       this.promptResearchIfIdle();
@@ -859,6 +864,23 @@ class App {
   }
 
   /**
+   * Section 67: ask what to add to the capital, when the empire has earned one.
+   *
+   * Offered rather than sold, and asked at the top of the turn beside the other
+   * things the council wants a decision about. `prideDue` owns when -- a score
+   * milestone, and an empire that is content and fed right now -- so this only
+   * has to put the question.
+   */
+  private promptPrideIfDue(): void {
+    if (isModalOpen() || isOver(this.state)) return;
+    if (!prideDue(this.state, this.viewerId)) return;
+    openPrideOffer(this.state, this.viewerId, () => {
+      this.playLogCues();
+      this.refreshHud();
+    });
+  }
+
+  /**
    * Ask about any promotion the player has not answered yet.
    *
    * Driven off what a unit is owed rather than a queue of events, so
@@ -896,12 +918,12 @@ class App {
    */
   private promptBuildIfIdle(): void {
     if (isModalOpen() || isOver(this.state)) return;
-    const city = playerCities(this.state, this.viewerId).find(
-      (c) =>
-        c.size > 0 &&
-        c.producing.kind === 'coin' &&
-        autoBuildOf(c) === 'ask' &&
-        !this.askedCities.has(c.id),
+    // Coin, Study and Placating all mean "nothing in particular", and a city on
+    // any of them is a city waiting to be told. This used to ask about Coin
+    // alone, so a city parked on Study under Ask me was never asked again --
+    // reported from a real game.
+    const city = needsOrders(this.state, this.viewerId).find(
+      (c) => !this.askedCities.has(c.id),
     );
     if (!city) return;
     // Remembered whether or not anything is chosen, so that closing the panel
@@ -1094,6 +1116,12 @@ class App {
     this.canvas.addEventListener('pointerdown', (e) => {
       if (e.button === 2) {
         const t = this.tileFromEvent(e);
+        // Road To is answered by whichever button the player reaches for.
+        // Right-click is *this game's* gesture for "go there", so a player who
+        // arms Road To and then right-clicks has said exactly what they meant --
+        // and used to get a plain march, because only the left button was
+        // listening. Reported from a real game at turn 31.
+        if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
         if (t) this.actOn(t.x, t.y);
         return;
       }

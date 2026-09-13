@@ -71,6 +71,31 @@ export const CALM = { base: 6 };
  */
 export const POSTING = { enabled: false };
 
+/**
+ * Whether this empire is doing well enough to start decorating.
+ *
+ * Section 67 asked for "especially well off and content", which nothing in the
+ * game expressed: `contentLimit` and disorder are per city. Three plain
+ * conditions, all of them things a player can see and fix:
+ *
+ * - **Nobody is rioting.** A capital growing a garden while a town burns is a
+ *   different game's joke.
+ * - **Nobody is starving**, for the same reason.
+ * - **Three cities and fifty gold**, so this is a thing an empire does once it
+ *   is an empire rather than a first-turn distraction.
+ */
+export function civicPride(state: GameState, playerId: number): boolean {
+  // Filtered here rather than through `playerCities`, which lives in
+  // `gamestate` and imports this file back.
+  const cities = state.cities.filter((c) => c.owner === playerId);
+  if (cities.length < CIVIC_PRIDE.cities) return false;
+  if (state.players[playerId].gold < CIVIC_PRIDE.gold) return false;
+  return !cities.some((c) => c.disorder || foodSurplus(state, c) < 0);
+}
+
+/** What "doing well" means, in the two numbers it is worth arguing about. */
+export const CIVIC_PRIDE = { cities: 3, gold: 50 };
+
 /** Soldiers this building wants standing in the city before it does anything. */
 export function garrisonNeededBy(b: { garrisonNeeded?: number; needsGarrison?: boolean }): number {
   return b.garrisonNeeded ?? (b.needsGarrison ? 1 : 0);
@@ -1289,6 +1314,30 @@ export function autoBuildOf(city: City): AutoBuild {
  * meant changing what the AI builds in order to change what a player's cities
  * do, and those are not the same question.
  */
+/**
+ * Whether what this city is "building" is a standing choice rather than a
+ * project: Coin, Study or Placating.
+ *
+ * None of the three ever finishes, which is the whole point of them -- they are
+ * what a city does when it has not been given anything to do. Asked as one
+ * question because the alternative was asking about Coin and forgetting the
+ * other two, which is exactly what happened: a city set to **Ask me** and parked
+ * on Study was never asked again, because only Coin counted as idle.
+ */
+export function isStanding(item: ProductionItem): boolean {
+  return item.kind === 'coin' || item.kind === 'beakers' || item.kind === 'calm';
+}
+
+/**
+ * Cities waiting to be told what to do: set to **Ask me**, and building nothing
+ * in particular.
+ */
+export function needsOrders(state: GameState, playerId: number): City[] {
+  return state.cities.filter(
+    (c) => c.owner === playerId && c.size > 0 && isStanding(c.producing) && autoBuildOf(c) === 'ask',
+  );
+}
+
 export function nextProduction(state: GameState, city: City): ProductionItem {
   const units = buildOptions(state, city).units;
   const again = city.lastUnit && units.find((u) => u.id === city.lastUnit);

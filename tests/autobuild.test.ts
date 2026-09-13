@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { City, GameState } from '../src/model/types';
 import { unitType } from '../src/model/units';
-import { autoBuildOf, foundCity, nextProduction, productionCostIn } from '../src/sim/city';
+import {
+  autoBuildOf,
+  foundCity,
+  isStanding,
+  needsOrders,
+  nextProduction,
+  productionCostIn,
+} from '../src/sim/city';
 import { createGame, playerCities } from '../src/sim/gamestate';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
@@ -27,6 +34,35 @@ function passATurn(state: GameState, playerId = 0): void {
   beginPlayerTurn(state, playerId);
   endPlayerTurn(state);
 }
+
+describe('cities waiting to be told', () => {
+  // Reported from a real game: a city set to Ask me and parked on Study was
+  // never asked again, because only Coin counted as having nothing to do.
+  it('counts every standing choice, not just Coin', () => {
+    const { state, city } = humanCity();
+    expect(autoBuildOf(city)).toBe('ask');
+
+    for (const kind of ['coin', 'beakers', 'calm'] as const) {
+      city.producing = { kind };
+      expect(isStanding(city.producing), kind).toBe(true);
+      expect(needsOrders(state, 0).map((c) => c.id), kind).toContain(city.id);
+    }
+  });
+
+  it('leaves a city that is actually building something alone', () => {
+    const { state, city } = humanCity();
+    city.producing = { kind: 'unit', id: 'footman' };
+    expect(isStanding(city.producing)).toBe(false);
+    expect(needsOrders(state, 0)).toHaveLength(0);
+  });
+
+  it('says nothing about a city that has been set to decide for itself', () => {
+    const { state, city } = humanCity();
+    city.producing = { kind: 'beakers' };
+    city.autoBuild = 'coin';
+    expect(needsOrders(state, 0)).toHaveLength(0);
+  });
+});
 
 describe('auto-build', () => {
   it('defaults to asking, and an unset city is left alone', () => {

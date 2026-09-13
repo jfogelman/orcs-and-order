@@ -511,7 +511,7 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
 # be called.
 # "2x2" describes how the frames are laid out, which is worked out from the
 # picture, not from the name.
-REROLL_WORDS = ("magenta", "bg", "v2", "v3", "redo", "reroll", "new", "2x2")
+REROLL_WORDS = ("magenta", "bg", "v2", "v2.1", "v3", "redo", "reroll", "new", "2x2")
 
 
 def normalise_stem(stem: str) -> tuple[str, str]:
@@ -1868,6 +1868,282 @@ def adopt_raw_files() -> list[str]:
     return adopted
 
 
+PALACE_SIZE = 128
+
+# Section 67's Civic Pride: a base chassis per side and five modules of three
+# tiers each, drawn to be layered rather than drawn as one picture. The names on
+# the left are what the game calls them; the names on the right are what the
+# generator called the files, which is `art_src/palace/capital_building_bible
+# (2).md` and is not going to match.
+#
+# Filed flat rather than per faction: one folder of thirty-two pieces is easier
+# to look through than ten folders of three, and the id already says whose it is.
+PALACE: dict[str, str] = {
+    "human-base": "the grand hall - base chassis",
+    "human-tower-1": "wooden lookout",
+    "human-tower-2": "stone tower",
+    "human-tower-3": "gilded spire tower",
+    # Tier one was re-rolled with its archway put back; the first attempt is
+    # still in the folder under its own name and is deliberately not used.
+    "human-gate-1": "wooden gate",
+    "human-gate-2": "reinforced stone gate",
+    "human-gate-3": "ornamental grand gate",
+    "human-wing-1": "shrine annex",
+    "human-wing-2": "stained-glass chapel",
+    "human-wing-3": "cathedral wing",
+    "human-grounds-1": "dirt yard",
+    "human-grounds-2": "cobbled courtyard",
+    "human-grounds-3": "manicured garden",
+    "human-banners-1": "single cloth banner",
+    "human-banners-2": "matched banner set",
+    "human-banners-3": "gold-trimmed heraldic banners",
+    "orc-base": "the warcamp - base chassis",
+    "orc-tower-1": "lashed-log lookout",
+    "orc-tower-2": "bone-reinforced tower",
+    "orc-tower-3": "iron-plated tower",
+    "orc-gate-1": "crude palisade gate",
+    "orc-gate-2": "spiked iron gate",
+    "orc-gate-3": "trophy-flanked warfort gate",
+    "orc-wing-1": "single totem",
+    "orc-wing-2": "totem cluster",
+    "orc-wing-3": "ritual altar wing",
+    "orc-grounds-1": "trampled dirt yard",
+    "orc-grounds-2": "weapon racks",
+    "orc-grounds-3": "forge yard",
+    "orc-banners-1": "single torn banner",
+    "orc-banners-2": "chained banner set",
+    "orc-banners-3": "massive blackened war-banners",
+}
+
+
+def palace_stand(img: "Image.Image") -> tuple[float, float]:
+    """
+    Where the piece actually stands: across its width, and how far down it.
+
+    **Not the lowest row of pixels.** That was the first version and it is wrong
+    for any asset with decoration hanging past its base -- the bone-reinforced
+    tower has stakes planted in front of its base logs, and anchoring the lowest
+    stake to the ground line lifts the whole tower off it. The same assumption
+    put the gate in the corner and the wing through the wall; this is its third
+    disguise.
+
+    So: walk up from the bottom and take the first row that is *structure*
+    rather than fringe -- wide enough to be the thing standing on the ground,
+    against the widest row in the lower half of the picture. The horizontal
+    answer is that row's middle; the vertical answer is where it sits, so a
+    renderer can stand the structure on the line and let the stakes hang below.
+    """
+    px = img.load()
+    w, h = img.size
+    rows = []
+    for y in range(h):
+        xs = [x for x in range(w) if px[x, y][3] > 24]
+        rows.append(xs)
+    lower = [len(xs) for xs in rows[h // 2 :] if xs]
+    if not lower:
+        return 0.5, 1.0
+    solid = max(lower) * 0.45
+    for y in range(h - 1, -1, -1):
+        xs = rows[y]
+        if len(xs) >= solid:
+            return (sum(xs) / len(xs)) / w, (y + 1) / h
+    for y in range(h - 1, -1, -1):
+        if rows[y]:
+            return (sum(rows[y]) / len(rows[y])) / w, (y + 1) / h
+    return 0.5, 1.0
+
+
+def palace_tip(img: "Image.Image") -> tuple[float, float]:
+    """
+    A wing's lowest point -- the middle of its lowest row -- as shares of the
+    width and the height.
+
+    That point is the wing's nearest corner, where its front wall meets the blank
+    wall it joins the hall by. The compositor hangs it on the hall's own corner,
+    so the wing's front carries on from the hall's and the blank wall runs back
+    behind it.
+    """
+    px = img.load()
+    w, h = img.size
+    for y in range(h - 1, -1, -1):
+        xs = [x for x in range(w) if px[x, y][3] > 24]
+        if xs:
+            return (xs[0] + xs[-1] + 1) / 2 / w, (y + 1) / h
+    return 0.5, 1.0
+
+
+def palace_plinth(img: "Image.Image") -> tuple[float, float]:
+    """
+    Where a tower's base meets the ground on its left: the lowest pixel of its
+    leftmost column, as shares of the width and the height.
+
+    The compositor stands this corner on the hall's own ground edge, so the
+    tower's skirt wall runs along the hall's wall rather than in front of it or
+    above it. The Warcamp's towers, which read right, already had their corners
+    there; the Grand Hall's, which floated, stood fifteen to twenty pixels high.
+    """
+    px = img.load()
+    w, h = img.size
+    lefts: list[tuple[int, int]] = []
+    for y in range(h // 2, h):
+        xs = [x for x in range(w) if px[x, y][3] > 24]
+        if xs:
+            lefts.append((y, xs[0]))
+    if not lefts:
+        return 0.0, 1.0
+    edge = min(x for _, x in lefts)
+    low = max(y for y, x in lefts if x <= edge + 1)
+    return edge / w, (low + 1) / h
+
+
+def write_palace_manifest(
+    shapes: dict[str, tuple[int, int, float, float, tuple[float, float] | None, tuple[float, float] | None]],
+    frames: dict[str, tuple[float, float]],
+) -> None:
+    """
+    The pieces' shapes, as a TypeScript file the compositor reads.
+
+    Generated rather than measured at runtime: the browser only learns an
+    image's size once it has loaded, and a palace that shuffles itself into
+    place a frame later looks broken. Checked in, like the sprite sheets.
+    """
+    out = ROOT / "src" / "model" / "palaceArt.ts"
+    # A frame is only measured when a piece is re-keyed, off the untrimmed art.
+    # Keep what the last run measured for the rest, or an ordinary run resets
+    # every piece that was already up to date to a full frame.
+    if out.exists():
+        for m in re.finditer(r"'([\w-]+)': \{[^}]*frame: ([\d.]+)", out.read_text(encoding="utf-8")):
+            frames.setdefault(m.group(1), (float(m.group(2)), float(m.group(2))))
+    lines = [
+        "// Generated by tools/prepare_art.py. Do not edit by hand.",
+        "//",
+        "// Section 67: what shape each piece of the capital is and where it stands.",
+        "//",
+        "// `foot` is where it stands across its own width and `base` how far down it,",
+        "// both measured from the first row that is structure rather than decoration --",
+        "// a tower with stakes planted past its base logs stands on the logs. `plinth`",
+        "// and `tip` are the corners a tower and a wing are hung by.",
+        "export interface PalacePieceArt {",
+        "  w: number;",
+        "  h: number;",
+        "  foot: number;",
+        "  /** How far down the picture the structure meets the ground. */",
+        "  base: number;",
+        "  /** A tower's base corner on its left, as shares of the width and height. */",
+        "  plinth?: [number, number];",
+        "  /** A wing's lowest point, its nearest corner, as shares of the width and height. */",
+        "  tip?: [number, number];",
+        "  /** Share of its own frame the piece filled before trimming. */",
+        "  frame: number;",
+        "}",
+        "",
+        "export const PALACE_ART: Record<string, PalacePieceArt> = {",
+    ]
+    for name in sorted(shapes):
+        w, h, foot, base, plinth, tip = shapes[name]
+        fw, fh = frames.get(name, (1.0, 1.0))
+        plinth_bit = f", plinth: [{plinth[0]:.3f}, {plinth[1]:.3f}]" if plinth else ""
+        plinth_bit += f", tip: [{tip[0]:.3f}, {tip[1]:.3f}]" if tip else ""
+        lines.append(
+            f"  '{name}': {{ w: {w}, h: {h}, foot: {foot:.3f}, base: {base:.3f}"
+            f"{plinth_bit}, frame: {max(fw, fh):.3f} }},"
+        )
+    lines.append("};")
+    out.write_text(chr(10).join(lines) + chr(10), encoding="utf-8", newline=chr(10))
+    print(f"  src/model/palaceArt.ts  {len(shapes)} pieces")
+
+
+def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    The capital's parts, keyed and squared but *not* floored.
+
+    Everything else in this file pads its subject out to a square, which is
+    right for an icon and wrong for a piece that has to line up with another
+    piece. These are trimmed to the picture and no more: the renderer stands
+    them on a shared ground line, so it needs their real shapes.
+    """
+    src = SRC / "palace"
+    out = OUT / "palace"
+    if not src.exists():
+        return 0, list(PALACE), []
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    failed: list[str] = []
+    shapes: dict[str, tuple[int, int, float, float, tuple[float, float] | None, tuple[float, float] | None]] = {}
+    frames: dict[str, tuple[float, float]] = {}
+    for out_id, source_name in PALACE.items():
+        path = find_source(src, source_name)
+        if path is None:
+            missing.append(out_id)
+            continue
+        target = out / f"{out_id}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        img = Image.open(path)
+        img, cut_out = remove_background(img)
+        # What share of its own frame the piece filled, before it was trimmed.
+        # The art is drawn one subject to a frame at a fixed scale, so this is
+        # the only record of how big these things are *relative to each other* --
+        # and the compositor needs exactly that, or a tall narrow tower drawn to
+        # the same width as a hall ends up three storeys taller than it should.
+        span = max(img.width, img.height)
+        box = img.getbbox()
+        drawn = max(box[2] - box[0], box[3] - box[1]) if box else span
+        frames[out_id] = (drawn / span, drawn / span)
+        img = fit_within(img, PALACE_SIZE)
+        img.save(target, optimize=True)
+        flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        print(f"  palace/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            failed.append(out_id)
+        done += 1
+    # Measured off whatever is on disk, so a piece that was already up to date
+    # still lands in the manifest.
+    for out_id in PALACE:
+        path = out / f"{out_id}.png"
+        if not path.exists():
+            continue
+        with Image.open(path) as done_img:
+            img = done_img.convert("RGBA")
+        foot, base = palace_stand(img)
+        shapes[out_id] = (
+            img.width,
+            img.height,
+            foot,
+            base,
+            palace_plinth(img) if "-tower-" in out_id else None,
+            palace_tip(img) if "-wing-" in out_id else None,
+        )
+    if shapes:
+        write_palace_manifest(shapes, frames)
+    return done, missing, failed
+
+
+def fit_within(img: Image.Image, size: int) -> Image.Image:
+    """
+    Crop to content and scale to fit, keeping the shape it was drawn in.
+
+    Deliberately *not* squared. Everything else in this file pads its subject
+    out to a square, which is right for an icon in a row and wrong for a piece
+    that has to stand on the same ground as another piece: a tower is taller
+    than the hall it stands beside and a courtyard is wider than it is deep, and
+    padding both to squares throws away the one thing the compositor needs. The
+    renderer places these by the ground under them, so what it wants is the
+    picture and nothing else.
+    """
+    bbox = img.getbbox()
+    if bbox:
+        img = img.crop(bbox)
+    scale = min(size / img.width, size / img.height)
+    if scale < 1:
+        img = img.resize(
+            (max(1, round(img.width * scale)), max(1, round(img.height * scale))),
+            Image.LANCZOS,
+        )
+    return img
+
+
 def main() -> int:
     force = "--force" in sys.argv
     if not SRC.exists():
@@ -1893,6 +2169,16 @@ def main() -> int:
     failed_units.extend(failed_wilds)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    # Section 102's posts are drawn in code until somebody draws them, so the
+    # folder is allowed not to exist yet. `ART_PROMPTS.md` has the two prompts.
+    posts, missing_posts, failed_posts = 0, ["orc", "human"], []
+    if (SRC / "posts").exists():
+        print("Garrison posts:")
+        posts, missing_posts, failed_posts = process_aliased(
+            "posts", {"orc": "orc", "human": "human"}, force, ICON_SIZE
+        )
+    print("Capital parts:")
+    palace, missing_palace, failed_palace = process_palace(force)
     print("Advisor bubbles:")
     bubbles, missing_bubbles, _failed_bubbles = process_aliased(
         "advisors", ADVISOR_BUBBLES, force, ICON_SIZE

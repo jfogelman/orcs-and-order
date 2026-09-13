@@ -1673,3 +1673,69 @@ kbd {
   margin-top: 3px;
   flex: 0 0 auto;
 }
+
+/* Section 67: the capital, drawn in layers. Absolute inside a fixed box, so a
+   piece's position is the one the art was drawn for whatever else is built. */
+.palace-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.palace {
+  position: relative;
+  image-rendering: pixelated;
+  /* The layout makes the frame as tall as the grounds need. */
+  margin: 4px 0 6px;
+}
+
+.palace-piece {
+  position: absolute;
+  image-rendering: pixelated;
+}
+
+/* The Kingdom's hall faces the other way from the Horde's. */
+.palace-piece.flipped {
+  transform: scaleX(-1);
+}
+
+.palace-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+/* Section 67: the choice of what to add to the capital. */
+.pride-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.pride-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pride-art {
+  height: 88px;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.pride-name {
+  font-weight: 600;
+}
+
+.pride-blurb {
+  font-style: italic;
+  opacity: 0.75;
+}

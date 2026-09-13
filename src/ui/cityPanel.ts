@@ -1,4 +1,5 @@
 import { idx } from '../engine/grid';
+import { palaceLayout, palacePieces } from '../model/palace';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -16,6 +17,7 @@ import {
   autoBuildOf,
   unitsInCity,
   buildOptions,
+  capitalOf,
   cityYield,
   contentLimit,
   foodSurplus,
@@ -72,6 +74,55 @@ const POSTURE: Record<UnitOrder, string> = {
   road: 'laying a road',
   post: 'building a post',
 };
+
+/**
+ * The capital, composited from what the empire has been given.
+ *
+ * The arrangement itself is `palaceLayout`, which hangs every piece from a
+ * hand-marked place on the chassis. This only turns its list into pictures.
+ */
+function palaceView(state: GameState, city: City): string {
+  const player = state.players[city.owner];
+  const faction = player.faction;
+  const standing = palacePieces(player);
+  // The frame can grow past the box for a big yard, and the column is not much
+  // wider than 250 -- so a frame that would pass that is laid out smaller.
+  const ROOM = 250;
+  const wide = palaceLayout(faction, standing, 210);
+  const layout =
+    wide.width > ROOM ? palaceLayout(faction, standing, Math.floor((210 * ROOM) / wide.width)) : wide;
+  const sprites = layout.pieces
+    .map(
+      (p) =>
+        `<img class="palace-piece${p.flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(p.art))}" alt=""
+          style="left:${Math.round(p.left)}px; top:${Math.round(p.top)}px; width:${Math.round(p.width)}px" />`,
+    )
+    .join('');
+
+  return `
+        <div class="panel-title">The Capital</div>
+        <div class="panel-body palace-body">
+          <div class="palace" style="width:${layout.width}px; height:${layout.height}px">${sprites}</div>
+          <div class="palace-parts">
+            ${
+              standing.length === 0
+                ? '<span class="muted">Four walls and a roof. Whether it stays that way is a matter of civic pride, and of how the empire is doing.</span>'
+                : standing
+                    .map(
+                      ({ module, tier }) =>
+                        `<span class="chip">${escapeHtml(module.tiers[faction][tier - 1])}</span>`,
+                    )
+                    .join('')
+            }
+          </div>
+        </div>`;
+}
+
+/** Where a palace piece's art lives. */
+function palacePath(name: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  return `${base.endsWith('/') ? base : `${base}/`}palace/${name}.png`;
+}
 
 const CITIZEN_FACE = 32;
 
@@ -286,6 +337,11 @@ export function openCityPanel(
   // sell. Listed even when there are none, as long as this city could have one,
   // because an unlinked treasury is money left in the ground and nothing else
   // in the interface says so.
+  // Section 67: the capital, drawn as whatever has been built onto it. Every
+  // city has a picture of a city; the capital is the one that changes.
+  const seat = capitalOf(state, city.owner);
+  const palace = seat?.id === city.id ? palaceView(state, city) : '';
+
   const sells = goldBuildingIn(state, city);
   const routes = linksForCity(state, city);
   const netShields = yields.shields - upkeep;
@@ -403,6 +459,7 @@ export function openCityPanel(
                   .join(' ')
           }
         </div>
+        ${palace}
         <div class="panel-title">Standing Structures</div>
         <div class="panel-body">
           ${

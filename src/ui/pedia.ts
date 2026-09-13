@@ -15,6 +15,7 @@ import { BARBARIANS, RAIDER } from '../sim/barbarians';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
+import { CIVIC_PRIDE } from '../sim/city';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -359,6 +360,16 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <div class="pedia-rows">${techList}</div>
       </div>
       <div class="pedia-pane" data-pane="buildings" hidden>
+        <p class="flavor">
+          <strong>Civic Pride.</strong> Your <strong>capital</strong> grows a piece at a time: a
+          watchtower at one corner, a gate at the front, a wing at one side, grounds out front and
+          banners along the roof, three tiers each. You never build these and they never cost
+          anything &mdash; when the empire has done well enough, and while nobody is rioting and
+          nobody is hungry (${CIVIC_PRIDE.cities} cities and ${CIVIC_PRIDE.gold} gold at the least),
+          the council asks which piece to add. They do <em>nothing</em> whatsoever: no yields, no
+          defence, no upkeep. The capital is a picture of how the game has gone, and the city view
+          draws it.
+        </p>
         <div class="pedia-rows">${buildingList}</div>
       </div>
       <div class="pedia-pane" data-pane="terrain" hidden>
