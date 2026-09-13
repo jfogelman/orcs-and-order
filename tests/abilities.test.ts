@@ -124,6 +124,24 @@ describe('the sapper', () => {
     expect(bystander.hp, 'two tiles away is out of range').toBe(UNIT_TYPES.orc.hp);
   });
 
+  it('is heard by the side it lands on, not only the side that set it off', () => {
+    // Sound is addressed to a player. Every blast used to be written for the
+    // sapper's owner alone, so the side losing units to it heard nothing.
+    const state = arena();
+    const sapper = spawnUnit(state, 1, 'sapper', 5, 5);
+    spawnUnit(state, 0, 'orc', 6, 5);
+    spawnUnit(state, 0, 'orc', 5, 6);
+    spawnUnit(state, 1, 'footman', 4, 5);
+    const before = state.log.length;
+
+    detonate(state, sapper);
+    const booms = state.log.slice(before).filter((e) => e.cue === 'explosion');
+    expect(booms.filter((e) => e.player === 1), 'the sapper side hears it once').toHaveLength(1);
+    const victims = booms.filter((e) => e.player === 0);
+    expect(victims, 'the side it landed on hears it once').toHaveLength(1);
+    expect(victims[0].text).toContain('2 of your unit(s)');
+  });
+
   it('does not chain', () => {
     const state = arena();
     const first = spawnUnit(state, 1, 'sapper', 5, 5);

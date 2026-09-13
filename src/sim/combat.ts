@@ -525,6 +525,10 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     if (caught.length > 0) {
       log(state, `${unitType(attacker.type).name} ${how}, catching ${caught.length} unit(s).`,
           'combat', attacker.owner, cue as never, [centre.x, centre.y], attacker.id);
+      heardBy(state, caught, attacker.owner, `A ${unitType(attacker.type).name}'s club goes off beside`, [
+        centre.x,
+        centre.y,
+      ]);
     }
     for (const victim of killed) {
       const i = state.units.indexOf(victim);
@@ -743,6 +747,10 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
     'explosion',
     [sapper.x, sapper.y],
   );
+  heardBy(state, caught, sapper.owner, `A ${unitType(sapper.type).name} goes up beside`, [
+    sapper.x,
+    sapper.y,
+  ]);
   for (const victim of killed) {
     const i = state.units.indexOf(victim);
     if (i >= 0) state.units.splice(i, 1);
@@ -750,6 +758,28 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
       undefined, [victim.x, victim.y]);
   }
   return killed;
+}
+
+/**
+ * Tell each other side with units caught in a blast that it happened.
+ *
+ * Sound is addressed: a player hears the entries written for them. Every blast
+ * was written for whoever set it off, so the side losing units to a sapper or a
+ * club heard nothing at all -- the one sound in the set that is about something
+ * happening *to* you. One line a side, with the cue, however many were caught.
+ */
+function heardBy(
+  state: GameState,
+  caught: Unit[],
+  cause: number,
+  what: string,
+  at: readonly [number, number],
+): void {
+  const owners = new Set(caught.map((u) => u.owner).filter((o) => o !== cause));
+  for (const owner of owners) {
+    const n = caught.filter((u) => u.owner === owner).length;
+    log(state, `${what} ${n} of your unit(s).`, 'bad', owner, 'explosion', at);
+  }
 }
 
 /** Remove a dead unit and narrate it to both sides. */
