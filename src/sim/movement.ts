@@ -445,7 +445,11 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       'explosion',
       [city.x, city.y],
     );
-    log(state, `The walls of ${city.name} are gone.`, 'bad', city.owner);
+    // Heard by the city that lost them, not only by the side that did it.
+    log(state, `The walls of ${city.name} are gone.`, 'bad', city.owner, 'explosion', [
+      city.x,
+      city.y,
+    ]);
     // Everything adjacent is caught, including whoever is holding the gate.
     detonate(state, unit);
     destroyUnit(state, unit, 'is spent bringing down a wall');

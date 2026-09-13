@@ -131,6 +131,14 @@ target-select UI to be friendly-aware.
 
 ## 2. Sound effects still needed
 
+> **Resolved.** Everything below is wired in `src/audio/audio.ts`: the explosion is
+> `xplosion.mp3`, and every interface cue in the second list (discovery, city
+> founded and lost, built, growth, blocked, turn) has a sound. The one gap left
+> turned out to be who *hears* a blast -- sound is addressed, and blasts were only
+> written for whoever set them off, so the side losing units heard nothing. Each
+> side caught in one now gets its own line with the cue. The list is kept as the
+> record of what was asked for.
+
 Current mapping is in `src/audio/audio.ts`. Twenty effects are wired, all combat.
 
 ### Needed by the abilities above

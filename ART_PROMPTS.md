@@ -304,7 +304,7 @@ should be conspicuously one stall selling one thing.
 
 ---
 
-## Garrison posts — 0 of 2 done
+## Garrison posts — 2 of 2 done
 
 Section 102's answer to the Posting: a hut on a tile, out on a city's own land,
 that a soldier stands in. It is **drawn on the map**, over the terrain and beside
