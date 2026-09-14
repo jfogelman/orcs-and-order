@@ -16,6 +16,7 @@ import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
 import { CIVIC_PRIDE } from '../sim/city';
+import { ALT_VICTORY } from '../sim/endings';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -357,6 +358,23 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       <div class="pedia-pane" data-pane="techs" hidden>
         <p class="flavor">Costs shown are the base price, before the surcharge for
         everything already known.</p>
+        ${
+          ALT_VICTORY.enabled
+            ? `<p class="flavor">
+          <strong>Two advances end the game.</strong> At the far end of each side's tree, one
+          advance unlocks <strong>three works</strong>: two that may stand in any city, and a final
+          one in a <strong>city holding one of the others</strong>, once both stand. One of each, never
+          bought with gold, and <strong>everybody is told the moment work begins</strong> and as each
+          work is finished. Shields put into a work are <strong>kept by the empire</strong>: switch a
+          city to something else, or start the work again in another city, and it carries on from
+          where it stopped. When the Horde's <em>Demonic Portal</em> opens, the Horde wins if it
+          still holds that city ${ALT_VICTORY.portalTurns} turns later. When the Kingdom's
+          <em>Mysterious Object</em> appears -- with a button nobody will explain -- the Kingdom wins
+          if it still holds that city ${ALT_VICTORY.objectTurns} turns later. Take a city and
+          whatever works stand in it are torn down.
+        </p>`
+            : ''
+        }
         <div class="pedia-rows">${techList}</div>
       </div>
       <div class="pedia-pane" data-pane="buildings" hidden>

@@ -46,6 +46,7 @@ import { splitTrade } from '../sim/research';
 import { openPedia } from './pedia';
 import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
 import { unitType } from '../model/units';
+import { workBanked } from '../sim/endings';
 
 /**
  * Edge of one citizen portrait **as rendered**, which is what the offset below
@@ -294,12 +295,13 @@ function citizenFaces(state: GameState, city: City, limit: number): string {
     .join('');
 }
 
-function turnsLeft(city: City, perTurn: number): number | null {
+function turnsLeft(state: GameState, city: City, perTurn: number): number | null {
   const cost = productionCost(city.producing);
   // None of the standing choices finishes, so none of them has a countdown.
   if (city.producing.kind !== 'unit' && city.producing.kind !== 'building') return null;
   if (perTurn <= 0) return null;
-  return Math.max(1, Math.ceil((cost - city.shields) / perTurn));
+  // A section 110 work counts what its empire has banked, not only this box.
+  return Math.max(1, Math.ceil((cost - city.shields - workBanked(state, city)) / perTurn));
 }
 
 export function openCityPanel(
@@ -345,7 +347,7 @@ export function openCityPanel(
   const sells = goldBuildingIn(state, city);
   const routes = linksForCity(state, city);
   const netShields = yields.shields - upkeep;
-  const eta = turnsLeft(city, netShields);
+  const eta = turnsLeft(state, city, netShields);
 
   // What this city does when it runs out of orders. Marked with the same
   // `armed` style the ability buttons use, so a set city reads at a glance.
@@ -366,7 +368,7 @@ export function openCityPanel(
         city.producing.id === item.id) ||
       // The standing choices carry no id, so matching on kind is the whole of it.
       (city.producing.kind === item.kind && !('id' in item));
-    const turns = netShields > 0 ? Math.max(1, Math.ceil((cost - city.shields) / netShields)) : null;
+    const turns = netShields > 0 ? Math.max(1, Math.ceil((cost - city.shields - workBanked(state, city, item)) / netShields)) : null;
     return `
       <button class="build-option${active ? ' active' : ''}"
               data-kind="${item.kind}" data-id="${'id' in item ? escapeHtml(item.id) : ''}">
@@ -503,7 +505,7 @@ export function openCityPanel(
       <div>
         <div class="panel-title">Building: ${escapeHtml(productionName(city.producing))}${eta !== null ? ` <span class="muted">(${eta} turns)</span>` : ''}</div>
         <div class="panel-body">
-          ${bar(city.shields, Math.max(1, productionCost(city.producing)))}
+          ${bar(city.shields + workBanked(state, city), Math.max(1, productionCost(city.producing)))}
           ${
             rushCost(state, city) > 0
               ? `<button class="small rush" data-rush="1"${rushBlocked(state, city) ? ' disabled' : ''}>

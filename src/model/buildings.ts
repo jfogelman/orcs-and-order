@@ -79,6 +79,17 @@ export interface BuildingDef {
    * it useful to the army standing on it costs you the shields.
    */
   suppliesArmy?: boolean;
+  /**
+   * One of section 110's endings: built once, in the capital, never for gold, and
+   * the game is over if it is still standing in its builder's hands when its
+   * clock runs out. See `sim/endings.ts`.
+   */
+  victory?: 'portal' | 'object';
+  /**
+   * One of the two lesser works an ending needs before its final work can be
+   * begun. Any city, one per empire, never for gold. See `sim/endings.ts`.
+   */
+  endingPart?: 'portal' | 'object';
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -341,6 +352,82 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     blurb:
       'Everything worth knowing, written down twice in case the first copy ' +
       'turns out to have been written down wrong.',
+  },
+  // Section 110: the ways to end a game by building something. Each side has two
+  // lesser works that may stand in any city and a final one for a city holding one
+  // of them. One of each per empire, never for sale, and everybody is told the
+  // moment work begins. At 180, 180 and 240 for both sides the endings decided 75
+  // games of 108 and turned a Horde lead of 63-44 into a Kingdom one of 41-67, so
+  // they were made dearer, 300, 300 and 400. The Kingdom's still landed more than
+  // twice as often as the Horde's (Object 49, Portal 21), so its committee pays a
+  // fifth more: 360, 360 and 480.
+  knockingStones: {
+    id: 'knockingStones',
+    name: 'The Knocking Stones',
+    faction: 'orc',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'portal',
+    blurb:
+      'Three large stones arranged so that the ground has something to knock on. The ground has ' +
+      'started knocking back. One of two works the Demonic Portal needs.',
+  },
+  offeringPit: {
+    id: 'offeringPit',
+    name: 'The Pit of Offerings',
+    faction: 'orc',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'portal',
+    blurb:
+      'A hole into which the Horde throws things it can spare, and a few it cannot, to see whether ' +
+      'anything throws them back. One of two works the Demonic Portal needs.',
+  },
+  demonPortal: {
+    id: 'demonPortal',
+    name: 'The Demonic Portal',
+    faction: 'orc',
+    cost: 400,
+    upkeep: 0,
+    victory: 'portal',
+    blurb:
+      'A hole in the world with something very large and very patient on the other side. Only in ' +
+      'a city holding the Knocking Stones or the Pit of Offerings, once both stand. Hold the city long ' +
+      'enough and the Horde wins, in a sense.',
+  },
+  committeeChamber: {
+    id: 'committeeChamber',
+    name: 'The Committee Chamber',
+    faction: 'human',
+    cost: 360,
+    upkeep: 0,
+    endingPart: 'object',
+    blurb:
+      'A room with a very large table, in which the question of what not to touch can be discussed ' +
+      'at length. One of two works the Mysterious Object needs.',
+  },
+  pedestal: {
+    id: 'pedestal',
+    name: 'A Very Good Pedestal',
+    faction: 'human',
+    cost: 360,
+    upkeep: 0,
+    endingPart: 'object',
+    blurb:
+      'Stone, level, and roped off. Nobody knows yet what it is for, which the committee considers ' +
+      'progress. One of two works the Mysterious Object needs.',
+  },
+  mysteriousObject: {
+    id: 'mysteriousObject',
+    name: 'The Mysterious Object',
+    faction: 'human',
+    cost: 480,
+    upkeep: 0,
+    victory: 'object',
+    blurb:
+      'Grey, about the size of a barrel, with one button on top. Only in a city holding the ' +
+      'Committee Chamber or the Pedestal, once both stand. Nobody is told what the button does. Hold the city ' +
+      'long enough and somebody finds out.',
   },
 };
 

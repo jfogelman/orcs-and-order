@@ -113,6 +113,31 @@ export interface Situation {
    */
   dominance: { turnsLeft: number; theirs: boolean } | null;
   /**
+   * An ending counting down somewhere: turns until it lands, whose, and which.
+   * Section 110. Everybody is told when one begins, so an advisor saying so is
+   * not an advisor knowing something the fog should hide.
+   *
+   * Optional so a situation written before the endings existed still holds.
+   */
+  ending?: { turnsLeft: number; theirs: boolean; kind: 'portal' | 'object' } | null;
+  /**
+   * How far this empire is along the road to its own ending, before it is built:
+   * the advance can be researched, the build can be started, or the capital is
+   * building it. Null before any of that, once it is standing, and when the
+   * endings are switched off.
+   *
+   * Only two advisors a side want to hear about it. The Horde's Death Mage and
+   * Death Knight are the ones who would open a door to something below; the
+   * Kingdom's Court Archmage wants to know what the button does, and its Paladin
+   * sees a way to end a war that nobody has to die in.
+   */
+  endingRoad?: 'researchable' | 'buildable' | 'building' | null;
+  /**
+   * The other side has begun work towards its ending, and which ending. Null once
+   * anything is counting down, when `ending` says so more urgently. Section 110.
+   */
+  rivalEnding?: 'portal' | 'object' | null;
+  /**
    * The deadline, once it is close enough to be worth planning around.
    *
    * Null until then, so an advisor can simply ask whether it is set rather than
@@ -359,6 +384,16 @@ export function crises(s: Situation): Crisis[] {
       headline: `They hold most of the known world. ${count(s.dominance.turnsLeft, 'turn')} and it is over.`,
     });
   }
+  if (s.ending?.theirs) {
+    out.push({
+      id: `${s.ending.kind}-theirs`,
+      topic: 'the-clock',
+      headline:
+        s.ending.kind === 'portal'
+          ? `Something is coming through their Portal. ${count(s.ending.turnsLeft, 'turn')} to take the city.`
+          : `They have a grey object with a button on it. ${count(s.ending.turnsLeft, 'turn')} to take the city before somebody presses it.`,
+    });
+  }
   // The spiral of section 77: rioting with nothing that can be built to stop it.
   // Worse than ordinary unrest, because waiting does not fix it.
   if (s.rioting > 0 && !s.calmAvailable && s.calmNeedsAdvance) {
@@ -507,6 +542,19 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Dented breastplate, never repaired, out of pride.',
     concerns: [
       {
+        // Section 110: the other side's ending counting down is a place to march on.
+        when: (s) => (s.ending ?? null) !== null && s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return s.ending!.kind === 'portal'
+            ? `There is a Portal open in one of their cities. ${left} to take the city. March, or explain ` +
+                `to whatever comes out of it why we did not.`
+            : `They have built something in one of their cities that nobody will explain. ${left} to take ` +
+                `the city. I do not need to know what it does to take it off them.`;
+        },
+      },
+      {
         about: 'raiders',
         when: (s) => s.raiders !== null && s.raiders.seen > 0,
         say: (s) =>
@@ -571,6 +619,17 @@ const KINGDOM: AdvisorDef[] = [
           `${sentence(count(s.gold, 'coin'))} in the vault and falling. I am not a treasurer, ` +
           `but I know what an unpaid garrison does, and it is not garrison.`,
       },
+      {
+        // Section 110: they have begun work towards an ending. Said only when there is
+        // nothing more pressing, since it can stay true for a long time.
+        when: (s) => (s.rivalEnding ?? null) !== null,
+        say: (s) =>
+          s.rivalEnding === 'portal'
+            ? `The Horde has begun work towards a Portal. It will stand in one of their cities. I would ` +
+              `rather we stood there first.`
+            : `They have begun work towards something they will not explain. It will stand in ` +
+              `one of their cities. I do not need an explanation to take a city.`,
+      },
     ],
     idle: [
       'Our footmen stand idle while orcs sharpen their axes on our fenceposts. Idle. Steel rusts from disuse faster than from blood.',
@@ -585,6 +644,16 @@ const KINGDOM: AdvisorDef[] = [
     faction: 'human',
     blurb: 'Radiant, humourless, standing suspiciously straight.',
     concerns: [
+      {
+        // Section 110: our own ending counting down. Ahead of everything else.
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return `${left} until the button is pressed. Hold the city. There is honour in a victory ` +
+            `nobody has to die for.`;
+        },
+      },
       {
         about: 'magic',
         when: (s) => s.magicUnits > 0,
@@ -610,6 +679,24 @@ const KINGDOM: AdvisorDef[] = [
         say: (s) =>
           `${count(s.rioting, 'city', 'cities')} in open disorder. This is what happens. I shall ` +
           `not say what it is what happens *because of*. I shall simply stand here.`,
+      },
+      {
+        // Section 110: the road to our own ending, said only when nothing else is
+        // worth saying -- it can stay true for fifty turns, and a councillor who
+        // talks about nothing else for fifty turns is not being listened to.
+        when: (s) => (s.endingRoad ?? null) !== null,
+        say: (s) => {
+          switch (s.endingRoad) {
+            case 'researchable':
+              return `There may be a way to end this war without another charge. Do Not Touch That. I ` +
+                `believe it is an honourable road.`;
+            case 'buildable':
+              return `Build the Object. If a button can end a war, that is a better use of a button than ` +
+                `most.`;
+            default:
+              return `The Object rises. Guard it as you would a shrine.`;
+          }
+        },
       },
     ],
     retorts: {
@@ -802,6 +889,16 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Elf. Treats your spellcraft as charming tinkering.',
     concerns: [
       {
+        // Section 110: our own ending counting down. Ahead of everything else.
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return `${left} until somebody presses the button. I have asked to be the somebody. A committee ` +
+            `is considering it.`;
+        },
+      },
+      {
         when: (s) => s.researching === null,
         say: () =>
           `We are researching nothing whatsoever. A bold curriculum. I look forward to its ` +
@@ -825,6 +922,25 @@ const KINGDOM: AdvisorDef[] = [
         say: (s) =>
           `${count(s.beakersPerTurn, 'beaker')} a turn from ${count(s.cities, 'city', 'cities')}. Your alchemists have ` +
           `discovered fire again. We are delighted for them.`,
+      },
+      {
+        // Section 110: the road to our own ending, said only when nothing else is
+        // worth saying -- it can stay true for fifty turns, and a councillor who
+        // talks about nothing else for fifty turns is not being listened to.
+        when: (s) => (s.endingRoad ?? null) !== null,
+        say: (s) => {
+          switch (s.endingRoad) {
+            case 'researchable':
+              return `Do Not Touch That is within reach. I have always wanted to know what it is we are ` +
+                `not supposed to touch. Purely academically.`;
+            case 'buildable':
+              return `The Object may now be commissioned. Nobody knows its purpose, which makes it ` +
+                `the most interesting thing this court has ever commissioned.`;
+            default:
+              return `The Object is taking shape. I have been told not to touch it. I have ` +
+                `been told this several times.`;
+          }
+        },
       },
     ],
     retorts: {
@@ -850,6 +966,19 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Trophies sewn into the armour. Not all of them old.',
     concerns: [
+      {
+        // Section 110: the other side's ending counting down is a place to march on.
+        when: (s) => (s.ending ?? null) !== null && s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return s.ending!.kind === 'object'
+            ? `The humans have a grey thing with a button in one of their cities. ${left} to take the city. ` +
+                `I do not need to know what it does to break it.`
+            : `Something is coming through a hole in one of their cities. ${left}. Go and stand in front ` +
+                `of the hole.`;
+        },
+      },
       {
         // Reported as the shape of the thing: they are not us, and that is the
         // whole of the analysis.
@@ -899,6 +1028,16 @@ const HORDE: AdvisorDef[] = [
         say: (s) =>
           `${sentence(count(s.gold, 'coin'))} left. I do not understand coin. I understand that ` +
           `when it runs out somebody tells me to stop, and I do not enjoy being told to stop.`,
+      },
+      {
+        // Section 110: they have begun work towards an ending. Said only when there is
+        // nothing more pressing, since it can stay true for a long time.
+        when: (s) => (s.rivalEnding ?? null) !== null,
+        say: (s) =>
+          s.rivalEnding === 'object'
+            ? `The humans have a committee and a pedestal. Next comes whatever goes on the pedestal, ` +
+              `in one of their cities. Break the pedestal.`
+            : `They are digging towards something under one of their cities. Go and stand on it.`,
       },
     ],
     idle: [
@@ -1006,6 +1145,16 @@ const HORDE: AdvisorDef[] = [
     blurb: 'Trails cold mist. Finds the living inconvenient.',
     concerns: [
       {
+        // Section 110: our own ending counting down. Ahead of everything else.
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return `${left} until the Portal finishes breathing in. Hold the city. Whatever comes through ` +
+            `will remember who held the door.`;
+        },
+      },
+      {
         when: (s) => s.researching === null,
         say: () =>
           `We study nothing. Nothing studies well. It is patient and it never asks for ` +
@@ -1031,6 +1180,25 @@ const HORDE: AdvisorDef[] = [
           `${count(s.rioting, 'city', 'cities')} in uproar. Delicious. Nothing motivates study like a deadline ` +
           `made of angry people.`,
       },
+      {
+        // Section 110: the road to our own ending, said only when nothing else is
+        // worth saying -- it can stay true for fifty turns, and a councillor who
+        // talks about nothing else for fifty turns is not being listened to.
+        when: (s) => (s.endingRoad ?? null) !== null,
+        say: (s) => {
+          switch (s.endingRoad) {
+            case 'researchable':
+              return `Somebody Knocked is within our reach. Something under the ground has been knocking ` +
+                `for a very long time. It would be rude not to answer.`;
+            case 'buildable':
+              return `We know how to open the way now. First the stones, then the pit, then the Portal. ` +
+                `The dead are very keen. So am I, and I am mostly dead.`;
+            default:
+              return `The Portal takes shape. Keep away from it anybody who might want it ` +
+                `to stop.`;
+          }
+        },
+      },
     ],
     retorts: {
       war: 'Swing harder, by all means. The dead swung harder too, once.',
@@ -1050,6 +1218,16 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Black armour, fel-green eyes, unsettlingly calm.',
     concerns: [
+      {
+        // Section 110: our own ending counting down. Ahead of everything else.
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) => {
+          const left = sentence(count(s.ending!.turnsLeft, 'turn'));
+          return `${left}. Hold the capital, and the thing on the other side will owe us. I intend to ` +
+            `collect.`;
+        },
+      },
       {
         about: 'the-little-ones',
         when: (s) => s.rankAndFile > s.army * 0.6 && s.army > 6,
@@ -1076,6 +1254,24 @@ const HORDE: AdvisorDef[] = [
         say: () =>
           `We are few. Few is honourable. Few is also brief, and I would rather we were ` +
           `honourable for longer.`,
+      },
+      {
+        // Section 110: the road to our own ending, said only when nothing else is
+        // worth saying -- it can stay true for fifty turns, and a councillor who
+        // talks about nothing else for fifty turns is not being listened to.
+        when: (s) => (s.endingRoad ?? null) !== null,
+        say: (s) => {
+          switch (s.endingRoad) {
+            case 'researchable':
+              return `There is an oath older than the Horde, sworn under the ground. Learn to answer the ` +
+                `knocking and I will swear it for us.`;
+            case 'buildable':
+              return `Build the Portal. I have served one master already. I would like a bigger one.`;
+            default:
+              return `Every shield we have should be going into the Portal. The rest is noise ` +
+                `with a sword.`;
+          }
+        },
       },
     ],
     retorts: {

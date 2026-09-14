@@ -1,3 +1,4 @@
+import { checkEndings, isEndingPiece } from './endings';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -221,14 +222,21 @@ function runEconomy(state: GameState, player: Player): void {
   player.gold += goldIncome - upkeep;
   addBeakers(state, player, beakerIncome);
 
-  // Bankruptcy sells something off rather than going negative forever.
+  // Bankruptcy sells something off rather than going negative forever -- the
+  // newest thing first, but never a work towards an ending. Those are not for
+  // sale in either direction (section 110): selling the newest building sold a
+  // Mysterious Object two turns into its count, and left the count running on
+  // nothing, so the game could never end the way it said it would.
   while (player.gold < 0) {
-    const victim = playerCities(state, player.id).find((c) => c.buildings.length > 0);
+    const victim = playerCities(state, player.id).find((c) =>
+      c.buildings.some((b) => !isEndingPiece(BUILDINGS[b])),
+    );
     if (!victim) {
       player.gold = 0;
       break;
     }
-    const sold = victim.buildings.pop()!;
+    const sold = [...victim.buildings].reverse().find((b) => !isEndingPiece(BUILDINGS[b]))!;
+    victim.buildings = victim.buildings.filter((b) => b !== sold);
     player.gold += Math.floor(BUILDINGS[sold].cost / 2);
     log(state, `${victim.name} sells its ${BUILDINGS[sold].name} to cover the books.`, 'bad', player.id);
   }
@@ -503,6 +511,8 @@ function checkElimination(state: GameState): void {
   }
 
   checkDominance(state);
+  // Section 110's two built endings, under the same guard as the rest.
+  checkEndings(state);
 
   // Nobody has managed it by the deadline: whoever built most, wins.
   if (!isOver(state) && state.turn > state.settings.maxTurns) {

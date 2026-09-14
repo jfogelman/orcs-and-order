@@ -14,6 +14,7 @@ import { SACKING } from '../src/sim/movement';
 import { BEAKERS_PER_TRADE } from '../src/sim/research';
 import { SPECIALS } from '../src/model/terrain';
 import { SPELL_TURNS } from '../src/sim/status';
+import { ALT_VICTORY } from '../src/sim/endings';
 import { DOMINANCE, REGEN, SCORE_WEIGHTS, beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 
 /**
@@ -62,6 +63,7 @@ export const NEW_GAME = { barbarians: false };
  */
 export const LEVERS: Record<string, object> = {
   AI_TUNING,
+  ALT_VICTORY,
   ATTRITION,
   BEAKERS_PER_TRADE,
   CALM,
@@ -571,7 +573,7 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt', 10)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob', 16)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -587,7 +589,11 @@ export function report(results: ArmResult[]): string {
       pad(`${r.techs[0].toFixed(1)}/${r.techs[1].toFixed(1)}`, 13) +
       pad(r.combats.toFixed(0), 8) +
       pad(r.captures.toFixed(1), 6) +
-      pad(`${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}`, 10) +
+      pad(
+        `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
+          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}`,
+        16,
+      ) +
       pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +
       pad(r.roadTiles.toFixed(0), 7) +
       pad(`${Math.round(r.joined[0] * 100)}%/${Math.round(r.joined[1] * 100)}%`, 11) +

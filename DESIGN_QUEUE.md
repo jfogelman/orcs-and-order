@@ -1080,6 +1080,8 @@ what counts as major should start far shorter than it ends up.
 
 ## 10. Alternative victories
 
+> **Built, as section 110.** The design questions below were settled there.
+
 Both are absurd, both end the game, and they are the first victory route that is
 neither conquest nor outlasting the clock -- which matters more than the joke, because
 **13 of 18 games currently reach turn 300** and are decided on points. A tech-based
@@ -8282,3 +8284,302 @@ Whichever is picked, it is one arm against today's settings, both seed sets, and
 the pooled figure to beat is **70-37**. The first one was tried and is written up
 above: it works, it overshoots, and it shrinks the Horde by more than the drift
 was worth.
+
+## 110. The Demonic Portal and the Mysterious Object
+
+Section 10's two joke endings, built: the first way to win a game **on purpose**
+that is neither conquest nor outlasting the clock. The settings live in
+`ALT_VICTORY` (`src/sim/endings.ts`) and are on the lever list.
+
+### How each side gets there: three works, known from the start
+
+Built the way a Civilization tech victory is built. One advance at the far end of
+each tree unlocks three works: two lesser ones for any city, and a final one for
+the capital once both stand.
+
+| | Horde | Kingdom |
+|---|---|---|
+| advance | **Somebody Knocked** (200) | **Do Not Touch That** (200) |
+| needs | The Dead Are Messed Up + Insanity | Lordship + Insanity |
+| lesser works, any city | The Knocking Stones (180), The Pit of Offerings (180) | The Committee Chamber (180), A Very Good Pedestal (180) |
+| final work, capital | **The Demonic Portal** (240) | **The Mysterious Object** (240) |
+| when it stands | opens; the city wears a mark | appears; a grey object with a button, **not explained** |
+| lands | if still held **10 turns** later | if still held **10 turns** later |
+
+The rules, all enforced in `endings.ts`:
+
+- **Everybody is told the moment work begins** -- the first time any work goes into
+  production -- and again as each work is finished, and when the final one stands.
+- **One of each per empire**, and a work cannot be started in a second city while
+  it is under way in a first. None can be bought with gold.
+- **Taking a city tears down every work standing in it**, the final one included.
+- **An ending is only read on its builder's own turn**, or it lands before the
+  other side has had its last move to stop it.
+
+**The AI** puts the advance chain on both research lists (the Horde's never asked
+for Insanity before), builds works in any garrisoned city ahead of expanding, and
+marches towards a rival's capital or finished works once the rival has begun --
+more strongly once the count is running.
+
+**The advisors**, as the idea behind each ending would have it. Only the Horde's
+Death Mage and Death Knight care about the Portal, and only the Kingdom's Court
+Archmage and Paladin about the Object -- the Paladin because it may be an
+honourable way to end a war. They speak of the road there only when they have
+nothing more pressing to say, and of the count ahead of everything. The other
+side's ending is a soldier's business: the Blademaster and the Knight-Marshal.
+
+### The two versions this replaced, and why
+
+**One silent build.** The first version was a single capital build each, the
+Portal announced and the Object told to nobody, pressed on the Kingdom's next
+turn. Across seeds 20 to 50 it ended **17 games in 31**, around turn 208; the
+Portal ended 3; the Horde won 7 to the Kingdom's 24, in a game section 109 had
+left at about two in three the other way. Section 10 had predicted exactly this.
+
+**One announced build.** Telling both sides when the Object was finished, with the
+same ten turns as the Portal, changed almost nothing: **16 in 31**, the same games
+nine turns later, Horde 8 to 23. The war could not reach a capital in ten turns,
+so whoever finished first won, and the Kingdom finished first. The fault was the
+structure rather than the secrecy.
+
+**So: three works, known from the start**, which is the part of the Civilization
+model that matters -- a long, visible build that turns a research race into a
+production race the other side can watch, march on, and interrupt, with the two
+sides paying the same shields for it.
+
+### The art
+
+The victory screens already existed. Nine small pieces lead to them, specified in
+`ART_PROMPTS.md` and all optional: two advance icons, six work icons, and one city
+overlay for an open Portal. The Object has no map mark.
+
+### Where this stands: shipped as a first version
+
+**Five fixes found by playing whole games**, all in the code:
+
+- **Bankruptcy sold the works.** It sold the newest building, which is usually a
+  final work: a finished Object vanished two turns into its count and the count ran
+  on for ever. It now never sells a work, and a count with no final work behind it
+  is cleared and announced.
+- **The AI's ending rule starved rioting capitals.** Placed ahead of the rule that
+  calms a city, a rioting Horde capital held its Portal at 134 of 240 shields for
+  sixty-four turns. It now sits after the calm rule (and after expanding).
+- **A garrison refill spent the work's shields.** An empty city builds a defender
+  first, and the shields saved for a work paid for it: a Portal fell from 168 of 240
+  to 24 in eight turns. A city building or holding a work now keeps a soldier home
+  (the section 108 keeper rule, extended).
+- **Lesser works went to whichever city saw them first**, including a town of size
+  one that needed forty turns for the Knocking Stones while no other city could
+  start them. They now start only in one of the empire's two busiest cities.
+- **The Horde's research list put the ending behind its two dearest advances**
+  (Stupidity for All, Full of Fire). Insanity and Somebody Knocked now come straight
+  after The Dead Are Messed Up, as the Kingdom's come straight after Lordship.
+
+**Scouted on seeds 20 to 50** (one seed set, a scratch scout since deleted):
+
+| version | Object | Portal | Horde-Kingdom wins | Horde / Kingdom learned the advance |
+|---|---|---|---|---|
+| endings **off** (baseline) | -- | -- | **14-17** | -- |
+| one silent build | 17 | 3 | 7-24 | -- |
+| one build, announced | 16 | 4 | 8-23 | -- |
+| three works, told at start | 18 | 2 | 6-25 | 10 / 27 |
+| + bankruptcy fix | 19 | 3 | 6-25 | 10 / 26 |
+| + research list mirrored | 18 | 2 | 5-26 | 14 / 26 |
+| + AI rule after the calm rule | 15 | 5 | 7-24 | 14 / 26 |
+| + Horde advance at 100 beakers, not 200 | 17 | 3 | 7-24 | 15 / 26 |
+| **+ keeper kept home, works in busy cities (current)** | **15** | **5** | **8-23** | 15 / 26 |
+
+So the endings, as they stand, move about six games in thirty-one to the Kingdom.
+The Horde now finishes its works in seven of the fifteen games it learns the
+advance (the Kingdom sixteen of twenty-six), and twice the two finished within a
+turn of each other. What is left is **research speed**: the Kingdom learns its
+advance in 26 games to the Horde's 15, twenty to thirty turns sooner.
+
+**It is not the shape of the tree.** `docs/TECH_TREE.md` (generated by
+`tools/tech-tree.run.test.ts`) puts the two roads at twelve advances each, 930
+base beakers for the Horde and 965 for the Kingdom, with each AI's list asking
+for about a thousand more first. The Kingdom simply earns beakers faster. Halving
+the Horde's advance from 200 to 100 changed nothing measurable, because the last
+advance was never the obstacle; the road in front of it is.
+
+**The full sweep** (`tools/sweep.run.test.ts`, 108 games an arm, both seed sets, the
+design as above):
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| endings off | tuned | 32-22 | 12 / 4 / 38 / -- / -- | 271 |
+| endings off | held-out | 31-22, one draw | 15 / 5 / 33 / -- / -- | 261 |
+| endings on | tuned | **21-33** | 12 / 1 / 2 / **14** / **25** | 210 |
+| endings on | held-out | **20-34** | 11 / 4 / 3 / **10** / **26** | 204 |
+
+It replicates on both sets. Pooled, the Horde goes from **63-44** without the endings
+to **41-67** with them -- a swing of twenty-two games in 108, from a Horde lead that
+section 109 had already left undecided to a Kingdom lead of about the same size.
+The endings decide **75 games of 108** (Object 51, Portal 24), points endings fall
+from 71 to 5, and games end about sixty turns sooner. So they do what section 10
+wanted -- games end on purpose -- but they over-correct the balance and they decide
+too many games; the Object lands twice as often as the Portal because the Kingdom
+researches faster.
+
+**Second sweep: rarer endings.** Every work made dearer for both sides, 180 / 180 /
+240 to **300 / 300 / 400**, everything else the same:
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| endings on, dearer | tuned | 22-32 | 11 / 4 / 13 / 9 / 17 | 244 |
+| endings on, dearer | held-out | 25-29 | 17 / 4 / 14 / 3 / 16 | 234 |
+
+Pooled: the endings now decide **45 games of 108** rather than 75 (Object 33, Portal
+12), 27 still go to points, and the Horde wins **47-61** against 63-44 without them --
+a swing of sixteen games rather than twenty-two. Rarer, and less lopsided, but the
+Object still lands nearly three times as often as the Portal: dearer works cost the
+side that researches slower the most, because it has fewer turns left to pay for them.
+The obvious next lever is the Horde's road -- dropping Insanity from Somebody Knocked.
+
+**Then the Horde's road, shortened** (Somebody Knocked needs only The Dead Are Messed
+Up; works still 300 / 300 / 400), scouted on seeds 20 to 50: the Horde learns its
+advance in **22 games** (from 16), often before the Kingdom -- and finishes the works
+in **none**. Object 10, Portal 0, Horde 7-23. Research was no longer the bottleneck;
+building was.
+
+**Why: a riot spends a half-built work.** A city's shields belong to whatever it
+builds next, so when a rioting city switches to a calming building, a unit, or
+Placating, the progress on its work pays for that instead, and the work starts again
+from nothing -- often in another city. Seed 34: the Pit of Offerings reached 154 of
+300 in the capital, the capital rioted and spent it on a Great Totem, and the Pit
+restarted from zero elsewhere; by turn 157 every work had been started over, and the
+Portal stood at 366 of 400 when the Object landed at 253. Seed 42: the Knocking Stones
+reached 241 of 300, the city Placated for twenty turns, and they restarted at 28 in
+another town, four hops in all. The Horde riots far more than the Kingdom, and the
+dearer a work the longer it stays exposed, which is why each of the last two changes
+left the Horde further behind. The fix is a decision (next below), and a full sweep
+of the shortened road was not run: the scout already shows it worse.
+
+**Decided: a work's shields are banked with the empire** (`Player.worksBanked`,
+`bankWork` in `sim/endings.ts`). A city building a work moves its box into the bank
+each turn; switching away, rioting, or starting the work in another city loses
+nothing, and the city panel and Horde Report count what is banked. Scouted on seeds 20
+to 50 (shortened Horde road, works 300 / 300 / 400): Object 12, Portal **2**, Horde
+**7-23**; the Horde learns its advance in 21 games, begins work in 21, and its final
+work stands in **2** (from none). The Kingdom: 26 / 25 / 12. Better, but not much --
+banking stopped the losses and did not make the Horde build faster, so the next
+question is where a Horde work's turns actually go (seed 42 learned it on turn 116
+and had no Portal by 217).
+
+**Where a banked Horde work's turns go** (seed 42, replayed side by side). Both sides'
+cities make about ten shields a turn, so the two roads cost the same to build. The
+Kingdom began on turn 139, had both lesser works by about 165, and the Object stood at
+207: about seventy turns, never interrupted. The Horde began 23 turns sooner and had
+both lesser works by 152 -- slower, because cities still wandered on and off them, but
+banked, so nothing was lost. Then **its capital Placated from turn 140 to 188** with
+nine hundred to a thousand gold in the treasury, and the Portal, which only the capital
+may build, did not begin until about 190. The Object landed at 217 with the Portal at
+249 of 400. What is left is not shields but **the one city allowed the final work
+rioting for forty turns**.
+
+**Third full sweep: shortened Horde road, works banked** (works 300 / 300 / 400):
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| endings off | tuned | 28-26 | 12 / 5 / 37 / -- / -- | 267 |
+| endings off | held-out | 29-24, one draw | 16 / 4 / 33 / -- / -- | 260 |
+| endings on | tuned | **17-37** | 11 / 5 / 8 / 7 / 23 | 235 |
+| endings on | held-out | **18-35**, one draw | 14 / 4 / 10 / 4 / 21 | 228 |
+
+**The control moved**, from 63-44 in both earlier sweeps to **57-50**. With the endings
+off the works do not exist, so banking cannot be the cause: it is the Horde's research
+list, which lost Insanity when the road was shortened and now learns something else
+in its place. The baseline to judge against is therefore 57-50, not 63-44.
+
+Against it, the endings take the Horde to **35-72** -- a swing of twenty-two games in
+108, as large as the very first sweep and worse than the dearer works alone (47-61).
+The endings decide **55 games** (Object 44, Portal 11). Banking did not close the gap
+the scout already showed was elsewhere: the Kingdom now researches no faster than the
+Horde to its advance, but it builds its three works without its capital rioting, and
+the Horde does not.
+
+**Decided: the final work stands in a city holding a lesser work**, not in the capital
+(`endingOffered` in `sim/endings.ts`). Once both lesser works stand, either city holding
+one may build the Portal or the Object; a third city holding neither may not. The one
+city an empire cannot choose no longer holds the ending hostage, and the work still
+stands somewhere everybody was told about when it began. The announcements, both
+final works' blurbs, the Orcpedia and every advisor line that said "capital" now say
+so.
+
+Scouted on seeds 20 to 50, against banking alone:
+
+| | banked, capital only | **final work in a works city** |
+|---|---|---|
+| Horde-Kingdom | 7-23 | **7-24** |
+| Portal / Object | 2 / 12 | **5 / 16** |
+| Horde's final work stood (of games it learned the advance) | 2 of 21 | **6 of 20** |
+| Kingdom's final work stood | 12 of 26 | **18 of 26** |
+
+The rule did what it was for -- the Portal now stands in six games, and wins five --
+but the Kingdom gained as much from it, so the win count did not move and the endings
+now decide 21 games in 31 rather than 14. Only seed 40 still reaches turn 299 with
+both sides alive, and it is the late-game fixture seed now.
+
+**Fourth full sweep: final work in a works city** (banked, shortened Horde road, works
+300 / 300 / 400):
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| endings off | tuned | 28-26 | 12 / 5 / 37 / -- / -- | 267 |
+| endings off | held-out | 29-24, one draw | 16 / 4 / 33 / -- / -- | 260 |
+| endings on | tuned | **19-35** | 13 / 2 / 2 / 13 / 24 | 222 |
+| endings on | held-out | **18-36** | 13 / 5 / 3 / 8 / 25 | 218 |
+
+Pooled: Horde **37-71** against 57-50 without the endings (35-72 with banking alone).
+The endings decide **70 games of 108** (Portal 21, Object 49, from 11 and 44), and
+points endings fall to five. It replicates the scout on both sets: the rule nearly
+doubled the Portal, gave the Kingdom almost as much, and moved the balance by two
+games. The endings are now common, not rare, and still cost the Horde about twenty
+games in 108.
+
+**Then two levers at once, chosen together:** both counts from ten turns to **fifteen**
+(rarer, and longer to reach the city), and the Kingdom's works from 300 / 300 / 400 to
+**360 / 360 / 480** (at the lean). Scouted on seeds 20 to 50:
+
+| | works-city rule | **+ fifteen-turn counts, dearer Kingdom works** |
+|---|---|---|
+| Horde-Kingdom | 7-24 | **9-22** |
+| Portal / Object | 5 / 16 | **6 / 13** |
+| endings deciding | 21 of 31 | **19 of 31** |
+| Horde / Kingdom final work stood | 6 of 20 / 18 of 26 | **9 of 20 / 15 of 26** |
+
+The right direction on every line, and not far. Seeds 32 and 36 reach turn 299 with
+both sides alive; the late-game fixture is back on 32.
+
+**Fifth full sweep: fifteen-turn counts, Kingdom works 360 / 360 / 480** (works-city
+rule, banked, shortened Horde road):
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| endings off | tuned | 28-26 | 12 / 5 / 37 / -- / -- | 267 |
+| endings off | held-out | 29-24, one draw | 16 / 4 / 33 / -- / -- | 260 |
+| endings on | tuned | **22-32** | 14 / 2 / 4 / 14 / 20 | 229 |
+| endings on | held-out | **22-32** | 14 / 5 / 3 / 12 / 20 | 223 |
+
+Pooled: Horde **44-64** against 57-50 without the endings (37-71 before this tuning).
+The endings now cost the Horde **thirteen games in 108**, from twenty, and the two seed
+sets agree exactly. They decide **66 games** (Portal 26, Object 40, from 21 and 49), so
+they are hardly rarer -- the longer counts moved Object wins to the Portal more than
+they moved wins to the war -- and the Object still leads about three to two.
+
+**Shipped at this tuning** (Jeremy's call): good enough for a first version, with the
+balance to be revisited once it has been played and the art is in.
+
+**Still open:**
+
+1. The endings decide about three games in five and still cost the Horde about thirteen
+   in 108. The next levers, if play agrees: the Kingdom's works dearer still (420 / 420
+   / 560), or counts longer still (twenty turns) to make them rarer.
+2. Re-run the full sweep after any change: the arms are set in
+   `tools/sweep.run.test.ts` (endings off / endings on), and the report has Portal and
+   Object columns. The per-seed scout and the two replay tools used above were scratch
+   and are not committed; rebuild them from `playGame` in `tools/sweep.ts` if needed.
+3. The late-game fixture seed is 32; any AI or rules change can push it off turn 299.
+4. Art still to arrive (ART_PROMPTS.md, "The nine small pieces"): the Knocking Stones,
+   Pit of Offerings, Committee Chamber and Pedestal icons, and the city portal overlay.
+   Until then they draw as placeholders.

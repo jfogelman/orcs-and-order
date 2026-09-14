@@ -35,7 +35,12 @@ export type TechFlag =
   /** A lone troll on a swamp may make another troll. */
   | 'swampy'
   /** Death knights may take the health of their own side. */
-  | 'bargain';
+  | 'bargain'
+  /**
+   * Leads to one of section 110's endings. Not researchable while the endings are
+   * switched off, so an arm without them is the game from before they existed.
+   */
+  | 'ending';
 
 export interface TechDef {
   id: TechId;
@@ -561,6 +566,40 @@ export const TECHS: TechDef[] = [
     buildings: ['paradeGround'],
     flags: [],
     flavor: 'The rumbling voice is given a hat, a title, and a great deal of land.',
+  },
+  // ================================================== section 110's endings
+  {
+    id: 'somebody-knocked',
+    name: 'Somebody Knocked',
+    faction: 'orc',
+    // Half the Kingdom's price, and a shorter road, on purpose. The two roads cost
+    // the same to walk when both went through Insanity (930 against 965 base,
+    // docs/TECH_TREE.md), but the Kingdom researches faster: it learned its ending
+    // advance in 26 games of 31 to the Horde's 14, and halving this price alone
+    // changed nothing. With the works made dearer, the Object then landed nearly
+    // three times as often as the Portal (33 to 12 in 108 games), so the Horde's
+    // road no longer runs through Insanity. Section 110.
+    cost: 100,
+    prereqs: ['dead-messed-up'],
+    units: [],
+    buildings: ['knockingStones', 'offeringPit', 'demonPortal'],
+    flags: ['ending'],
+    flavor:
+      'Something under the ground knocked. An orc knocked back. Neither of them has been ' +
+      'able to stop since.',
+  },
+  {
+    id: 'do-not-touch',
+    name: 'Do Not Touch That',
+    faction: 'human',
+    cost: 200,
+    prereqs: ['lordship', 'insanity'],
+    units: [],
+    buildings: ['committeeChamber', 'pedestal', 'mysteriousObject'],
+    flags: ['ending'],
+    flavor:
+      'A committee has been formed to establish what it does. So far it has agreed on the ' +
+      'wording of the sign.',
   },
 ];
 
