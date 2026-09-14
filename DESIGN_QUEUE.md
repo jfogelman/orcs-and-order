@@ -8580,6 +8580,5 @@ balance to be revisited once it has been played and the art is in.
    Object columns. The per-seed scout and the two replay tools used above were scratch
    and are not committed; rebuild them from `playGame` in `tools/sweep.ts` if needed.
 3. The late-game fixture seed is 32; any AI or rules change can push it off turn 299.
-4. Art still to arrive (ART_PROMPTS.md, "The nine small pieces"): the Knocking Stones,
-   Pit of Offerings, Committee Chamber and Pedestal icons, and the city portal overlay.
-   Until then they draw as placeholders.
+4. The art is in: all nine pieces in ART_PROMPTS.md ("The nine small pieces"), processed
+   by `tools/prepare_art.py`.

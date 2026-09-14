@@ -671,7 +671,7 @@ thousand years of war is sitting in the corner being ignored. Resist anything
 triumphant — no rays of light, no kneeling, no awe. The heap of abandoned weapons is
 the only hint that anything happened at all.
 
-### The nine small pieces that lead to them — 4 of 9 done
+### The nine small pieces that lead to them — 9 of 9 done
 
 The two scenes above are the *ending*. These are the road to it, and the game
 runs without any of them: a missing icon is left off its card and a missing
