@@ -8585,7 +8585,7 @@ balance to be revisited once it has been played and the art is in.
 
 ## 111. Follies: twelve buildings there is only one of
 
-Jeremy's design, from `art_src/follies/follies.md` and `follies_bible.md`: the
+Jeremy's design, from `docs/follies.md` and `docs/follies_bible.md`: the
 game's wonders, called follies. Twelve one-of-a-kind buildings -- four shared, four
 the Horde's, four the Kingdom's -- split between ones that help the city holding them
 and ones that help the whole empire. Eleven ride on an advance already in the tree;

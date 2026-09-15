@@ -1468,8 +1468,8 @@ are kept in `art_src/terrain/roads/not used/`.
 ## Follies — 13 of 13 done
 
 Section 111's twelve one-of-a-kind buildings and the one advance they needed. The
-prompts, subjects and flavour are Jeremy's, in `art_src/follies/follies (1).md`
-and `follies_bible (1).md`, which is where the originals live; copies sit in
+prompts, subjects and flavour are Jeremy's, in `docs/follies.md` and
+`docs/follies_bible.md`; the original images live in `art_src/follies`, and copies sit in
 `art_src/buildings` (and `art_src/tech` for the advance) under their ids so
 `tools/prepare_art.py` finds them.
 
