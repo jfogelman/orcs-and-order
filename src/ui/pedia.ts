@@ -17,6 +17,7 @@ import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
 import { CIVIC_PRIDE } from '../sim/city';
 import { ALT_VICTORY } from '../sim/endings';
+import { FOLLIES } from '../sim/follyEffects';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -201,6 +202,27 @@ function buildingEffects(b: BuildingDef): string[] {
   }
   if (b.foodKept) out.push(`keeps ${pct(b.foodKept)} of the food store each time the city grows`);
   if (b.veteranUnits) out.push('land units built here start as veterans');
+  // Section 111: what a folly is, then what this one does.
+  if (b.folly === 'world') out.push('a folly: only one in the whole game, and whoever finishes it first has it');
+  if (b.folly === 'faction') out.push('a folly: one per empire, torn down if its city falls to the other side');
+  if (b.folly) out.push('never bought with gold, never sold, never sacked; shields put into it are kept if the city switches');
+  if (b.citySight) {
+    out.push(`+${b.citySight} sight for this city${b.sightUnblocked ? ', seeing over hills and forest alike' : ''}`);
+  }
+  if (b.empireContent) out.push(`+${b.empireContent} content citizen in every city you hold`);
+  if (b.spellTurnsMult) out.push(`burning and freezing from your magic last ${b.spellTurnsMult} times as long`);
+  if (b.builtAttack) out.push(`units built here get +${b.builtAttack} attack, for good`);
+  if (b.builtRanks) out.push(`units built here start ${b.builtRanks} rank higher, up to the top rank`);
+  if (b.builtReach) out.push(`mages built here may also strike from ${b.builtReach} tile further away`);
+  if (b.bargainTakes) {
+    out.push(`a Dark Bargain takes ${Math.round(b.bargainTakes * 100)}% of the donor's health rather than half, for the same healing`);
+  }
+  if (b.homeMoves) out.push(`+${b.homeMoves} movement for a unit that starts its turn on your own land`);
+  if (b.mountedDefense) out.push(`+${b.mountedDefense} defence for Outriders, Knights and Paladins`);
+  if (b.unitSight) out.push(`+${b.unitSight} sight for every unit you have`);
+  if (b.empireContent || b.spellTurnsMult || b.bargainTakes || b.homeMoves || b.mountedDefense || b.unitSight) {
+    out.push('works for the whole empire, from whichever city holds it');
+  }
   return out;
 }
 
@@ -388,6 +410,20 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           defence, no upkeep. The capital is a picture of how the game has gone, and the city view
           draws it.
         </p>
+        ${
+          FOLLIES.enabled
+            ? `<p class="flavor">
+          <strong>Follies</strong> are buildings there is only one of. Four are shared: only one
+          stands in the whole game, and both sides may race for it. Four more belong to each side,
+          one per empire. They come with advances you would learn anyway, apart from The Argument
+          With The Sky, which needs both kinds of magic. Some help the city holding them and some
+          the whole empire, but only once built and only while you hold that city. None can be
+          bought with gold, and shields put into one are kept if the city switches to something
+          else. <strong>Lose a race and the shields go back into that city's stores.</strong> Take
+          a city and a shared folly works for you; the other side's own follies are torn down.
+        </p>`
+            : ''
+        }
         <div class="pedia-rows">${buildingList}</div>
       </div>
       <div class="pedia-pane" data-pane="terrain" hidden>

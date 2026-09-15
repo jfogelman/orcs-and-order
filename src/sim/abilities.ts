@@ -1,6 +1,7 @@
 import { DIRS8, distance, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
+import { heldFollies } from './follyEffects';
 import { hasPerk } from '../model/perks';
 import { ammoLeft, needsAmmo, unitType } from '../model/units';
 import type { GameState, Unit } from '../model/types';
@@ -151,7 +152,8 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // Exactly at reach: a ranged unit cannot lob one at somebody standing
       // next to it, which is the drawback that makes the range worth having.
       if (other.owner === unit.owner) return false;
-      return d === type.range;
+      // Section 111: a mage from the Rumbling Archive may also stand further back.
+      return d >= type.range && d <= type.range + (unit.reach ?? 0);
     }
 
     if (ability === 'drain') {
@@ -401,11 +403,18 @@ function makeSwampyFriend(state: GameState, unit: Unit): AbilityOutcome {
 function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
   if (target.id === unit.id) return { ok: false, reason: 'It cannot bargain with itself.' };
   const donorMax = unitType(target.type).hp;
-  const taken = Math.max(1, Math.round(target.hp * DRAIN.takesFraction));
+  const owed = Math.max(1, Math.round(target.hp * DRAIN.takesFraction));
+  // Section 111: with the Bargain Stone the terms are written down, and the donor
+  // gives up less for the same return.
+  const takes = heldFollies(state, unit.owner).reduce(
+    (f, b) => Math.min(f, b.bargainTakes ?? f),
+    DRAIN.takesFraction,
+  );
+  const taken = Math.max(1, Math.round(target.hp * takes));
   const fatal = target.hp <= donorMax * DRAIN.survivesAbove;
 
   const room = unitType(unit.type).hp - unit.hp;
-  const healed = Math.min(room, taken * DRAIN.returnsMultiple);
+  const healed = Math.min(room, owed * DRAIN.returnsMultiple);
   unit.hp += healed;
   unit.moves = 0;
 

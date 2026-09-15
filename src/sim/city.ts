@@ -12,6 +12,8 @@ import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, with
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
+import { follyFinished, follyOffered } from './follies';
+import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
 
 /**
  * Cities: yields, growth, and production.
@@ -302,6 +304,8 @@ export function contentLimit(state: GameState, city: City): number {
   // list, so a posting would have calmed a city with nobody standing in it --
   // the gate existed and this was not asking it.
   let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
+  // Section 111: the Long Peace, felt in every city of the empire holding it.
+  limit += empireBonus(state, city.owner, (b) => b.empireContent);
   // Section 102: a hut with a soldier standing in it, out on the city's own
   // land. The building version could never have the two soldiers it asked for;
   // this one gives each of them a tile to stand on.
@@ -903,6 +907,10 @@ export function rushBlocked(state: GameState, city: City): string | null {
   if (item.kind === 'building' && isEndingPiece(BUILDINGS[item.id])) {
     return 'Nobody will sell you one of these.';
   }
+  // Nor a folly, for the same reason: there is only one, and the Kingdom banks more gold.
+  if (item.kind === 'building' && isFolly(BUILDINGS[item.id])) {
+    return 'There is only one of these, and nobody is selling it.';
+  }
   const cost = rushCost(state, city);
   if (cost <= 0) return 'This is already paid for.';
   if (state.players[city.owner].gold < cost) return `Needs ${cost} gold.`;
@@ -974,6 +982,8 @@ export function buildOptions(
     // Section 110's works: one of each an empire, the final one only in a city
     // holding one of the others once both stand, and none while the endings are off.
     .filter((b) => endingOffered(state, city, b))
+    // Section 111's follies: one of each, and a shared one once in the whole game.
+    .filter((b) => follyOffered(state, city, b))
     // Shared infrastructure only while resettling: a granary is a shed for
     // food and does not care whose food it is, but nobody is raising a totem
     // to the new owner's gods in a town that is still half the old owner's.
@@ -1016,6 +1026,11 @@ export interface CityTurnEvents {
   /** Production turned straight into research this turn, if any. */
   beakers: number;
   enteredDisorder: boolean;
+  /**
+   * What was completed is a folly (section 111), which gets its own fanfare in
+   * place of the ordinary chime. Absent for anything else.
+   */
+  folly?: boolean;
 }
 
 export function processCity(state: GameState, city: City): CityTurnEvents {
@@ -1085,13 +1100,16 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     city.shields = 0;
   } else {
     const cost = productionCostIn(state, city, item);
-    if (item.kind === 'building' && isEndingPiece(BUILDINGS[item.id])) {
-      // Section 110's works keep their shields with the empire, not in this box.
+    if (item.kind === 'building' && (isEndingPiece(BUILDINGS[item.id]) || isFolly(BUILDINGS[item.id]))) {
+      // Section 110's works and section 111's follies keep their shields with the
+      // empire, not in this box.
       if (bankWork(state, city, cost)) {
         city.buildings.push(item.id);
         events.completed = BUILDINGS[item.id].name;
         city.producing = { kind: 'coin' };
         pieceFinished(state, city, BUILDINGS[item.id]);
+        follyFinished(state, city, BUILDINGS[item.id]);
+        if (isFolly(BUILDINGS[item.id])) events.folly = true;
       }
     } else if (city.shields >= cost) {
       if (item.kind === 'unit') {
@@ -1118,8 +1136,17 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
             if (!b) return best;
             return Math.max(best, b.startingRank ?? (b.veteranUnits ? 1 : 0));
           }, 0);
-          const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], rank > 0);
-          unit.rank = Math.max(unit.rank, rank);
+          // Section 111: a Bonepit starts them a rank above the best of the rest, up to
+          // the top rank (MAX_RANK in combat.ts, which imports this file).
+          const ranked = Math.min(3, rank + cityFollyBonus(city, (b) => b.builtRanks));
+          const unit: Unit = spawnUnit(state, city.owner, item.id, spot[0], spot[1], ranked > 0);
+          unit.rank = Math.max(unit.rank, ranked);
+          // And a Loudest Rock or a Rumbling Archive sends them out with something
+          // extra that stays with them wherever they go.
+          const drilled = cityFollyBonus(city, (b) => b.builtAttack);
+          if (drilled > 0) unit.drilled = drilled;
+          const reach = unitType(item.id).base === 'mage' ? cityFollyBonus(city, (b) => b.builtReach) : 0;
+          if (reach > 0) unit.reach = reach;
           unit.homeCity = city.id;
           city.shields -= cost;
           if (takesCitizen) {

@@ -16,6 +16,7 @@ import { SPECIALS } from '../src/model/terrain';
 import { SPELL_TURNS } from '../src/sim/status';
 import { ALT_VICTORY } from '../src/sim/endings';
 import { DOMINANCE, REGEN, SCORE_WEIGHTS, beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
+import { FOLLIES } from '../src/sim/follyEffects';
 
 /**
  * A repeatable way to measure a rules change.
@@ -64,6 +65,7 @@ export const NEW_GAME = { barbarians: false };
 export const LEVERS: Record<string, object> = {
   AI_TUNING,
   ALT_VICTORY,
+  FOLLIES,
   ATTRITION,
   BEAKERS_PER_TRADE,
   CALM,

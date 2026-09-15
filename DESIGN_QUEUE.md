@@ -8582,3 +8582,127 @@ balance to be revisited once it has been played and the art is in.
 3. The late-game fixture seed is 32; any AI or rules change can push it off turn 299.
 4. The art is in: all nine pieces in ART_PROMPTS.md ("The nine small pieces"), processed
    by `tools/prepare_art.py`.
+
+## 111. Follies: twelve buildings there is only one of
+
+Jeremy's design, from `art_src/follies/follies.md` and `follies_bible.md`: the
+game's wonders, called follies. Twelve one-of-a-kind buildings -- four shared, four
+the Horde's, four the Kingdom's -- split between ones that help the city holding them
+and ones that help the whole empire. Eleven ride on an advance already in the tree;
+one, **The Argument With The Sky**, is a new advance needing both Setting Things
+Alight and The Cold Shoulder. The art for all thirteen arrived with the design.
+
+### The roster, and what each does here
+
+| Folly | Rides on | Scope | Effect as built |
+|---|---|---|---|
+| The First Ledger | Not You Again! | city, shared | +50% gold from its city |
+| The Yelling Wall | Tower Building | city, shared | +2 sight for its city, and nothing blocks it |
+| The Long Peace | Insanity | empire, shared | +1 content citizen in every city |
+| The Argument With The Sky | The Argument With The Sky (new) | empire, shared | burning and freezing last twice as long |
+| The Loudest Rock | To Be An Orc | city, Horde | units built there get +1 attack for good |
+| The Bonepit | Axes Make You Crazy | city, Horde | units built there start a rank higher, up to the top |
+| The Bargain Stone | The Dead are Messed Up | empire, Horde | a Dark Bargain takes a third of the donor's health, not half, for the same healing |
+| The Long March | Full of Fire | empire, Horde | +1 movement for a unit starting its turn on the Horde's own land |
+| The Unfinished Cathedral | Hammers of Glory | city, Kingdom | +1 content citizen in its city |
+| The Rumbling Archive | Rumbling Voice | city, Kingdom | mages built there may also strike from one tile further |
+| The Long Vigil | We'll Run You Through! | empire, Kingdom | +1 defence for mounted units (Outriders, Knights, Paladins) |
+| The Learned Committee | Lordship | empire, Kingdom | +1 sight for every unit |
+
+### Decided with Jeremy before building
+
+- **An empire-wide folly works once it is built**, not when its advance is learned,
+  and stops if the city holding it falls. Otherwise the building is decoration and
+  the advance alone hands out the bonus.
+- **The Spire makes spells last twice as long.** The design said magical attacks
+  apply burning and freezing together, which is exactly what `applySpellEffects`
+  was changed to stop ("not a thing that happens to anybody"). Longer spells reward
+  holding both advances without undoing that.
+- **The Long March works on the Horde's own land only.** Nearly every Horde foot unit
+  moves one tile, so +1 everywhere doubled the whole army's speed. On its own ground
+  it gathers and reinforces faster and is no faster once it invades.
+- **Losing a shared race costs nothing.** The shields banked towards it (the same
+  banking section 110's works use) go into the box of the city that was building it.
+
+### Defaults taken, and open to change
+
+- Never bought with gold, never sold by bankruptcy, never destroyed by sacking.
+- Taken with a city: a shared folly changes hands and works for its new owner; a
+  faction folly is torn down, and its builder may raise it again elsewhere.
+- Everybody is told when one is finished.
+- Costs by the depth of the advance they ride on: 150 (45-85 beakers), 200
+  (100-130), 250 (150 and up). No upkeep.
+- One of each per empire, and one city at a time; a shared one may be under way in
+  both empires at once, which is the race.
+
+### As built, beyond what the design said
+
+- **Code:** rules and races in `src/sim/follies.ts`; the effect queries in
+  `src/sim/follyEffects.ts` (kept apart because `rules.ts` asks them, and anything
+  `rules.ts` imports must not import `gamestate`). The lever is `FOLLIES.enabled`, on
+  the sweep's list. Effects live on `BuildingDef` fields (`citySight`,
+  `empireContent`, `builtAttack`, `homeMoves` and the rest), so the Orcpedia reads
+  them off the data.
+- **Own land**, which the Long March needed and nothing had defined: a city of the
+  empire's, or any tile one of its cities could work.
+- **Mounted**, likewise: Outriders, Knights and Paladins (`MOUNTED`).
+- **Units remember their city's gifts.** A unit from beside the Loudest Rock carries
+  `drilled`, one from the Rumbling Archive carries `reach`, both saved on the unit, so
+  they keep them if the city falls.
+- **The AI** starts a folly in one of its two busiest cities, after the endings and
+  before anything military, and only one at a time per empire so twelve of them
+  cannot crowd out an army. It does not yet aim from its mages' extra reach; they
+  still strike from their ordinary range.
+- **A fanfare** (`geoffreyburch-handy-introduction`, Jeremy's choice) plays for the
+  builder when a folly is finished, in place of the ordinary chime.
+
+### Measured: follies off against on
+
+`tools/sweep.run.test.ts`, 108 games an arm, both seed sets, the section 110 tuning
+as shipped. The off arm reproduces section 110's fifth sweep exactly, which is the
+control working.
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| follies off | tuned | 22-32 | 14 / 2 / 4 / 14 / 20 | 229 |
+| follies off | held-out | 22-32 | 14 / 5 / 3 / 12 / 20 | 223 |
+| follies on | tuned | 21-33 | 15 / 6 / 2 / 12 / 19 | 216 |
+| follies on | held-out | 25-29 | 17 / 4 / 2 / 12 / 19 | 221 |
+
+Pooled: Horde **46-62** with them against 44-64 without -- two games, one set moving
+each way, which is noise. Conquest and dominance endings rise from 35 to 42, the two
+build endings fall from 66 to 62, and games end about eight turns sooner. The
+Kingdom's cities and population come down slightly (6.60 to 6.27 cities).
+
+**They are built, which is what makes the flat result mean something.** A scratch
+probe over seeds 20 to 27 counted 54 follies in 8 games, three to nine a game: the
+Kingdom 30, the Horde 24. The First Ledger, the Loudest Rock and the Unfinished
+Cathedral stood in every game, and the Horde won the First Ledger race six times in
+eight. The late shared ones went to the Kingdom -- the Long Peace five times of five,
+the Yelling Wall both times -- and the Long March was built once. **The Argument With
+The Sky was never built**: neither AI's research list asks for Setting Things Alight
+or The Cold Shoulder, so the advance is reached only by the cheapest-thing fallback.
+So twelve buildings arrive in real games and leave the balance where section 110 put
+it.
+
+**Then the AI was taught the way to the Spire** (Jeremy's call): Setting Things Alight,
+The Cold Shoulder and The Argument With The Sky now close both research lists. The
+same eight games again: the Spire stood in **six**, every one of them the Kingdom's,
+which reaches the far end of the shared tree first -- the same reason it takes the
+Long Peace. Follies built rose from 54 to 60.
+
+**This moved the games, so the sweep above is of the code just before it.** Three of
+the eight changed ending (seed 20 from a Horde dominance to the Object, seed 22 from a
+Kingdom dominance to the Portal, seed 25 from the Object to points) -- a longer
+research list plays differently -- and no sweep was run of the lists as shipped. The
+late-game fixture still reaches turn 299.
+
+### Still open
+
+1. **Sweep the shipped research lists** (follies off against on, ~25 minutes), since
+   the measurement above predates them.
+2. **The Kingdom takes every late shared folly** it races for: the Long Peace and the
+   Spire every time. If that matters in play, the lever is where the magic advances
+   sit in the Horde's list, or the price of the late shared follies.
+3. **The AI does not aim from its mages' extra reach** (the Rumbling Archive); they
+   still strike from their ordinary range.

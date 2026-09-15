@@ -5,8 +5,8 @@
 
 Costs are base prices. The real price of an advance is marked up by 3.5% for every advance already known (`techCost` in `src/sim/research.ts`), so the same advance costs more the later it is learned.
 
-- **Horde**: 32 advances -- 12 shared, 20 its own.
-- **Kingdom**: 27 advances -- 12 shared, 15 its own.
+- **Horde**: 33 advances -- 13 shared, 20 its own.
+- **Kingdom**: 28 advances -- 13 shared, 15 its own.
 
 ## The road to each ending
 
@@ -38,6 +38,7 @@ flowchart LR
   happiness["Happiness<br/>105"]
   pyromancy["Setting Things Alight<br/>165"]
   cryomancy["The Cold Shoulder<br/>180"]
+  sky_argument["The Argument With The Sky<br/>70"]
   insanity["Insanity<br/>150"]
   first_orc["First Orc<br/>0"]
   goblin_smarts["Goblin 'Smarts'<br/>20"]
@@ -69,6 +70,8 @@ flowchart LR
   joy_making --> happiness
   insanity --> pyromancy
   insanity --> cryomancy
+  pyromancy --> sky_argument
+  cryomancy --> sky_argument
   happiness --> insanity
   first_orc --> goblin_smarts
   goblin_smarts --> suicidal_goblins
@@ -92,7 +95,7 @@ flowchart LR
   dead_messed_up --> somebody_knocked
   classDef shared fill:#e8e2d0,stroke:#8a7a55,color:#222
   classDef ending fill:#f3d36b,stroke:#9a6b00,color:#222,stroke-width:2px
-  class mapmaking,tree_hugging,bridge_building,wall_building,tower_building,not_you_again,hammers_of_glory,joy_making,happiness,pyromancy,cryomancy,insanity shared
+  class mapmaking,tree_hugging,bridge_building,wall_building,tower_building,not_you_again,hammers_of_glory,joy_making,happiness,pyromancy,cryomancy,sky_argument,insanity shared
   class somebody_knocked ending
 ```
 
@@ -113,6 +116,7 @@ flowchart LR
   happiness["Happiness<br/>105"]
   pyromancy["Setting Things Alight<br/>165"]
   cryomancy["The Cold Shoulder<br/>180"]
+  sky_argument["The Argument With The Sky<br/>70"]
   insanity["Insanity<br/>150"]
   first_human["First Human<br/>0"]
   brotherhood["Brotherhood<br/>30"]
@@ -139,6 +143,8 @@ flowchart LR
   joy_making --> happiness
   insanity --> pyromancy
   insanity --> cryomancy
+  pyromancy --> sky_argument
+  cryomancy --> sky_argument
   happiness --> insanity
   first_human --> brotherhood
   brotherhood --> join_army
@@ -159,7 +165,7 @@ flowchart LR
   insanity --> do_not_touch
   classDef shared fill:#e8e2d0,stroke:#8a7a55,color:#222
   classDef ending fill:#f3d36b,stroke:#9a6b00,color:#222,stroke-width:2px
-  class mapmaking,tree_hugging,bridge_building,wall_building,tower_building,not_you_again,hammers_of_glory,joy_making,happiness,pyromancy,cryomancy,insanity shared
+  class mapmaking,tree_hugging,bridge_building,wall_building,tower_building,not_you_again,hammers_of_glory,joy_making,happiness,pyromancy,cryomancy,sky_argument,insanity shared
   class do_not_touch ending
 ```
 
@@ -169,16 +175,17 @@ flowchart LR
 |---|---|---|---|---|---|---|---|
 | **Mapmaking** `mapmaking` | 25 | -- | -- | -- | mapmaking | 0 | The world turns out to have a shape. Everyone is a little put out about it. |
 | **Bridge Building** `bridge-building` | 45 | Mapmaking | -- | Attempted Outpost, Forward Depot | bridges | 1 | Walking around the swamp was, in hindsight, a choice. |
-| **Not You Again!** `not-you-again` | 45 | Mapmaking | -- | Goblin Treasury, Simple Market | -- | 1 | The same coin keeps turning up. Eventually somebody scratches a number on it and the whole economy follows. |
+| **Not You Again!** `not-you-again` | 45 | Mapmaking | -- | Goblin Treasury, Simple Market, The First Ledger | -- | 1 | The same coin keeps turning up. Eventually somebody scratches a number on it and the whole economy follows. |
 | **Tree-Hugging** `tree-hugging` | 55 | Mapmaking | -- | Granary | -- | 1 | If you do not eat the whole forest immediately, there is more forest later. |
 | **Joy Making** `joy-making` | 65 | Tree-Hugging | -- | Totem of Managed Feelings, Chapel of Mild Optimism | -- | 2 | Morale is discovered, immediately weaponised, and then regulated. |
 | **Wall Building** `wall-building` | 75 | Bridge Building | -- | Walls, Broken Catapult | -- | 2 | A bridge, but standing up and unwelcoming. The Horde attends the same lecture and comes away with a catapult. |
-| **Hammers of Glory** `hammers-of-glory` | 85 | Not You Again! | -- | The Thinking Rock, Hall of Careful Notes | -- | 2 | It emerges you can build a place specifically for thinking in. The hammers were, in the end, the easy part. |
+| **Hammers of Glory** `hammers-of-glory` | 85 | Not You Again! | -- | The Thinking Rock, Hall of Careful Notes, The Unfinished Cathedral | -- | 2 | It emerges you can build a place specifically for thinking in. The hammers were, in the end, the easy part. |
 | **Happiness** `happiness` | 105 | Joy Making | -- | -- | contentment | 3 | Formal proof that people who are not miserable work slightly harder. |
-| **Tower Building** `tower-building` | 115 | Wall Building | -- | Goblin Vault, Reinforced, Slightly Complicated Market | watchtower | 3 | A wall, but taller and lonelier. |
-| **Insanity** `insanity` | 150 | Happiness | -- | Considerably Larger Totem, Cathedral of Firm Conviction | berserk | 4 | Happiness, taken one step further than anyone recommended. |
+| **Tower Building** `tower-building` | 115 | Wall Building | -- | Goblin Vault, Reinforced, Slightly Complicated Market, The Yelling Wall | watchtower | 3 | A wall, but taller and lonelier. |
+| **Insanity** `insanity` | 150 | Happiness | -- | Considerably Larger Totem, Cathedral of Firm Conviction, The Long Peace | berserk | 4 | Happiness, taken one step further than anyone recommended. |
 | **Setting Things Alight** `pyromancy` | 165 | Insanity | -- | -- | pyromancy | 5 | Fire was always available. What is new is doing it to somebody deliberately, from a distance, and then walking away while it continues. |
 | **The Cold Shoulder** `cryomancy` | 180 | Insanity | -- | -- | cryomancy | 5 | Nobody has worked out how to make a thing colder. They have worked out how to make a thing very slow, which for military purposes is the same discovery. |
+| **The Argument With The Sky** `sky-argument` | 70 | Setting Things Alight, The Cold Shoulder | -- | The Argument With The Sky | folly | 6 | Fire and cold were each mastered separately and immediately turned on each other. The weather has held a grudge ever since. |
 
 ## Horde advances
 
@@ -189,19 +196,19 @@ flowchart LR
 | **The Meaning of Orc** `orc-meaning` | 25 | First Orc | Orc | -- | -- | 1 | A long night of reflection concludes that an orc is a thing that hits. |
 | **Let's Orc Together** `orc-together` | 40 | The Meaning of Orc | Two Orcs | -- | -- | 2 | Two orcs can stand in the same place. Nothing is ever the same again. |
 | **"Suicidal" Goblins** `suicidal-goblins` | 45 | Goblin "Smarts" | Five Goblins, Goblin Sapper | -- | -- | 2 | The quotation marks are load-bearing. Nobody has explained them. |
-| **To Be An Orc** `to-be-an-orc` | 45 | The Meaning of Orc | -- | Barracks, Orc Posting | -- | 2 | It emerges that an orc can be trained, which is to say shouted at on purpose. |
+| **To Be An Orc** `to-be-an-orc` | 45 | The Meaning of Orc | -- | Barracks, Orc Posting, The Loudest Rock | -- | 2 | It emerges that an orc can be trained, which is to say shouted at on purpose. |
 | **Axes** `axes` | 50 | The Meaning of Orc | Troll | -- | -- | 2 | Sharpened on one side. The Horde considers this its finest hour so far. |
 | **Idiots Stick Together** `idiots-stick-together` | 60 | Let's Orc Together | Three Orcs | -- | -- | 3 | Three. The number is three. It comes after the other two. |
 | **Throwing Buddies** `throwing-buddies` | 65 | Axes | Axethrower, Two Axethrowers | -- | -- | 3 | The axe goes away from you. This is the entire discovery. |
-| **Axes Make You Crazy** `axes-crazy` | 80 | Axes | Two Trolls, Three Trolls | -- | swampy | 3 | Correlation is established. Causation is declared uninteresting. |
+| **Axes Make You Crazy** `axes-crazy` | 80 | Axes | Two Trolls, Three Trolls | The Bonepit | swampy | 3 | Correlation is established. Causation is declared uninteresting. |
 | **Underground Smarts** `underground-smarts` | 95 | "Suicidal" Goblins | Two Goblin Sappers, Goblin Catapult | The Considerably Bigger Rock | volatile | 3 | Everything is better underground, where nobody can see how it is going. |
 | **The Next Level of Stupid** `next-level-stupid` | 85 | Idiots Stick Together | Four Orcs | -- | -- | 4 | Four orcs. The Horde is officially past what its hands can represent. |
 | **My Little Friend** `my-little-friend` | 95 | Throwing Buddies | Three Axethrowers, Ogre | -- | -- | 4 | Every orc should have someone larger standing behind them. |
-| **The Dead are Messed Up** `dead-messed-up` | 130 | To Be An Orc, Axes Make You Crazy | Death Knight | -- | bargain | 4 | A finding delivered with unusual confidence and no supporting evidence. |
+| **The Dead are Messed Up** `dead-messed-up` | 130 | To Be An Orc, Axes Make You Crazy | Death Knight | The Bargain Stone | bargain | 4 | A finding delivered with unusual confidence and no supporting evidence. |
 | **Somebody Knocked** `somebody-knocked` | 100 | The Dead are Messed Up | -- | The Knocking Stones, The Pit of Offerings, The Demonic Portal | ending | 5 | Something under the ground knocked. An orc knocked back. Neither of them has been able to stop since. |
 | **Beyond Stupid** `beyond-stupid` | 105 | The Next Level of Stupid | Six Orcs | -- | -- | 5 | Six orcs, achieved by doing three orcs twice and refusing to elaborate. |
 | **Improvements to the Club** `club-improvement` | 150 | My Little Friend | -- | -- | clubs | 5 | Three of them, and no agreement on which is best. The argument is ongoing and occasionally on fire. |
-| **Full of Fire** `full-of-fire` | 185 | The Dead are Messed Up | Two Death Knights, Dragon | -- | -- | 5 | The Horde has one plan for the late game and has now finished writing it down. |
+| **Full of Fire** `full-of-fire` | 185 | The Dead are Messed Up | Two Death Knights, Dragon | The Long March | -- | 5 | The Horde has one plan for the late game and has now finished writing it down. |
 | **Not Just Stupid Anymore** `not-just-stupid` | 132 | Beyond Stupid | Eight Orcs | -- | coordination | 6 | Eight orcs, all walking the same way. Historians will not believe this part. |
 | **And Stupidity for All** `stupidity-for-all` | 168 | Not Just Stupid Anymore | Ten Orcs | The Yelling Grounds | -- | 7 | Ten orcs. One unit. One extremely large mistake waiting to happen. |
 
@@ -219,17 +226,17 @@ flowchart LR
 | **Let us Ride!** `let-us-ride` | 85 | Horses Make Me Sneeze | Two Knights | -- | -- | 2 | Two knights, riding abreast, at considerable expense to everyone. |
 | **Bunches of Footmen** `bunches-footmen` | 88 | Join the Army | Five Footmen | -- | -- | 3 | The official term is "bunches". The Royal Academy fought this and lost. |
 | **Arrows to Glory** `arrows-glory` | 90 | Pointed Ears Anyone? | Three Archers, Ballista | -- | -- | 3 | If one arrow is glory, the correct number of arrows is all of them. |
-| **Rumbling Voice** `rumbling-voice` | 100 | See the World, Join the Army | Mage | -- | -- | 3 | It is discovered that saying things in a deeper voice makes them true. |
-| **We'll Run You Through!** `run-you-through` | 125 | Let us Ride!, Join the Army | Three Knights, Paladin | -- | valour | 3 | Shouted in advance, as courtesy demands. |
+| **Rumbling Voice** `rumbling-voice` | 100 | See the World, Join the Army | Mage | The Rumbling Archive | -- | 3 | It is discovered that saying things in a deeper voice makes them true. |
+| **We'll Run You Through!** `run-you-through` | 125 | Let us Ride!, Join the Army | Three Knights, Paladin | The Long Vigil | valour | 3 | Shouted in advance, as courtesy demands. |
 | **10 Heads are Better than One** `ten-heads` | 128 | Bunches of Footmen | Ten Footmen | Hall of Cross-Referenced Notes | coordination | 4 | Ten heads, one direction, and a rota for who carries the flag. |
-| **Lordship** `lordship` | 150 | Rumbling Voice | Two Mages, Two Paladins | The Parade Ground | -- | 4 | The rumbling voice is given a hat, a title, and a great deal of land. |
+| **Lordship** `lordship` | 150 | Rumbling Voice | Two Mages, Two Paladins | The Parade Ground, The Learned Committee | -- | 4 | The rumbling voice is given a hat, a title, and a great deal of land. |
 | **Do Not Touch That** `do-not-touch` | 200 | Lordship, Insanity | -- | The Committee Chamber, A Very Good Pedestal, The Mysterious Object | ending | 5 | A committee has been formed to establish what it does. So far it has agreed on the wording of the sign. |
 
 ## Dead ends
 
 Advances nothing else depends on.
 
-- **Shared:** Tower Building, Hammers of Glory, Setting Things Alight, The Cold Shoulder
+- **Shared:** Tower Building, Hammers of Glory, The Argument With The Sky
 - **Horde:** Underground Smarts, And Stupidity for All, Improvements to the Club, Full of Fire, Somebody Knocked
 - **Kingdom:** 10 Heads are Better than One, Arrows to Glory, We'll Run You Through!, Do Not Touch That
 
@@ -265,6 +272,9 @@ Each personality works down its `techPriority` list (`src/ai/ai.ts`), taking the
 24. Somebody Knocked (100) — *on the road to its ending*
 25. And Stupidity for All (168)
 26. Full of Fire (185)
+27. Setting Things Alight (165)
+28. The Cold Shoulder (180)
+29. The Argument With The Sky (70)
 
 **Kingdom**
 
@@ -290,3 +300,6 @@ Each personality works down its `techPriority` list (`src/ai/ai.ts`), taking the
 20. Lordship (150) — *on the road to its ending*
 21. Insanity (150) — *on the road to its ending*
 22. Do Not Touch That (200) — *on the road to its ending*
+23. Setting Things Alight (165)
+24. The Cold Shoulder (180)
+25. The Argument With The Sky (70)

@@ -57,6 +57,8 @@ export function revealAround(
   cx: number,
   cy: number,
   radius: number,
+  /** Whether terrain may block the view at all. Only a Yelling Wall says no. */
+  unblocked = false,
 ): void {
   for (let dy = -radius; dy <= radius; dy++) {
     for (let dx = -radius; dx <= radius; dx++) {
@@ -65,7 +67,7 @@ export function revealAround(
       if (!inBounds(x, y, width, height)) continue;
       const dist = Math.max(Math.abs(dx), Math.abs(dy));
       if (dist > radius) continue;
-      if (dist > 1 && !losClear(terrain, width, cx, cy, x, y)) continue;
+      if (dist > 1 && !unblocked && !losClear(terrain, width, cx, cy, x, y)) continue;
       const i = idx(x, y, width);
       visible[i] = 1;
       explored[i] = 1;

@@ -18,6 +18,7 @@ import type {
 } from '../model/types';
 import { generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
+import { cityFollyBonus, citySightUnblocked } from './follyEffects';
 
 // 2: units carry `disarmed`, for the axethrower that has thrown its axe.
 // 3: cities carry `citizens`, naming who lives in them.
@@ -141,7 +142,9 @@ export function recomputeVisibility(state: GameState, playerId: number): void {
       p.explored,
       c.x,
       c.y,
-      citySight(p),
+      // Section 111: the Yelling Wall sees further, and over anything.
+      citySight(p) + cityFollyBonus(c, (b) => b.citySight),
+      citySightUnblocked(c),
     );
   }
 }

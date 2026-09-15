@@ -196,6 +196,17 @@ export interface Unit {
    */
   reprieved?: boolean;
   /**
+   * Attack added for good by the city it was built in -- section 111's Loudest
+   * Rock. Absent means none, so every older save and fixture loads unchanged.
+   */
+  drilled?: number;
+  /**
+   * Tiles of extra reach, from the city it was built in -- section 111's Rumbling
+   * Archive. A ranged unit may strike from its own range or up to this much
+   * further. Absent means none.
+   */
+  reach?: number;
+  /**
    * Shots left, for a creature that carries a finite number.
    *
    * Absent means "as its type says" -- a fresh piece is loaded, and old saves

@@ -46,7 +46,9 @@ export type SfxId =
   | 'move'
   | 'promote'
   | 'coin'
-  | 'explosion';
+  | 'explosion'
+  // Section 111: a folly is finished, which deserves a fanfare.
+  | 'folly';
 
 /**
  * Exported so tests can check that every cue the simulation emits names a
@@ -68,6 +70,7 @@ const LINGERING: ReadonlySet<SfxId> = new Set<SfxId>([
   'city-lost',
   'capture',
   'turn',
+  'folly',
 ]);
 
 export const SFX_FILES: Record<SfxId, string> = {
@@ -107,6 +110,7 @@ export const SFX_FILES: Record<SfxId, string> = {
   // Named without its leading vowel on disk; kept as supplied so the credit
   // trail still matches the download.
   explosion: 'xplosion.mp3',
+  folly: 'geoffreyburch-handy-introduction-022-glbml-21786.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */

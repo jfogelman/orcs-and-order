@@ -10,6 +10,7 @@ import { SPECIALS } from '../src/model/terrain';
 import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
+import { FOLLIES } from '../src/sim/follyEffects';
 
 /**
  * The question this sweep is currently asking.
@@ -70,21 +71,17 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 110: the Demonic Portal and the Mysterious Object, both announced to
-  // everybody with ten turns to take the city, against the game without them.
-  //
-  // The off arm is the game from before section 110: with the endings disabled
-  // the two advances are not researchable and the builds are not offered. What it
-  // does keep is the AI's longer research lists, which is the point -- the
-  // question is what the endings do, not what asking for Insanity does.
+  // Section 111: the twelve follies against the game without them. Off, none is
+  // offered and The Argument With The Sky is not researchable, so the control is
+  // the game as section 110 shipped it.
   {
-    label: 'endings off',
+    label: 'follies off',
     apply: () => {
       control();
-      ALT_VICTORY.enabled = false;
+      FOLLIES.enabled = false;
     },
   },
-  { label: 'endings on', apply: control },
+  { label: 'follies on', apply: control },
 ];
 
 /**
