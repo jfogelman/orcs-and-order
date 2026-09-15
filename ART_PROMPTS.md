@@ -671,6 +671,76 @@ thousand years of war is sitting in the corner being ignored. Resist anything
 triumphant — no rays of light, no kneeling, no awe. The heap of abandoned weapons is
 the only hint that anything happened at all.
 
+### The nine small pieces that lead to them — 9 of 9 done
+
+The two scenes above are the *ending*. These are the road to it, and the game
+runs without any of them: a missing icon is left off its card and a missing
+overlay is simply not drawn.
+
+Each side reaches its ending the same way, the way a Civilization tech victory
+works: an advance at the far end of its tree unlocks **three works** -- two lesser
+ones for any city, then the final one for the capital. Everybody is told when work
+begins, and when the final work stands there are ten turns to take the city. The
+**Portal** says exactly what it is, and the Horde's capital wears a mark the Kingdom
+can see. The **Object** is announced as a grey object with a button, and nobody is
+told what the button does. Only the Portal gets a map overlay.
+
+**The four icons** use the same preamble as every other advance and building
+icon: 48×48, plain solid magenta background, single centred object, thick dark
+outline, no text, no numerals. Save advances as `art_src/tech/<id>.png` and
+builds as `art_src/buildings/<id>.png`.
+
+| id | What it is | Icon subject |
+|---|---|---|
+| `somebody-knocked` | Horde advance, *Somebody Knocked* | a small wooden trapdoor set flat into bare ground, sickly green light leaking out of the cracks, one clawed knuckle poking up through a gap as if knocking |
+| `do-not-touch` | Kingdom advance, *Do Not Touch That* | a small wooden sign on a post, painted with a pointing finger and a big red diagonal bar struck through it, no lettering anywhere |
+| `demonPortal` | Horde build, *The Demonic Portal* | a ring of crude standing stones around a swirling green-and-black rift, a tattered orc banner planted beside it |
+| `mysteriousObject` | Kingdom build, *The Mysterious Object* | a plain grey featureless barrel-sized object on a simple stone pedestal, one large round red button on top |
+
+**The four lesser works** -- done: `somebody-knocked`, `do-not-touch`, `demonPortal`,
+`mysteriousObject` above; still to draw: these four, and the overlay below. Same
+icon preamble, saved as `art_src/buildings/<id>.png`.
+
+| id | What it is | Icon subject |
+|---|---|---|
+| `knockingStones` | Horde work, *The Knocking Stones* | a ring of three crude grey standing stones on bare earth, the front stone with a big fist-shaped dent knocked into it, a thin crack of green light in the ground at the centre |
+| `offeringPit` | Horde work, *The Pit of Offerings* | a round dark pit edged with rough rocks, a battered helmet, a single boot and a bone lying on the rim ready to be thrown in, faint green glow coming up from inside |
+| `committeeChamber` | Kingdom work, *The Committee Chamber* | a round wooden table seen at an angle with six empty high-backed chairs around it, one tall untidy stack of papers in the middle and a small brass hand bell beside it |
+| `pedestal` | Kingdom work, *A Very Good Pedestal* | a plain empty grey stone pedestal, the same pedestal as the Mysterious Object's, with two short brass posts and a red velvet rope strung in front of it |
+
+- **The two pairs rhyme with their final works.** The Knocking Stones and the Pit are
+  the Portal's green light before the Portal exists; the Pedestal is the Object's own
+  pedestal with nothing on it yet. Keep the green and the grey consistent across each
+  set of three.
+- **`pedestal` must be empty.** The joke is a roped-off pedestal for something that is
+  not there yet. If the generator puts a statue or an urn on it, ask for "an empty
+  plinth with nothing on top, roped off like a museum exhibit".
+- **`committeeChamber` must have nobody in it.** Empty chairs and a stack of papers:
+  the committee has adjourned, as committees do.
+
+- **`somebody-knocked` is about the knock, not the demon.** The advance is an orc
+  hearing something under the ground and knocking back. A demon's face on the icon
+  gives the joke away; a knuckle through a trapdoor keeps it.
+- **`do-not-touch` must have no writing on it.** Generators will try to paint the
+  words on the sign and they will be mush at 48px. The finger and the red bar say
+  it. If lettering keeps appearing, ask for "a no-entry style symbol over a
+  pointing hand, painted on a small wooden board".
+- **`mysteriousObject` should match the victory screen's object** -- same grey,
+  same pedestal, same round button -- so the player who sees the ending recognises
+  the thing they built. The button is the only colour on it.
+
+**The overlay** follows the city-overlay recipe, not the icon one: one motif on
+flat magenta, no ground, no settlement under it, kept clear of the frame edges.
+Save as `art_src/cities/city portal overlay.<ext>`, beside the others.
+
+| state | why it matters | prompt |
+|---|---|---|
+| `portal` | The Horde's Portal is open and the Kingdom has ten turns to take that city | A small swirling rift of green and black fire hanging in the air, two tiny horned silhouettes peering out of it, pixel art, thick black outline, flat magenta background, no ground, centred, 90s fantasy strategy game icon |
+
+It sits on the capital banner's city, so it has to read against wood and stone
+at about a third of a tile: saturated green on black, which is exactly what the
+advice for the other overlays asks for.
+
 ### If a losing screen is wanted later
 
 The same two scenes from the other side would work — the Kingdom watching the rift open

@@ -82,6 +82,8 @@ const VOID_COLOR = '#0a0806';
  * game has no state that means any of them yet -- see DESIGN_QUEUE section 72.
  */
 const CITY_OVERLAY_STATES = [
+  // Section 110: an open Demonic Portal, above every other condition.
+  'portal',
   'capital',
   'besieged',
   'unrest',

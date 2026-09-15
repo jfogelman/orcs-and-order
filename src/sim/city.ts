@@ -11,6 +11,7 @@ import type { City, GameState, ProductionItem, Unit, AutoBuild, Player } from '.
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
+import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
 
 /**
  * Cities: yields, growth, and production.
@@ -896,6 +897,12 @@ export function rushCost(state: GameState, city: City): number {
 export function rushBlocked(state: GameState, city: City): string | null {
   const kind = city.producing.kind;
   if (kind !== 'unit' && kind !== 'building') return 'This city is not building anything.';
+  // A way to end the game is not for sale. A victory you can pay to hurry is a
+  // victory denominated in gold, and the Kingdom banks far more of it.
+  const item = city.producing;
+  if (item.kind === 'building' && isEndingPiece(BUILDINGS[item.id])) {
+    return 'Nobody will sell you one of these.';
+  }
   const cost = rushCost(state, city);
   if (cost <= 0) return 'This is already paid for.';
   if (state.players[city.owner].gold < cost) return `Needs ${cost} gold.`;
@@ -964,6 +971,9 @@ export function buildOptions(
     // building in the list that can never do anything is a trap, and section 102
     // turned this one off for good.
     .filter((b) => POSTING.enabled || !(b.garrisonNeeded && b.contentBonus))
+    // Section 110's works: one of each an empire, the final one only in a city
+    // holding one of the others once both stand, and none while the endings are off.
+    .filter((b) => endingOffered(state, city, b))
     // Shared infrastructure only while resettling: a granary is a shed for
     // food and does not care whose food it is, but nobody is raising a totem
     // to the new owner's gods in a town that is still half the old owner's.
@@ -1075,7 +1085,15 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
     city.shields = 0;
   } else {
     const cost = productionCostIn(state, city, item);
-    if (city.shields >= cost) {
+    if (item.kind === 'building' && isEndingPiece(BUILDINGS[item.id])) {
+      // Section 110's works keep their shields with the empire, not in this box.
+      if (bankWork(state, city, cost)) {
+        city.buildings.push(item.id);
+        events.completed = BUILDINGS[item.id].name;
+        city.producing = { kind: 'coin' };
+        pieceFinished(state, city, BUILDINGS[item.id]);
+      }
+    } else if (city.shields >= cost) {
       if (item.kind === 'unit') {
         const spot = placementFor(state, city);
         // A settler is people, not equipment: the ones who walk out are the
@@ -1131,6 +1149,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
         city.shields -= cost;
         events.completed = BUILDINGS[item.id].name;
         city.producing = { kind: 'coin' };
+        pieceFinished(state, city, BUILDINGS[item.id]);
       }
     }
   }
@@ -1264,6 +1283,9 @@ export function isIdle(city: City): boolean {
  * canvas. Mapping a condition to a picture stays the renderer's business.
  */
 export function cityCondition(state: GameState, c: City): string {
+  // Above everything: an open Portal is the one thing on the map that ends the
+  // game, and the whole point of it is that the other side can see it.
+  if (portalOpen(c)) return 'portal';
   const besieged = state.units.some(
     (u) =>
       u.owner !== c.owner &&

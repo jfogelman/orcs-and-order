@@ -19,6 +19,7 @@ import { tradeGold } from '../sim/trade';
 import { TRADE_STEPS, tradeRates } from '../sim/research';
 import { techCost } from '../sim/research';
 import { escapeHtml, openModal } from './dom';
+import { workBanked } from '../sim/endings';
 
 /**
  * Everything you own, on one screen.
@@ -91,7 +92,7 @@ function cityRow(state: GameState, city: City, capitalId: number | null): string
       ? null
       : yields.shields <= 0
       ? null
-      : Math.max(1, Math.ceil((productionCostIn(state, city, item) - city.shields) / yields.shields));
+      : Math.max(1, Math.ceil((productionCostIn(state, city, item) - city.shields - workBanked(state, city)) / yields.shields));
   const flags = cityFlags(state, city, capitalId);
   // The real helper rather than size * FOOD_PER_CITIZEN spelled out again,
   // which would quietly stop agreeing with the rules if the constant moved.

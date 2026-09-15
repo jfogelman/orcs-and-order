@@ -6,6 +6,7 @@ import { unitType, UNIT_TYPES } from '../model/units';
 import type { UnitTypeDef } from '../model/units';
 import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
+import { ALT_VICTORY } from './endings';
 
 /**
  * Research: what a player knows, what they can learn next, and what that
@@ -20,7 +21,11 @@ export function knowsTech(player: Player, id: TechId): boolean {
 /** Advances whose prerequisites are all met and which are not yet known. */
 export function researchableTechs(player: Player): TechDef[] {
   return techsForFaction(player.faction).filter(
-    (t) => !knowsTech(player, t.id) && t.prereqs.every((p) => knowsTech(player, p)),
+    (t) =>
+      !knowsTech(player, t.id) &&
+      t.prereqs.every((p) => knowsTech(player, p)) &&
+      // Section 110's advances lead nowhere while the endings are switched off.
+      (ALT_VICTORY.enabled || !t.flags.includes('ending')),
   );
 }
 

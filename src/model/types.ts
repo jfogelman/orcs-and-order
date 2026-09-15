@@ -86,6 +86,19 @@ export interface Player {
    * nothing. Section 106.
    */
   tradeLinks?: string[];
+  /**
+   * The turn this empire first put one of section 110's ending works into
+   * production, which is when everybody was told. Absent until then, and in
+   * every save from before the endings existed.
+   */
+  endingBegunAt?: number;
+  /**
+   * Shields put into each of section 110's works so far, by building id. Kept by
+   * the empire rather than in a city's shield box, so a riot, a change of orders
+   * or moving the work to another city spends none of it. Absent until a work is
+   * begun, and a work's entry is deleted when it is finished.
+   */
+  worksBanked?: Record<string, number>;
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */
@@ -274,8 +287,12 @@ export type DamageKind = 'physical' | 'magic';
  * `draw` is the clock running out with the totals exactly level, and is the one
  * ending with no winner at all: `winner` stays null. Use isOver() rather than a
  * null check to ask whether a game has finished.
+ *
+ * `portal` and `object` are section 110's two built endings: the Horde's Demonic
+ * Portal held open long enough, and the Kingdom's Mysterious Object with its
+ * button pressed.
  */
-export type VictoryKind = 'conquest' | 'dominance' | 'points' | 'draw';
+export type VictoryKind = 'conquest' | 'dominance' | 'points' | 'draw' | 'portal' | 'object';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
@@ -312,6 +329,12 @@ export interface City {
    * order is consulted at all, what it should repeat has been gone a while.
    */
   lastUnit?: UnitTypeId;
+  /**
+   * The turn this city's ending was finished: section 110's Demonic Portal or
+   * Mysterious Object. Absent everywhere else, and in every save from before the
+   * endings existed.
+   */
+  endingSince?: number;
   /** Flat tile indices currently worked by citizens (excludes the centre). */
   workedTiles: number[];
   /**

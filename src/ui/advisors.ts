@@ -25,8 +25,16 @@ import { hasFlag } from '../sim/rules';
 import { idx } from '../engine/grid';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
+import {
+  ALT_VICTORY,
+  endingBuilt,
+  endingIn,
+  endingOpen,
+  endingTurnsLeft,
+  isEndingPiece,
+} from '../sim/endings';
 import { TECHS } from '../model/techs';
-import { tradeRates, unlockedBuildings } from '../sim/research';
+import { researchableTechs, tradeRates, unlockedBuildings } from '../sim/research';
 import { TECHS_BY_ID } from '../model/techs';
 import { escapeHtml, openModal } from './dom';
 
@@ -152,6 +160,40 @@ export function situationOf(state: GameState, playerId: number): Situation {
     dominance = { turnsLeft: left, theirs: p.id !== playerId };
   }
 
+  // An ending counting down anywhere on the map. Everybody is told when one
+  // begins, so knowing about it is not knowing something the fog should hide.
+  let ending: Situation['ending'] = null;
+  for (const c of state.cities) {
+    if (!endingOpen(c)) continue;
+    const turns = endingTurnsLeft(state, c);
+    const kind = endingIn(c)?.victory;
+    if (turns === null || turns <= 0 || !kind) continue;
+    ending = { turnsLeft: turns, theirs: c.owner !== playerId, kind };
+  }
+
+  // How far along the road to its own ending this empire is, for the two
+  // advisors a side who want it. Asked of the advance carrying the `ending` flag
+  // for this faction, so a renamed advance cannot quietly silence them.
+  let endingRoad: Situation['endingRoad'] = null;
+  const road = TECHS.find((t) => t.flags.includes('ending') && t.faction === player.faction);
+  if (road && ALT_VICTORY.enabled && !endingBuilt(state, playerId)) {
+    const underWay = playerCities(state, playerId).some(
+      (c) => c.producing.kind === 'building' && isEndingPiece(BUILDINGS[c.producing.id]),
+    );
+    if (underWay) endingRoad = 'building';
+    else if (player.techs.includes(road.id)) endingRoad = 'buildable';
+    else if (researchableTechs(player).some((t) => t.id === road.id)) endingRoad = 'researchable';
+  }
+
+  // The other side has begun, and nothing is counting down yet.
+  let rivalEnding: Situation['rivalEnding'] = null;
+  if (ALT_VICTORY.enabled && ending === null) {
+    for (const p of state.players) {
+      if (p.id === playerId || p.barbarian || !p.alive || p.endingBegunAt === undefined) continue;
+      rivalEnding = p.faction === 'orc' ? 'portal' : 'object';
+    }
+  }
+
   // The deadline, once it is close enough to plan around. `CLOCK_WARNINGS[0]`
   // rather than a number of its own, so the advisors start talking about it on
   // the same turn the log first mentions it.
@@ -209,6 +251,9 @@ export function situationOf(state: GameState, playerId: number): Situation {
     unlinkedGoldCities,
     routeGold,
     dominance,
+    ending,
+    endingRoad,
+    rivalEnding,
   };
 }
 

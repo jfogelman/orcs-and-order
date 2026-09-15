@@ -12,6 +12,7 @@ import {
   buildOptions,
   canFoundCity,
   capitalOf,
+  cityYield,
   POSTING,
   contentLimit,
   garrisonNeededBy,
@@ -28,6 +29,7 @@ import {
   tileYield,
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
+import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
@@ -166,6 +168,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'club-improvement',
       'not-just-stupid',
       'dead-messed-up',
+      // Section 110: the ending, straight after its own line's prerequisite -- the
+      // same place the Kingdom's list puts it, right after Lordship. Placed after
+      // Full of Fire instead, the Horde learned it in ten games in thirty-one to the
+      // Kingdom's twenty-six: the two dearest advances in its tree stood in front of
+      // it, and nothing in the Kingdom's list does. It no longer needs Insanity.
+      'somebody-knocked',
       'stupidity-for-all',
       'full-of-fire',
     ],
@@ -216,6 +224,9 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'run-you-through',
       'rumbling-voice',
       'lordship',
+      // Section 110, as for the Horde.
+      'insanity',
+      'do-not-touch',
     ],
     // The single most sensitive number in the file, and the only one that
     // moved faction balance at all. Measured over 18 seeds:
@@ -270,6 +281,24 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
  */
 const HARD_TARGET = 0.6;
 
+/**
+ * How much nearer a city with an ending counting down counts, as a multiple of
+ * its real distance.
+ *
+ * Everybody is told when a Portal opens or an Object appears, and exactly where,
+ * so marching on it is using something the AI was told rather than something the
+ * fog should hide. Without this each side would go on attacking whatever sat on
+ * its border while the count ran out behind the front. Section 110.
+ */
+const ENDING_PULL = 0.35;
+
+/**
+ * The same pull, gentler, once the other side has begun work towards its ending:
+ * its capital, where the final work will stand, and any city holding a work
+ * already finished. Everybody was told when the work began.
+ */
+const BEGUN_PULL = 0.6;
+
 /** Defence at which a city counts as thoroughly held. */
 const GUARD_REFERENCE = 12;
 
@@ -316,7 +345,10 @@ function nearestEnemyTarget(
       const held = guard ? unitType(guard.type).defense * headcount(guard) : 0;
       hardness = Math.min(1, held / GUARD_REFERENCE);
     }
-    consider(c.x, c.y, 1, hardness);
+    const begun =
+      state.players[c.owner]?.endingBegunAt !== undefined &&
+      (hasEndingPiece(c) || capitalOf(state, c.owner)?.id === c.id);
+    consider(c.x, c.y, endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1, hardness);
   }
   for (const u of state.units) {
     if (u.owner !== playerId && player.visible[idx(u.x, u.y, state.width)]) {
@@ -569,6 +601,23 @@ function chooseProduction(
     // city merely approaching its limit is still working, and should carry on.
     if (city.disorder) return { kind: 'calm' };
   }
+
+  // 3a. A work towards an ending, where one can be built. Behind the garrison,
+  // because a work in an empty city is a work the other side walks in and tears
+  // down; and behind the lid on the riots, because a rioting city builds nothing.
+  // This first sat ahead of both, and the Horde's Portal stood at 134 shields of
+  // 240 for sixty-four turns in a capital that rioted the whole time and was
+  // never once told to build a Totem. After expanding, which rarely applies this
+  // late, and ahead of everything else. `buildOptions` already keeps each work to
+  // one city at a time and the final one to the capital. Section 110.
+  // A lesser work only in one of the empire's two busiest cities: the first come
+  // took it before, and a Knocking Stones begun in a town of size one needed forty
+  // turns while nobody else was allowed to start one. The final work is the
+  // capital's anyway.
+  const ending = options.buildings.find(
+    (b) => isEndingPiece(b) && (!!b.victory || amongBusiest(state, city, 2)),
+  );
+  if (ending) return { kind: 'building', id: ending.id };
 
   // 3b. If the enemy is turtling behind walls, build something that ignores
   // them. Without this the AI keeps making melee units that cannot get in.
@@ -929,7 +978,24 @@ function onEnemyGround(state: GameState, unit: Unit): boolean {
  * around the city and is somebody else's problem, while `needsGarrison` means
  * one body in the gate, which is a job a single soldier can finish.
  */
+/** Whether this city is among its owner's `n` most productive, by shields a turn. */
+function amongBusiest(state: GameState, city: City, n: number): boolean {
+  return playerCities(state, city.owner)
+    .map((c) => ({ id: c.id, shields: cityYield(state, c).shields }))
+    .sort((a, b) => b.shields - a.shields)
+    .slice(0, n)
+    .some((r) => r.id === city.id);
+}
+
 function wantsKeeper(state: GameState, city: City): boolean {
+  // Section 110: a city building or holding a work towards an ending. The first
+  // production rule refills an empty city, and the shields saved for the work pay
+  // for the new defender -- the Horde's Portal fell from 168 of 240 to 24 in eight
+  // turns that way. Somebody stays home instead, and the work keeps its shields.
+  const item = city.producing;
+  if (hasEndingPiece(city) || (item.kind === 'building' && isEndingPiece(BUILDINGS[item.id]))) {
+    return true;
+  }
   return workingBuildings(state, city).some((b) => {
     const def = BUILDINGS[b];
     return !!def && def.needsGarrison && def.garrisonNeeded === undefined;

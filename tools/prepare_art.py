@@ -120,6 +120,8 @@ CITY_OVERLAYS = {
     "overlay_celebration": "city celebration overlay",
     "overlay_idle": "city idle overlay",
     "overlay_damaged": "damaged city overlay",
+    # Section 110: an open Demonic Portal, which the whole map can see.
+    "overlay_portal": "city portal overlay",
 }
 
 # The two bubbles that mark an advisor as worth clicking, keyed by what they
@@ -150,6 +152,8 @@ TECH_ICONS = [
     "lordship",
     # The two magic advances off Insanity, from DESIGN_QUEUE section 11.
     "pyromancy", "cryomancy",
+    # The two endings, from DESIGN_QUEUE section 110.
+    "somebody-knocked", "do-not-touch",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -162,6 +166,9 @@ BUILDING_ICONS = [
     "outpost", "depot",
     "bigTotem", "cathedral", "bigVault", "exchange", "biggerRock", "library",
     "yellingGrounds", "paradeGround",
+    # Section 110's endings: two lesser works and a final one, a side.
+    "knockingStones", "offeringPit", "demonPortal",
+    "committeeChamber", "pedestal", "mysteriousObject",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the

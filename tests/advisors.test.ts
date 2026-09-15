@@ -137,6 +137,72 @@ describe('who advises whom', () => {
   });
 });
 
+/**
+ * Section 110: who wants the endings.
+ *
+ * Only two advisors a side care about their own: the Horde's Death Mage and Death
+ * Knight would open a door to something below, the Kingdom's Court Archmage wants
+ * to know what the button does and its Paladin sees a war ended with nobody dying.
+ * The other side's ending is a place to march on, which is a soldier's business.
+ *
+ * Asked of the concerns directly -- which ones switch on when an ending is added
+ * to a calm empire -- because an advisor's *line* is only its first concern that
+ * applies, and a calm empire already gives the Paladin something else to say.
+ */
+describe('who wants the endings', () => {
+  const OURS = { orc: 'portal', human: 'object' } as const;
+  const THEIRS = { orc: 'object', human: 'portal' } as const;
+
+  const wakes = (advisor: (typeof ADVISORS)[number], extra: Partial<Situation>) => {
+    const base = { ...calm(), faction: advisor.faction };
+    const moved = { ...base, ...extra };
+    return advisor.concerns.filter((c) => c.when(moved) && !c.when(base)).map((c) => c.say(moved));
+  };
+
+  it('leaves the road to our own ending to the two who want it', () => {
+    const want = ['death-mage', 'death-knight', 'archmage', 'paladin'];
+    for (const advisor of ADVISORS) {
+      for (const endingRoad of ['researchable', 'buildable', 'building'] as const) {
+        const lines = wakes(advisor, { endingRoad });
+        expect(lines.length > 0, `${advisor.id} at ${endingRoad}`).toBe(want.includes(advisor.id));
+        for (const line of lines) {
+          expect(line).toMatch(/Portal|Object|Knocked|knocking|Do Not Touch/);
+          expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
+        }
+      }
+    }
+  });
+
+  it('has the same two count our ending down', () => {
+    const want = ['death-mage', 'death-knight', 'archmage', 'paladin'];
+    for (const advisor of ADVISORS) {
+      const ending = { turnsLeft: 5, theirs: false, kind: OURS[advisor.faction] };
+      const lines = wakes(advisor, { ending });
+      expect(lines.length > 0, advisor.id).toBe(want.includes(advisor.id));
+      for (const line of lines) expect(line).toMatch(/five turns/i);
+    }
+  });
+
+  it("sends the soldiers at the other side's", () => {
+    const want = ['blademaster', 'knight-marshal'];
+    for (const advisor of ADVISORS) {
+      const ending = { turnsLeft: 5, theirs: true, kind: THEIRS[advisor.faction] };
+      const lines = wakes(advisor, { ending });
+      expect(lines.length > 0, advisor.id).toBe(want.includes(advisor.id));
+      for (const line of lines) expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
+    }
+  });
+
+  it('has the same soldiers mention the other side beginning work', () => {
+    const want = ['blademaster', 'knight-marshal'];
+    for (const advisor of ADVISORS) {
+      const lines = wakes(advisor, { rivalEnding: THEIRS[advisor.faction] });
+      expect(lines.length > 0, advisor.id).toBe(want.includes(advisor.id));
+      for (const line of lines) expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
+    }
+  });
+});
+
 describe('what they notice', () => {
   it('takes the first concern that applies, so the order is the character', () => {
     const marshal = advisorsFor('human').find((a) => a.id === 'knight-marshal')!;

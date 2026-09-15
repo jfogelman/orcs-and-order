@@ -94,10 +94,11 @@ function garrison(state: GameState, city: City): Unit {
  *
  * It has to be re-scouted whenever the AI changes, which is the price of a real
  * board rather than a built one. Seed 22 served until section 108 put a garrison
- * in every city; that game now ends in conquest at turn 205, and seed 25 is the
- * nearest one that still runs to the deadline with both sides standing.
+ * in every city; that game now ends in conquest at turn 205, and seed 25 took
+ * over. Section 110's endings end most games in the two hundreds now; of seeds 20
+ * to 50, only 32 still reaches 299 with both sides standing and no ending landed.
  */
-const LATE_SEED = 25;
+const LATE_SEED = 32;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];

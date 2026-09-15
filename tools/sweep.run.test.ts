@@ -7,6 +7,7 @@ import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { SPECIALS } from '../src/model/terrain';
+import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 
@@ -62,28 +63,28 @@ const control = () => {
   // Back to the quiet game for section 102: the baseline it has to beat is
   // section 101's Posting table, which was measured without raiders.
   NEW_GAME.barbarians = false;
+  // Section 110's endings, at their shipping settings.
+  ALT_VICTORY.enabled = true;
+  ALT_VICTORY.portalTurns = 10;
+  ALT_VICTORY.objectTurns = 10;
 };
 
 const ARMS: Arm[] = [
-  // Section 109's second dial. The first -- `CALM.base` at five -- corrected
-  // eleven points of drift with eighteen and took an advance and a half off the
-  // Horde doing it, which is too high a price in a game whose joke is the
-  // counting ladder.
+  // Section 110: the Demonic Portal and the Mysterious Object, both announced to
+  // everybody with ten turns to take the city, against the game without them.
   //
-  // This one aims at the winning condition instead of at the growth that feeds
-  // it: about three quarters of these games now end on points, points are mostly
-  // size, and size is mostly cities. One fewer city for the Horde takes score
-  // off it without making anybody's calm scarcer.
-  //
-  // The arm at six should reproduce section 109's `today`: 36-17-1 and 34-20.
-  { label: 'orc targets 6', apply: control },
+  // The off arm is the game from before section 110: with the endings disabled
+  // the two advances are not researchable and the builds are not offered. What it
+  // does keep is the AI's longer research lists, which is the point -- the
+  // question is what the endings do, not what asking for Insanity does.
   {
-    label: 'orc targets 5',
+    label: 'endings off',
     apply: () => {
       control();
-      PERSONALITIES.orc.targetCities = 5;
+      ALT_VICTORY.enabled = false;
     },
   },
+  { label: 'endings on', apply: control },
 ];
 
 /**

@@ -955,6 +955,10 @@ class App {
     const root = base.endsWith('/') ? base : `${base}/`;
     // A draw has no side, so it has one picture with both of them in it.
     if (!winner) return `${root}victory/draw.jpg`;
+    // The two built endings have one scene each, whoever is looking at it.
+    if (this.state.victory === 'portal' || this.state.victory === 'object') {
+      return `${root}victory/${this.state.victory}.jpg`;
+    }
     const kind = this.state.victory === 'points' ? 'points' : 'conquest';
     const side = winner.faction === 'orc' ? 'orc' : 'human';
     return `${root}victory/${kind}-${side}.jpg`;
@@ -967,6 +971,20 @@ class App {
         'Everything was counted twice and came out the same both times. ' +
         'Both sides have declared the result a technicality and gone home.'
       );
+    }
+    if (this.state.victory === 'portal') {
+      return you
+        ? 'Something came through the Portal and everybody cheered. It has put collars on ' +
+          'everybody. Everybody is still cheering.'
+        : 'Ten turns was the whole of the warning. Something came through, and the Horde is ' +
+          'delighted about it for reasons nobody can follow.';
+    }
+    if (this.state.victory === 'object') {
+      return you
+        ? 'Somebody pressed the button. The wars have stopped and there is a quiz on ' +
+          'Thursdays. Nobody remembers voting for this.'
+        : 'Nobody was told there was a button. Somebody pressed it anyway, and now there is ' +
+          'a quiz night, and the Horde turns out to be quite good at it.';
     }
     if (this.state.victory === 'points') {
       return you
@@ -1945,6 +1963,8 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   dominance: 'Dominance — most of the world, held long enough that it counted',
   points: 'Points — the turn limit arrived and the columns were totalled',
   draw: 'A draw — the turn limit arrived and the columns matched',
+  portal: 'The Demonic Portal — held open long enough for something to come through',
+  object: 'The Mysterious Object — somebody pressed the button',
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;
