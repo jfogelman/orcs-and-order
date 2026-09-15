@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { City, GameState, Unit, UnitTypeId } from '../src/model/types';
 import { FACTIONS } from '../src/model/factions';
-import { assignWorkers } from '../src/sim/city';
+import { assignWorkers, foodSurplus } from '../src/sim/city';
+import { TERRAIN } from '../src/model/terrain';
+import { playerScore, prideDue } from '../src/sim/turn';
 import { createGame, playerCities, playerUnits, spawnUnit } from '../src/sim/gamestate';
 import { deserialize, serialize } from '../src/persist/save';
 import { playGame } from '../tools/sweep';
@@ -237,6 +239,65 @@ const SCENARIOS: Scenario[] = [
     check: (state) => {
       expect(state.players[0].gold).toBeGreaterThan(1000);
       expect(playerCities(state, 0)[0].producing.kind).toBe('building');
+    },
+  },
+  {
+    name: 'capital-offer-due',
+    about:
+      'Three content, fed cities and a score past the first milestone, so the council offers a ' +
+      'piece of the capital. Pick one to watch it fade into place on the capital screen.',
+    build: () => {
+      const { state, city } = opening(4007);
+      state.players[0].gold = 200;
+      // Two more towns on dry land, far enough apart to be legal and near enough
+      // to stay out of anybody else's way.
+      const taken: { x: number; y: number }[] = [city];
+      for (let n = 0; n < 2; n++) {
+        let spot: { x: number; y: number } | null = null;
+        for (let r = 4; r < 12 && !spot; r++) {
+          for (let dy = -r; dy <= r && !spot; dy++) {
+            for (let dx = -r; dx <= r && !spot; dx++) {
+              const x = city.x + dx;
+              const y = city.y + dy;
+              if (x < 1 || y < 1 || x >= state.width - 1 || y >= state.height - 1) continue;
+              const terrain = TERRAIN[state.terrain[y * state.width + x]];
+              if (terrain.water || terrain.noCity) continue;
+              if (taken.some((t) => Math.max(Math.abs(t.x - x), Math.abs(t.y - y)) < 4)) continue;
+              if (state.units.some((u) => u.x === x && u.y === y)) continue;
+              spot = { x, y };
+            }
+          }
+        }
+        if (!spot) throw new Error('no room for a second town');
+        taken.push(spot);
+        const town: City = {
+          ...city,
+          id: state.nextCityId++,
+          name: n === 0 ? 'Fixture Yard' : 'Fixture Pit',
+          x: spot.x,
+          y: spot.y,
+          size: 3,
+          buildings: [],
+          workedTiles: [],
+          foundedTurn: 4 + n,
+        };
+        state.cities.push(town);
+      }
+      for (const c of playerCities(state, 0)) assignWorkers(state, c);
+      // Past the first milestone on advances, which is the cheapest part of the
+      // score to fake without touching anything the council looks at.
+      const learnable = ['mapmaking', 'bridge-building', 'tree-hugging', 'not-you-again', 'joy-making', 'hammers-of-glory', 'wall-building'];
+      for (const id of learnable) {
+        if (playerScore(state, 0) >= 36) break;
+        if (!state.players[0].techs.includes(id)) state.players[0].techs.push(id);
+      }
+      return state;
+    },
+    check: (state) => {
+      expect(playerCities(state, 0).length).toBeGreaterThanOrEqual(3);
+      expect(playerCities(state, 0).every((c) => !c.disorder && foodSurplus(state, c) >= 0)).toBe(true);
+      expect(state.players[0].prideTaken ?? 0).toBe(0);
+      expect(prideDue(state, 0)).toBe(true);
     },
   },
 ];

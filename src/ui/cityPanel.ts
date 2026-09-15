@@ -1,5 +1,5 @@
 import { idx } from '../engine/grid';
-import { palaceLayout, palacePieces } from '../model/palace';
+import { palaceArt, palaceLayout, palacePieces } from '../model/palace';
 import { goldBuildingIn, linksForCity, otherEnd } from '../sim/trade';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -81,8 +81,11 @@ const POSTURE: Record<UnitOrder, string> = {
  *
  * The arrangement itself is `palaceLayout`, which hangs every piece from a
  * hand-marked place on the chassis. This only turns its list into pictures.
+ *
+ * `arriving` names the art of a piece the empire has just been given, which fades
+ * into place so the gain is something seen rather than a line in the log.
  */
-function palaceView(state: GameState, city: City): string {
+function palaceView(state: GameState, city: City, arriving?: string): string {
   const player = state.players[city.owner];
   const faction = player.faction;
   const standing = palacePieces(player);
@@ -95,7 +98,7 @@ function palaceView(state: GameState, city: City): string {
   const sprites = layout.pieces
     .map(
       (p) =>
-        `<img class="palace-piece${p.flip ? ' flipped' : ''}" src="${escapeHtml(palacePath(p.art))}" alt=""
+        `<img class="palace-piece${p.flip ? ' flipped' : ''}${p.art === arriving ? ' arriving' : ''}" src="${escapeHtml(palacePath(p.art))}" alt=""
           style="left:${Math.round(p.left)}px; top:${Math.round(p.top)}px; width:${Math.round(p.width)}px" />`,
     )
     .join('');
@@ -111,7 +114,7 @@ function palaceView(state: GameState, city: City): string {
                 : standing
                     .map(
                       ({ module, tier }) =>
-                        `<span class="chip">${escapeHtml(module.tiers[faction][tier - 1])}</span>`,
+                        `<span class="chip${palaceArt(faction, module.id, tier) === arriving ? ' arriving' : ''}">${escapeHtml(module.tiers[faction][tier - 1])}</span>`,
                     )
                     .join('')
             }
@@ -309,6 +312,11 @@ export function openCityPanel(
   city: City,
   onChange: () => void,
   onWake?: (unit: Unit) => void,
+  /**
+   * The art of a capital piece just chosen, to fade in. Only for this opening:
+   * the panel re-renders itself without it, so the piece arrives once.
+   */
+  arriving?: string,
 ): void {
   const yields = cityYield(state, city);
   const surplus = foodSurplus(state, city);
@@ -342,7 +350,7 @@ export function openCityPanel(
   // Section 67: the capital, drawn as whatever has been built onto it. Every
   // city has a picture of a city; the capital is the one that changes.
   const seat = capitalOf(state, city.owner);
-  const palace = seat?.id === city.id ? palaceView(state, city) : '';
+  const palace = seat?.id === city.id ? palaceView(state, city, arriving) : '';
 
   const sells = goldBuildingIn(state, city);
   const routes = linksForCity(state, city);
@@ -560,6 +568,11 @@ export function openCityPanel(
     body,
     width: 'min(920px, 94vw)',
     onMount: (root) => {
+      // A piece just given to the capital fades in for under two seconds, and the
+      // capital sits below the fold of this panel -- so without this the whole
+      // arrival happened where nobody was looking. Instant, not smooth, so the
+      // fade is on screen from its first frame.
+      if (arriving) root.querySelector('.palace')?.scrollIntoView({ block: 'center' });
       // Waking is the way back out: these units are not on the map to click.
       root.querySelectorAll<HTMLButtonElement>('[data-wake]').forEach((btn) => {
         btn.addEventListener('click', () => {
