@@ -4,6 +4,7 @@ import { TECHS_BY_ID } from '../model/techs';
 import { unitType } from '../model/units';
 import type { GameState, Player, TerrainId, Unit, UnitTypeId } from '../model/types';
 import { idx } from '../engine/grid';
+import { empireBonus } from './follyEffects';
 
 /**
  * Derived stats that depend on both a unit and what its owner has researched.
@@ -53,6 +54,8 @@ export function effectiveSight(state: GameState, player: Player, unit: Unit): nu
   const t = unitType(unit.type);
   let sight = t.sight;
   if (hasFlag(player, 'mapmaking')) sight += 1;
+  // Section 111: the Learned Committee, watching the horizon for everybody.
+  sight += empireBonus(state, unit.owner, (b) => b.unitSight);
   const terrain = state.terrain[idx(unit.x, unit.y, state.width)];
   if (terrain === 'hills' || terrain === 'mountains') sight += 1;
   return sight;

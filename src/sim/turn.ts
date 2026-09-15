@@ -1,4 +1,6 @@
 import { checkEndings, isEndingPiece } from './endings';
+import { checkFollies } from './follies';
+import { empireBonus, isFolly, onOwnLand } from './follyEffects';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -95,13 +97,16 @@ function healUnits(state: GameState, playerId: number): void {
 }
 
 function refreshUnits(state: GameState, player: Player): void {
+  // Section 111: the Long March, once per turn rather than once per unit.
+  const march = empireBonus(state, player.id, (b) => b.homeMoves);
   for (const unit of state.units) {
     if (unit.owner !== player.id) continue;
     // Frozen slows rather than stops. A unit that cannot act at all is a unit
     // removed from the game for the duration, which is strictly better than
     // damage; halving is a real cost that leaves it playing. Never below one,
     // so a one-move unit is slowed rather than frozen in place forever.
-    const full = effectiveMove(player, unit.type);
+    const full =
+      effectiveMove(player, unit.type) + (march > 0 && onOwnLand(state, player.id, unit.x, unit.y) ? march : 0);
     unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
     if (unit.order === 'skip') unit.order = 'none';
     // Digging carries on at the top of the owner's turn, and a road is laid the
@@ -199,7 +204,8 @@ function runEconomy(state: GameState, player: Player): void {
       log(state, `${city.name} has fallen into disorder.`, 'bad', player.id);
     }
     if (events.completed) {
-      log(state, `${city.name} completes ${events.completed}.`, 'good', player.id, 'built');
+      // A folly's own announcement carries the fanfare; the chime would only talk over it.
+      log(state, `${city.name} completes ${events.completed}.`, 'good', player.id, events.folly ? undefined : 'built');
     }
     if (events.blocked) {
       log(
@@ -229,13 +235,13 @@ function runEconomy(state: GameState, player: Player): void {
   // nothing, so the game could never end the way it said it would.
   while (player.gold < 0) {
     const victim = playerCities(state, player.id).find((c) =>
-      c.buildings.some((b) => !isEndingPiece(BUILDINGS[b])),
+      c.buildings.some((b) => !isEndingPiece(BUILDINGS[b]) && !isFolly(BUILDINGS[b])),
     );
     if (!victim) {
       player.gold = 0;
       break;
     }
-    const sold = [...victim.buildings].reverse().find((b) => !isEndingPiece(BUILDINGS[b]))!;
+    const sold = [...victim.buildings].reverse().find((b) => !isEndingPiece(BUILDINGS[b]) && !isFolly(BUILDINGS[b]))!;
     victim.buildings = victim.buildings.filter((b) => b !== sold);
     player.gold += Math.floor(BUILDINGS[sold].cost / 2);
     log(state, `${victim.name} sells its ${BUILDINGS[sold].name} to cover the books.`, 'bad', player.id);
@@ -513,6 +519,7 @@ function checkElimination(state: GameState): void {
   checkDominance(state);
   // Section 110's two built endings, under the same guard as the rest.
   checkEndings(state);
+  checkFollies(state);
 
   // Nobody has managed it by the deadline: whoever built most, wins.
   if (!isOver(state) && state.turn > state.settings.maxTurns) {

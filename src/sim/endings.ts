@@ -122,7 +122,8 @@ export function endingOffered(state: GameState, city: City, b: BuildingDef): boo
  * wonder's progress when a city switches between wonders.
  */
 export function workBanked(state: GameState, city: City, item: ProductionItem = city.producing): number {
-  if (item.kind !== 'building' || !isEndingPiece(BUILDINGS[item.id])) return 0;
+  // Section 111's follies bank the same way.
+  if (item.kind !== 'building' || !(isEndingPiece(BUILDINGS[item.id]) || BUILDINGS[item.id]?.folly)) return 0;
   return state.players[city.owner]?.worksBanked?.[item.id] ?? 0;
 }
 

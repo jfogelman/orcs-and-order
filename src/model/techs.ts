@@ -40,7 +40,12 @@ export type TechFlag =
    * Leads to one of section 110's endings. Not researchable while the endings are
    * switched off, so an arm without them is the game from before they existed.
    */
-  | 'ending';
+  | 'ending'
+  /**
+   * The one advance section 111's follies needed of their own. Not researchable
+   * while the follies are switched off.
+   */
+  | 'folly';
 
 export interface TechDef {
   id: TechId;
@@ -110,7 +115,7 @@ export const TECHS: TechDef[] = [
     cost: 115,
     prereqs: ['wall-building'],
     units: [],
-    buildings: ['bigVault', 'exchange'],
+    buildings: ['bigVault', 'exchange', 'yellingWall'],
     flags: ['watchtower'],
     flavor: 'A wall, but taller and lonelier.',
   },
@@ -121,7 +126,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: ['treasury', 'market'],
+    buildings: ['treasury', 'market', 'firstLedger'],
     flags: [],
     flavor:
       'The same coin keeps turning up. Eventually somebody scratches a number ' +
@@ -134,7 +139,7 @@ export const TECHS: TechDef[] = [
     cost: 85,
     prereqs: ['not-you-again'],
     units: [],
-    buildings: ['thinkingRock', 'scriptorium'],
+    buildings: ['thinkingRock', 'scriptorium', 'unfinishedCathedral'],
     flags: [],
     flavor:
       'It emerges you can build a place specifically for thinking in. The ' +
@@ -188,6 +193,22 @@ export const TECHS: TechDef[] = [
       'Nobody has worked out how to make a thing colder. They have worked out how to ' +
       'make a thing very slow, which for military purposes is the same discovery.',
   },
+  // Section 111: the one folly whose prerequisite did not exist -- both elements
+  // known at once, and they sit side by side under Insanity rather than on one line.
+  // Cheap, because the two advances before it did the expensive part.
+  {
+    id: 'sky-argument',
+    name: 'The Argument With The Sky',
+    faction: 'both',
+    cost: 70,
+    prereqs: ['pyromancy', 'cryomancy'],
+    units: [],
+    buildings: ['skyArgumentSpire'],
+    flags: ['folly'],
+    flavor:
+      'Fire and cold were each mastered separately and immediately turned on each other. The ' +
+      'weather has held a grudge ever since.',
+  },
   {
     id: 'insanity',
     name: 'Insanity',
@@ -195,7 +216,7 @@ export const TECHS: TechDef[] = [
     cost: 150,
     prereqs: ['happiness'],
     units: [],
-    buildings: ['bigTotem', 'cathedral'],
+    buildings: ['bigTotem', 'cathedral', 'longPeaceMonument'],
     flags: ['berserk'],
     flavor: 'Happiness, taken one step further than anyone recommended.',
   },
@@ -329,7 +350,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['orc-meaning'],
     units: [],
-    buildings: ['barracks', 'orcPosting'],
+    buildings: ['barracks', 'orcPosting', 'loudestRock'],
     flags: [],
     flavor: 'It emerges that an orc can be trained, which is to say shouted at on purpose.',
   },
@@ -351,7 +372,7 @@ export const TECHS: TechDef[] = [
     cost: 80,
     prereqs: ['axes'],
     units: ['troll_x2', 'troll_x3'],
-    buildings: [],
+    buildings: ['bonepit'],
     flags: ['swampy'],
     flavor: 'Correlation is established. Causation is declared uninteresting.',
   },
@@ -396,7 +417,7 @@ export const TECHS: TechDef[] = [
     cost: 130,
     prereqs: ['to-be-an-orc', 'axes-crazy'],
     units: ['deathknight'],
-    buildings: [],
+    buildings: ['bargainStone'],
     flags: ['bargain'],
     flavor: 'A finding delivered with unusual confidence and no supporting evidence.',
   },
@@ -407,7 +428,7 @@ export const TECHS: TechDef[] = [
     cost: 185,
     prereqs: ['dead-messed-up'],
     units: ['deathknight_x2', 'dragon'],
-    buildings: [],
+    buildings: ['longMarchRoad'],
     flags: [],
     flavor: 'The Horde has one plan for the late game and has now finished writing it down.',
   },
@@ -541,7 +562,7 @@ export const TECHS: TechDef[] = [
     cost: 125,
     prereqs: ['let-us-ride', 'join-army'],
     units: ['knight_x3', 'paladin'],
-    buildings: [],
+    buildings: ['longVigilShrine'],
     flags: ['valour'],
     flavor: 'Shouted in advance, as courtesy demands.',
   },
@@ -552,7 +573,7 @@ export const TECHS: TechDef[] = [
     cost: 100,
     prereqs: ['see-the-world', 'join-army'],
     units: ['mage'],
-    buildings: [],
+    buildings: ['rumblingArchive'],
     flags: [],
     flavor: 'It is discovered that saying things in a deeper voice makes them true.',
   },
@@ -563,7 +584,7 @@ export const TECHS: TechDef[] = [
     cost: 150,
     prereqs: ['rumbling-voice'],
     units: ['mage_x2', 'paladin_x2'],
-    buildings: ['paradeGround'],
+    buildings: ['paradeGround', 'learnedCommittee'],
     flags: [],
     flavor: 'The rumbling voice is given a hat, a title, and a great deal of land.',
   },

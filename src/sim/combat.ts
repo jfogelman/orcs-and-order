@@ -8,6 +8,7 @@ import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
 import { hasFlag } from './rules';
 import { SPELL_TURNS, applyStatus } from './status';
+import { empireBonus, heldFollies, isMounted } from './follyEffects';
 
 /**
  * Civ2-flavoured combat: two strengths, repeated coin flips, one survivor.
@@ -218,7 +219,9 @@ export function applySpellEffects(state: GameState, attacker: Unit, target: Unit
   // randomness.
   const casts: 'burning' | 'frozen' =
     fire && ice ? (state.turn % 2 === 0 ? 'burning' : 'frozen') : fire ? 'burning' : 'frozen';
-  applyStatus(target, casts, SPELL_TURNS[casts]);
+  // Section 111: with the Argument With The Sky, the weather holds its grudge longer.
+  const lasts = heldFollies(state, attacker.owner).reduce((m, b) => m * (b.spellTurnsMult ?? 1), 1);
+  applyStatus(target, casts, SPELL_TURNS[casts] * lasts);
 }
 
 /** What a dragon's breath does to whatever is standing behind its target. */
@@ -335,7 +338,8 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
       ? 1 + workingBuildings(state, homeCity).reduce((sum, b) => sum + (BUILDINGS[b]?.sallyBonus ?? 0), 0)
       : 1;
 
-  let total = type.attack;
+  // Section 111: built beside the Loudest Rock, and it swings a little harder for good.
+  let total = type.attack + (attacker.drilled ?? 0);
   // Losses. Ten Orcs that have taken half the damage they can take are Five
   // Orcs, and swing like five, which is what stops a big enough stack being
   // the answer to every question in the game. A singleton is unaffected.
@@ -400,7 +404,8 @@ export function defenseStrength(
     : 1;
   const fortified = defender.order === 'fortified' || city !== undefined;
 
-  let total = type.defense;
+  // Section 111: the Long Vigil, for anything that rides.
+  let total = type.defense + (isMounted(defender) ? empireBonus(state, defender.owner, (b) => b.mountedDefense) : 0);
   // The same losses, on the other foot: fewer of them left to hold the line.
   total *= headcount(defender);
   total *= rankBonus(defender);

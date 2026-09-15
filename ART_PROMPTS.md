@@ -1464,3 +1464,27 @@ That is fine: the pipeline crops the centre square before it does anything else.
 `straight` and `diagonal` are from the third drop, measured at 42% and 49% of the
 tile wide and within a few pixels of dead centre. The pieces that were not used
 are kept in `art_src/terrain/roads/not used/`.
+
+## Follies — 13 of 13 done
+
+Section 111's twelve one-of-a-kind buildings and the one advance they needed. The
+prompts, subjects and flavour are Jeremy's, in `docs/follies.md` and
+`docs/follies_bible.md`; the original images live in `art_src/follies`, and copies sit in
+`art_src/buildings` (and `art_src/tech` for the advance) under their ids so
+`tools/prepare_art.py` finds them.
+
+| id | kind | subject |
+|---|---|---|
+| `firstLedger` | building, shared | an ancient scroll under glass on a stone plinth |
+| `yellingWall` | building, shared | a tall, disproportionately thick section of grey wall |
+| `longPeaceMonument` | building, shared | a stone obelisk with a carved dove, one wing chipped |
+| `skyArgumentSpire` | building, shared | a thin spire, flame up one side and frost up the other |
+| `sky-argument` | advance | a storm cloud split down the middle, orange lightning and blue frost |
+| `loudestRock` | building, Horde | an enormous smooth boulder with a deep worn seat |
+| `bonepit` | building, Horde | a sunken pit of stacked bones and rusted weapons |
+| `bargainStone` | building, Horde | a dark standing stone with tally marks glowing violet |
+| `longMarchRoad` | building, Horde | a straight dirt road to the horizon, banners along it |
+| `unfinishedCathedral` | building, Kingdom | a cathedral front, half finished stone and half scaffold |
+| `rumblingArchive` | building, Kingdom | a shelf of books with a golden glow between the spines |
+| `longVigilShrine` | building, Kingdom | a small shrine with one candle burning |
+| `learnedCommittee` | building, Kingdom | a round table, empty chairs, one very tall stack of papers |

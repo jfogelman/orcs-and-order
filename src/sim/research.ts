@@ -7,6 +7,7 @@ import type { UnitTypeDef } from '../model/units';
 import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
 import { ALT_VICTORY } from './endings';
+import { FOLLIES } from './follyEffects';
 
 /**
  * Research: what a player knows, what they can learn next, and what that
@@ -25,7 +26,9 @@ export function researchableTechs(player: Player): TechDef[] {
       !knowsTech(player, t.id) &&
       t.prereqs.every((p) => knowsTech(player, p)) &&
       // Section 110's advances lead nowhere while the endings are switched off.
-      (ALT_VICTORY.enabled || !t.flags.includes('ending')),
+      (ALT_VICTORY.enabled || !t.flags.includes('ending')) &&
+      // Nor section 111's, while the follies are.
+      (FOLLIES.enabled || !t.flags.includes('folly')),
   );
 }
 

@@ -30,6 +30,8 @@ import {
   startRoad,
   stepCost,
 } from './roads';
+import { BUILDINGS } from '../model/buildings';
+import { isFolly } from './follyEffects';
 
 /**
  * Movement, and the one place where moving turns into fighting.
@@ -351,7 +353,8 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
   // than it had been to take, so cities flipped back and forth for the rest of
   // the game and no war ever resolved. Whoever holds the city holds its walls.
   for (let razed = 0; razed < severity; razed++) {
-    const sackable = city.buildings.filter((b) => b !== 'walls');
+    // Nor a folly (section 111): there is only one, and it is worth more standing.
+    const sackable = city.buildings.filter((b) => b !== 'walls' && !isFolly(BUILDINGS[b]));
     if (sackable.length === 0) break;
     const lost = withRng(state, (rng) => rng.pick(sackable));
     city.buildings = city.buildings.filter((b) => b !== lost);

@@ -90,6 +90,34 @@ export interface BuildingDef {
    * begun. Any city, one per empire, never for gold. See `sim/endings.ts`.
    */
   endingPart?: 'portal' | 'object';
+  /**
+   * Section 111: a folly, of which there is only one. `'world'` once in the whole
+   * game, and a race between both sides; `'faction'` once per empire. Never for
+   * gold, never sold, never sacked. See `sim/follies.ts`.
+   */
+  folly?: 'world' | 'faction';
+  /** Rings of sight added to the city holding it. */
+  citySight?: number;
+  /** The city holding it sees over anything, hills and forest included. */
+  sightUnblocked?: boolean;
+  /** Content citizens added in every city of the empire holding it. */
+  empireContent?: number;
+  /** Multiplies how long the holder's burning and freezing last. */
+  spellTurnsMult?: number;
+  /** Attack added, for good, to every unit built in the city holding it. */
+  builtAttack?: number;
+  /** Ranks added to the starting rank of every unit built in the city holding it. */
+  builtRanks?: number;
+  /** Tiles of extra reach for mages built in the city holding it. */
+  builtReach?: number;
+  /** Share of a donor's health a Dark Bargain takes for the holder, for the same healing. */
+  bargainTakes?: number;
+  /** Movement added to the holder's units that begin their turn on its own land. */
+  homeMoves?: number;
+  /** Defence added to the holder's mounted units. */
+  mountedDefense?: number;
+  /** Sight added to every one of the holder's units. */
+  unitSight?: number;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -428,6 +456,154 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'Grey, about the size of a barrel, with one button on top. Only in a city holding the ' +
       'Committee Chamber or the Pedestal, once both stand. Nobody is told what the button does. Hold the city ' +
       'long enough and somebody finds out.',
+  },
+  // Section 111: the follies. One of each, ever -- shared ones once in the whole
+  // game, the rest once per empire. Priced by how deep the advance they ride on
+  // sits: 150 behind one of 45 to 85 beakers, 200 behind 100 to 130, 250 beyond.
+  // No upkeep; the price is the shields. Flavour is Jeremy's, from the follies bible.
+  firstLedger: {
+    id: 'firstLedger',
+    name: 'The First Ledger',
+    faction: 'both',
+    cost: 150,
+    upkeep: 0,
+    folly: 'world',
+    goldBonus: 0.5,
+    blurb:
+      'The original tax record, preserved out of either reverence or spite. It has been copied so ' +
+      'many times nobody is sure the original numbers were ever right.',
+  },
+  yellingWall: {
+    id: 'yellingWall',
+    name: 'The Yelling Wall',
+    faction: 'both',
+    cost: 200,
+    upkeep: 0,
+    folly: 'world',
+    citySight: 2,
+    sightUnblocked: true,
+    blurb:
+      'A wall so tall both sides claim credit for the idea. Nobody remembers who suggested it ' +
+      "first. Everyone remembers whose idea it definitely wasn't.",
+  },
+  longPeaceMonument: {
+    id: 'longPeaceMonument',
+    name: 'The Long Peace',
+    faction: 'both',
+    cost: 250,
+    upkeep: 0,
+    folly: 'world',
+    empireContent: 1,
+    blurb:
+      'Erected during a brief, genuine cessation of hostilities, and finished just after ' +
+      'hostilities resumed. The plaque was updated. The peace was not.',
+  },
+  skyArgumentSpire: {
+    id: 'skyArgumentSpire',
+    name: 'The Argument With The Sky',
+    faction: 'both',
+    cost: 250,
+    upkeep: 0,
+    folly: 'world',
+    spellTurnsMult: 2,
+    blurb:
+      'Fire and cold were each mastered separately and immediately turned on each other. The ' +
+      'weather has held a grudge ever since.',
+  },
+  loudestRock: {
+    id: 'loudestRock',
+    name: 'The Loudest Rock',
+    faction: 'orc',
+    cost: 150,
+    upkeep: 0,
+    folly: 'faction',
+    builtAttack: 1,
+    blurb:
+      'The biggest thinking-rock ever raised, mostly so orcs can shout at it from further away. ' +
+      'It has never once thought anything back. Not to be confused with the Considerably Bigger ' +
+      'Rock, a completely different rock.',
+  },
+  bonepit: {
+    id: 'bonepit',
+    name: 'The Bonepit',
+    faction: 'orc',
+    cost: 150,
+    upkeep: 0,
+    folly: 'faction',
+    builtRanks: 1,
+    blurb:
+      'An ever-growing monument built from every enemy the Horde has definitely, actually, ' +
+      'historically beaten. The pit does not lie, though it has been known to exaggerate.',
+  },
+  bargainStone: {
+    id: 'bargainStone',
+    name: 'The Bargain Stone',
+    faction: 'orc',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    bargainTakes: 1 / 3,
+    blurb:
+      'A record of every deal struck with the dead, kept mostly so nobody has to remember the ' +
+      'terms out loud a second time.',
+  },
+  longMarchRoad: {
+    id: 'longMarchRoad',
+    name: 'The Long March',
+    faction: 'orc',
+    cost: 250,
+    upkeep: 0,
+    folly: 'faction',
+    homeMoves: 1,
+    blurb:
+      'The Horde has finished writing down its one plan for the late game and has now also ' +
+      'finished walking there ahead of schedule.',
+  },
+  unfinishedCathedral: {
+    id: 'unfinishedCathedral',
+    name: 'The Unfinished Cathedral',
+    faction: 'human',
+    cost: 150,
+    upkeep: 0,
+    folly: 'faction',
+    contentBonus: 1,
+    blurb:
+      'Construction has been "almost done" for two generations. The committee overseeing its ' +
+      'completion has itself required a committee.',
+  },
+  rumblingArchive: {
+    id: 'rumblingArchive',
+    name: 'The Rumbling Archive',
+    faction: 'human',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    builtReach: 1,
+    blurb:
+      "Every recorded instance of someone's voice making something true. Cross-referencing it " +
+      'against actual events has been deliberately deprioritised.',
+  },
+  longVigilShrine: {
+    id: 'longVigilShrine',
+    name: 'The Long Vigil',
+    faction: 'human',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    mountedDefense: 1,
+    blurb: 'A vow, sworn once, renewed constantly, and never once actually finished being kept.',
+  },
+  learnedCommittee: {
+    id: 'learnedCommittee',
+    name: 'The Learned Committee',
+    faction: 'human',
+    cost: 250,
+    upkeep: 0,
+    folly: 'faction',
+    unitSight: 1,
+    blurb:
+      "A standing body convened to watch the horizon on the Kingdom's behalf. It has produced " +
+      'fourteen reports and no horizon.',
   },
 };
 

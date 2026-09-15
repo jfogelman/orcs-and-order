@@ -154,6 +154,8 @@ TECH_ICONS = [
     "pyromancy", "cryomancy",
     # The two endings, from DESIGN_QUEUE section 110.
     "somebody-knocked", "do-not-touch",
+    # The one advance the follies needed of their own, section 111.
+    "sky-argument",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -169,6 +171,10 @@ BUILDING_ICONS = [
     # Section 110's endings: two lesser works and a final one, a side.
     "knockingStones", "offeringPit", "demonPortal",
     "committeeChamber", "pedestal", "mysteriousObject",
+    # Section 111's follies: four shared, four a side.
+    "firstLedger", "yellingWall", "longPeaceMonument", "skyArgumentSpire",
+    "loudestRock", "bonepit", "bargainStone", "longMarchRoad",
+    "unfinishedCathedral", "rumblingArchive", "longVigilShrine", "learnedCommittee",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the

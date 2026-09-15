@@ -44,6 +44,7 @@ import {
 import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
 import { POSTS, startPost } from '../sim/posts';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
+import { isFolly } from '../sim/follyEffects';
 
 /**
  * The opposition.
@@ -176,6 +177,11 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'somebody-knocked',
       'stupidity-for-all',
       'full-of-fire',
+      // Section 111: the one folly with an advance of its own needs both elements.
+      // Left off every list, no AI ever built it in eight probed games.
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
     ],
     caution: 0.25,
     stormingParty: 3,
@@ -227,6 +233,10 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // Section 110, as for the Horde.
       'insanity',
       'do-not-touch',
+      // Section 111, as for the Horde.
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
     ],
     // The single most sensitive number in the file, and the only one that
     // moved faction balance at all. Measured over 18 seeds:
@@ -618,6 +628,18 @@ function chooseProduction(
     (b) => isEndingPiece(b) && (!!b.victory || amongBusiest(state, city, 2)),
   );
   if (ending) return { kind: 'building', id: ending.id };
+
+  // 3a'. A folly (section 111), in one of the empire's two busiest cities, and only
+  // one under way at a time. After the endings, which win the game; ahead of the
+  // rest, because there is only one of each and somebody else may get there first.
+  // One at a time so twelve of them cannot crowd out an army.
+  const follyUnderWay = playerCities(state, city.owner).some(
+    (c) => c.id !== city.id && c.producing.kind === 'building' && isFolly(BUILDINGS[c.producing.id]),
+  );
+  const folly = follyUnderWay
+    ? undefined
+    : options.buildings.find((b) => isFolly(b) && amongBusiest(state, city, 2));
+  if (folly) return { kind: 'building', id: folly.id };
 
   // 3b. If the enemy is turtling behind walls, build something that ignores
   // them. Without this the AI keeps making melee units that cannot get in.
