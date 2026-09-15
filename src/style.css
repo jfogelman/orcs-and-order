@@ -1723,6 +1723,10 @@ kbd {
   padding: 8px;
   text-align: center;
   cursor: pointer;
+  /* A card is a button, and buttons do not wrap: the blurb ran straight out of
+     the card and under its neighbours, and scrolled the dialog sideways. */
+  white-space: normal;
+  min-width: 0;
 }
 
 .pride-art {
@@ -1738,4 +1742,49 @@ kbd {
 .pride-blurb {
   font-style: italic;
   opacity: 0.75;
+  overflow-wrap: anywhere;
+}
+
+/* The piece just chosen, fading into the capital. Opacity and a glow only:
+   a mirrored piece already uses its transform to face the other way. */
+.palace-piece.arriving {
+  animation: palace-arrive 1.8s ease-out both;
+}
+
+@keyframes palace-arrive {
+  0% {
+    opacity: 0;
+    filter: brightness(1.8) drop-shadow(0 0 6px rgba(240, 200, 90, 0.9));
+  }
+  60% {
+    opacity: 1;
+    filter: brightness(1.25) drop-shadow(0 0 4px rgba(240, 200, 90, 0.6));
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+/* And its name in the list below, for a little longer. */
+.chip.arriving {
+  animation: palace-chip 3s ease-out both;
+}
+
+@keyframes palace-chip {
+  0%,
+  40% {
+    border-color: rgba(240, 200, 90, 0.9);
+    box-shadow: 0 0 6px rgba(240, 200, 90, 0.6);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palace-piece.arriving,
+  .chip.arriving {
+    animation: none;
+  }
 }

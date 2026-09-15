@@ -21,7 +21,8 @@ import { escapeHtml, openModal } from './dom';
 export function openPrideOffer(
   state: GameState,
   playerId: number,
-  onTaken: () => void,
+  /** Called with the art of the piece taken, so the capital can show it arriving. */
+  onTaken: (arriving: string) => void,
 ): void {
   const player = state.players[playerId];
   const faction = player.faction;
@@ -85,7 +86,7 @@ export function openPrideOffer(
             'built',
           );
           close();
-          onTaken();
+          onTaken(palaceArt(faction, id, tier));
         }),
       );
     },

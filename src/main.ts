@@ -59,6 +59,7 @@ import {
 } from './sim/combat';
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
+import { capitalOf } from './sim/city';
 import { prideDue } from './sim/turn';
 import { openHordeReport } from './ui/hordeReport';
 import {
@@ -874,9 +875,14 @@ class App {
   private promptPrideIfDue(): void {
     if (isModalOpen() || isOver(this.state)) return;
     if (!prideDue(this.state, this.viewerId)) return;
-    openPrideOffer(this.state, this.viewerId, () => {
+    openPrideOffer(this.state, this.viewerId, (arriving) => {
       this.playLogCues();
       this.refreshHud();
+      // Then show it: the capital, with the new piece fading into place.
+      const seat = capitalOf(this.state, this.viewerId);
+      if (seat) {
+        openCityPanel(this.state, seat, () => this.refreshHud(), (u) => this.select(u), arriving);
+      }
     });
   }
 
