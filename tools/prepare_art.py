@@ -145,7 +145,7 @@ TECH_ICONS = [
     "first-orc", "goblin-smarts", "suicidal-goblins", "underground-smarts",
     "orc-meaning", "to-be-an-orc",
     "axes", "axes-crazy", "throwing-buddies", "my-little-friend",
-    "dead-messed-up", "full-of-fire",
+    "dead-messed-up", "full-of-fire", "club-improvement",
     "first-human",
     "see-the-world", "archery", "pointed-ears", "arrows-glory",
     "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
