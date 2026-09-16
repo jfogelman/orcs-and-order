@@ -64,10 +64,12 @@ const control = () => {
   // Back to the quiet game for section 102: the baseline it has to beat is
   // section 101's Posting table, which was measured without raiders.
   NEW_GAME.barbarians = false;
-  // Section 110's endings, at their shipping settings.
+  // Section 110's endings, at their shipping settings -- fifteen turns, not the
+  // ten they were first measured at. Left at ten here, every arm since would have
+  // been measuring a game nobody plays.
   ALT_VICTORY.enabled = true;
-  ALT_VICTORY.portalTurns = 10;
-  ALT_VICTORY.objectTurns = 10;
+  ALT_VICTORY.portalTurns = 15;
+  ALT_VICTORY.objectTurns = 15;
 };
 
 const ARMS: Arm[] = [
