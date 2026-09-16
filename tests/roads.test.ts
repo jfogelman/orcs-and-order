@@ -142,6 +142,45 @@ describe('walking on a road', () => {
   });
 });
 
+describe('a road-to that has nowhere left to dig', () => {
+  it('ends at your own city instead of waiting at the gate for ever', () => {
+    // Reported from a real game (turn 69): both Peons stood on a road with a
+    // standing Road To pointed at one of the player's own cities, and did
+    // nothing for the rest of the game. A city can never take a road and always
+    // has somebody standing in it, so the step was refused as a traffic jam,
+    // the worker waited, and there was nothing to dig where it stood.
+    const state = flatWorld();
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    const home = city(state, 6, 5);
+    spawnUnit(state, 0, 'goblin', home.x, home.y, false);
+    lay(state, [5, 5]);
+
+    expect(startRoadTo(state, peon, home.x, home.y).ok).toBe(true);
+    for (let t = 0; t < 4; t++) beginPlayerTurn(state, 0);
+
+    expect(peon.roadTo).toBeUndefined();
+    expect(peon.order).not.toBe('road');
+    expect([peon.x, peon.y]).toEqual([5, 5]);
+    expect(state.log.some((e) => /nothing left to lay/.test(e.text))).toBe(true);
+  });
+
+  it('still digs its way there when the ground wants a road', () => {
+    const state = flatWorld();
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    lay(state, [5, 5]);
+    const home = city(state, 9, 5);
+
+    expect(startRoadTo(state, peon, home.x, home.y).ok).toBe(true);
+    for (let t = 0; t < 12; t++) beginPlayerTurn(state, 0);
+
+    // The three tiles between the road it started on and the city gate.
+    for (const [x, y] of [[6, 5], [7, 5], [8, 5]] as const) {
+      expect(hasRoad(state, x, y), `${x},${y}`).toBe(true);
+    }
+    expect(peon.roadTo).toBeUndefined();
+  });
+});
+
 describe('laying a road', () => {
   it('takes a Peon two turns on open ground', () => {
     const state = flatWorld('grass');

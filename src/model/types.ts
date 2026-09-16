@@ -99,6 +99,12 @@ export interface Player {
    * begun, and a work's entry is deleted when it is finished.
    */
   worksBanked?: Record<string, number>;
+  /**
+   * Shared follies this empire has already been told somebody started, by
+   * building id, so the announcement is made once each. Section 111. Absent
+   * until the first one is begun, and in every save from before them.
+   */
+  folliesTold?: string[];
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */

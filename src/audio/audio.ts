@@ -48,7 +48,9 @@ export type SfxId =
   | 'coin'
   | 'explosion'
   // Section 111: a folly is finished, which deserves a fanfare.
-  | 'folly';
+  | 'folly'
+  // And the race for a shared one: somebody has started, or somebody has won.
+  | 'folly-race';
 
 /**
  * Exported so tests can check that every cue the simulation emits names a
@@ -71,6 +73,7 @@ const LINGERING: ReadonlySet<SfxId> = new Set<SfxId>([
   'capture',
   'turn',
   'folly',
+  'folly-race',
 ]);
 
 export const SFX_FILES: Record<SfxId, string> = {
@@ -111,6 +114,8 @@ export const SFX_FILES: Record<SfxId, string> = {
   // trail still matches the download.
   explosion: 'xplosion.mp3',
   folly: 'geoffreyburch-handy-introduction-022-glbml-21786.mp3',
+  // The advance chime: the news is that somebody now knows something.
+  'folly-race': 'discovery.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */

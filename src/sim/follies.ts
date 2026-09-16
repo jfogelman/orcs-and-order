@@ -17,7 +17,7 @@ import { FOLLIES, isFolly } from './follyEffects';
  * - None is bought with gold, sold by bankruptcy, or destroyed by sacking.
  * - Taken with its city, a shared folly works for its new owner. A faction folly
  *   is torn down, and its builder may raise it again.
- * - Everybody is told when one is finished.
+ * - Everybody is told when work begins on a shared one, and when any is finished.
  *
  * What each one does lives on its `BuildingDef` and is read in `follyEffects.ts`.
  */
@@ -38,10 +38,51 @@ export function follyOffered(state: GameState, city: City, b: BuildingDef): bool
  * Tell everybody, with a line for the builder and a line for everyone else. The
  * builder's line carries the fanfare; nobody else is in a mood to hear one.
  */
-function tellEverybody(state: GameState, builder: number, ours: string, theirs: string, city: City): void {
+function tellEverybody(
+  state: GameState,
+  builder: number,
+  ours: string,
+  theirs: string,
+  city: City,
+  cue: { ours?: string; theirs?: string } = { ours: 'folly' },
+): void {
   for (const p of contenders(state)) {
     const mine = p.id === builder;
-    log(state, mine ? ours : theirs, mine ? 'good' : 'info', p.id, mine ? 'folly' : undefined, [city.x, city.y]);
+    log(state, mine ? ours : theirs, mine ? 'good' : 'info', p.id, mine ? cue.ours : cue.theirs, [
+      city.x,
+      city.y,
+    ]);
+  }
+}
+
+/**
+ * Everybody is told the first time a shared folly is begun anywhere.
+ *
+ * There is only one of it, so knowing somebody has started is the difference
+ * between racing and wasting a city's production -- which is exactly what
+ * happened in a real game, where the first anybody heard of The First Ledger was
+ * the line saying theirs was finished and ours had stopped.
+ */
+export function announceFollyStarts(state: GameState): void {
+  if (!FOLLIES.enabled) return;
+  for (const p of contenders(state)) {
+    for (const city of playerCities(state, p.id)) {
+      const item = city.producing;
+      if (item.kind !== 'building') continue;
+      const b = BUILDINGS[item.id];
+      if (b?.folly !== 'world') continue;
+      const told = (state.players[p.id].folliesTold ??= []);
+      if (told.includes(b.id)) continue;
+      told.push(b.id);
+      tellEverybody(
+        state,
+        p.id,
+        `Work has begun on ${b.name} in ${city.name}. There is only one, and everybody now knows we want it.`,
+        `${p.name} has begun ${b.name} in ${city.name}. There is only one: build it first, or not at all.`,
+        city,
+        { ours: 'folly-race', theirs: 'folly-race' },
+      );
+    }
   }
 }
 
@@ -90,14 +131,18 @@ export function follyFinished(state: GameState, city: City, built: BuildingDef):
     }
     if (!home) continue;
     home.shields += banked;
+    // Said plainly, and with a noise. There is only one of a shared folly, so a
+    // city building the other side's copy simply stops -- which, reported from a
+    // real game, reads as the build vanishing out of the queue.
     log(
       state,
-      banked > 0
-        ? `${owner.name} finished ${built.name} first. The ${banked} shields put into ours go back into ${home.name}'s stores.`
-        : `${owner.name} finished ${built.name} first. ${home.name} stops work on it.`,
+      `${built.name} is lost: ${owner.name} finished theirs first, and there is only one. ` +
+        (banked > 0
+          ? `${home.name} stops work and keeps the ${banked} shields put into it.`
+          : `${home.name} stops work on it.`),
       'bad',
       p.id,
-      undefined,
+      'folly-race',
       [home.x, home.y],
     );
   }
@@ -111,6 +156,7 @@ export function follyFinished(state: GameState, city: City, built: BuildingDef):
  * whoever holds the city.
  */
 export function checkFollies(state: GameState): void {
+  announceFollyStarts(state);
   for (const city of state.cities) {
     const owner = state.players[city.owner];
     if (!owner) continue;

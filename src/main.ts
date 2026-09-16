@@ -59,6 +59,7 @@ import {
 } from './sim/combat';
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
+import { openNotice } from './ui/notice';
 import { capitalOf } from './sim/city';
 import { prideDue } from './sim/turn';
 import { openHordeReport } from './ui/hordeReport';
@@ -594,6 +595,8 @@ class App {
 
   /** Whether the next click on the map is where the selected worker's road goes. */
   private roadArmed = false;
+  /** How much of the log has already been raised as folly news. Section 111. */
+  private follyNewsSeen = 0;
 
   /**
    * Arm "Road To": the next click on the map sets where the road goes.
@@ -817,6 +820,9 @@ class App {
     this.promptPrideIfDue();
     if (isModalOpen()) return chain();
 
+    this.promptFollyNews();
+    if (isModalOpen()) return chain();
+
     if (!this.askedResearch) {
       this.askedResearch = true;
       this.promptResearchIfIdle();
@@ -862,6 +868,30 @@ class App {
       // Passed through, so the room talks about what it interrupted for.
       openAdvisors(this.state, this.viewerId, raise),
     );
+  }
+
+  /**
+   * Section 111: a shared folly has been begun, or won, somewhere.
+   *
+   * Straight off the log, by cue, rather than by watching the rules: the sim
+   * already says these things to whoever they concern, and the only thing
+   * missing was that a line in the log is not enough to act on. There is one of
+   * each shared folly in the whole game, so somebody else starting one changes
+   * what your cities should be building.
+   */
+  private promptFollyNews(): void {
+    if (isOver(this.state)) return;
+    const fresh = this.state.log.slice(this.follyNewsSeen);
+    this.follyNewsSeen = this.state.log.length;
+    const lines = fresh
+      .filter(
+        (e) =>
+          (e.cue === 'folly' || e.cue === 'folly-race') &&
+          (e.player === null || e.player === this.viewerId),
+      )
+      .map((e) => e.text);
+    if (lines.length === 0) return;
+    openNotice(lines.length === 1 ? 'A folly' : 'The follies', lines);
   }
 
   /**
