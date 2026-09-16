@@ -178,10 +178,14 @@ recipe to follow when any of it is re-rolled.
 - **Group sprites.** Composed at runtime. See above.
 - **UI art.** The panels are CSS.
 - **More terrain.** All eight exist and tile well.
+- **The Posting buildings** (`orcPosting`, `soldierPosting`). Section 102 switched them
+  off for good and replaced them with a hut on a tile; they are kept only so a save
+  carrying one still loads, and the Orcpedia no longer lists them. Reported as "orc
+  posting has no image", which it never will have.
 
 ---
 
-## Advance icons — 42 of 44 done
+## Advance icons — 43 of 44 done
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -260,6 +264,16 @@ went wrong.
 | `my-little-friend` | a small figure standing beside a much larger silhouette |
 | `dead-messed-up` | a cracked skull with faint violet glow in the eye sockets |
 | `full-of-fire` | a red dragon's head breathing a gout of orange flame |
+
+### The one advance still without an icon
+
+| id | Advance | Icon subject |
+|---|---|---|
+| `club-improvement` | Improvements to the Club | a heavy wooden club held upright, its head bristling with hammered-in iron nails and one bent horseshoe, a strip of hide bound round the grip |
+
+Section 44's advance: the ogres' club, improved by the addition of more things to it.
+Nothing else in the tree is missing one -- the ten that look absent are the counting
+ladder, stamped from three heads by `COMPOSED_ICONS`.
 
 ### Human branches
 

@@ -15,7 +15,7 @@ import { BARBARIANS, RAIDER } from '../sim/barbarians';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
-import { CIVIC_PRIDE } from '../sim/city';
+import { CIVIC_PRIDE, POSTING } from '../sim/city';
 import { ALT_VICTORY } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
 
@@ -334,6 +334,10 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
   const buildingList = BUILDING_IDS.map((id) => BUILDINGS[id])
     .filter((b) => b.faction === 'both' || b.faction === faction)
+    // A Posting pays nothing and is not offered while section 102's lever is off,
+    // so listing one here is the same trap `buildOptions` refuses to set: an entry
+    // for a building the player can never have, with no art to draw it by.
+    .filter((b) => POSTING.enabled || !(b.garrisonNeeded && b.contentBonus))
     .map(
       (b) => `
       <div class="pedia-tech-row" id="pedia-b-${escapeHtml(b.id)}">
@@ -410,6 +414,18 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           defence, no upkeep. The capital is a picture of how the game has gone, and the city view
           draws it.
         </p>
+        ${
+          ALT_VICTORY.enabled
+            ? `<p class="flavor">
+          <strong>Three works end the game.</strong> The Horde's <em>Demonic Portal</em> and the
+          Kingdom's <em>Mysterious Object</em> each need two lesser works first; the last one goes
+          up in a city holding one of them, and its builder wins if it still holds that city
+          ${ALT_VICTORY.portalTurns} turns later. One of each per empire, never bought with gold,
+          and everybody is told when work begins and as each is finished. Take the city and
+          whatever stands in it is torn down. The advance is at the far end of your own tree.
+        </p>`
+            : ''
+        }
         ${
           FOLLIES.enabled
             ? `<p class="flavor">
