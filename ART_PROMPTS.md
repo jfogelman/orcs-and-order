@@ -149,7 +149,7 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Unit sprites | 17 | done |
 | City sprites | 6 | done |
 | Terrain sets | 8 | done |
-| Advance icons | 42 | done |
+| Advance icons | 44 | done |
 | Building icons | 10 | done |
 | Sound and music | 33 + 3 | done |
 | Effect animations | 10 | done and wired |
@@ -185,7 +185,7 @@ recipe to follow when any of it is re-rolled.
 
 ---
 
-## Advance icons — 43 of 44 done
+## Advance icons — all 44 done
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -265,15 +265,15 @@ went wrong.
 | `dead-messed-up` | a cracked skull with faint violet glow in the eye sockets |
 | `full-of-fire` | a red dragon's head breathing a gout of orange flame |
 
-### The one advance still without an icon
+### The last one drawn
 
-| id | Advance | Icon subject |
-|---|---|---|
-| `club-improvement` | Improvements to the Club | a heavy wooden club held upright, its head bristling with hammered-in iron nails and one bent horseshoe, a strip of hide bound round the grip |
+| id | Advance | Icon subject | Status |
+|---|---|---|---|
+| `club-improvement` | Improvements to the Club | a heavy wooden club held upright, its head bristling with hammered-in iron nails and one bent horseshoe, a strip of hide bound round the grip | done |
 
 Section 44's advance: the ogres' club, improved by the addition of more things to it.
-Nothing else in the tree is missing one -- the ten that look absent are the counting
-ladder, stamped from three heads by `COMPOSED_ICONS`.
+It was the only advance in the tree without an icon -- the ten that look absent are
+the counting ladder, stamped from three heads by `COMPOSED_ICONS`.
 
 ### Human branches
 
