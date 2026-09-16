@@ -8570,12 +8570,24 @@ they moved wins to the war -- and the Object still leads about three to two.
 **Shipped at this tuning** (Jeremy's call): good enough for a first version, with the
 balance to be revisited once it has been played and the art is in.
 
-> **Correction (section 111's re-sweep).** Every sweep in this section was run with
+> **Correction, and the real number.** Every sweep in this section was run with
 > `control()` in `tools/sweep.run.test.ts` pinning `portalTurns` and `objectTurns` to
 > **ten**, including the fifth one above -- so the 44-64 that decided the shipping
-> tuning describes ten-turn endings, not the fifteen that ship. Measured at fifteen,
-> with follies off, the Horde leads 58-50. Treat the tables above as a record of how
-> the levers moved against each other, not as the shipped balance.
+> tuning describes ten-turn endings, not the fifteen that ship. Re-measured at the
+> shipped counts, with section 111's follies on in both arms (2026-09-16):
+>
+> | arm | tuned | held-out | pooled | conquest / dominance / points / Portal / Object |
+> |---|---|---|---|---|
+> | endings off | 31-23 | 35-19 | **66-42** | 27 / 10 / 71 / -- / -- |
+> | endings on | 28-26 | 34-20 | **62-46** | 27 / 15 / 8 / 34 / 24 |
+>
+> **The endings cost the Horde four games in 108, not thirteen**, and they still do
+> what section 10 asked: points endings fall from 71 to 8 and games end 29 turns
+> sooner (259 to 230). They decide 58 games of 108, the Portal now ahead of the
+> Object, 34 to 24 -- the reverse of the ten-turn measurement, because the extra five
+> turns cost the Kingdom more (it finishes later and has to hold longer). The tuning
+> above was chosen against numbers that overstated the lean by about nine games; it
+> is not wrong to ship, but nothing in this section's tables describes today's game.
 
 **Still open:**
 
@@ -8734,8 +8746,11 @@ its own arm -- but the lean they were tuned against was measured at ten.
 
 ### Still open
 
-1. **Re-run section 110's endings arm at the shipped counts** (endings off against
-   on, ~25 minutes), since its tuning was decided on ten-turn counts.
+1. ~~**Re-run section 110's endings arm at the shipped counts.**~~ Done
+   (2026-09-16), written up under section 110: the endings cost the Horde four games
+   in 108 rather than thirteen, and today's shipped game -- endings and follies both
+   on -- is Horde 62-46. That is about 57%, which section 90's band calls
+   unestablished, and it is the first honest measurement of the whole arc.
 2. **The Kingdom takes every late shared folly** it races for: the Long Peace and the
    Spire every time. If that matters in play, the lever is where the magic advances
    sit in the Horde's list, or the price of the late shared follies.

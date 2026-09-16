@@ -70,20 +70,22 @@ const control = () => {
   ALT_VICTORY.enabled = true;
   ALT_VICTORY.portalTurns = 15;
   ALT_VICTORY.objectTurns = 15;
+  // Section 111's follies ship too, so the game being measured has them.
+  FOLLIES.enabled = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 111: the twelve follies against the game without them. Off, none is
-  // offered and The Argument With The Sky is not researchable, so the control is
-  // the game as section 110 shipped it.
+  // Section 110's endings, at the counts that actually ship: fifteen turns, not
+  // the ten every earlier arm was measured against. Follies are on in both arms,
+  // because they ship -- this asks what the endings are worth in today's game.
   {
-    label: 'follies off',
+    label: 'endings off',
     apply: () => {
       control();
-      FOLLIES.enabled = false;
+      ALT_VICTORY.enabled = false;
     },
   },
-  { label: 'follies on', apply: control },
+  { label: 'endings on', apply: control },
 ];
 
 /**
