@@ -8751,9 +8751,29 @@ its own arm -- but the lean they were tuned against was measured at ten.
    in 108 rather than thirteen, and today's shipped game -- endings and follies both
    on -- is Horde 62-46. That is about 57%, which section 90's band calls
    unestablished, and it is the first honest measurement of the whole arc.
-2. **The Kingdom takes every late shared folly** it races for: the Long Peace and the
-   Spire every time. If that matters in play, the lever is where the magic advances
-   sit in the Horde's list, or the price of the late shared follies.
+2. **The Kingdom takes every late shared folly** -- attacked, and it costs balance.
+   Two causes, both real: the Horde's research list **never asked for Insanity**,
+   which the Long Peace and both magics need (it arrived around turn 190 by the
+   cheapest-thing fallback, against the Kingdom's 110), and neither side preferred
+   the one kind of folly another empire can take from it. Asking for Insanity
+   straight after Happiness, and building shared follies first
+   (`AI_TUNING.sharedFollyFirst`), moved the shared follies from 6-10 to 10-12 over
+   eight probe games -- the Long Peace from 0-5 to 3-2, the Yelling Wall to 2-2.
+   Only the Spire stays the Kingdom's, because it needs both magics and those sit
+   at the end of the Horde's list.
+
+   **But it hands the Horde the game**: 67-41 against 62-46, and the two seed sets
+   disagree about how much (+6 tuned, -1 held-out), which is the shape of a change
+   smaller than it looks sitting on top of a game that already leaned Horde 57%.
+   Insanity carries `berserk`, so this is tempo, not just buildings. The two halves
+   are separable -- the preference is symmetric and free; the research move is the
+   lever.
+
+   **Both shipped** (Jeremy's call): the follies are worth contesting and the
+   held-out set says the gain is smaller than the pooled figure. **The Horde at
+   about 62% is now the thing to watch**, and this research move is the first lever
+   to reach for if play agrees -- put Insanity back at four fifths of the way down
+   the Horde's list and the Long Peace goes back to the Kingdom.
 3. **The AI does not aim from its mages' extra reach** (the Rumbling Archive); they
    still strike from their ordinary range.
 

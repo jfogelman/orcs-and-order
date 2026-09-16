@@ -159,6 +159,15 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'wall-building',
       'next-level-stupid',
       'happiness',
+      // Section 111: straight after its own prerequisite, because three things hang
+      // off Insanity -- the Long Peace rides on it, and both magics sit under it --
+      // and the list asked for none of them. Left off entirely, the Horde reached
+      // the branch only when the cheapest-thing fallback found it, around turn 190
+      // against the Kingdom's 110, and the Kingdom took every late shared folly it
+      // raced for. Asked for at the same depth as the Kingdom's own it still
+      // arrived forty turns late, because what stands in front of it here is the
+      // Horde's own long line rather than a handful of cheap advances.
+      'insanity',
       'axes-crazy',
       'beyond-stupid',
       'my-little-friend',
@@ -636,9 +645,15 @@ function chooseProduction(
   const follyUnderWay = playerCities(state, city.owner).some(
     (c) => c.id !== city.id && c.producing.kind === 'building' && isFolly(BUILDINGS[c.producing.id]),
   );
+  // A shared one first, always: it is the only kind that can be lost to somebody
+  // else, and an empire that spends its one folly slot on a building nobody is
+  // racing it for hands over every contested one. The Kingdom took the Long Peace
+  // five times of five and the Spire six of six while both sides built in the
+  // order the list happened to offer.
+  const offered = options.buildings.filter((b) => isFolly(b) && amongBusiest(state, city, 2));
   const folly = follyUnderWay
     ? undefined
-    : options.buildings.find((b) => isFolly(b) && amongBusiest(state, city, 2));
+    : ((AI_TUNING.sharedFollyFirst ? offered.find((b) => b.folly === 'world') : undefined) ?? offered[0]);
   if (folly) return { kind: 'building', id: folly.id };
 
   // 3b. If the enemy is turtling behind walls, build something that ignores
@@ -1501,6 +1516,15 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
  * selling its own buildings off the moment upkeep exceeded income.
  */
 export const AI_TUNING = {
+  /**
+   * Whether a shared folly is preferred over one of its own. Section 111.
+   *
+   * A shared folly is the only building in the game somebody else can take from
+   * you. Spending the one folly a city builds at a time on something nobody is
+   * racing for hands over every contested one, which is what happened: the
+   * Kingdom took the Long Peace five times of five and the Spire six of six.
+   */
+  sharedFollyFirst: true,
   /**
    * Whether the AI spends gold on production at all. **Off, and measured.**
    *
