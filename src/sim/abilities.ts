@@ -74,6 +74,18 @@ export { ammoLeft, needsAmmo } from '../model/units';
 /** Rounds a ranged attack resolves before both sides stop. */
 export const RANGED_ROUNDS = 3;
 
+/**
+ * How far this unit can actually strike: what its kind can do, plus whatever the
+ * city it was built in added (section 111's Rumbling Archive).
+ *
+ * One answer, in one place, because the rule and the AI asking "where can I shoot
+ * from" have to agree -- they did not, and a mage with the extra tile was given a
+ * range it would never stand at.
+ */
+export function unitReach(unit: Unit): number {
+  return unitType(unit.type).range + (unit.reach ?? 0);
+}
+
 /** How much harder a thrown weapon hits than the same creature swinging it. */
 export const THROW_BONUS = 1.5;
 
@@ -153,7 +165,7 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // next to it, which is the drawback that makes the range worth having.
       if (other.owner === unit.owner) return false;
       // Section 111: a mage from the Rumbling Archive may also stand further back.
-      return d >= type.range && d <= type.range + (unit.reach ?? 0);
+      return d >= type.range && d <= unitReach(unit);
     }
 
     if (ability === 'drain') {

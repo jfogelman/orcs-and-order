@@ -31,7 +31,7 @@ import {
 import { rankBonus } from '../sim/combat';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
-import { abilityReady, abilityTargets, useAbility } from '../sim/abilities';
+import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
 import {
   attackTargets,
@@ -1172,16 +1172,21 @@ function fireIfPossible(state: GameState, unit: Unit): boolean {
 /**
  * Step to somewhere a shot is actually possible.
  *
- * Reach is *exactly* one distance -- a ranged unit cannot lob one at somebody
- * standing next to it -- so a unit that simply marches at the enemy walks
- * straight through its own firing position and ends up in a brawl. This looks
- * for a reachable tile at exactly that distance from something, and with
- * nothing closer, which also walks a unit that is already in a brawl back out
- * of one.
+ * Reach is a band, not a line: a ranged unit cannot lob one at somebody standing
+ * next to it, and a mage built beside section 111's Rumbling Archive may also
+ * stand a tile further back. A unit that simply marches at the enemy walks
+ * straight through its own firing position and ends up in a brawl, so this looks
+ * for a reachable tile within the band and with nothing closer -- which also
+ * walks a unit that is already in a brawl back out of one.
+ *
+ * It asks `unitReach`, the same answer `abilityTargets` gives. Asking the unit's
+ * *kind* instead is what left the Archive's extra tile unused: the shot was legal
+ * from there and the AI would never stand there.
  */
 function takeAim(state: GameState, unit: Unit): boolean {
-  const reach = unitType(unit.type).range;
-  if (reach <= 1) return false;
+  const near = unitType(unit.type).range;
+  const far = unitReach(unit);
+  if (far <= 1) return false;
   const seen = state.players[unit.owner].visible;
   const w = state.width;
   const enemies = state.units.filter(
@@ -1191,13 +1196,17 @@ function takeAim(state: GameState, unit: Unit): boolean {
 
   let bestIdx: number | null = null;
   let bestCost = Infinity;
+  let bestRoom = -1;
   for (const [idx, cost] of reachableTiles(state, unit)) {
     const x = idx % w;
     const y = Math.floor(idx / w);
     const nearest = Math.min(...enemies.map((e) => distance(x, y, e.x, e.y)));
-    // Exactly at reach, and nothing has closed inside it.
-    if (nearest !== reach) continue;
-    if (cost < bestCost) {
+    // Within the band, and nothing has closed inside it.
+    if (nearest < near || nearest > far) continue;
+    // The far edge of the band first: a tile further out is a tile the enemy has
+    // to spend another turn crossing, and the shot is the same either way.
+    if (nearest > bestRoom || (nearest === bestRoom && cost < bestCost)) {
+      bestRoom = nearest;
       bestCost = cost;
       bestIdx = idx;
     }
