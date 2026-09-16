@@ -3,7 +3,10 @@ import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
 import { TECHS, TECHS_BY_ID } from '../src/model/techs';
 import type { City, GameState } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
-import { abilityTargets } from '../src/sim/abilities';
+import { runAiTurn } from '../src/ai/ai';
+import { abilityTargets, unitReach } from '../src/sim/abilities';
+import { distance } from '../src/engine/grid';
+import { unitType } from '../src/model/units';
 import { assignWorkers, buildOptions, contentLimit, rushBlocked } from '../src/sim/city';
 import { attackStrength, defenseStrength } from '../src/sim/combat';
 import { workBanked } from '../src/sim/endings';
@@ -283,6 +286,44 @@ describe('what they do', () => {
     nextTurn(state);
     expect(home.moves).toBe(2);
     expect(away.moves).toBe(1);
+  });
+
+  it('counts the extra tile as part of what a mage can reach', () => {
+    const state = game();
+    const mage = spawnUnit(state, 1, 'mage', 14, 10, false);
+    expect(unitReach(mage)).toBe(unitType('mage').range);
+    mage.reach = 1;
+    expect(unitReach(mage)).toBe(unitType('mage').range + 1);
+  });
+
+  it('has the AI stand at the extra tile and shoot from it', () => {
+    // The rule allowed the shot and the AI aimed by its unit's kind, so a mage
+    // from the Archive walked through the further tile into the ordinary one.
+    const state = game();
+    state.players[1].controller = 'ai';
+    const mage = spawnUnit(state, 1, 'mage', 14, 10, false);
+    mage.reach = 1;
+    // One step outside the band: a mage moves one tile, so the far edge is the
+    // only firing position it can reach this turn.
+    const orc = spawnUnit(state, 0, 'orc', 14, 14, false);
+    orc.order = 'fortified';
+    // Seen: a mage's own sight is three tiles, and the aiming rule can only aim at
+    // something its owner can see.
+    state.players[1].visible.fill(1);
+    state.players[1].explored.fill(1);
+
+    runAiTurn(state, 1);
+    const apart = distance(mage.x, mage.y, orc.x, orc.y);
+    expect(apart, 'did not stand at the tile the Archive bought it').toBe(
+      unitType('mage').range + 1,
+    );
+
+    // And from there it shoots, without stepping into the brawl. Its movement is
+    // spent on the step, and `runAiTurn` does not refresh it the way a turn does.
+    mage.moves = unitType(mage.type).move;
+    runAiTurn(state, 1);
+    expect(orc.hp, 'never fired').toBeLessThan(unitType('orc').hp);
+    expect(distance(mage.x, mage.y, orc.x, orc.y)).toBe(unitType('mage').range + 1);
   });
 
   it('The Rumbling Archive lets its mages strike from one further back', () => {

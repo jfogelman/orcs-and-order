@@ -8774,8 +8774,15 @@ its own arm -- but the lean they were tuned against was measured at ten.
    about 62% is now the thing to watch**, and this research move is the first lever
    to reach for if play agrees -- put Insanity back at four fifths of the way down
    the Horde's list and the Long Peace goes back to the Kingdom.
-3. **The AI does not aim from its mages' extra reach** (the Rumbling Archive); they
-   still strike from their ordinary range.
+3. ~~**The AI does not aim from its mages' extra reach**~~ Fixed. Reach was asked
+   of the unit's *kind* in `takeAim` and of the unit itself in `abilityTargets`, so
+   the shot was legal from the further tile and the AI would never stand there --
+   it walked through it into the ordinary one. Both now ask `unitReach` (type range
+   plus whatever the city added), and `takeAim` treats reach as a band, preferring
+   its far edge: a tile further out is another turn the enemy has to spend crossing,
+   and the shot is the same from either. Not swept: with no extra reach the band is
+   the single distance it always was and the tie-break is unchanged, so only a mage
+   from the Archive behaves differently.
 
 ### Two things a played game found (turn 69, Jeremy's save)
 
