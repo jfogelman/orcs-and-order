@@ -789,6 +789,26 @@ export function advanceRoadTo(state: GameState, unit: Unit): void {
       delete unit.roadTo;
       return;
     }
+    // Nothing left on the way that wants a road, so the order is done even
+    // though the worker is not standing on the destination.
+    //
+    // Reported from a real game as "Road To does nothing from a road": the
+    // destination was the player's own city, a tile that can never take a road
+    // and always has a garrison standing on it. The worker tried to step into
+    // it, was turned back as a traffic jam, waited, and did that for ever --
+    // on a road, so there was nothing to dig where it stood either.
+    if (!routeWantsRoad(state, unit, plan)) {
+      delete unit.roadTo;
+      log(
+        state,
+        `${unitType(unit.type).name} finishes the road: there is nothing left to lay that way.`,
+        'good',
+        unit.owner,
+        undefined,
+        [unit.x, unit.y],
+      );
+      return;
+    }
     if (unit.moves <= 0) return;
     const route = roadRouteTo(state, unit, plan.x, plan.y);
     if (!route || route.length < 2) {
@@ -808,6 +828,24 @@ export function advanceRoadTo(state: GameState, unit: Unit): void {
       }
     }
   }
+}
+
+/**
+ * Whether anything between here and the destination still wants a road.
+ *
+ * The destination counts, and so does the tile underfoot. A city, open water
+ * and a stretch already laid all want nothing, which is what ends an order that
+ * would otherwise wait for ever at a gate it cannot walk through.
+ */
+function routeWantsRoad(state: GameState, unit: Unit, plan: { x: number; y: number }): boolean {
+  const route = roadRouteTo(state, unit, plan.x, plan.y);
+  if (!route) return false;
+  return route.some(([x, y]) => {
+    const terrain = state.terrain[idx(x, y, state.width)];
+    if (TERRAIN[terrain].water || roadTurns(terrain) === null) return false;
+    if (hasRoad(state, x, y)) return false;
+    return !state.cities.some((c) => c.x === x && c.y === y);
+  });
 }
 
 /**

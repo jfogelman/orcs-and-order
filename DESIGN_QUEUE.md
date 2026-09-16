@@ -8706,3 +8706,30 @@ late-game fixture still reaches turn 299.
    sit in the Horde's list, or the price of the late shared follies.
 3. **The AI does not aim from its mages' extra reach** (the Rumbling Archive); they
    still strike from their ordinary range.
+
+### Two things a played game found (turn 69, Jeremy's save)
+
+**A Road To pointed at your own city waited at the gate for ever.** Both the
+player's Peons stood on a road with a standing order to a city of their own, and
+did nothing for the rest of the game: a city tile can never take a road and always
+has somebody standing in it, so the step was refused as a traffic jam, the worker
+waited for the jam to clear, and there was nothing to dig where it stood either.
+It read as "Road To does not work when you are on a road". `advanceRoadTo` now
+ends the order when nothing on the remaining route wants a road -- a city, water,
+or a stretch already laid -- and says so.
+
+**A shared folly stopped being built and nobody noticed.** The Kingdom finished
+The First Ledger on turn 47; the player's capital had been building it, stopped,
+and the only word of it was a line in the log. From the player's side the build
+had vanished. Three changes, and the third is the general one:
+
+- **Everybody is told when work begins on a shared folly**, not only when one is
+  finished. There is one in the whole game, so somebody else starting is the thing
+  that changes what your cities should build. Told once per folly per empire
+  (`Player.folliesTold`).
+- **The lost-race line says what happened** -- that the folly is lost, that there
+  was only one, and that the shields are kept.
+- **These are raised as a dialog**, not left in the log: `openNotice` in
+  `src/ui/notice.ts`, driven from `promptFollyNews` in `main.ts`, which reads the
+  log by cue (`folly`, `folly-race`) and queues behind the other turn-start
+  questions. Jeremy: "the log is not sufficient."

@@ -145,8 +145,53 @@ describe('the race', () => {
     expect(kingdom.producing.kind).toBe('coin');
     expect(state.players[1].worksBanked?.firstLedger).toBeUndefined();
     expect(kingdom.shields).toBeGreaterThanOrEqual(banked);
-    expect(state.log.some((e) => e.player === 1 && /first/.test(e.text) && /go back/.test(e.text))).toBe(true);
+    expect(
+      state.log.some((e) => e.player === 1 && /is lost/.test(e.text) && /keeps the \d+ shields/.test(e.text)),
+    ).toBe(true);
     expect(state.log.some((e) => e.player === 1 && /There is only one\./.test(e.text))).toBe(true);
+  });
+});
+
+describe('the news', () => {
+  it('tells everybody the first time a shared folly is begun, and only once', () => {
+    const state = game();
+    learnFor(state, 1, 'firstLedger');
+    cityOf(state, 3).producing = { kind: 'building', id: 'firstLedger' };
+
+    nextTurn(state);
+    const told = state.log.filter((e) => /has begun|Work has begun/.test(e.text));
+    expect(new Set(told.map((e) => e.player))).toEqual(new Set([0, 1]));
+    for (const e of told) expect(e.cue).toBe('folly-race');
+    // The other side is told what it is up against, not merely that something happened.
+    expect(told.find((e) => e.player === 0)!.text).toMatch(/only one/i);
+
+    state.log.length = 0;
+    nextTurn(state);
+    expect(state.log.filter((e) => /begun/.test(e.text))).toHaveLength(0);
+  });
+
+  it('says nothing at the start of a folly only one empire can build', () => {
+    const state = game();
+    learnFor(state, 0, 'loudestRock');
+    cityOf(state, 1).producing = { kind: 'building', id: 'loudestRock' };
+    nextTurn(state);
+    expect(state.log.filter((e) => /begun/.test(e.text))).toHaveLength(0);
+  });
+
+  it('marks the lost race so the interface can raise it', () => {
+    const state = game();
+    learnFor(state, 0, 'firstLedger');
+    learnFor(state, 1, 'firstLedger');
+    cityOf(state, 3).producing = { kind: 'building', id: 'firstLedger' };
+    const horde = cityOf(state, 1);
+    horde.producing = { kind: 'building', id: 'firstLedger' };
+    horde.shields = BUILDINGS.firstLedger.cost;
+    nextTurn(state);
+
+    const lost = state.log.find((e) => e.player === 1 && /is lost/.test(e.text));
+    expect(lost?.cue).toBe('folly-race');
+    const won = state.log.find((e) => e.player === 0 && /There is only one, and it is ours/.test(e.text));
+    expect(won?.cue).toBe('folly');
   });
 });
 
