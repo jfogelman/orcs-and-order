@@ -8570,6 +8570,13 @@ they moved wins to the war -- and the Object still leads about three to two.
 **Shipped at this tuning** (Jeremy's call): good enough for a first version, with the
 balance to be revisited once it has been played and the art is in.
 
+> **Correction (section 111's re-sweep).** Every sweep in this section was run with
+> `control()` in `tools/sweep.run.test.ts` pinning `portalTurns` and `objectTurns` to
+> **ten**, including the fifth one above -- so the 44-64 that decided the shipping
+> tuning describes ten-turn endings, not the fifteen that ship. Measured at fifteen,
+> with follies off, the Horde leads 58-50. Treat the tables above as a record of how
+> the levers moved against each other, not as the shipped balance.
+
 **Still open:**
 
 1. The endings decide about three games in five and still cost the Horde about thirteen
@@ -8697,10 +8704,38 @@ Kingdom dominance to the Portal, seed 25 from the Object to points) -- a longer
 research list plays differently -- and no sweep was run of the lists as shipped. The
 late-game fixture still reaches turn 299.
 
+### Re-measured on the shipped rules, and a correction that matters more
+
+The sweep above predated the research-list change -- and, it turns out, was run
+against a control that pinned section 110's endings at **ten** turns, which is not
+what ships. `control()` in `tools/sweep.run.test.ts` set `portalTurns` and
+`objectTurns` to 10 long after section 110 shipped them at 15. Every arm measured
+since that tuning has therefore been describing a game nobody plays. It is now 15,
+and this is the first sweep of the game as it actually ships:
+
+| arm | set | Horde-Kingdom | conquest / dominance / points / Portal / Object | turns |
+|---|---|---|---|---|
+| follies off | tuned | 25-29 | 12 / 4 / 2 / 19 / 17 | 235 |
+| follies off | held-out | 33-21 | 12 / 5 / 3 / 20 / 14 | 241 |
+| follies on | tuned | 28-26 | 14 / 7 / 4 / 17 / 12 | 231 |
+| follies on | held-out | 34-20 | 13 / 8 / 4 / 17 / 12 | 228 |
+
+**The follies are worth about four games to the Horde** (58-50 without them, 62-46
+with), moving the same way on both seed sets (+3 and +1) -- small, and no longer the
+flat nothing the ten-turn run reported. They also take work away from the endings:
+the two build endings fall from 70 games of 108 to 58, conquest and dominance rise
+from 33 to 42.
+
+**And section 110's shipped balance is wrong as written.** Its fifth sweep read the
+endings as costing the Horde thirteen games in 108 (44-64 against 57-50 off). At the
+counts that actually ship the Horde is *ahead* with the endings on and no follies:
+58-50. Nothing here says what the endings are worth at fifteen turns -- that wants
+its own arm -- but the lean they were tuned against was measured at ten.
+
 ### Still open
 
-1. **Sweep the shipped research lists** (follies off against on, ~25 minutes), since
-   the measurement above predates them.
+1. **Re-run section 110's endings arm at the shipped counts** (endings off against
+   on, ~25 minutes), since its tuning was decided on ten-turn counts.
 2. **The Kingdom takes every late shared folly** it races for: the Long Peace and the
    Spire every time. If that matters in play, the lever is where the magic advances
    sit in the Horde's list, or the price of the late shared follies.
