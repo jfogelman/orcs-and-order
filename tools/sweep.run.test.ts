@@ -43,6 +43,9 @@ declare const process: { env: Record<string, string | undefined> };
  * behind, which is a different bug from section 59's and the same kind of wrong
  * answer.
  */
+/** The Horde's research list as it stands, kept so an arm can put it back. */
+const HORDE_LIST = [...PERSONALITIES.orc.techPriority];
+
 const control = () => {
   CALM.base = 6;
   PERSONALITIES.orc.targetCities = 5;
@@ -72,20 +75,24 @@ const control = () => {
   ALT_VICTORY.objectTurns = 15;
   // Section 111's follies ship too, so the game being measured has them.
   FOLLIES.enabled = true;
+  AI_TUNING.sharedFollyFirst = true;
+  PERSONALITIES.orc.techPriority = [...HORDE_LIST];
 };
 
 const ARMS: Arm[] = [
-  // Section 110's endings, at the counts that actually ship: fifteen turns, not
-  // the ten every earlier arm was measured against. Follies are on in both arms,
-  // because they ship -- this asks what the endings are worth in today's game.
+  // Section 111's open item: the Kingdom took every late shared folly. Two causes,
+  // measured together because they are one fix -- the Horde's list never asked for
+  // Insanity, which the Long Peace and both magics need, and neither side
+  // preferred the one kind of folly somebody else can take from it.
   {
-    label: 'endings off',
+    label: 'before: no insanity, no preference',
     apply: () => {
       control();
-      ALT_VICTORY.enabled = false;
+      AI_TUNING.sharedFollyFirst = false;
+      PERSONALITIES.orc.techPriority = HORDE_LIST.filter((t) => t !== 'insanity');
     },
   },
-  { label: 'endings on', apply: control },
+  { label: 'after: insanity asked for, shared first', apply: control },
 ];
 
 /**

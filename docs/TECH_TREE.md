@@ -270,11 +270,12 @@ Each personality works down its `techPriority` list (`src/ai/ai.ts`), taking the
 22. Not Just Stupid Anymore (132)
 23. The Dead are Messed Up (130) — *on the road to its ending*
 24. Somebody Knocked (100) — *on the road to its ending*
-25. And Stupidity for All (168)
-26. Full of Fire (185)
-27. Setting Things Alight (165)
-28. The Cold Shoulder (180)
-29. The Argument With The Sky (70)
+25. Insanity (150)
+26. And Stupidity for All (168)
+27. Full of Fire (185)
+28. Setting Things Alight (165)
+29. The Cold Shoulder (180)
+30. The Argument With The Sky (70)
 
 **Kingdom**
 
