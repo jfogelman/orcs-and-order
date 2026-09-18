@@ -1503,7 +1503,7 @@ prompts, subjects and flavour are Jeremy's, in `docs/follies.md` and
 | `longVigilShrine` | building, Kingdom | a small shrine with one candle burning |
 | `learnedCommittee` | building, Kingdom | a round table, empty chairs, one very tall stack of papers |
 
-## Worked land — 2 of 2 done, `mine` worth a re-roll
+## Worked land — 2 of 2 done
 
 Section 112: what a worker makes of the ground. **Two overlays**, drawn over the
 terrain the way the roads are, in `art_src/terrain/improvements/`:
@@ -1532,10 +1532,10 @@ One prompt per file, changing only the bracketed line:
 
 `npm run art` keys out the magenta and writes `public/terrain/improvements/<name>.png`.
 
-**Both arrived.** `irrigation` works as a field filling its tile. `mine` came back on
-a solid square of dirt -- 81% of the tile opaque -- so it hides the hill or mountain it
-sits on, and the tile stops reading as high ground. A re-roll with the background
-spelled out should fix it:
+**Both arrived.** `irrigation` works as a field filling its tile. The first `mine` came
+back on a solid square of dirt -- 81% of the tile opaque -- and hid the hill it sat on;
+re-rolled with the prompt below it covers 28% and the high ground reads through. Kept
+for any future re-roll:
 
 > pixel art, top-down view, one single square tile for a fantasy strategy game map. In
 > the lower-left corner only, a small timber-framed mine entrance with a pickaxe
@@ -1544,4 +1544,3 @@ spelled out should fix it:
 > field, no grass, no shadow across the tile. Thick dark outline on the object only,
 > earthy browns, mid-1990s fantasy strategy game style, no text, no border.
 
-Drop it at `art_src/terrain/improvements/mine` and `npm run art` replaces the current one.
