@@ -1788,3 +1788,21 @@ kbd {
     animation: none;
   }
 }
+
+/* The full text of anything the layout has cut short (ui/overflowTips.ts). Fixed,
+   so no panel's overflow can clip the thing that exists to beat clipping. */
+.overflow-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(420px, 90vw);
+  padding: 5px 9px;
+  background: var(--stone-lo);
+  color: var(--parch);
+  border: 1px solid var(--edge-hi);
+  border-radius: 3px;
+  box-shadow: var(--panel-shadow);
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  pointer-events: none;
+}
