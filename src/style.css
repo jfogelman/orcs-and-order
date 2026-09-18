@@ -101,6 +101,10 @@ body {
   max-width: 340px;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* The first thing to give up room in a narrow window, before any button folds
+     into the More menu -- and the overflow tooltip still shows it in full. */
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .spacer {
@@ -1805,4 +1809,37 @@ kbd {
   line-height: 1.35;
   white-space: normal;
   pointer-events: none;
+}
+
+/* The top bar's More menu (ui/topbarMore.ts): the buttons a narrow window has no
+   room for. Fixed, so the bar's own layout cannot clip it. */
+.topbar-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+  padding: 6px;
+  background: linear-gradient(180deg, rgba(36, 30, 24, 0.98), rgba(23, 19, 16, 0.98));
+  border: 2px solid var(--edge);
+  border-radius: 4px;
+  box-shadow: var(--panel-shadow);
+}
+
+.topbar-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.topbar-menu .hint {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+#btn-more.armed {
+  border-color: var(--edge-hi);
 }
