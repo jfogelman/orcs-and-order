@@ -8945,8 +8945,19 @@ game about as even as this file has recorded: 53% Horde. The two endings come ou
 level too, the Portal and the Object deciding 27 and 26 games against 34 and 19.
 Conquest rises from 31 to 38.
 
-Not separated: whether the tile fix alone moves an untouched game. It changes every
-game, so it is worth an arm of its own if the balance is ever revisited.
+**The tile fix on its own** (2026-09-18, 216 games, terraforming on in both arms,
+only `AUTO_TILES.spareFoodAtLimit` moving):
+
+| arm | Horde–Kingdom | Horde cities (tuned/held-out) | Horde pop | disorder |
+|---|---|---|---|---|
+| tiles off | 53–55 | 5.09 / 5.65 | 45.1 / 44.0 | 60% / 61% |
+| tiles on (shipped) | 57–51 | 5.54 / 6.00 | 48.1 / 47.4 | 64% / 63% |
+
+The "tiles on" rows match the earlier terraform + tiles sweep exactly, which is the
+determinism check. The fix is worth about four games in 108 to the Horde, who have
+more cities and more people with it. It turns a slight Kingdom lead into a slight
+Horde one and does not dominate anything; most of the gap from today's 67–41 is
+terraforming itself, not the tile rule. It stays on. Nothing further to measure here.
 
 ## 113. Difficulty: a choice at the start of the game
 
