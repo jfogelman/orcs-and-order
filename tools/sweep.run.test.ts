@@ -12,6 +12,7 @@ import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
+import { AUTO_TILES } from '../src/sim/city';
 
 /**
  * The question this sweep is currently asking.
@@ -80,19 +81,24 @@ const control = () => {
   PERSONALITIES.orc.techPriority = [...HORDE_LIST];
   // Section 112: terraforming ships, so the game being measured has it.
   TERRAFORM.enabled = true;
+  // And a city at its content limit stops chasing food, which is what keeps it.
+  AUTO_TILES.spareFoodAtLimit = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 112: workers improving the land once the roads are laid, against the
-  // game as it shipped before it -- where they stood about costing upkeep.
+  // Section 112, as it would ship: terraforming on, with cities at their content
+  // limit no longer chasing food -- against the game as it ships today, which has
+  // neither. The first terraforming sweep had only the first half, and the Horde
+  // rioted its way out of seventeen games.
   {
-    label: 'terraform off',
+    label: 'today',
     apply: () => {
       control();
       TERRAFORM.enabled = false;
+      AUTO_TILES.spareFoodAtLimit = false;
     },
   },
-  { label: 'terraform on', apply: control },
+  { label: 'terraform + tiles', apply: control },
 ];
 
 /**

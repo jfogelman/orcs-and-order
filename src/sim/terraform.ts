@@ -76,11 +76,11 @@ function wet(state: GameState, x: number, y: number): boolean {
 }
 
 /**
- * Why this tile cannot have this job done, or null if it can. The tile alone --
- * who is asking is `canImprove`'s question -- so the AI can survey land it is not
- * standing on.
+ * Why this tile cannot have this job done, or null if it can. The tile, and whose
+ * workers are asking -- an empire with Tower Building's channels irrigates away
+ * from water -- so the AI and Auto work can survey land nobody is standing on.
  */
-export function tileBlocked(state: GameState, i: number, job: Job): string | null {
+export function tileBlocked(state: GameState, i: number, job: Job, playerId?: number): string | null {
   const terrain = state.terrain[i];
   const def = TERRAIN[terrain];
   const x = i % state.width;
@@ -94,7 +94,8 @@ export function tileBlocked(state: GameState, i: number, job: Job): string | nul
   }
   if (job === 'irrigate') {
     if (state.irrigation?.[i] === 1) return 'Already irrigated.';
-    if (!DIRS8.some(([dx, dy]) => wet(state, x + dx, y + dy))) {
+    const channels = playerId !== undefined && hasFlag(state.players[playerId], 'channels');
+    if (!channels && !DIRS8.some(([dx, dy]) => wet(state, x + dx, y + dy))) {
       return 'No water within reach: dig beside the coast, a city, or another ditch.';
     }
   }
@@ -111,7 +112,7 @@ export function canImprove(state: GameState, unit: Unit, job: Job): { ok: boolea
     const teacher = TECHS.find((t) => t.flags.includes('terraform'))?.name ?? 'the right advance';
     return { ok: false, reason: `That needs ${teacher}.` };
   }
-  const blocked = tileBlocked(state, idx(unit.x, unit.y, state.width), job);
+  const blocked = tileBlocked(state, idx(unit.x, unit.y, state.width), job, unit.owner);
   return blocked ? { ok: false, reason: blocked } : { ok: true };
 }
 
@@ -139,7 +140,7 @@ export function advanceImproveWork(
 ): { status: 'done' | 'working' | 'stopped'; what?: string } {
   const job = unit.job;
   const i = idx(unit.x, unit.y, state.width);
-  if (!job || tileBlocked(state, i, job) !== null) {
+  if (!job || tileBlocked(state, i, job, unit.owner) !== null) {
     unit.order = 'none';
     delete unit.work;
     delete unit.job;

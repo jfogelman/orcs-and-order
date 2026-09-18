@@ -135,8 +135,23 @@ export function tileYield(state: GameState, index: number, isCenter: boolean): Y
   return y;
 }
 
-function tileScore(y: Yield): number {
-  return y.food * 3 + y.shields * 2 + y.trade;
+/**
+ * Section 112: whether a city at its content limit stops chasing food.
+ *
+ * The greedy fill scores food at three times a shield, so a city goes on taking
+ * its richest food tiles however close it is to rioting -- and irrigation made
+ * those tiles richer. With terraforming on and nothing else changed, the Horde,
+ * which grows fastest, spent 9% of its city-turns in disorder against 4% without
+ * and lost seventeen games in 108. At the limit, food beyond what the citizen
+ * working the tile eats is worth nothing: the city stays fed and works shields
+ * and trade instead of growing into a riot. Hand-picked tiles are untouched. A
+ * lever, so the sweep can hold it.
+ */
+export const AUTO_TILES = { spareFoodAtLimit: true };
+
+function tileScore(y: Yield, atLimit = false): number {
+  const food = atLimit ? Math.min(y.food, FOOD_PER_CITIZEN) : y.food;
+  return food * 3 + y.shields * 2 + y.trade;
 }
 
 /**
@@ -219,10 +234,11 @@ export function assignWorkers(state: GameState, city: City): void {
   const chosen = honouredChoices(state, city);
   const taken = new Set(chosen);
 
+  const atLimit = AUTO_TILES.spareFoodAtLimit && city.size >= contentLimit(state, city);
   const candidates: Array<{ index: number; score: number }> = [];
   for (const i of fatCrossIndices(city.x, city.y, state.width, state.height)) {
     if (taken.has(i) || !tileWorkable(state, city, i)) continue;
-    candidates.push({ index: i, score: tileScore(tileYield(state, i, false)) });
+    candidates.push({ index: i, score: tileScore(tileYield(state, i, false), atLimit) });
   }
   candidates.sort((a, b) => b.score - a.score);
   const filler = candidates.slice(0, Math.max(0, city.size - chosen.length));

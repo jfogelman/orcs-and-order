@@ -60,7 +60,8 @@ import {
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
-import { JOBS, JOB_VERB, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
+import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
+import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
 import type { Job } from './sim/terraform';
 
 /** The key each of section 112's jobs answers to, with Shift, on a worker. */
@@ -414,8 +415,11 @@ class App {
     const unit = this.selected;
     if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
     if (unit.x === x && unit.y === y) return;
-    // Moving a worker by hand is a new plan, and replaces a road-to.
+    // Moving a worker by hand is a new plan, and replaces a road-to -- and an
+    // Irrigate To or Auto work with it.
     delete unit.roadTo;
+    delete unit.irrigateTo;
+    delete unit.autoWork;
 
     // Note both types up front: either combatant may not survive the call.
     const attackerType = unit.type;
@@ -641,6 +645,77 @@ class App {
     this.roadArmed = true;
     this.refreshSidebar();
     this.notify('Road To: click where the road should go — either button. Escape to cancel.');
+  }
+
+  /** Section 112: Irrigate To, armed the same way Road To is. */
+  private irrigateArmed = false;
+
+  /**
+   * Arm "Irrigate To": the next click on the map sets where the ditches go. The
+   * same shape as Road To, because it is the same chore -- a field has to be walked
+   * inland from the water one ditch at a time.
+   */
+  private orderIrrigateTo(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (this.irrigateArmed) {
+      this.irrigateArmed = false;
+      this.refreshSidebar();
+      return;
+    }
+    const check = canIrrigateTo(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not this unit.');
+      return;
+    }
+    this.disarm(false);
+    this.roadArmed = false;
+    this.irrigateArmed = true;
+    this.refreshSidebar();
+    this.notify('Irrigate To: click where the ditches should reach -- either button. Escape to cancel.');
+  }
+
+  /** Handle a click while Irrigate To is armed. Returns whether the click was consumed. */
+  private clickWhileIrrigateArmed(x: number, y: number): boolean {
+    if (!this.irrigateArmed) return false;
+    this.irrigateArmed = false;
+    const unit = this.selected;
+    if (!unit) return true;
+    delete unit.autoWork;
+    const started = startIrrigateTo(this.state, unit, x, y);
+    if (!started.ok) {
+      this.flash(started.reason ?? 'No ditch can go there.');
+    } else {
+      audio.play('move');
+      this.playLogCues();
+      if (unit.moves <= 0 || unit.order === 'improve') this.selectNextIdle();
+    }
+    this.refreshOverlays();
+    this.refreshSidebar();
+    return true;
+  }
+
+  /**
+   * Auto work, on or off: the worker finds land to improve by itself each turn,
+   * the way the AI's own workers do. Section 112.
+   */
+  private toggleAutoWork(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId || !unitType(unit.type).settler) return;
+    if (unit.autoWork) {
+      delete unit.autoWork;
+      this.refreshSidebar();
+      return;
+    }
+    const check = canIrrigateTo(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not this unit.');
+      return;
+    }
+    unit.autoWork = true;
+    delete unit.roadTo;
+    delete unit.irrigateTo;
+    this.selectNextIdle();
   }
 
   /** Handle a click while Road To is armed. Returns whether the click was consumed. */
@@ -1194,6 +1269,7 @@ class App {
         // and used to get a plain march, because only the left button was
         // listening. Reported from a real game at turn 31.
         if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
+        if (t && this.clickWhileIrrigateArmed(t.x, t.y)) return;
         if (t) this.actOn(t.x, t.y);
         return;
       }
@@ -1448,6 +1524,7 @@ class App {
 
   private onLeftClick(x: number, y: number): void {
     if (this.clickWhileRoadArmed(x, y)) return;
+    if (this.clickWhileIrrigateArmed(x, y)) return;
     if (this.clickWhileArmed(x, y)) return;
     const unit = unitAt(this.state, x, y);
     const city = cityAt(this.state, x, y);
@@ -1514,6 +1591,14 @@ class App {
       const job = JOBS.find((j) => JOB_KEY[j].toLowerCase() === e.key.toLowerCase());
       if (job) {
         this.orderImprove(job);
+        return;
+      }
+      if (e.key.toLowerCase() === 'w') {
+        this.orderIrrigateTo();
+        return;
+      }
+      if (e.key.toLowerCase() === 'a') {
+        this.toggleAutoWork();
         return;
       }
     }
@@ -1594,8 +1679,9 @@ class App {
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
         // thing, not drop the selection out from under it.
-        if (this.roadArmed) {
+        if (this.roadArmed || this.irrigateArmed) {
           this.roadArmed = false;
+          this.irrigateArmed = false;
           this.refreshSidebar();
         } else if (this.armed !== null) this.disarm();
         else this.select(null);
@@ -1764,6 +1850,8 @@ class App {
                 ? `<div class="chip">${unit.order}</div>`
                 : ''
           }
+          ${unit.irrigateTo ? `<div class="chip">digging ditches to (${unit.irrigateTo.x}, ${unit.irrigateTo.y})</div>` : ''}
+          ${unit.autoWork ? '<div class="chip">working the land by itself</div>' : ''}
           ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
@@ -1806,6 +1894,14 @@ class App {
                     )}">${JOB_VERB[j]} (Shift+${JOB_KEY[j]}) &middot; ${jobTurns(j, ground)} turns</button>`;
                   })
                   .join('')
+              : ''
+          }
+          ${
+            unit.owner === this.viewerId && t.settler && TERRAFORM.enabled && canIrrigateTo(this.state, unit).ok
+              ? `<button class="small${this.irrigateArmed ? ' armed' : ''}" data-act="irrigateto">Irrigate To&hellip; (Shift+W)</button>
+                 <button class="small${unit.autoWork ? ' armed' : ''}" data-act="autowork">${
+                   unit.autoWork ? 'Stop auto work' : 'Auto work'
+                 } (Shift+A)</button>`
               : ''
           }
           ${
@@ -1878,6 +1974,12 @@ class App {
               break;
             case 'improve':
               this.orderImprove(btn.dataset.job as Job);
+              break;
+            case 'irrigateto':
+              this.orderIrrigateTo();
+              break;
+            case 'autowork':
+              this.toggleAutoWork();
               break;
             case 'pillage':
               this.orderPillage();

@@ -18,6 +18,7 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import { DOMINANCE, REGEN, SCORE_WEIGHTS, beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
+import { AUTO_TILES } from '../src/sim/city';
 
 /**
  * A repeatable way to measure a rules change.
@@ -68,6 +69,7 @@ export const LEVERS: Record<string, object> = {
   ALT_VICTORY,
   FOLLIES,
   TERRAFORM,
+  AUTO_TILES,
   ATTRITION,
   BEAKERS_PER_TRADE,
   CALM,

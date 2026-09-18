@@ -236,6 +236,13 @@ export interface Unit {
   /** Which of section 112's jobs a worker on `improve` is doing. */
   job?: 'irrigate' | 'mine' | 'clear';
   /**
+   * A standing Irrigate To: dig ditches along the way to this tile, section 112.
+   * Absent in every older save.
+   */
+  irrigateTo?: { x: number; y: number };
+  /** Auto work: the worker finds land to improve by itself each turn. Section 112. */
+  autoWork?: boolean;
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *

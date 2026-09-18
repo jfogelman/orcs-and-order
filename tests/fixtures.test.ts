@@ -101,9 +101,10 @@ function garrison(state: GameState, city: City): Unit {
  * over. Section 110's endings end most games in the two hundreds now; of seeds 20
  * to 50, only 32 still reaches 299 with both sides standing and no ending landed.
  */
-// Section 112's workers changed which games last: of seeds 20 to 50, only 35 still
-// reaches turn 299 with both sides standing once the land is being improved.
-const LATE_SEED = 35;
+// Section 112's workers, and cities that stop chasing food at their content limit,
+// changed which games last: of seeds 20 to 50, only 45 and 50 still reach turn 299
+// with both sides standing.
+const LATE_SEED = 45;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];

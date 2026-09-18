@@ -106,6 +106,7 @@ const FLAG_LABELS: Record<TechFlag, string> = {
   ending: 'Leads to a way to end the game',
   folly: 'Unlocks a folly of its own',
   terraform: 'Workers can irrigate, mine and clear the land',
+  channels: 'Workers can irrigate away from water',
 };
 
 export function openTechPanel(state: GameState, player: Player, onChange: () => void): void {

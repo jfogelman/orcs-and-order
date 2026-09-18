@@ -3,7 +3,8 @@ import { PERSONALITIES, runAiTurn } from '../src/ai/ai';
 import { idx } from '../src/engine/grid';
 import type { City, GameState, TerrainId } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
-import { assignWorkers, tileYield } from '../src/sim/city';
+import { AUTO_TILES, assignWorkers, contentLimit, tileYield } from '../src/sim/city';
+import { resumeAutoWork, startIrrigateTo } from '../src/sim/autowork';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { canPillage, pillage } from '../src/sim/roads';
 import { TERRAFORM, canImprove, jobName, startImprove } from '../src/sim/terraform';
@@ -38,7 +39,20 @@ function work(state: GameState, turns: number): void {
 
 afterEach(() => {
   TERRAFORM.enabled = true;
+  AUTO_TILES.spareFoodAtLimit = true;
 });
+
+/** A city of ours on the flat world, its tiles assigned. */
+function cityAt(state: GameState, x: number, y: number, size: number): City {
+  const c: City = {
+    id: state.cities.length + 1, owner: 0, name: 'Muddy Field', x, y, size,
+    food: 0, shields: 0, buildings: [], producing: { kind: 'coin' },
+    workedTiles: [], disorder: false, foundedTurn: 1,
+  };
+  state.cities.push(c);
+  assignWorkers(state, c);
+  return c;
+}
 
 describe('irrigation', () => {
   it('needs water beside it, and then adds a food', () => {
@@ -183,5 +197,91 @@ describe('the AI', () => {
       PERSONALITIES.orc.targetCities = target;
     }
     expect(peon.order === 'improve' || peon.goto !== null || (peon.x !== 3 || peon.y !== 5)).toBe(true);
+  });
+});
+
+describe('a city at its content limit', () => {
+  it('stops chasing food it would only riot with, and works the mine instead', () => {
+    // Irrigated grass (3/1/0) beside mined hills (1/3/0). Below the limit the city
+    // takes the grass for its food; at the limit the grass's spare food is worth
+    // nothing, and a mined hill is the better tile.
+    const make = () => {
+      const state = world();
+      state.irrigation = new Array(state.width * state.height).fill(0);
+      state.mines = new Array(state.width * state.height).fill(0);
+      for (let y = 3; y <= 7; y++) {
+        for (let x = 8; x <= 12; x++) {
+          if (x >= 11) {
+            state.terrain[at(state, x, y)] = 'hills';
+            state.mines[at(state, x, y)] = 1;
+          } else state.irrigation[at(state, x, y)] = 1;
+        }
+      }
+      return state;
+    };
+    const hillsWorked = (state: GameState, c: City) =>
+      c.workedTiles.filter((i) => state.terrain[i] === 'hills').length;
+
+    const calm = make();
+    const small = cityAt(calm, 10, 5, 2);
+    expect(small.size).toBeLessThan(contentLimit(calm, small));
+    expect(hillsWorked(calm, small)).toBe(0);
+
+    const crowded = make();
+    const big = cityAt(crowded, 10, 5, 8);
+    expect(big.size).toBeGreaterThanOrEqual(contentLimit(crowded, big));
+    expect(hillsWorked(crowded, big)).toBeGreaterThan(0);
+
+    AUTO_TILES.spareFoodAtLimit = false;
+    assignWorkers(crowded, big);
+    expect(hillsWorked(crowded, big)).toBe(0);
+  });
+});
+
+describe('Tower Building', () => {
+  it('lets a worker irrigate away from water', () => {
+    const state = world();
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    expect(canImprove(state, peon, 'irrigate').ok).toBe(false);
+    state.players[0].techs.push('tower-building');
+    expect(canImprove(state, peon, 'irrigate').ok).toBe(true);
+  });
+});
+
+describe('Irrigate To', () => {
+  it('walks out from the water digging a chain of ditches', () => {
+    const state = world();
+    for (let y = 0; y < state.height; y++) state.terrain[at(state, 2, y)] = 'water';
+    const peon = spawnUnit(state, 0, 'peon', 3, 5, false);
+    expect(startIrrigateTo(state, peon, 6, 5).ok).toBe(true);
+    work(state, 20);
+    for (const x of [3, 4, 5, 6]) expect(state.irrigation?.[at(state, x, 5)], `${x},5`).toBe(1);
+    expect(peon.irrigateTo).toBeUndefined();
+  });
+
+  it('ends at a city of ours rather than waiting at the gate', () => {
+    const state = world();
+    state.terrain[at(state, 4, 5)] = 'water';
+    const home = cityAt(state, 6, 5, 1);
+    spawnUnit(state, 0, 'goblin', home.x, home.y, false);
+    state.irrigation = new Array(state.width * state.height).fill(0);
+    state.irrigation[at(state, 5, 5)] = 1;
+    const peon = spawnUnit(state, 0, 'peon', 5, 5, false);
+    expect(startIrrigateTo(state, peon, home.x, home.y).ok).toBe(true);
+    work(state, 3);
+    expect(peon.irrigateTo).toBeUndefined();
+    expect(state.log.some((e) => /nothing left to water/.test(e.text))).toBe(true);
+  });
+});
+
+describe('Auto work', () => {
+  it('sends a worker to improve land a city is working, and does not count it as idle', () => {
+    const state = world();
+    for (let y = 0; y < state.height; y++) state.terrain[at(state, 0, y)] = 'water';
+    const city = cityAt(state, 2, 5, 3);
+    const peon = spawnUnit(state, 0, 'peon', city.x, city.y, false);
+    peon.autoWork = true;
+    resumeAutoWork(state, 0);
+    expect(peon.order === 'improve' || peon.goto !== null || peon.x !== city.x || peon.y !== city.y).toBe(true);
   });
 });

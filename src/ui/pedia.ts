@@ -500,6 +500,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <em>${escapeHtml(jobName('clear', faction, 'swamp'))}</em>, Shift+C), which also clears
           whatever special was on it and what the ground was worth to defend. What a worker
           makes adds to whatever the tile already grows, special included. Raiders can tear it up.
+        </p>
+        <p class="flavor">
+          <strong>Irrigate To</strong> (Shift+W) walks a worker out from the water to a tile you
+          click, digging a ditch wherever the ground will take one, the way Road To lays a road.
+          <strong>Auto work</strong> (Shift+A) leaves a worker to find land worth improving by
+          itself, as the other side's workers do. Once ${escapeHtml(
+            TECHS.find((t) => t.flags.includes('channels'))?.name ?? 'the right advance',
+          )} is known, water no longer has to be next door.
         </p>`
             : ''
         }

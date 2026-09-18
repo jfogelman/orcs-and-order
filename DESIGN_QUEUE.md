@@ -8856,3 +8856,86 @@ every city was joined a worker had nothing left to do. This gives it the land.
 - **Found on the way:** ten of the sixteen advance flags reached the tech cards as
   bare identifiers ("Granary, terraform"). Every flag has a line now, and the table
   is typed so a new one without a line will not compile.
+
+### Measured: terraforming off against on
+
+`tools/sweep.run.test.ts`, 108 games an arm, both seed sets, the game as it ships
+otherwise. The off arm reproduces section 111's last "after" arm exactly (34-20,
+33-21), which is the control working.
+
+| arm | set | Horde-Kingdom | cities H/K | population H/K | conquest / dominance / points / Portal / Object |
+|---|---|---|---|---|---|
+| terraform off | tuned | 34-20 | 6.57 / 6.72 | 49.9 / 43.5 | 14 / 7 / 2 / 21 / 10 |
+| terraform off | held-out | 33-21 | 6.63 / 6.11 | 47.1 / 39.5 | 17 / 10 / 5 / 13 / 9 |
+| terraform on | tuned | **23-31** | **4.39** / 6.54 | 40.4 / 50.7 | 18 / 6 / 6 / 14 / 10 |
+| terraform on | held-out | **27-27** | 5.31 / 5.20 | 42.5 / 42.3 | 23 / 4 / 6 / 9 / 12 |
+
+**Seventeen games from the Horde to the Kingdom**, both sets agreeing (-11, -6):
+67-41 becomes 50-58. On the numbers alone that is closer to even than the game it
+replaces, but the way it gets there is not a balance change: the Horde's cities fall
+from 6.6 to 4.4 on one set and its population by a fifth, while the Kingdom's grow.
+Something breaks for the Horde. Not shipped until it is understood.
+
+**Why: the Horde riots.** A scratch probe over seeds 20 to 27, terraforming off and
+on: both sides irrigate about equally (153 and 149 worked tiles), but the Horde's
+share of city-turns in disorder goes from **4% to 9%** and the Kingdom's from 1% to
+2%. More food grows cities past their content limit, a rioting city produces
+nothing, and the Horde -- the side that grows fastest and was already pressed against
+the limit (section 85) -- pays for it.
+
+**Teaching the AI to irrigate only where a city has room to grow did not fix it.**
+Ditches fell from 153 to 114 and mines rose from 3 to 13, and the Horde's disorder
+stayed at 9%: a city irrigated while it had room keeps growing past the limit
+afterwards. The AI check is kept -- a ditch for a city that cannot use the food is
+waste -- but the cause is upstream: cities go on choosing food and growing into
+riots, and irrigation hands them more of it.
+
+### The fix, and three things Jeremy asked for on top
+
+- **A city at its content limit stops chasing food** (`AUTO_TILES.spareFoodAtLimit`,
+  Jeremy's call). The greedy fill scored food at three times a shield, so a city went
+  on taking its richest food tiles however close it was to rioting, and irrigation
+  made those richer. At the limit, food beyond what the citizen on the tile eats now
+  counts for nothing: irrigated grass (3/1/0) and plain grass score the same, a mined
+  hill (1/3/0) beats both, and the city stays fed without growing into a riot.
+  Hand-picked tiles are untouched. This changes every game, terraforming or not.
+- **Irrigate To** (Shift+W), because irrigation needs water beside it and a field
+  has to be walked inland one ditch at a time. Built like Road To, and after its
+  lessons: it ends when nothing left on the way could be watered, rather than
+  waiting at a city gate, and it follows Road To's straight-leaning route -- on the
+  plain march route a chain pointed along a row wandered off it a tile in.
+- **Auto work** (Shift+A): the worker finds land to improve by itself each turn,
+  with the same job-picking the AI uses, now shared from `src/sim/autowork.ts`.
+  Moving the worker by hand ends it; a worker on it is not counted as idle.
+- **Tower Building lets workers irrigate away from water** (a `channels` flag,
+  Jeremy's pick): mid-game, shared, and already the advance that raises tall stone
+  things.
+
+The art arrived: `irrigation` reads well, as a field filling its tile; `mine` came
+back on a solid square of dirt (81% of the tile opaque) and hides the hill or
+mountain under it. A tighter prompt is in ART_PROMPTS.
+
+The sweep of the game as it would ship -- terraforming on and the tile fix -- against
+today's game is recorded below.
+
+### Measured: the game as it would ship
+
+Today's game against terraforming with the tile fix, 108 games an arm, both seed
+sets. The "today" arm reproduces the last one exactly.
+
+| arm | set | Horde-Kingdom | cities H/K | population H/K | conquest / dominance / points / Portal / Object |
+|---|---|---|---|---|---|
+| today | tuned | 34-20 | 6.57 / 6.72 | 49.9 / 43.5 | 14 / 7 / 2 / 21 / 10 |
+| today | held-out | 33-21 | 6.63 / 6.11 | 47.1 / 39.5 | 17 / 10 / 5 / 13 / 9 |
+| terraform + tiles | tuned | **27-27** | 5.54 / 5.59 | 48.1 / 44.7 | 18 / 3 / 5 / 14 / 14 |
+| terraform + tiles | held-out | **30-24** | 6.00 / 5.09 | 47.4 / 40.5 | 20 / 5 / 4 / 13 / 12 |
+
+**Horde 57-51**, against 67-41 today: ten games, both sets moving the same way (-7,
+-3). The collapse the first sweep found is mostly gone -- the Horde's population is
+back to today's, its cities fall to 5.5-6.0 rather than 4.4 -- and what is left is a
+game about as even as this file has recorded: 53% Horde. The two endings come out
+level too, the Portal and the Object deciding 27 and 26 games against 34 and 19.
+Conquest rises from 31 to 38.
+
+Not separated: whether the tile fix alone moves an untouched game. It changes every
+game, so it is worth an arm of its own if the balance is ever revisited.

@@ -45,8 +45,8 @@ import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
 import { POSTS, startPost } from '../sim/posts';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 import { isFolly } from '../sim/follyEffects';
-import { JOBS, TERRAFORM, startImprove, tileBlocked } from '../sim/terraform';
-import type { Job } from '../sim/terraform';
+import { TERRAFORM } from '../sim/terraform';
+import { improveWorkToDo, takeImproveJob } from '../sim/autowork';
 
 /**
  * The opposition.
@@ -866,71 +866,6 @@ function takePostJob(state: GameState, unit: Unit): boolean {
     if (unit.x !== spot.x || unit.y !== spot.y) return true;
   }
   return startPost(state, unit);
-}
-
-/**
- * The best piece of worked land a worker could improve, section 112, or null.
- *
- * Worked tiles only: a ditch nobody farms is a ditch for nothing. Irrigation and
- * mines add, so they are always worth it; clearing a *forest* trades two shields
- * for one food and one shield, so the AI leaves forests alone and clears swamps,
- * which are strictly worse than the grass they become. A tile somebody is standing
- * on, or another worker is already walking to or working, is left alone.
- */
-function bestImproveJob(
-  state: GameState,
-  playerId: number,
-  from: Unit | null,
-): { i: number; job: Job } | null {
-  if (!TERRAFORM.enabled || !hasFlag(state.players[playerId], 'terraform')) return null;
-  const w = state.width;
-  const claimed = new Set<number>();
-  for (const u of playerUnits(state, playerId)) {
-    if ((from && u.id === from.id) || !unitType(u.type).settler) continue;
-    if (u.order === 'improve') claimed.add(idx(u.x, u.y, w));
-    if (u.goto) claimed.add(idx(u.goto.x, u.goto.y, w));
-  }
-  let best: { i: number; job: Job } | null = null;
-  let bestScore = -Infinity;
-  for (const city of playerCities(state, playerId)) {
-    for (const i of city.workedTiles) {
-      if (claimed.has(i)) continue;
-      const x = i % w;
-      const y = Math.floor(i / w);
-      if (state.units.some((u) => u.x === x && u.y === y && u.id !== from?.id)) continue;
-      const terrain = state.terrain[i];
-      for (const job of JOBS) {
-        if (job === 'clear' && terrain !== 'swamp') continue;
-        if (tileBlocked(state, i, job) !== null) continue;
-        const value = job === 'irrigate' ? 3 : job === 'mine' ? 2 * (TERRAFORM.shields[terrain] ?? 0) : 4;
-        const score = value * 4 - (from ? distance(from.x, from.y, x, y) : 0);
-        if (score > bestScore) {
-          bestScore = score;
-          best = { i, job };
-        }
-      }
-    }
-  }
-  return best;
-}
-
-/** Whether any of this empire's worked land is still waiting for a worker. */
-function improveWorkToDo(state: GameState, playerId: number): boolean {
-  return bestImproveJob(state, playerId, null) !== null;
-}
-
-/** Walk to the best piece of land to improve, and start on it once there. */
-function takeImproveJob(state: GameState, unit: Unit): boolean {
-  const target = bestImproveJob(state, unit.owner, unit);
-  if (!target) return false;
-  const x = target.i % state.width;
-  const y = Math.floor(target.i / state.width);
-  if (unit.x !== x || unit.y !== y) {
-    if (!routeTo(state, unit, x, y)) return false;
-    moveToward(state, unit, x, y);
-    if (unit.x !== x || unit.y !== y) return true;
-  }
-  return startImprove(state, unit, target.job);
 }
 
 function roadWorkToDo(state: GameState, playerId: number): boolean {
