@@ -3,6 +3,7 @@ import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
 import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
+import { resumeExplore } from './explore';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -682,6 +683,8 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // Section 112: ditches dug along the way, then workers left to find their own.
   resumeIrrigateOrders(state, playerId);
   resumeAutoWork(state, playerId);
+  // Section 15: explorers walk on, and halt at the first new thing they see.
+  resumeExplore(state, playerId);
   recomputeVisibility(state, playerId);
   // After visibility and not before: a sighting is a fact about what this
   // player can see this turn, so it has to be asked of the map as it now is.
@@ -721,6 +724,7 @@ export function idleUnits(state: GameState, playerId: number) {
       !u.roadTo &&
       // A worker on Irrigate To or Auto work has its orders, even on a turn it waits.
       !u.irrigateTo &&
-      !u.autoWork,
+      !u.autoWork &&
+      !u.exploring,
   );
 }

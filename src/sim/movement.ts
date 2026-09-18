@@ -105,7 +105,7 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
 }
 
 /** Ids of enemy units this player can currently see. */
-function visibleEnemies(state: GameState, playerId: number): Set<number> {
+export function visibleEnemies(state: GameState, playerId: number): Set<number> {
   const seen = new Set<number>();
   const viewer = state.players[playerId];
   for (const u of state.units) {

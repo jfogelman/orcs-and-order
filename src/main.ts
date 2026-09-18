@@ -64,6 +64,7 @@ import { installOverflowTips } from './ui/overflowTips';
 import { installTopbarMore } from './ui/topbarMore';
 import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
 import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
+import { canExplore, startExplore } from './sim/explore';
 import type { Job } from './sim/terraform';
 
 /** The key each of section 112's jobs answers to, with Shift, on a worker. */
@@ -352,8 +353,11 @@ class App {
    */
   private orderHalt(): void {
     const unit = this.selected;
-    if (!unit?.goto && !unit?.roadTo) return;
+    if (!unit?.goto && !unit?.roadTo && !unit?.irrigateTo && !unit?.exploring) return;
     unit.goto = null;
+    // Section 112's ditches and section 15's explorer stop the same way a march does.
+    delete unit.irrigateTo;
+    delete unit.exploring;
     // A road-to stops where it is. Every stretch already dug stays dug, and the
     // tile being dug right now is finished -- that is a road order of its own,
     // the same one R gives. Walking the worker off is how to abandon that too.
@@ -422,6 +426,7 @@ class App {
     delete unit.roadTo;
     delete unit.irrigateTo;
     delete unit.autoWork;
+    delete unit.exploring;
 
     // Note both types up front: either combatant may not survive the call.
     const attackerType = unit.type;
@@ -564,6 +569,31 @@ class App {
     delete unit.roadTo;
     startRoad(this.state, unit);
     this.selectNextIdle();
+  }
+
+  /**
+   * Explore: walk toward the unknown each turn and halt at the first new sighting.
+   * Section 15's auto-scout, for any soldier. E again, or X, or a move by hand,
+   * stops it.
+   */
+  private orderExplore(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (unit.exploring) {
+      delete unit.exploring;
+      this.refreshSidebar();
+      return;
+    }
+    const check = canExplore(unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not this unit.');
+      return;
+    }
+    startExplore(this.state, unit);
+    this.playLogCues();
+    this.refreshOverlays();
+    if (unit.moves <= 0 || !unit.exploring) this.selectNextIdle();
+    else this.refreshSidebar();
   }
 
   /** Improve the land where the worker stands. Section 112. */
@@ -1662,6 +1692,9 @@ class App {
       case 'x':
         this.orderHalt();
         break;
+      case 'e':
+        this.orderExplore();
+        break;
       case ',':
         this.cycleCity(-1);
         break;
@@ -1865,6 +1898,7 @@ class App {
           }
           ${unit.irrigateTo ? `<div class="chip">digging ditches to (${unit.irrigateTo.x}, ${unit.irrigateTo.y})</div>` : ''}
           ${unit.autoWork ? '<div class="chip">working the land by itself</div>' : ''}
+          ${unit.exploring ? '<div class="chip">exploring</div>' : ''}
           ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
@@ -1883,6 +1917,13 @@ class App {
         </div>
         <div class="button-row">
           ${canSettle ? '<button class="small" data-act="found">Found City (B)</button>' : ''}
+          ${
+            unit.owner === this.viewerId && !t.settler
+              ? `<button class="small${unit.exploring ? ' armed' : ''}" data-act="explore" title="Walk toward the unknown, halting at the first new sighting">${
+                  unit.exploring ? 'Stop exploring' : 'Explore'
+                } (E)</button>`
+              : ''
+          }
           ${
             canRoad
               ? `<button class="small" data-act="road">Build Road (R) &middot; ${roadTurns(
@@ -1993,6 +2034,9 @@ class App {
               break;
             case 'autowork':
               this.toggleAutoWork();
+              break;
+            case 'explore':
+              this.orderExplore();
               break;
             case 'pillage':
               this.orderPillage();
