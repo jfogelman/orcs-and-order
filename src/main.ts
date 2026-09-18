@@ -1256,6 +1256,12 @@ class App {
     el<HTMLButtonElement>('btn-mute').addEventListener('click', () =>
       openAudioMenu(() => this.refreshMuteButton()),
     );
+    // Said from the stored preference at once, not on the first click. The page
+    // ships reading "Sound: on", and this only ran when somebody touched something
+    // -- so a player who had muted the game reloaded into a button claiming the
+    // sound was on while it was not, and pressing M then did the opposite of what
+    // the label promised.
+    this.refreshMuteButton();
     el<HTMLButtonElement>('btn-endturn').addEventListener('click', () => this.endTurn());
     el<HTMLButtonElement>('btn-tech').addEventListener('click', () =>
       openTechPanel(this.state, this.state.players[this.viewerId], () => this.refreshHud()),
