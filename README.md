@@ -152,55 +152,48 @@ has the details.
 
 ## Status
 
-Everything below is built, tested, and playable end to end. 62 tests pass
-(`npm test`), including full 300-turn AI-vs-AI games, save round-trips, and a
-determinism check.
+Everything below is built, tested, and playable end to end. **779 tests pass**
+(`npm test`), including full AI-vs-AI games, save round-trips, a determinism check,
+and fixture saves that land the interface straight on a situation worth looking at
+(`fixtures/`, loaded through Save and load).
 
-Balance is measured over eighteen seeds of AI-vs-AI played to a verdict:
+### Balance
 
-```bash
-BALANCE_SEEDS=18 npx vitest run tests/balance.test.ts --reporter=verbose
-```
+The authority is the sweep, not the per-commit test: `npm run sweep` plays 216
+AI-vs-AI games -- two arms, two seed sets -- in about 25 minutes, and refuses to
+compare arms that do not really differ. The method, and every result it has
+produced, is in [DESIGN_QUEUE.md](DESIGN_QUEUE.md).
 
-The two sides come out level over eighteen seeds: **wins 9–9**, with each faction
-ahead on the columns it should be — the Kingdom on cities (10.6 v 8.9) and population
-(64.1 v 49.5), the Horde on advances (25.2 v 21.7). The scoring formula nets those
-against one another, which is what it is for.
+The game as it ships -- endings and follies both on, measured September 2026 --
+comes out **Horde 62-46 over 108 games**. Games end on purpose now: the Demonic
+Portal and the Mysterious Object decide about half of them, and barely one in
+fourteen is still settled on points at the turn limit. The Horde's lead is the open
+balance question; section 111 names the first lever.
 
-Getting there took three changes and only one of them was the cause; the diagnosis is
-written up in [DESIGN_QUEUE.md](DESIGN_QUEUE.md). Briefly: the scoring formula was
-genuinely flawed but fixing it changed nothing, rioting cities were growing forever
-which made everything worse, and the actual culprit was a single AI timidity constant.
+### What is in
 
-Around 83% of games reach the turn limit — but not for want of fighting. Cities change
-hands roughly **50 times per game**; the war is close to reciprocal, each side taking
-cities at nearly the rate it loses them, so little compounds into a collapse. That,
-rather than conquest being too hard, is the outstanding problem.
+Two factions with their own counting-joke tech trees, singleton units that grow into
+groups, promotion perks and abilities, supply lines, roads and trade routes, raiders,
+garrison posts, pillaging, land specials, hand-picked city tiles, a capital that grows
+a piece at a time, two ways to win by building something, and twelve follies (the
+game's wonders). A council of advisors argues about all of it.
 
 ### Art status
 
-All 17 unit sprites, all 6 city sprites, all 8 terrain sets, sound effects and music
-are in. The only art still outstanding is the **advance icons**, which are entirely
-optional — a missing icon is simply removed and the tech card reads fine without it.
-Prompts for all 43 are in [ART_PROMPTS.md](ART_PROMPTS.md).
-
-`dist/` is **3.7 MB**, of which 3.0 MB is the two music tracks. `npm run art`
-re-encodes audio on the way in: the source files arrive at 256 kbps stereo, which is a
-studio master setting, and music at a third of full volume does not need it. Music goes
-to VBR ~110 kbps stereo and sound effects to mono, taking audio from 9.0 MB to 3.4 MB
-with no audible difference in play.
+Every unit, city, terrain set, road piece, building icon, advance icon, advisor
+portrait and palace piece is in, along with sound effects and music. Prompts for all
+of it, and the house style, are in [ART_PROMPTS.md](ART_PROMPTS.md). `npm run art`
+cuts raw art out of its background, sizes it, and re-encodes audio on the way in.
 
 ### Known gaps and next steps
 
-1. **`Ten Orcs` is still rarely reached.** Eight now shows up on some seeds since
-   research buildings arrived; ten remains a stretch for the AI inside 300 turns.
-   A focused human player should manage it.
+1. **No terraforming.** Once every city is joined by road, workers have nothing left
+   to do and stand around costing upkeep.
 2. **No naval anything.** Worldgen therefore guarantees both civs start on the same
    continent. Islands on the map are decorative and unreachable.
-3. **Citizens are auto-assigned to tiles.** There is no manual tile-assignment UI.
-4. **No diplomacy, roads, terraforming, wonders, or governments.** Deliberate for v1;
-   all fit the existing architecture.
-5. **AI is a behaviour list, not a planner.** It expands, garrisons, and marches at
-   the nearest known target. It does not concentrate force or defend a front.
-6. **Not yet played by a human for a full game.** The AI-vs-AI harness exercises the
-   rules hard, but pacing and feel need a real session.
+3. **No diplomacy or governments.** Deliberate for now; both fit the architecture.
+4. **AI is a behaviour list, not a planner.** It expands, garrisons, builds roads and
+   follies, and marches at the nearest known target. It does not concentrate force
+   or defend a front.
+5. **Balance leans Horde,** which play should confirm or deny before anything is
+   tuned.
