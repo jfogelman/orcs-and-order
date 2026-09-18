@@ -61,6 +61,7 @@ import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
 import { installOverflowTips } from './ui/overflowTips';
+import { installTopbarMore } from './ui/topbarMore';
 import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
 import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
 import type { Job } from './sim/terraform';
@@ -1360,6 +1361,9 @@ class App {
     // the label promised.
     this.refreshMuteButton();
     el<HTMLButtonElement>('btn-endturn').addEventListener('click', () => this.endTurn());
+    // Whatever a narrow window has no room for folds into a More menu. After the
+    // buttons are wired, because the menu clicks the real ones.
+    installTopbarMore();
     el<HTMLButtonElement>('btn-tech').addEventListener('click', () =>
       openTechPanel(this.state, this.state.players[this.viewerId], () => this.refreshHud()),
     );
