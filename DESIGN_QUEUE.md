@@ -1456,6 +1456,14 @@ it sees an enemy or a city**, which is the part that makes it useful rather than
 a way to lose a unit unattended. Reuses the standing-order machinery that `goto`
 already has, and wants the same Halt action the march does.
 
+*Done, as **Explore** (E), in `src/sim/explore.ts`.* An order any soldier can
+take, the way Civ2's was, since the Horde has no scout and a new one wants art.
+It steps one tile at a time toward the nearest *reachable* dark edge, checking
+for a new enemy or foreign city after every step, so the halt is mid-turn and
+not just at the top of one. It never attacks: an occupied tile ahead ends the
+order. X, E again, or a move by hand stops it. The AI does not use it; it has
+its own frontier search. The Goblin Scout is still unmade.
+
 ## 16. Choosing which tiles a city works -- DONE
 
 Citizens are assigned greedily and the player cannot overrule it. That is
@@ -8937,5 +8945,66 @@ game about as even as this file has recorded: 53% Horde. The two endings come ou
 level too, the Portal and the Object deciding 27 and 26 games against 34 and 19.
 Conquest rises from 31 to 38.
 
-Not separated: whether the tile fix alone moves an untouched game. It changes every
-game, so it is worth an arm of its own if the balance is ever revisited.
+**The tile fix on its own** (2026-09-18, 216 games, terraforming on in both arms,
+only `AUTO_TILES.spareFoodAtLimit` moving):
+
+| arm | Horde–Kingdom | Horde cities (tuned/held-out) | Horde pop | disorder |
+|---|---|---|---|---|
+| tiles off | 53–55 | 5.09 / 5.65 | 45.1 / 44.0 | 60% / 61% |
+| tiles on (shipped) | 57–51 | 5.54 / 6.00 | 48.1 / 47.4 | 64% / 63% |
+
+The "tiles on" rows match the earlier terraform + tiles sweep exactly, which is the
+determinism check. The fix is worth about four games in 108 to the Horde, who have
+more cities and more people with it. It turns a slight Kingdom lead into a slight
+Horde one and does not dominate anything; most of the gap from today's 67–41 is
+terraforming itself, not the tile rule. It stays on. Nothing further to measure here.
+
+## 113. Difficulty: a choice at the start of the game
+
+Asked for 2026-09-18, after section 112 made the game harder: "the game has become
+more challenging, which is good, but it also means I want a difficulty option."
+
+**What exists already.** `GameSettings.difficulty` is typed
+`'peaceful' | 'normal' | 'nasty'`, `createGame` defaults it to `'normal'`, and it
+is written into every save. **Nothing reads it**, and the new-game screen offers
+no choice. So the field and the save format are there; the rules and the menu are
+not. Old saves all say `'normal'`, which is what they were played at.
+
+**What Civ2 did, and why most of it fits.** Six levels, and nearly all the
+difference fell on the *player*, not the AI: fewer content citizens per city as
+you went up, and the AI's production and research costs scaled down. It kept the
+AI's play the same and changed the arithmetic around it. That suits this game.
+The AI's tuning (`AI_TUNING`, `PERSONALITIES`) is measured by sweep and should not
+fork per level; a handful of multipliers applied to one side can be measured the
+same way.
+
+**The levers, in order of how much they would do:**
+
+1. **Content limit for the human's cities** (`CALM.base`, read in `contentLimit`):
+   +1 at Easy, -1 at Hard. Riots are what made section 112 hard. This is the most
+   direct lever and the one Civ2 leaned on.
+2. **Build and research cost for the AI sides**: 110% at Easy, 90% at Hard, in
+   `productionCost` and the research cost. It never shows the player a changed
+   number, since those are the AI's costs.
+3. **Raiders** (section 69, when on): fewer and later at Easy, more at Hard.
+4. **Starting units**: an extra worker for the human at Easy, or an extra soldier
+   for each AI at Hard. Cheap, and felt only early on.
+
+**Decisions for Jeremy before building:**
+
+- **How many levels?** Three fits the existing type. Renaming them is free, since
+  nothing reads them. Each side could have its own names, like the terraforming
+  jobs. Example: *Snack / Meal / Feast* for the Horde, *Squire / Knight / Paladin*
+  for the Kingdom.
+- **Which levers**: 1 and 2 only (my recommendation, as the smallest change that
+  reads clearly), or all four.
+- **Can it change mid-game?** Civ2 allowed it. I would say no, the way raiders
+  cannot: it is saved with the game and fixed at the start.
+
+**Measuring it.** The sweep plays AI against AI, so the human-side content lever
+never fires there. To measure a level, run it as an arm that applies the human's
+multipliers to one seat. Easy and Hard should land near 65% and 35% for that seat.
+Normal must not move at all: it is today's game, and the tests should pin that.
+
+**The Orcpedia** gets a line on each level saying what it changes, in numbers,
+under the new-game help.

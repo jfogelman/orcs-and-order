@@ -385,6 +385,34 @@ describe('advisors who talk back', () => {
     }
   });
 
+  // Section 112: idle workers beside land they could be improving.
+  it('has the domestic advisor put idle workers to the land, on both sides', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const advisor = advisorsFor(faction).find((a) => a.role === 'domestic')!;
+      const s: Situation = { ...calm(), faction, terraformKnown: true, idleWorkers: 2, landToWork: 5 };
+      const line = advisorConcern(advisor, s);
+      expect(line?.about, `${advisor.id} said nothing about the land`).toBe('the-land');
+      expect(line?.say(s)).toMatch(/auto work|Shift and A/i);
+    }
+  });
+
+  it('says nothing about the land before Tree-Hugging, or with no one idle', () => {
+    for (const advisor of ADVISORS) {
+      for (const s of [
+        { ...calm(), faction: advisor.faction, terraformKnown: false, idleWorkers: 3, landToWork: 5 },
+        { ...calm(), faction: advisor.faction, terraformKnown: true, idleWorkers: 0, landToWork: 5 },
+      ] as Situation[]) {
+        expect(advisorConcern(advisor, s)?.about).not.toBe('the-land');
+      }
+    }
+  });
+
+  it('puts riots ahead of idle shovels', () => {
+    const advisor = advisorsFor('orc').find((a) => a.role === 'domestic')!;
+    const s: Situation = { ...calm(), faction: 'orc', rioting: 1, terraformKnown: true, idleWorkers: 2, landToWork: 5 };
+    expect(advisorConcern(advisor, s)?.about).not.toBe('the-land');
+  });
+
   it('lets somebody argue with the arcane advisor about magic', () => {
     const arcane = advisorsFor('orc').find((a) => a.role === 'arcane')!;
     // The state that puts his magic line on top: an army, and nobody in it who

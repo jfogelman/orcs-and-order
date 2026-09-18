@@ -22,6 +22,7 @@ import { capitalOf } from '../sim/city';
 import { connectedByRoad } from '../sim/roads';
 import { goldBuildingIn, tradeLinks } from '../sim/trade';
 import { hasFlag } from '../sim/rules';
+import { TERRAFORM, tileBlocked } from '../sim/terraform';
 import { idx } from '../engine/grid';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
@@ -121,6 +122,34 @@ export function situationOf(state: GameState, playerId: number): Situation {
     (c) => goldBuildingIn(state, c) && !linked.has(c.id),
   ).length;
   const routeGold = routes.reduce((sum, l) => sum + (l.paying ? l.gold : 0), 0);
+
+  // Section 112: idle workers, and worked land they could still be improving.
+  const terraformKnown = TERRAFORM.enabled && hasFlag(player, 'terraform');
+  const idleWorkers = units.filter(
+    (u) =>
+      unitType(u.type).settler &&
+      u.order === 'none' &&
+      !u.goto &&
+      !u.roadTo &&
+      !u.irrigateTo &&
+      !u.autoWork,
+  ).length;
+  let landToWork = 0;
+  if (terraformKnown) {
+    for (const c of cities) {
+      const roomToGrow = c.size < contentLimit(state, c) - 1;
+      for (const i of c.workedTiles) {
+        const swamp = state.terrain[i] === 'swamp';
+        if (
+          (roomToGrow && tileBlocked(state, i, 'irrigate', playerId) === null) ||
+          tileBlocked(state, i, 'mine', playerId) === null ||
+          (swamp && tileBlocked(state, i, 'clear', playerId) === null)
+        ) {
+          landToWork++;
+        }
+      }
+    }
+  }
 
   // Counted with the cities' own income, because the treasury does not care
   // which of the two it came from and neither does the Ledger-Thane.
@@ -250,6 +279,9 @@ export function situationOf(state: GameState, playerId: number): Situation {
     unjoinedCities,
     unlinkedGoldCities,
     routeGold,
+    terraformKnown,
+    idleWorkers,
+    landToWork,
     dominance,
     ending,
     endingRoad,

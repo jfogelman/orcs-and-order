@@ -243,6 +243,11 @@ export interface Unit {
   /** Auto work: the worker finds land to improve by itself each turn. Section 112. */
   autoWork?: boolean;
   /**
+   * Explore: walks toward the unknown each turn and halts at the first new
+   * sighting. Section 15's auto-scout. Absent in every older save.
+   */
+  exploring?: boolean;
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *

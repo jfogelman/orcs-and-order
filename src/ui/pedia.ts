@@ -563,7 +563,12 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           is standing there &mdash; and everything standing there is listed in the
           panel, including whatever the city has just finished building.
           A left click on open ground sets a march, which carries on across as many
-          turns as it takes.
+          turns as it takes. <strong>Explore</strong> (E) is a march with no end in
+          mind: any soldier walks toward the nearest dark edge of the map, turn after
+          turn, and halts the moment it sees something new &mdash; an enemy, a raider,
+          a city not yours &mdash; so it is never walked unattended into a fight. It
+          will not attack anything, and it gives up when there is nothing left it can
+          reach.
         </p>
         <div class="pedia-controls">${controlsMarkup()}</div>
       </div>`,

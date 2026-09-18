@@ -103,6 +103,14 @@ export interface Situation {
   /** Structures that push supply further out. */
   supplyPosts: number;
   /**
+   * Section 112, as the council sees it: whether the land can be worked yet, the
+   * workers with nothing to do, and the worked tiles a worker could still improve.
+   * Optional so a situation written before terraforming still holds.
+   */
+  terraformKnown?: boolean;
+  idleWorkers?: number;
+  landToWork?: number;
+  /**
    * Turns until somebody wins by holding most of the world, and who.
    *
    * Null when nobody is close. Reported here rather than shouted into the log
@@ -197,7 +205,9 @@ export type Topic =
   | 'unrest'
   | 'hunger'
   | 'the-treasury'
-  | 'raiders';
+  | 'raiders'
+  // Section 112: the land itself, and the workers standing about beside it.
+  | 'the-land';
 
 export interface AdvisorDef {
   id: string;
@@ -740,6 +750,15 @@ const KINGDOM: AdvisorDef[] = [
           `arithmetic, and arithmetic does not cheer up on its own.`,
       },
       {
+        // Section 112, after the fires and the famine: an engineer looking at unworked ground and idle hands.
+        about: 'the-land',
+        when: (s) => !!s.terraformKnown && (s.idleWorkers ?? 0) > 0 && (s.landToWork ?? 0) > 0,
+        say: (s) =>
+          `${sentence(count(s.idleWorkers ?? 0, 'peasant', 'peasants'))} idle, and ` +
+          `${count(s.landToWork ?? 0, 'worked field')} that would take a furrow or a mine. I have ` +
+          `drawn up a schedule. Set them to auto work and they will even follow it.`,
+      },
+      {
         when: (s) => s.restless > 0 && s.calmBuildings < s.cities,
         say: (s) =>
           `${count(s.restless, 'city', 'cities')} a bad week from trouble, and ${spell(s.cities - s.calmBuildings)} ` +
@@ -1073,6 +1092,15 @@ const HORDE: AdvisorDef[] = [
         say: (s) =>
           `${count(s.starving, 'city', 'cities')} running out of food. We tried eating optimism. Results ` +
           `disappointing, boss.`,
+      },
+      {
+        // Section 112, after the fires and the famine: he oversees Peons, and some of them are standing about.
+        about: 'the-land',
+        when: (s) => !!s.terraformKnown && (s.idleWorkers ?? 0) > 0 && (s.landToWork ?? 0) > 0,
+        say: (s) =>
+          `${sentence(count(s.idleWorkers ?? 0, 'Peon', 'Peons'))} standing about wid shovels and ` +
+          `nuffing to hit, boss, and ${count(s.landToWork ?? 0, 'field')} out dere wid no ditch in it. ` +
+          `Tell dem to get on wid it — Shift and A — and dey find it demselves.`,
       },
       {
         when: (s) => s.restless > 0,
