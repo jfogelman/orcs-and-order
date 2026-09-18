@@ -152,7 +152,7 @@ has the details.
 
 ## Status
 
-Everything below is built, tested, and playable end to end. **779 tests pass**
+Everything below is built, tested, and playable end to end. **798 tests pass**
 (`npm test`), including full AI-vs-AI games, save round-trips, a determinism check,
 and fixture saves that land the interface straight on a situation worth looking at
 (`fixtures/`, loaded through Save and load).
@@ -164,19 +164,20 @@ AI-vs-AI games -- two arms, two seed sets -- in about 25 minutes, and refuses to
 compare arms that do not really differ. The method, and every result it has
 produced, is in [DESIGN_QUEUE.md](DESIGN_QUEUE.md).
 
-The game as it ships -- endings and follies both on, measured September 2026 --
-comes out **Horde 62-46 over 108 games**. Games end on purpose now: the Demonic
-Portal and the Mysterious Object decide about half of them, and barely one in
-fourteen is still settled on points at the turn limit. The Horde's lead is the open
-balance question; section 111 names the first lever.
+The game as it ships -- endings, follies and terraforming all on, measured
+September 2026 -- comes out **Horde 57-51 over 108 games**, about as even as it has
+been. Games end on purpose now: the Demonic Portal and the Mysterious Object decide
+about half of them, level with each other, and barely one in twenty is still settled
+on points at the turn limit.
 
 ### What is in
 
 Two factions with their own counting-joke tech trees, singleton units that grow into
 groups, promotion perks and abilities, supply lines, roads and trade routes, raiders,
 garrison posts, pillaging, land specials, hand-picked city tiles, a capital that grows
-a piece at a time, two ways to win by building something, and twelve follies (the
-game's wonders). A council of advisors argues about all of it.
+a piece at a time, two ways to win by building something, twelve follies (the
+game's wonders), and workers who irrigate, mine and clear the land once the roads are
+laid. A council of advisors argues about all of it.
 
 ### Art status
 
@@ -187,13 +188,11 @@ cuts raw art out of its background, sizes it, and re-encodes audio on the way in
 
 ### Known gaps and next steps
 
-1. **No terraforming.** Once every city is joined by road, workers have nothing left
-   to do and stand around costing upkeep.
-2. **No naval anything.** Worldgen therefore guarantees both civs start on the same
+1. **No naval anything.** Worldgen therefore guarantees both civs start on the same
    continent. Islands on the map are decorative and unreachable.
-3. **No diplomacy or governments.** Deliberate for now; both fit the architecture.
-4. **AI is a behaviour list, not a planner.** It expands, garrisons, builds roads and
-   follies, and marches at the nearest known target. It does not concentrate force
+2. **No diplomacy or governments.** Deliberate for now; both fit the architecture.
+3. **AI is a behaviour list, not a planner.** It expands, garrisons, builds roads and
+   follies, works the land, and marches at the nearest known target. It does not concentrate force
    or defend a front.
-5. **Balance leans Horde,** which play should confirm or deny before anything is
-   tuned.
+4. **Balance has not been played to a verdict.** The sweep says about even; play
+   should confirm or deny it before anything is tuned.
