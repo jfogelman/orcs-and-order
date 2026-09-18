@@ -86,19 +86,17 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 112, as it would ship: terraforming on, with cities at their content
-  // limit no longer chasing food -- against the game as it ships today, which has
-  // neither. The first terraforming sweep had only the first half, and the Horde
-  // rioted its way out of seventeen games.
-  {
-    label: 'today',
+  // Section 113: the four levels that are not Normal. The Horde has seat 0, the
+  // player's, so these read as how the player's side fares. Normal is the shipped
+  // game, already measured at Horde 57-51 (section 112), and the harness is
+  // deterministic, so it is not run again here.
+  ...(['easiest', 'easy', 'hard', 'hardest'] as const).map((level) => ({
+    label: level,
     apply: () => {
       control();
-      TERRAFORM.enabled = false;
-      AUTO_TILES.spareFoodAtLimit = false;
+      NEW_GAME.difficulty = level;
     },
-  },
-  { label: 'terraform + tiles', apply: control },
+  })),
 ];
 
 /**

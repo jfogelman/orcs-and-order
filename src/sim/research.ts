@@ -8,6 +8,7 @@ import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
 import { ALT_VICTORY } from './endings';
 import { FOLLIES } from './follyEffects';
+import { handicapCost } from './difficulty';
 
 /**
  * Research: what a player knows, what they can learn next, and what that
@@ -107,7 +108,8 @@ export const BEAKERS_PER_TRADE = { multiplier: 1.25 };
 
 export function techCost(player: Player, t: TechDef): number {
   const known = Math.max(0, player.techs.length - 1);
-  return Math.round(t.cost * (1 + known * TECH_ESCALATION));
+  // Section 113: the AI's discount (or surcharge) at a level other than Normal.
+  return handicapCost(player, Math.round(t.cost * (1 + known * TECH_ESCALATION)));
 }
 
 export function setResearch(state: GameState, player: Player, id: TechId | null): void {

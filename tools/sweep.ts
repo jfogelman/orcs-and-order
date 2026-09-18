@@ -3,7 +3,7 @@ import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
 import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
-import type { GameState, VictoryKind } from '../src/model/types';
+import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
@@ -54,7 +54,13 @@ import { AUTO_TILES } from '../src/sim/city';
  * Off by default, so every earlier number in this file and the balance band in
  * `tests/balance.test.ts` still describe the game they were taken from.
  */
-export const NEW_GAME = { barbarians: false };
+export const NEW_GAME: { barbarians: boolean; difficulty: DifficultyId } = {
+  barbarians: false,
+  // Section 113. Seat 0 is created as the player's and handed to the AI, so it
+  // keeps the player's side of the level: patience at home, full prices, while
+  // seat 1 gets the AI's discount. That is how a level is measured.
+  difficulty: 'normal',
+};
 
 /**
  * Every constant a sweep is allowed to move, by name.
@@ -245,7 +251,7 @@ export function playGame(
    */
   watch?: (state: GameState) => void,
 ): Outcome {
-  const state = createGame({ seed, barbarians: NEW_GAME.barbarians });
+  const state = createGame({ seed, barbarians: NEW_GAME.barbarians, difficulty: NEW_GAME.difficulty });
   const map = mapSignature(state);
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
