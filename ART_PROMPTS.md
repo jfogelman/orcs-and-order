@@ -1502,3 +1502,32 @@ prompts, subjects and flavour are Jeremy's, in `docs/follies.md` and
 | `rumblingArchive` | building, Kingdom | a shelf of books with a golden glow between the spines |
 | `longVigilShrine` | building, Kingdom | a small shrine with one candle burning |
 | `learnedCommittee` | building, Kingdom | a round table, empty chairs, one very tall stack of papers |
+
+## Worked land — 0 of 2 done
+
+Section 112: what a worker makes of the ground. **Two overlays**, drawn over the
+terrain the way the roads are, in `art_src/terrain/improvements/`:
+
+| file | what it shows |
+|---|---|
+| `irrigation` | rows of dug furrows with a line of water through them |
+| `mine` | a small timbered mine entrance in one corner, so the hill still reads |
+
+Both sides share them -- the Horde calls irrigation *A Ditch Somebody Fell In* and the
+Kingdom *Tidy Furrows*, but it is the same ditch. Clearing a forest or a swamp needs no
+art: the tile simply becomes grassland. Until these exist the map draws both itself
+(three furrows and a blue line; the dark mouth of a hole with a prop over it).
+
+One prompt per file, changing only the bracketed line:
+
+> pixel art, top-down view, one single square tile for a fantasy strategy game map
+> showing [PIECE]. Earthy browns, thick dark outline on the object only, plain solid
+> magenta background (#FF00FF) everywhere else, mid-1990s fantasy strategy game style,
+> no text, no grass, no scenery, no border, nothing else in the picture -- one tile only.
+
+| file | [PIECE] |
+|---|---|
+| `irrigation` | rows of freshly dug dark furrows filling the middle of the tile, with a thin channel of blue water running straight across them -- furrows and water only, no crops |
+| `mine` | a small timber-framed mine entrance set into a heap of grey rubble in the lower-left corner, a pickaxe leaning against it, covering no more than a third of the tile |
+
+`npm run art` keys out the magenta and writes `public/terrain/improvements/<name>.png`.

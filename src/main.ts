@@ -60,6 +60,11 @@ import {
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
+import { JOBS, JOB_VERB, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
+import type { Job } from './sim/terraform';
+
+/** The key each of section 112's jobs answers to, with Shift, on a worker. */
+const JOB_KEY: Record<Job, string> = { irrigate: 'I', mine: 'M', clear: 'C' };
 import { capitalOf } from './sim/city';
 import { prideDue } from './sim/turn';
 import { openHordeReport } from './ui/hordeReport';
@@ -552,6 +557,19 @@ class App {
     }
     delete unit.roadTo;
     startRoad(this.state, unit);
+    this.selectNextIdle();
+  }
+
+  /** Improve the land where the worker stands. Section 112. */
+  private orderImprove(job: Job): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    const check = canImprove(this.state, unit, job);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    startImprove(this.state, unit, job);
     this.selectNextIdle();
   }
 
@@ -1488,6 +1506,17 @@ class App {
     }
     if (isModalOpen()) return;
     const unit = this.selected;
+    // Section 112: Shift and a letter sets a worker to work the land, the way
+    // Shift+R sends it off laying a road. Asked first, because I, M and C already
+    // mean the report, the sound and centring -- and still do without Shift, or on
+    // anybody who is not a worker.
+    if (e.shiftKey && unit && unit.owner === this.viewerId && unitType(unit.type).settler) {
+      const job = JOBS.find((j) => JOB_KEY[j].toLowerCase() === e.key.toLowerCase());
+      if (job) {
+        this.orderImprove(job);
+        return;
+      }
+    }
     switch (e.key.toLowerCase()) {
       case 'enter':
         this.endTurn();
@@ -1717,9 +1746,19 @@ class App {
               : ''
           }
           ${
-            unit.order === 'road' || unit.order === 'post'
+            unit.order === 'road' || unit.order === 'post' || unit.order === 'improve'
               ? `<div class="chip">${
-                  unit.order === 'road' ? 'laying a road' : 'building a post'
+                  unit.order === 'road'
+                    ? 'laying a road'
+                    : unit.order === 'post'
+                      ? 'building a post'
+                      : escapeHtml(
+                          jobName(
+                            unit.job ?? 'irrigate',
+                            this.state.players[unit.owner].faction,
+                            this.state.terrain[unit.y * this.state.width + unit.x],
+                          ),
+                        )
                 } &middot; ${unit.work ?? '?'} ${unit.work === 1 ? 'turn' : 'turns'} left</div>`
               : unit.order !== 'none'
                 ? `<div class="chip">${unit.order}</div>`
@@ -1753,6 +1792,20 @@ class App {
           ${
             canRoadTo
               ? `<button class="small${this.roadArmed ? ' armed' : ''}" data-act="roadto">Road To&hellip; (Shift+R)</button>`
+              : ''
+          }
+          ${
+            // Section 112: whatever this ground could be made into, by its owner's name for it.
+            unit.owner === this.viewerId && t.settler
+              ? JOBS.filter((j) => canImprove(this.state, unit, j).ok)
+                  .map((j) => {
+                    const ground = this.state.terrain[unit.y * this.state.width + unit.x];
+                    const faction = this.state.players[unit.owner].faction;
+                    return `<button class="small" data-act="improve" data-job="${j}" title="${escapeHtml(
+                      jobName(j, faction, ground),
+                    )}">${JOB_VERB[j]} (Shift+${JOB_KEY[j]}) &middot; ${jobTurns(j, ground)} turns</button>`;
+                  })
+                  .join('')
               : ''
           }
           ${
@@ -1822,6 +1875,9 @@ class App {
               break;
             case 'roadto':
               this.orderRoadTo();
+              break;
+            case 'improve':
+              this.orderImprove(btn.dataset.job as Job);
               break;
             case 'pillage':
               this.orderPillage();

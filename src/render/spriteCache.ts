@@ -345,6 +345,16 @@ export class SpriteCache {
       .catch(() => {});
   }
 
+  /**
+   * Section 112's overlays -- `terrain/improvements/irrigation.png` and `mine.png`.
+   * Absent, the map draws both itself, the way it drew roads before they had art.
+   */
+  installImprovementArt(name: string, onLoaded: (img: HTMLImageElement) => void): void {
+    loadImage(`${this.base}terrain/improvements/${name}.png`)
+      .then(onLoaded)
+      .catch(() => {});
+  }
+
   installSpecialArt(
     into: Map<string, HTMLImageElement>,
     ids: TerrainId[],

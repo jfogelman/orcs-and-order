@@ -160,7 +160,13 @@ export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?
   }
   // Section 102's garrison posts are the second customer this rule was promised.
   // Anything somebody chose to put here counts.
-  if (state.roads?.[i] !== 1 && state.posts?.[i] !== 1) {
+  // And since section 112, whatever a worker made of the land.
+  if (
+    state.roads?.[i] !== 1 &&
+    state.posts?.[i] !== 1 &&
+    state.irrigation?.[i] !== 1 &&
+    state.mines?.[i] !== 1
+  ) {
     return { ok: false, reason: 'There is nothing here to tear up.' };
   }
   return { ok: true };
@@ -180,8 +186,22 @@ export function pillage(state: GameState, unit: Unit): boolean {
   // being made to choose which to ruin is bookkeeping, not a decision.
   const hadPost = state.posts?.[i] === 1;
   const hadRoad = state.roads?.[i] === 1;
+  const hadDitch = state.irrigation?.[i] === 1;
+  const hadMine = state.mines?.[i] === 1;
   if (hadRoad) state.roads![i] = 0;
   if (hadPost) state.posts![i] = 0;
+  if (hadDitch) state.irrigation![i] = 0;
+  if (hadMine) state.mines![i] = 0;
+  const wrecked = [
+    hadRoad ? 'the road' : null,
+    hadPost ? 'the garrison post' : null,
+    hadDitch ? 'the ditches' : null,
+    hadMine ? 'the mine' : null,
+  ].filter((w): w is string => w !== null);
+  const list =
+    wrecked.length === 1
+      ? wrecked[0]
+      : `${wrecked.slice(0, -1).join(', ')} and ${wrecked[wrecked.length - 1]}`;
   unit.moves = 0;
   unit.order = 'none';
   const who = state.players[unit.owner];
@@ -190,11 +210,8 @@ export function pillage(state: GameState, unit: Unit): boolean {
     if (p.barbarian || p.visible[i] !== 1) continue;
     log(
       state,
-      hadPost && hadRoad
-        ? `${name} tear up the road and the post with it.`
-        : hadPost
-          ? `${name} tear down the garrison post.`
-          : `${name} tear up the road.`,
+      // A post is torn down and everything else torn up; alone, it says so.
+      wrecked.length === 1 && hadPost ? `${name} tear down the garrison post.` : `${name} tear up ${list}.`,
       p.id === unit.owner ? 'info' : 'bad',
       p.id,
       undefined,

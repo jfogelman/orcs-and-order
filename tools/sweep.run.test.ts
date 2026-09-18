@@ -11,6 +11,7 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
+import { TERRAFORM } from '../src/sim/terraform';
 
 /**
  * The question this sweep is currently asking.
@@ -77,22 +78,21 @@ const control = () => {
   FOLLIES.enabled = true;
   AI_TUNING.sharedFollyFirst = true;
   PERSONALITIES.orc.techPriority = [...HORDE_LIST];
+  // Section 112: terraforming ships, so the game being measured has it.
+  TERRAFORM.enabled = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 111's open item: the Kingdom took every late shared folly. Two causes,
-  // measured together because they are one fix -- the Horde's list never asked for
-  // Insanity, which the Long Peace and both magics need, and neither side
-  // preferred the one kind of folly somebody else can take from it.
+  // Section 112: workers improving the land once the roads are laid, against the
+  // game as it shipped before it -- where they stood about costing upkeep.
   {
-    label: 'before: no insanity, no preference',
+    label: 'terraform off',
     apply: () => {
       control();
-      AI_TUNING.sharedFollyFirst = false;
-      PERSONALITIES.orc.techPriority = HORDE_LIST.filter((t) => t !== 'insanity');
+      TERRAFORM.enabled = false;
     },
   },
-  { label: 'after: insanity asked for, shared first', apply: control },
+  { label: 'terraform on', apply: control },
 ];
 
 /**

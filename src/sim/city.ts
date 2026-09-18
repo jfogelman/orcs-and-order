@@ -14,6 +14,7 @@ import { unlockedBuildings, unlockedUnits } from './research';
 import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
 import { follyFinished, follyOffered } from './follies';
 import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
+import { improvementYield } from './terraform';
 
 /**
  * Cities: yields, growth, and production.
@@ -125,6 +126,12 @@ export function tileYield(state: GameState, index: number, isCenter: boolean): Y
     y.shields = Math.max(y.shields, 1);
     y.trade = Math.max(y.trade, 1);
   }
+  // Section 112: what a worker has made of it, on top of the ground and any
+  // special, which is Civ2's order and the one that makes a mined gold hill worth
+  // the walk.
+  const made = improvementYield(state, index);
+  y.food += made.food;
+  y.shields += made.shields;
   return y;
 }
 

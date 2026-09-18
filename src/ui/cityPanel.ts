@@ -73,6 +73,7 @@ const POSTURE: Record<UnitOrder, string> = {
   sentry: 'sentry',
   fortified: 'fortified',
   road: 'laying a road',
+  improve: 'working the land',
   post: 'building a post',
 };
 

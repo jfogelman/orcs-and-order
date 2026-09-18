@@ -8810,3 +8810,49 @@ had vanished. Three changes, and the third is the general one:
   `src/ui/notice.ts`, driven from `promptFollyNews` in `main.ts`, which reads the
   log by cue (`folly`, `folly-race`) and queues behind the other turn-start
   questions. Jeremy: "the log is not sufficient."
+
+## 112. Terraforming: something for the diggers to do
+
+Section 107 found the diggers piling up: 21 settler-class units standing about at the
+end of a game with roads against 5 without, every one costing upkeep, because once
+every city was joined a worker had nothing left to do. This gives it the land.
+
+### What was decided (Jeremy)
+
+- **Four jobs:** irrigate grassland or wastes (+1 food), mine hills (+1 shield) and
+  mountains (+2), and clear forest or swamp to grassland.
+- **Each side its own names, one picture each.** *A Ditch Somebody Fell In* / *Tidy
+  Furrows*; *The Big Hole* / *A Respectable Mine*; *Stomping It Flat* / *Managed
+  Woodland Reduction* for a forest, *Somebody Fell In Again* / *Reclaiming the Bog*
+  for a swamp.
+- **Taught by Tree-Hugging**, the Granary advance -- having hugged the trees, everybody
+  agrees they are in the way -- and **raiders can tear it up**, as they do roads.
+
+### As built
+
+- **Rules** in `src/sim/terraform.ts`, lever `TERRAFORM` on the sweep's list. A worker
+  on `improve` carries a `job` and counts down `work` at the top of its turn, the
+  same way a road is dug. Turns: irrigation 3 on grass and 4 on wastes, mines 5 on
+  hills and 8 on mountains, clearing 5 for forest and 6 for swamp.
+- **Irrigation needs water beside it**: the coast, a city, or a ditch already dug --
+  so a field spreads inland from somewhere, as Civ2's did.
+- **The yield adds on top** of the terrain and any special, in `tileYield`.
+- **Clearing changes the ground**, drops whatever special was on it, and bumps
+  `state.terrainEdits`, which is now part of the key the map picture is cached
+  under -- the picture is otherwise built once per map and would never show it.
+- **Saved** as two more packed layers beside the roads and posts (`irrigation`,
+  `mines`), absent from every older save.
+- **Controls:** Shift+I, Shift+M and Shift+C on a worker, and a button for each job
+  the ground under it allows, named in its side's words with the turns. I, M and C
+  alone still mean the report, the sound and centring.
+- **Pillage** takes improvements along with roads and posts, in one turn's work.
+- **The AI** gives a worker land once the roads and posts are done: the best worked
+  tile nobody else has claimed. It irrigates and mines, and clears swamps -- strictly
+  worse than the grass they become -- but not forests, which trade two shields for
+  one food and one shield.
+- **Drawn** under the roads: real art from `terrain/improvements/` when it exists,
+  otherwise three furrows and a line of water, and a hole with a prop over it.
+- **The Orcpedia** explains it in the Terrain pane, in the reader's side's words.
+- **Found on the way:** ten of the sixteen advance flags reached the tech cards as
+  bare identifiers ("Granary, terraform"). Every flag has a line now, and the table
+  is typed so a new one without a line will not compile.

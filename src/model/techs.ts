@@ -45,7 +45,9 @@ export type TechFlag =
    * The one advance section 111's follies needed of their own. Not researchable
    * while the follies are switched off.
    */
-  | 'folly';
+  | 'folly'
+  /** Workers may irrigate, mine and clear the land. Section 112. */
+  | 'terraform';
 
 export interface TechDef {
   id: TechId;
@@ -81,7 +83,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['mapmaking'],
     units: [],
     buildings: ['granary'],
-    flags: [],
+    flags: ['terraform'],
     flavor: 'If you do not eat the whole forest immediately, there is more forest later.',
   },
   {

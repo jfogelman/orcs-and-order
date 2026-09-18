@@ -18,6 +18,7 @@ import { POSTS } from '../sim/posts';
 import { CIVIC_PRIDE, POSTING } from '../sim/city';
 import { ALT_VICTORY } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
+import { TERRAFORM, jobName } from '../sim/terraform';
 
 /**
  * The Orcpedia: what everything is, what it costs, and what unlocks it.
@@ -484,6 +485,24 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           &mdash; those buildings pay nothing with nobody standing in the city &mdash; and the city
           view lists every route a city has, what it pays, and whether it is paying at all.
         </p>
+        ${
+          TERRAFORM.enabled
+            ? `<p class="flavor">
+          <strong>Improving the land.</strong> Once ${escapeHtml(
+            TECHS.find((t) => t.flags.includes('terraform'))?.name ?? 'the right advance',
+          )} is known -- having hugged the trees, everybody agrees they are in the way -- a
+          worker can <strong>irrigate</strong> grassland or wastes for +${TERRAFORM.food} food, as
+          long as there is water beside it: the coast, a city, or another ditch
+          (<em>${escapeHtml(jobName('irrigate', faction))}</em>, Shift+I). It can
+          <strong>mine</strong> hills for +1 shield and mountains for +2
+          (<em>${escapeHtml(jobName('mine', faction))}</em>, Shift+M), and <strong>clear</strong>
+          forest or swamp to grassland (<em>${escapeHtml(jobName('clear', faction, 'forest'))}</em> and
+          <em>${escapeHtml(jobName('clear', faction, 'swamp'))}</em>, Shift+C), which also clears
+          whatever special was on it and what the ground was worth to defend. What a worker
+          makes adds to whatever the tile already grows, special included. Raiders can tear it up.
+        </p>`
+            : ''
+        }
         <div class="pedia-rows">${terrainList}</div>
       </div>
       <div class="pedia-pane" data-pane="wilds" hidden>

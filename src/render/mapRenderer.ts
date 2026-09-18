@@ -126,6 +126,8 @@ export class MapRenderer {
   private roadFrames: HTMLCanvasElement[] | null = null;
   /** Section 102's posts, per faction, once somebody draws them. */
   private postArt = new Map<string, HTMLImageElement>();
+  /** Section 112's irrigation and mine overlays, once drawn. */
+  private improvementArt = new Map<string, HTMLImageElement>();
   /** Badges a settlement wears, by state. Empty until the art loads. */
   private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;
@@ -156,6 +158,9 @@ export class MapRenderer {
     });
     for (const faction of ['orc', 'human']) {
       this.sprites.installPostArt(faction, (img) => this.postArt.set(faction, img));
+    }
+    for (const name of ['irrigation', 'mine']) {
+      this.sprites.installImprovementArt(name, (img) => this.improvementArt.set(name, img));
     }
     // Cities are drawn every frame rather than pre-rendered, so these need no
     // invalidation -- they start appearing as soon as they have loaded.
@@ -325,6 +330,70 @@ export class MapRenderer {
     }
   }
 
+  /**
+   * Irrigation and mines, section 112. Real art if it has been drawn, and two
+   * plain shapes if not: furrows with a line of water through them, and the dark
+   * mouth of a hole with a prop over it. Remembered on explored ground, like roads.
+   */
+  private drawImprovements(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+  ): void {
+    const w = state.width;
+    const { x0, y0, x1, y1 } = cam.visibleTileRange();
+    const ditchArt = this.improvementArt.get('irrigation');
+    const mineArt = this.improvementArt.get('mine');
+    for (let y = Math.max(0, y0); y <= Math.min(state.height - 1, y1); y++) {
+      for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
+        const i = idx(x, y, w);
+        if (!viewer.explored[i]) continue;
+        const s = cam.tileToScreen(x, y);
+        const u = size / 8;
+        if (state.irrigation?.[i] === 1) {
+          if (ditchArt) ctx.drawImage(ditchArt, s.x, s.y, size, size);
+          else {
+            ctx.strokeStyle = 'rgba(58, 38, 18, 0.75)';
+            ctx.lineWidth = Math.max(1, u * 0.45);
+            ctx.beginPath();
+            for (const row of [2.2, 4, 5.8]) {
+              ctx.moveTo(s.x + u, s.y + u * row);
+              ctx.lineTo(s.x + u * 7, s.y + u * row);
+            }
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(80, 150, 210, 0.85)';
+            ctx.lineWidth = Math.max(1, u * 0.35);
+            ctx.beginPath();
+            ctx.moveTo(s.x + u * 4, s.y + u);
+            ctx.lineTo(s.x + u * 4, s.y + u * 7);
+            ctx.stroke();
+          }
+        }
+        if (state.mines?.[i] === 1) {
+          if (mineArt) ctx.drawImage(mineArt, s.x, s.y, size, size);
+          else {
+            // The mouth of the hole, low and to one side so the hill still reads.
+            ctx.fillStyle = '#1c140c';
+            ctx.beginPath();
+            ctx.arc(s.x + u * 2.6, s.y + u * 6, u * 1.4, Math.PI, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#8a6a3a';
+            ctx.lineWidth = Math.max(1, u * 0.4);
+            ctx.beginPath();
+            ctx.moveTo(s.x + u * 1.1, s.y + u * 6);
+            ctx.lineTo(s.x + u * 1.1, s.y + u * 4.4);
+            ctx.lineTo(s.x + u * 4.1, s.y + u * 4.4);
+            ctx.lineTo(s.x + u * 4.1, s.y + u * 6);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+  }
+
   private drawRoads(
     ctx: CanvasRenderingContext2D,
     state: GameState,
@@ -416,6 +485,11 @@ export class MapRenderer {
     // every visible tile. Unexplored ground is painted back out under fog.
     this.ensureLayer(state);
     this.blitTerrain(ctx, cam);
+
+    // --- worked land ----------------------------------------------------
+    // Section 112's ditches and mines, under the roads: a road runs across a
+    // field, not the other way about.
+    if (state.irrigation || state.mines) this.drawImprovements(ctx, state, viewer, cam, size);
 
     // --- roads -----------------------------------------------------------
     // Over the terrain rather than baked into it: the terrain layer is built

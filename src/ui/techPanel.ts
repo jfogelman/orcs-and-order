@@ -9,6 +9,7 @@ import { advisorSuggestions } from '../model/suggestions';
 import { portraitPath } from './advisors';
 import { afterModalCloses, bar, escapeHtml, openModal } from './dom';
 import { openPedia } from './pedia';
+import type { TechFlag } from '../model/techs';
 
 /**
  * How long the current study has to run, said in words.
@@ -76,17 +77,35 @@ function unlockSummary(t: TechDef, player: Player): string {
       );
     }
   }
-  for (const f of t.flags) bits.push(escapeHtml(FLAG_LABELS[f] ?? f));
+  for (const f of t.flags) bits.push(escapeHtml(FLAG_LABELS[f]));
   return bits.join(', ');
 }
 
-const FLAG_LABELS: Record<string, string> = {
+/**
+ * What each advance flag does, in the words a card shows.
+ *
+ * Every flag, and typed so: this was a partial table that fell back to the flag's
+ * own name, and ten of sixteen reached the player as a bare identifier -- the
+ * Tree-Hugging card read "Granary, terraform". A flag added without a line here
+ * is now a compile error rather than a word nobody explained.
+ */
+const FLAG_LABELS: Record<TechFlag, string> = {
   coordination: 'Big groups stop losing a movement point',
   mapmaking: '+1 sight for every unit',
   bridges: 'Forest and swamp cost 1 movement; workers can lay roads',
   watchtower: 'Cities see one tile further',
   contentment: '+1 content citizen everywhere',
   berserk: '+25% attack, -25% defence, army-wide',
+  pyromancy: 'Magic sets its target alight',
+  cryomancy: 'Magic leaves its target slowed',
+  clubs: 'Ogres may take a club when promoted',
+  volatile: 'Sappers may learn to survive one killing blow',
+  valour: 'Knights may learn to withdraw from a fight they are losing',
+  swampy: 'A lone troll on a swamp may make another troll',
+  bargain: 'Death Knights may take the health of their own side',
+  ending: 'Leads to a way to end the game',
+  folly: 'Unlocks a folly of its own',
+  terraform: 'Workers can irrigate, mine and clear the land',
 };
 
 export function openTechPanel(state: GameState, player: Player, onChange: () => void): void {

@@ -9,6 +9,7 @@ through Save and load (Ctrl+S), then Upload.
 - **city-asks-what-to-build.w2c** — A city set to ask, banking shields with nothing on order. Ending the turn opens its panel with the build list live.
 - **rioting-city.w2c** — A large city in disorder with nothing calming it, for the unrest overlay and advisors.
 - **rich-and-idle.w2c** — Gold to burn and something part-built, for rush buying and the treasury.
+- **land-to-work.w2c** — A Peon on grassland beside the water, hills and a swamp next door, and Tree-Hugging known -- so Irrigate, Mine and Clear (Shift+I, M, C) are all a step away.
 - **capital-offer-due.w2c** — Three content, fed cities and a score past the first milestone, so the council offers a piece of the capital. Pick one to watch it fade into place on the capital screen.
 - **late-game.w2c** — Turn 200 of a real game, both sides alive, empires grown and fighting.
 - **deadline-in-thirty.w2c** — Turn 269 of 300. Ending one turn crosses the thirty-turn mark, so this is the save for anything about the deadline warning or the advisors noticing it.
