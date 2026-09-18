@@ -60,6 +60,7 @@ import {
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
+import { installOverflowTips } from './ui/overflowTips';
 import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
 import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
 import type { Job } from './sim/terraform';
@@ -1332,6 +1333,8 @@ class App {
       this.camera.centerOnTile(t.x, t.y);
     });
 
+    // The full text of any label a narrow window has cut short, on hover.
+    installOverflowTips();
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     window.addEventListener('keyup', (e) => this.held.delete(e.key));
     window.addEventListener('blur', () => this.held.clear());
