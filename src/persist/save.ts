@@ -54,21 +54,26 @@ interface PackedPlayer extends Omit<Player, 'explored' | 'visible'> {
   visible: string;
 }
 
-interface SaveFile extends Omit<GameState, 'players' | 'roads' | 'posts'> {
+interface SaveFile extends Omit<GameState, 'players' | 'roads' | 'posts' | 'irrigation' | 'mines'> {
   players: PackedPlayer[];
   savedAt: string;
   /** Packed like the fog: long runs of nothing with the odd road in them. */
   roads?: string;
   /** The same, for section 102's garrison posts. */
   posts?: string;
+  /** And section 112's ditches and mines. */
+  irrigation?: string;
+  mines?: string;
 }
 
 export function serialize(state: GameState): string {
-  const { roads, posts, ...plain } = state;
+  const { roads, posts, irrigation, mines, ...plain } = state;
   const file: SaveFile = {
     ...plain,
     ...(roads ? { roads: packBits(roads) } : {}),
     ...(posts ? { posts: packBits(posts) } : {}),
+    ...(irrigation ? { irrigation: packBits(irrigation) } : {}),
+    ...(mines ? { mines: packBits(mines) } : {}),
     players: state.players.map((p) => ({
       ...p,
       explored: packBits(p.explored),
@@ -99,12 +104,15 @@ export function deserialize(text: string): GameState {
 
   const tiles = file.width * file.height;
   // Drop the save-only metadata and re-expand the packed fog bitmaps.
-  const { savedAt: _savedAt, players, roads, posts, ...rest } = file;
+  const { savedAt: _savedAt, players, roads, posts, irrigation, mines, ...rest } = file;
   const state: GameState = {
     ...rest,
     // Absent in every save from before roads, which loads as a map without any.
     ...(typeof roads === 'string' ? { roads: unpackBits(roads, tiles) } : {}),
     ...(typeof posts === 'string' ? { posts: unpackBits(posts, tiles) } : {}),
+    // Absent in every save from before section 112, which loads as untouched land.
+    ...(typeof irrigation === 'string' ? { irrigation: unpackBits(irrigation, tiles) } : {}),
+    ...(typeof mines === 'string' ? { mines: unpackBits(mines, tiles) } : {}),
     players: players.map((p) => ({
       ...p,
       explored: unpackBits(p.explored, tiles),

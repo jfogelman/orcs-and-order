@@ -1,6 +1,8 @@
 import { checkEndings, isEndingPiece } from './endings';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
+import { advanceImproveWork } from './terraform';
+import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -129,8 +131,18 @@ function refreshUnits(state: GameState, player: Player): void {
           [unit.x, unit.y],
         );
       }
+    } else if (unit.order === 'improve') {
+      // Section 112: a ditch, a mine or a cleared field, the turn its last shift is done.
+      const done = advanceImproveWork(state, unit);
+      if (done.status === 'done') {
+        log(state, `${unitType(unit.type).name} finishes ${done.what}.`, 'good', player.id, undefined, [
+          unit.x,
+          unit.y,
+        ]);
+      }
     } else if (unit.work !== undefined) {
       delete unit.work;
+      delete unit.job;
     }
     // The axe was thrown, not destroyed. Given a moment, it is fetched back.
     if (unit.disarmed && unit.rearmIn !== undefined) {
@@ -667,6 +679,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // After the digging above has advanced, so a worker that finished a stretch
   // this morning walks on to the next one the same turn.
   resumeRoadOrders(state, playerId);
+  // Section 112: ditches dug along the way, then workers left to find their own.
+  resumeIrrigateOrders(state, playerId);
+  resumeAutoWork(state, playerId);
   recomputeVisibility(state, playerId);
   // After visibility and not before: a sighting is a fact about what this
   // player can see this turn, so it has to be asked of the map as it now is.
@@ -698,6 +713,14 @@ export function endPlayerTurn(state: GameState): void {
 /** Units that still have moves and no standing order — the "anything left?" check. */
 export function idleUnits(state: GameState, playerId: number) {
   return state.units.filter(
-    (u) => u.owner === playerId && u.moves > 0 && u.order === 'none' && !u.goto && !u.roadTo,
+    (u) =>
+      u.owner === playerId &&
+      u.moves > 0 &&
+      u.order === 'none' &&
+      !u.goto &&
+      !u.roadTo &&
+      // A worker on Irrigate To or Auto work has its orders, even on a turn it waits.
+      !u.irrigateTo &&
+      !u.autoWork,
   );
 }

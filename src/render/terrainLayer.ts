@@ -111,7 +111,8 @@ export class TerrainLayer {
   }
 
   static keyFor(state: GameState): string {
-    return `${state.seed}:${state.width}x${state.height}:${state.settings.landRatio}`;
+    // Section 112: a cleared forest is a change to the ground, so it is part of the key.
+    return `${state.seed}:${state.width}x${state.height}:${state.settings.landRatio}:${state.terrainEdits ?? 0}`;
   }
 
   /**

@@ -147,7 +147,7 @@ export interface Player {
 
 // ---------------------------------------------------------------------- units
 
-export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road' | 'post';
+export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road' | 'post' | 'improve';
 
 export interface Unit {
   id: number;
@@ -233,6 +233,15 @@ export interface Unit {
    * roads loads unchanged, and absent means no job.
    */
   work?: number;
+  /** Which of section 112's jobs a worker on `improve` is doing. */
+  job?: 'irrigate' | 'mine' | 'clear';
+  /**
+   * A standing Irrigate To: dig ditches along the way to this tile, section 112.
+   * Absent in every older save.
+   */
+  irrigateTo?: { x: number; y: number };
+  /** Auto work: the worker finds land to improve by itself each turn. Section 112. */
+  autoWork?: boolean;
   /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
@@ -495,6 +504,19 @@ export interface GameState {
    * packed the same way.
    */
   posts?: number[];
+  /**
+   * 0/1 per tile: irrigated by a worker (section 112). Optional and created with
+   * the first ditch, like the roads layer, and packed the same way.
+   */
+  irrigation?: number[];
+  /** 0/1 per tile: mined by a worker (section 112). The same arrangement. */
+  mines?: number[];
+  /**
+   * How many times a worker has changed the ground itself -- a forest or swamp
+   * cleared to grassland. Part of the key the map picture is cached under, so the
+   * change is drawn. Absent until the first clearing.
+   */
+  terrainEdits?: number;
   players: Player[];
   units: Unit[];
   cities: City[];

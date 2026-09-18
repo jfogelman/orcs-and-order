@@ -2,11 +2,12 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { City, GameState, Unit, UnitTypeId } from '../src/model/types';
+import type { City, GameState, TerrainId, Unit, UnitTypeId } from '../src/model/types';
 import { FACTIONS } from '../src/model/factions';
 import { assignWorkers, foodSurplus } from '../src/sim/city';
 import { TERRAIN } from '../src/model/terrain';
 import { playerScore, prideDue } from '../src/sim/turn';
+import { canImprove } from '../src/sim/terraform';
 import { createGame, playerCities, playerUnits, spawnUnit } from '../src/sim/gamestate';
 import { deserialize, serialize } from '../src/persist/save';
 import { playGame } from '../tools/sweep';
@@ -100,7 +101,10 @@ function garrison(state: GameState, city: City): Unit {
  * over. Section 110's endings end most games in the two hundreds now; of seeds 20
  * to 50, only 32 still reaches 299 with both sides standing and no ending landed.
  */
-const LATE_SEED = 32;
+// Section 112's workers, and cities that stop chasing food at their content limit,
+// changed which games last: of seeds 20 to 50, only 45 and 50 still reach turn 299
+// with both sides standing.
+const LATE_SEED = 45;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];
@@ -239,6 +243,40 @@ const SCENARIOS: Scenario[] = [
     check: (state) => {
       expect(state.players[0].gold).toBeGreaterThan(1000);
       expect(playerCities(state, 0)[0].producing.kind).toBe('building');
+    },
+  },
+  {
+    name: 'land-to-work',
+    about:
+      'A Peon on grassland beside the water, hills and a swamp next door, and Tree-Hugging ' +
+      'known -- so Irrigate, Mine and Clear (Shift+I, M, C) are all a step away.',
+    build: () => {
+      const { state, city } = opening(4008);
+      const me = state.players[0];
+      for (const t of ['tree-hugging', 'bridge-building']) if (!me.techs.includes(t)) me.techs.push(t);
+      // Clear a patch beside the city so what is offered does not depend on the seed.
+      const x = city.x + 2;
+      const y = city.y;
+      const put = (dx: number, dy: number, t: TerrainId) => {
+        const tx = x + dx;
+        const ty = y + dy;
+        if (tx < 0 || ty < 0 || tx >= state.width || ty >= state.height) return;
+        state.terrain[ty * state.width + tx] = t;
+        state.specials[ty * state.width + tx] = 0;
+      };
+      put(0, 0, 'grass');
+      put(1, 0, 'water');
+      put(0, 1, 'hills');
+      put(0, -1, 'swamp');
+      state.units = state.units.filter((u) => !(u.x === x && u.y === y));
+      spawnUnit(state, 0, FACTIONS[state.players[0].faction].settlerUnit as UnitTypeId, x, y);
+      return state;
+    },
+    check: (state) => {
+      const peon = playerUnits(state, 0).find((u) => u.type === FACTIONS[state.players[0].faction].settlerUnit);
+      expect(peon).toBeDefined();
+      expect(state.players[0].techs).toContain('tree-hugging');
+      expect(canImprove(state, peon!, 'irrigate').ok).toBe(true);
     },
   },
   {

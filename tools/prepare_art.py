@@ -821,6 +821,47 @@ def centre_square(img: Image.Image) -> Image.Image:
     return img.crop((left, top, left + side, top + side))
 
 
+# Section 112's two overlays, drawn over the terrain like the roads.
+IMPROVEMENT_OVERLAYS = ("irrigation", "mine")
+
+
+def process_improvements(force: bool) -> tuple[int, list[str]]:
+    """
+    Section 112's overlays: `art_src/terrain/improvements/irrigation` and `mine`,
+    each one tile of magenta with the ditches or the mine on it.
+
+    Out as `public/terrain/improvements/<name>.png`, twice the terrain size so it
+    stays crisp at the largest zoom. Optional: the map draws both itself until the
+    art exists, the way it drew roads.
+    """
+    src = SRC / "terrain" / "improvements"
+    out = OUT / "terrain" / "improvements"
+    if not src.is_dir():
+        return 0, []
+    out.mkdir(parents=True, exist_ok=True)
+    count = 0
+    problems: list[str] = []
+    for name in IMPROVEMENT_OVERLAYS:
+        path = find_source(src, name)
+        if path is None:
+            continue
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        # Most of the tile is background, as with a road, so the ceiling on how
+        # much may be keyed out is raised the same way.
+        keyed, cut_out = remove_background(centre_square(Image.open(path)), max_removed=0.99)
+        if not cut_out:
+            problems.append(f"improvements/{path.name}: background would not key")
+            continue
+        keyed.resize((TERRAIN_SIZE * 2, TERRAIN_SIZE * 2), Image.LANCZOS).save(target)
+        print(f"  terrain/improvements/{name}.png")
+        count += 1
+    for line in problems:
+        print(f"  {line}")
+    return count, problems
+
+
 def process_roads(
     force: bool, src: Path | None = None, target: Path | None = None
 ) -> tuple[int, list[str]]:
@@ -2248,6 +2289,8 @@ def main() -> int:
     terrain, missing_terrain = process_terrain(force)
     print("Roads:")
     roads, road_problems = process_roads(force)
+    print("Worked land:")
+    improvements, improvement_problems = process_improvements(force)
     print("Effects:")
     effects, failed_effects = process_effects(force)
     print("Unit attack animations:")

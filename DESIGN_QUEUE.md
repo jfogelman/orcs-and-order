@@ -8810,3 +8810,132 @@ had vanished. Three changes, and the third is the general one:
   `src/ui/notice.ts`, driven from `promptFollyNews` in `main.ts`, which reads the
   log by cue (`folly`, `folly-race`) and queues behind the other turn-start
   questions. Jeremy: "the log is not sufficient."
+
+## 112. Terraforming: something for the diggers to do
+
+Section 107 found the diggers piling up: 21 settler-class units standing about at the
+end of a game with roads against 5 without, every one costing upkeep, because once
+every city was joined a worker had nothing left to do. This gives it the land.
+
+### What was decided (Jeremy)
+
+- **Four jobs:** irrigate grassland or wastes (+1 food), mine hills (+1 shield) and
+  mountains (+2), and clear forest or swamp to grassland.
+- **Each side its own names, one picture each.** *A Ditch Somebody Fell In* / *Tidy
+  Furrows*; *The Big Hole* / *A Respectable Mine*; *Stomping It Flat* / *Managed
+  Woodland Reduction* for a forest, *Somebody Fell In Again* / *Reclaiming the Bog*
+  for a swamp.
+- **Taught by Tree-Hugging**, the Granary advance -- having hugged the trees, everybody
+  agrees they are in the way -- and **raiders can tear it up**, as they do roads.
+
+### As built
+
+- **Rules** in `src/sim/terraform.ts`, lever `TERRAFORM` on the sweep's list. A worker
+  on `improve` carries a `job` and counts down `work` at the top of its turn, the
+  same way a road is dug. Turns: irrigation 3 on grass and 4 on wastes, mines 5 on
+  hills and 8 on mountains, clearing 5 for forest and 6 for swamp.
+- **Irrigation needs water beside it**: the coast, a city, or a ditch already dug --
+  so a field spreads inland from somewhere, as Civ2's did.
+- **The yield adds on top** of the terrain and any special, in `tileYield`.
+- **Clearing changes the ground**, drops whatever special was on it, and bumps
+  `state.terrainEdits`, which is now part of the key the map picture is cached
+  under -- the picture is otherwise built once per map and would never show it.
+- **Saved** as two more packed layers beside the roads and posts (`irrigation`,
+  `mines`), absent from every older save.
+- **Controls:** Shift+I, Shift+M and Shift+C on a worker, and a button for each job
+  the ground under it allows, named in its side's words with the turns. I, M and C
+  alone still mean the report, the sound and centring.
+- **Pillage** takes improvements along with roads and posts, in one turn's work.
+- **The AI** gives a worker land once the roads and posts are done: the best worked
+  tile nobody else has claimed. It irrigates and mines, and clears swamps -- strictly
+  worse than the grass they become -- but not forests, which trade two shields for
+  one food and one shield.
+- **Drawn** under the roads: real art from `terrain/improvements/` when it exists,
+  otherwise three furrows and a line of water, and a hole with a prop over it.
+- **The Orcpedia** explains it in the Terrain pane, in the reader's side's words.
+- **Found on the way:** ten of the sixteen advance flags reached the tech cards as
+  bare identifiers ("Granary, terraform"). Every flag has a line now, and the table
+  is typed so a new one without a line will not compile.
+
+### Measured: terraforming off against on
+
+`tools/sweep.run.test.ts`, 108 games an arm, both seed sets, the game as it ships
+otherwise. The off arm reproduces section 111's last "after" arm exactly (34-20,
+33-21), which is the control working.
+
+| arm | set | Horde-Kingdom | cities H/K | population H/K | conquest / dominance / points / Portal / Object |
+|---|---|---|---|---|---|
+| terraform off | tuned | 34-20 | 6.57 / 6.72 | 49.9 / 43.5 | 14 / 7 / 2 / 21 / 10 |
+| terraform off | held-out | 33-21 | 6.63 / 6.11 | 47.1 / 39.5 | 17 / 10 / 5 / 13 / 9 |
+| terraform on | tuned | **23-31** | **4.39** / 6.54 | 40.4 / 50.7 | 18 / 6 / 6 / 14 / 10 |
+| terraform on | held-out | **27-27** | 5.31 / 5.20 | 42.5 / 42.3 | 23 / 4 / 6 / 9 / 12 |
+
+**Seventeen games from the Horde to the Kingdom**, both sets agreeing (-11, -6):
+67-41 becomes 50-58. On the numbers alone that is closer to even than the game it
+replaces, but the way it gets there is not a balance change: the Horde's cities fall
+from 6.6 to 4.4 on one set and its population by a fifth, while the Kingdom's grow.
+Something breaks for the Horde. Not shipped until it is understood.
+
+**Why: the Horde riots.** A scratch probe over seeds 20 to 27, terraforming off and
+on: both sides irrigate about equally (153 and 149 worked tiles), but the Horde's
+share of city-turns in disorder goes from **4% to 9%** and the Kingdom's from 1% to
+2%. More food grows cities past their content limit, a rioting city produces
+nothing, and the Horde -- the side that grows fastest and was already pressed against
+the limit (section 85) -- pays for it.
+
+**Teaching the AI to irrigate only where a city has room to grow did not fix it.**
+Ditches fell from 153 to 114 and mines rose from 3 to 13, and the Horde's disorder
+stayed at 9%: a city irrigated while it had room keeps growing past the limit
+afterwards. The AI check is kept -- a ditch for a city that cannot use the food is
+waste -- but the cause is upstream: cities go on choosing food and growing into
+riots, and irrigation hands them more of it.
+
+### The fix, and three things Jeremy asked for on top
+
+- **A city at its content limit stops chasing food** (`AUTO_TILES.spareFoodAtLimit`,
+  Jeremy's call). The greedy fill scored food at three times a shield, so a city went
+  on taking its richest food tiles however close it was to rioting, and irrigation
+  made those richer. At the limit, food beyond what the citizen on the tile eats now
+  counts for nothing: irrigated grass (3/1/0) and plain grass score the same, a mined
+  hill (1/3/0) beats both, and the city stays fed without growing into a riot.
+  Hand-picked tiles are untouched. This changes every game, terraforming or not.
+- **Irrigate To** (Shift+W), because irrigation needs water beside it and a field
+  has to be walked inland one ditch at a time. Built like Road To, and after its
+  lessons: it ends when nothing left on the way could be watered, rather than
+  waiting at a city gate, and it follows Road To's straight-leaning route -- on the
+  plain march route a chain pointed along a row wandered off it a tile in.
+- **Auto work** (Shift+A): the worker finds land to improve by itself each turn,
+  with the same job-picking the AI uses, now shared from `src/sim/autowork.ts`.
+  Moving the worker by hand ends it; a worker on it is not counted as idle.
+- **Tower Building lets workers irrigate away from water** (a `channels` flag,
+  Jeremy's pick): mid-game, shared, and already the advance that raises tall stone
+  things.
+
+The art arrived: `irrigation` reads well, as a field filling its tile; `mine` came
+back on a solid square of dirt (81% of the tile opaque) and hides the hill or
+mountain under it. A tighter prompt is in ART_PROMPTS.
+
+The sweep of the game as it would ship -- terraforming on and the tile fix -- against
+today's game is recorded below.
+
+### Measured: the game as it would ship
+
+Today's game against terraforming with the tile fix, 108 games an arm, both seed
+sets. The "today" arm reproduces the last one exactly.
+
+| arm | set | Horde-Kingdom | cities H/K | population H/K | conquest / dominance / points / Portal / Object |
+|---|---|---|---|---|---|
+| today | tuned | 34-20 | 6.57 / 6.72 | 49.9 / 43.5 | 14 / 7 / 2 / 21 / 10 |
+| today | held-out | 33-21 | 6.63 / 6.11 | 47.1 / 39.5 | 17 / 10 / 5 / 13 / 9 |
+| terraform + tiles | tuned | **27-27** | 5.54 / 5.59 | 48.1 / 44.7 | 18 / 3 / 5 / 14 / 14 |
+| terraform + tiles | held-out | **30-24** | 6.00 / 5.09 | 47.4 / 40.5 | 20 / 5 / 4 / 13 / 12 |
+
+**Horde 57-51**, against 67-41 today: ten games, both sets moving the same way (-7,
+-3). The collapse the first sweep found is mostly gone -- the Horde's population is
+back to today's, its cities fall to 5.5-6.0 rather than 4.4 -- and what is left is a
+game about as even as this file has recorded: 53% Horde. The two endings come out
+level too, the Portal and the Object deciding 27 and 26 games against 34 and 19.
+Conquest rises from 31 to 38.
+
+Not separated: whether the tile fix alone moves an untouched game. It changes every
+game, so it is worth an arm of its own if the balance is ever revisited.

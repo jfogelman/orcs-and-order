@@ -45,6 +45,8 @@ import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
 import { POSTS, startPost } from '../sim/posts';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 import { isFolly } from '../sim/follyEffects';
+import { TERRAFORM } from '../sim/terraform';
+import { improveWorkToDo, takeImproveJob } from '../sim/autowork';
 
 /**
  * The opposition.
@@ -718,7 +720,8 @@ function chooseProduction(
       worker &&
       workers < wanted &&
       (roadWorkToDo(state, city.owner) ||
-        (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)))
+        (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)) ||
+        improveWorkToDo(state, city.owner))
     ) {
       return { kind: 'unit', id: worker.id };
     }
@@ -1053,6 +1056,12 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
   if (AI_TUNING.buildPosts && cities >= personality.targetCities) {
     if (unit.order === 'post') return;
     if (takePostJob(state, unit)) return;
+  }
+  // Section 112: with the roads laid and the posts up, the land itself -- which is
+  // what section 107's diggers were standing around for.
+  if (TERRAFORM.enabled && cities >= personality.targetCities) {
+    if (unit.order === 'improve') return;
+    if (takeImproveJob(state, unit)) return;
   }
   if (cities >= personality.targetCities + 2) {
     // Enough cities; park it somewhere safe rather than wandering forever.

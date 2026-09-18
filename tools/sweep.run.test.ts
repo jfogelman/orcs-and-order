@@ -11,6 +11,8 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
+import { TERRAFORM } from '../src/sim/terraform';
+import { AUTO_TILES } from '../src/sim/city';
 
 /**
  * The question this sweep is currently asking.
@@ -77,22 +79,26 @@ const control = () => {
   FOLLIES.enabled = true;
   AI_TUNING.sharedFollyFirst = true;
   PERSONALITIES.orc.techPriority = [...HORDE_LIST];
+  // Section 112: terraforming ships, so the game being measured has it.
+  TERRAFORM.enabled = true;
+  // And a city at its content limit stops chasing food, which is what keeps it.
+  AUTO_TILES.spareFoodAtLimit = true;
 };
 
 const ARMS: Arm[] = [
-  // Section 111's open item: the Kingdom took every late shared folly. Two causes,
-  // measured together because they are one fix -- the Horde's list never asked for
-  // Insanity, which the Long Peace and both magics need, and neither side
-  // preferred the one kind of folly somebody else can take from it.
+  // Section 112, as it would ship: terraforming on, with cities at their content
+  // limit no longer chasing food -- against the game as it ships today, which has
+  // neither. The first terraforming sweep had only the first half, and the Horde
+  // rioted its way out of seventeen games.
   {
-    label: 'before: no insanity, no preference',
+    label: 'today',
     apply: () => {
       control();
-      AI_TUNING.sharedFollyFirst = false;
-      PERSONALITIES.orc.techPriority = HORDE_LIST.filter((t) => t !== 'insanity');
+      TERRAFORM.enabled = false;
+      AUTO_TILES.spareFoodAtLimit = false;
     },
   },
-  { label: 'after: insanity asked for, shared first', apply: control },
+  { label: 'terraform + tiles', apply: control },
 ];
 
 /**
