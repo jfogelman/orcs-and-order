@@ -6,6 +6,7 @@ import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from '.
 import { assignWorkers, syncCitizens } from './city';
 import { tryStep } from './movement';
 import { pillage } from './roads';
+import { difficultyOf } from './difficulty';
 
 /**
  * Raiding parties out of the unclaimed wilds.
@@ -105,11 +106,23 @@ export function waveSize(state: GameState): number {
   return Math.min(BARBARIANS.cap, Math.round(BARBARIANS.base + advances * BARBARIANS.perAdvance));
 }
 
+/**
+ * When raiding starts and how often it comes, at this game's level. Normal
+ * reads BARBARIANS unchanged, so a sweep moving those levers still moves them.
+ */
+export function raidPace(state: GameState): { notBefore: number; every: number } {
+  const level = difficultyOf(state.settings);
+  if (level.id === 'normal') return { notBefore: BARBARIANS.notBefore, every: BARBARIANS.every };
+  return { notBefore: level.raidNotBefore, every: level.raidEvery };
+}
+
 /** Turns since the last wave, or since raiding could have started. */
 export function waveDue(state: GameState): boolean {
   if (!raidersActive(state)) return false;
-  if (state.turn < BARBARIANS.notBefore) return false;
-  return (state.turn - BARBARIANS.notBefore) % BARBARIANS.every === 0;
+  // Section 113: the level sets the pace. At Normal these are BARBARIANS' own.
+  const { notBefore, every } = raidPace(state);
+  if (state.turn < notBefore) return false;
+  return (state.turn - notBefore) % every === 0;
 }
 
 /**

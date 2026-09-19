@@ -15,6 +15,7 @@ import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } fro
 import { follyFinished, follyOffered } from './follies';
 import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
 import { improvementYield } from './terraform';
+import { handicapContent, handicapCost } from './difficulty';
 
 /**
  * Cities: yields, growth, and production.
@@ -327,6 +328,8 @@ export function contentLimit(state: GameState, city: City): number {
   // list, so a posting would have calmed a city with nobody standing in it --
   // the gate existed and this was not asking it.
   let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
+  // Section 113: the level's patience, on the player's side only.
+  limit += handicapContent(owner);
   // Section 111: the Long Peace, felt in every city of the empire holding it.
   limit += empireBonus(state, city.owner, (b) => b.empireContent);
   // Section 102: a hut with a soldier standing in it, out on the city's own
@@ -591,6 +594,11 @@ export const OUTPOST_DISTANCE_COST = 6;
 
 /** What this city would charge to build the given thing. */
 export function productionCostIn(state: GameState, city: City, item: ProductionItem): number {
+  // Section 113: the AI's discount (or surcharge) at a level other than Normal.
+  return handicapCost(state.players[city.owner], baseCostIn(state, city, item));
+}
+
+function baseCostIn(state: GameState, city: City, item: ProductionItem): number {
   const base = productionCost(item);
   if (item.kind !== 'building' || !BUILDINGS[item.id]?.suppliesArmy) return base;
   const seat = capitalOf(state, city.owner);

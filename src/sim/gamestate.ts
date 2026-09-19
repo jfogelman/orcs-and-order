@@ -19,6 +19,7 @@ import type {
 import { generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
 import { cityFollyBonus, citySightUnblocked } from './follyEffects';
+import { difficultyOf, handicapFor } from './difficulty';
 
 // 2: units carry `disarmed`, for the axethrower that has thrown its axe.
 // 3: cities carry `citizens`, naming who lives in them.
@@ -284,6 +285,13 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     winner: null,
     settings,
   };
+
+  // Section 113: the level's gifts, fixed now for the whole game.
+  const level = difficultyOf(settings);
+  for (const p of state.players) {
+    const handicap = handicapFor(level, p.controller);
+    if (handicap) p.handicap = handicap;
+  }
 
   // Starting forces: two settlers and two of the faction's first fighting unit.
   const rng = new Rng(seed ^ 0x5bf03635);

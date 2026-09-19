@@ -2,7 +2,8 @@ import { audio } from '../audio/audio';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { perkName } from '../model/perks';
 import type { PerkDef } from '../model/perks';
-import type { FactionId, GameState } from '../model/types';
+import type { DifficultyId, FactionId, GameState } from '../model/types';
+import { DIFFICULTIES } from '../sim/difficulty';
 import type { NewGameOptions } from '../sim/gamestate';
 import {
   deleteSlot,
@@ -32,6 +33,16 @@ export function openNewGameMenu(
       </label>`;
   }).join('');
 
+  // Section 113: five levels, Normal picked unless the player asks otherwise.
+  const difficultyCards = DIFFICULTIES.map(
+    (d) => `
+      <label class="choice-card${d.id === 'normal' ? ' selected' : ''}" data-difficulty="${d.id}">
+        <input type="radio" name="difficulty" value="${d.id}" ${d.id === 'normal' ? 'checked' : ''} />
+        <span class="choice-name">${escapeHtml(d.name)}</span>
+        <span class="choice-sub">${escapeHtml(d.blurb)}</span>
+      </label>`,
+  ).join('');
+
   openModal({
     title: 'A New World',
     width: 'min(720px, 94vw)',
@@ -58,6 +69,11 @@ export function openNewGameMenu(
             <span class="choice-sub">88 x 60 — time to build</span>
           </label>
         </div>
+
+        <div class="field-label" style="margin-top:12px">
+          Difficulty <span class="muted">(decided now, kept for the whole game)</span>
+        </div>
+        <div class="choice-row compact">${difficultyCards}</div>
 
         <div class="field-row" style="margin-top:12px">
           <label class="field">
@@ -93,11 +109,9 @@ export function openNewGameMenu(
       // Keep the visual selection in step with the radio buttons.
       root.querySelectorAll<HTMLElement>('.choice-card').forEach((card) => {
         card.addEventListener('click', () => {
-          const group = card.dataset.faction ? 'faction' : 'size';
+          const group = card.dataset.faction ? 'faction' : card.dataset.difficulty ? 'difficulty' : 'size';
           root
-            .querySelectorAll<HTMLElement>(
-              `.choice-card[data-${group === 'faction' ? 'faction' : 'size'}]`,
-            )
+            .querySelectorAll<HTMLElement>(`.choice-card[data-${group}]`)
             .forEach((c) => c.classList.remove('selected'));
           card.classList.add('selected');
         });
@@ -123,9 +137,15 @@ export function openNewGameMenu(
           root.querySelector<HTMLInputElement>('#turns-input')?.value ?? 300,
         );
 
+        const difficulty =
+          (root.querySelector<HTMLInputElement>('input[name="difficulty"]:checked')?.value as
+            | DifficultyId
+            | undefined) ?? 'normal';
+
         close();
         onStart({
           playerFaction: faction,
+          difficulty,
           ...dims,
           maxTurns: Number.isFinite(maxTurns) ? maxTurns : 300,
           barbarians:

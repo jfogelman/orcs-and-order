@@ -27,6 +27,9 @@ export type BuildingId = string;
 
 export type Controller = 'human' | 'ai';
 
+/** Section 113's five levels. Saves before it all say `'normal'`. */
+export type DifficultyId = 'easiest' | 'easy' | 'normal' | 'hard' | 'hardest';
+
 export interface Player {
   id: number;
   faction: FactionId;
@@ -46,6 +49,12 @@ export interface Player {
   /** The leader's name, e.g. "Grunk the Reasonably Confident". */
   leader: string;
   controller: Controller;
+  /**
+   * Section 113: what the difficulty gave this seat at the start. `content` is
+   * extra patience in its cities, `cost` scales what it pays to build and to
+   * research. Absent means Normal, which is every save before section 113.
+   */
+  handicap?: { content: number; cost: number };
   /** Map / UI colour, as a CSS hex string. */
   color: string;
   gold: number;
@@ -459,7 +468,7 @@ export interface GameSettings {
   height: number;
   /** 0..1, share of the map that should end up as land. */
   landRatio: number;
-  difficulty: 'peaceful' | 'normal' | 'nasty';
+  difficulty: DifficultyId;
   /** After this turn, the highest score wins by default. */
   maxTurns: number;
   /**

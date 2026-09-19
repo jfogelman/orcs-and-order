@@ -11,7 +11,8 @@ import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
-import { BARBARIANS, RAIDER } from '../sim/barbarians';
+import { BARBARIANS, RAIDER, raidPace } from '../sim/barbarians';
+import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
@@ -371,6 +372,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <button class="pedia-tab" data-tab="buildings">Structures</button>
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
         <button class="pedia-tab" data-tab="wilds">The Wilds</button>
+        <button class="pedia-tab" data-tab="difficulty">Difficulty</button>
         <button class="pedia-tab" data-tab="controls">Controls</button>
       </div>
 
@@ -530,7 +532,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           does not make them worse for you alone.
         </p>
         <div class="panel-body">
-          <div class="stat-row"><span class="label">First wave</span><span class="value">turn ${BARBARIANS.notBefore}, then every ${BARBARIANS.every} turns</span></div>
+          <div class="stat-row"><span class="label">First wave</span><span class="value">turn ${raidPace(state).notBefore}, then every ${raidPace(state).every} turns</span></div>
           <div class="stat-row"><span class="label">How many</span><span class="value">grows with the average advances known, up to ${BARBARIANS.cap}</span></div>
           <div class="stat-row"><span class="label">Where</span><span class="value">open ground, at least ${BARBARIANS.clearOfCities} tiles from any city</span></div>
           <div class="stat-row"><span class="label">Cities</span><span class="value">they cannot take one, ever</span></div>
@@ -552,6 +554,30 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           them, because that time we really did see them.
         </p>
         <div class="pedia-grid">${unitCard(UNIT_TYPES[RAIDER])}</div>
+      </div>
+      <div class="pedia-pane" data-pane="difficulty" hidden>
+        <p class="flavor">
+          This game is <strong>${escapeHtml(difficultyOf(state.settings).name)}</strong>. The
+          level is chosen on the new-game screen and kept for the whole game. The other
+          side plays the same way at every level; what changes is how patient your cities
+          are, what the other side pays for its buildings and its advances, and, in a
+          game with raiders, how soon and how often they come.
+        </p>
+        <table class="report-table pedia-difficulty">
+          <thead>
+            <tr><th>Level</th><th>Your cities riot</th><th>Their costs</th><th>Raiders</th></tr>
+          </thead>
+          <tbody>
+            ${DIFFICULTIES.map(
+              (d) => `<tr${d.id === difficultyOf(state.settings).id ? ' class="current"' : ''}>
+                <td>${escapeHtml(d.name)}</td>
+                <td>${d.content === 0 ? 'as measured' : `${Math.abs(d.content)} citizen${Math.abs(d.content) === 1 ? '' : 's'} ${d.content > 0 ? 'later' : 'sooner'}`}</td>
+                <td>${Math.round(d.aiCost * 100)}%</td>
+                <td>from turn ${d.raidNotBefore}, every ${d.raidEvery}</td>
+              </tr>`,
+            ).join('')}
+          </tbody>
+        </table>
       </div>
       <div class="pedia-pane" data-pane="controls" hidden>
         <p class="flavor">

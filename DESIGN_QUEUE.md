@@ -8959,7 +8959,7 @@ more cities and more people with it. It turns a slight Kingdom lead into a sligh
 Horde one and does not dominate anything; most of the gap from today's 67–41 is
 terraforming itself, not the tile rule. It stays on. Nothing further to measure here.
 
-## 113. Difficulty: a choice at the start of the game
+## 113. Difficulty: a choice at the start of the game -- BUILT
 
 Asked for 2026-09-18, after section 112 made the game harder: "the game has become
 more challenging, which is good, but it also means I want a difficulty option."
@@ -9008,3 +9008,57 @@ Normal must not move at all: it is today's game, and the tests should pin that.
 
 **The Orcpedia** gets a line on each level saying what it changes, in numbers,
 under the new-game help.
+
+**Jeremy's decisions (2026-09-18):** five levels; fixed once the game starts; the
+levers are rioting, raider frequency and the AI's costs. No extra starting units.
+
+**As built** (`src/sim/difficulty.ts`):
+
+| level | your cities riot | AI build and research cost | raiders (when on) |
+|---|---|---|---|
+| A Picnic | 2 citizens later | 130% | from turn 40, every 25 |
+| A Skirmish | 1 later | 115% | from 30, every 20 |
+| **A War** (Normal) | as measured | 100% | from 25, every 15 (`BARBARIANS`) |
+| A Crusade | 1 sooner | 100% | from 22, every 12 |
+| Doom | 1 sooner | 85% | from 20, every 10 |
+
+- The names are shared by both sides, and the whole ladder is a single table.
+  Per-faction names can still be added.
+- The level is stored as `Player.handicap` at creation: `{content, cost}`, with
+  the patience on the human seat and the price on the AI's. It is fixed with the
+  game and survives a save.
+- At Normal nobody has a handicap and raiders read `BARBARIANS` itself, so
+  Normal is the shipped game exactly. `tests/difficulty.test.ts` pins that, plus:
+  - every step up is harder on every lever;
+  - each lever touches one side only;
+  - the level survives a save.
+- The two old names the type allowed, `'peaceful'` and `'nasty'`, were never
+  written. Anything unrecognised reads as Normal.
+- The new-game screen has five cards, Normal preselected. The Orcpedia has a
+  Difficulty tab with the table and this game's level marked, and the Wilds
+  tab's wave timing follows the level.
+- The sweep has `NEW_GAME.difficulty`. Seat 0 is created as the player's and so
+  keeps the player's side of the level, which is how a level is measured.
+
+**Measured** (2026-09-18, 108 games a level, raiders off, the Horde in the
+player's seat played by the AI):
+
+| level | Horde–Kingdom | player's side wins |
+|---|---|---|
+| A Picnic | 97–11 | 90% |
+| A Skirmish | 74–34 | 69% |
+| A War (Normal) | 57–51 | 53% |
+| A Crusade | 41–67 | 38% |
+| Doom | 19–89 | 18% |
+
+- **The first hard side was too steep.** It had Crusade at 1 sooner and 85%, and
+  Doom at 2 sooner and 70%. Those came out 18% and 5%: a 35-point drop for one
+  step up, against 16 points for one step down.
+- **Split, Crusade's two levers are about equal.** Riots alone gave 38%; the 85%
+  price alone gave 33%. They add up.
+- **The fix used only measured settings.** Crusade kept only the riots, and its
+  old pair became Doom. The ladder now steps 21, 16, 15, 20.
+- **Caveat: the AI plays the player's seat here.** A person who manages unrest
+  better than the AI will find the riot lever gentler than these numbers say.
+- **Raiders were off in all of this.** Their pace per level is unmeasured.
+

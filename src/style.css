@@ -1843,3 +1843,14 @@ kbd {
 #btn-more.armed {
   border-color: var(--edge-hi);
 }
+
+/* Section 113: five difficulty cards want one row, not three-and-two. */
+.choice-row.compact .choice-card {
+  flex-basis: 110px;
+}
+
+/* This game's own level, in the Orcpedia's table of all five. */
+.pedia-difficulty tr.current td {
+  color: var(--gold);
+  font-weight: 700;
+}
