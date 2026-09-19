@@ -5,6 +5,7 @@ import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { resumeExplore } from './explore';
 import { recordTurn } from './history';
+import { refreshCargo } from './ships';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -675,6 +676,8 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
 
   tickUnitStatuses(state, playerId);
   refreshUnits(state, player);
+  // Passengers get their legs back too, so they can step ashore this turn.
+  refreshCargo(state, playerId);
   healUnits(state, playerId);
   runEconomy(state, player);
   resumeGotoOrders(state, playerId);

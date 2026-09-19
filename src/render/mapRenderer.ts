@@ -1113,6 +1113,22 @@ export class MapRenderer {
         ctx.textBaseline = 'middle';
         ctx.fillText(String(alive), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
       }
+      // Passengers, on our own ships only: what the other side has aboard is
+      // exactly the thing a ship is for hiding.
+      const aboard = u.cargo?.length ?? 0;
+      if (aboard > 0 && u.owner === viewerId) {
+        const bw = size * 0.3;
+        ctx.fillStyle = 'rgba(12,10,8,0.85)';
+        ctx.fillRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
+        ctx.strokeStyle = owner.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(s.x + size - bw - 1, s.y + size - bw - 1, bw, bw);
+        ctx.fillStyle = '#f2e6c8';
+        ctx.font = `bold ${Math.round(bw * 0.78)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(aboard), s.x + size - bw / 2 - 1, s.y + size - bw / 2);
+      }
       // Rank badge, in place of the drawn asterisk this used to be. Sits at
       // the bottom-left so it does not collide with the count badge on the
       // right or the out-of-supply mark at the top.

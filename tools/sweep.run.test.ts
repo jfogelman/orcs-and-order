@@ -9,6 +9,7 @@ import { POSTS } from '../src/sim/posts';
 import { SPECIALS } from '../src/model/terrain';
 import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
+import { NAVAL } from '../src/ai/naval';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -69,6 +70,9 @@ const control = () => {
   // Back to the quiet game for section 102: the baseline it has to beat is
   // section 101's Posting table, which was measured without raiders.
   NEW_GAME.barbarians = false;
+  NEW_GAME.world = 'continent';
+  NEW_GAME.difficulty = 'normal';
+  NAVAL.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have
   // been measuring a game nobody plays.
@@ -86,16 +90,24 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 113: the four levels that are not Normal, as shipped. The Horde has
-  // seat 0, the player's. Normal is the shipped game, already measured at Horde
-  // 57-51 (section 112), and the harness is deterministic.
-  ...(['easiest', 'easy', 'hard', 'hardest'] as const).map((level) => ({
-    label: level,
+  // Ships. On a continent everybody can walk to everybody, so the navy should
+  // barely move the game -- the first two arms check that. The third is the
+  // archipelago, where ships are the only way to meet.
+  {
+    label: 'continent, no navy',
     apply: () => {
       control();
-      NEW_GAME.difficulty = level;
+      NAVAL.enabled = false;
     },
-  })),
+  },
+  { label: 'continent, navy', apply: control },
+  {
+    label: 'archipelago',
+    apply: () => {
+      control();
+      NEW_GAME.world = 'archipelago';
+    },
+  },
 ];
 
 /**

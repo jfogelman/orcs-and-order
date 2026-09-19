@@ -1,4 +1,5 @@
 import { distance, fatCrossIndices, idx } from '../engine/grid';
+import { isCoastal, launchTile } from './ships';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN, specialAt } from '../model/terrain';
@@ -7,7 +8,7 @@ import { unitType, UNIT_TYPES } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
-import type { City, GameState, ProductionItem, Unit, AutoBuild, Player } from '../model/types';
+import type { City, GameState, ProductionItem, Unit, AutoBuild, Player, UnitTypeId } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
@@ -758,6 +759,8 @@ export function supplyChain(state: GameState, playerId: number): Map<number, num
  */
 export function supplyQuality(state: GameState, unit: Unit): number {
   if (SUPPLY.range >= 99) return 1;
+  // A ship carries its own stores. The supply line is a thing for armies.
+  if (unitType(unit.type).sails) return 1;
   // Somebody in this lot knows where to find things.
   const reach = SUPPLY.range + (hasPerk(unit, 'quartermaster') ? SUPPLY.perkReach : 0);
   const chain = supplyChain(state, unit.owner);
@@ -990,8 +993,10 @@ export function buildOptions(
   // never finish.
   // A city below the threshold is not offered a settler at all, rather than
   // allowed to queue one it can never finish.
-  const units =
-    city.size >= SETTLER.minCitySize ? allUnits : allUnits.filter((u) => !u.settler);
+  const coastal = isCoastal(state, city);
+  const units = (city.size >= SETTLER.minCitySize ? allUnits : allUnits.filter((u) => !u.settler))
+    // Ships are built where there is water to launch them into.
+    .filter((u) => !u.sails || coastal);
   // A place still being resettled raises nobody. There is no population here
   // yet that thinks of itself as yours, and conscripting the people who are
   // in the middle of leaving is not a thing an army can do.
@@ -1030,7 +1035,9 @@ export function buildOptions(
  */
 const PLACEMENT_RADIUS = 3;
 
-function placementFor(state: GameState, city: City): [number, number] | null {
+function placementFor(state: GameState, city: City, typeId?: UnitTypeId): [number, number] | null {
+  // A ship goes straight into the water beside the city, never onto its tile.
+  if (typeId && unitType(typeId).sails) return launchTile(state, city);
   if (!unitAt(state, city.x, city.y)) return [city.x, city.y];
   for (let r = 1; r <= PLACEMENT_RADIUS; r++) {
     for (let dy = -r; dy <= r; dy++) {
@@ -1144,7 +1151,7 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
       }
     } else if (city.shields >= cost) {
       if (item.kind === 'unit') {
-        const spot = placementFor(state, city);
+        const spot = placementFor(state, city, item.id);
         // A settler is people, not equipment: the ones who walk out are the
         // ones who were living here. A city of one has nobody to send without
         // ceasing to be a city, so it holds the shields until it has grown --

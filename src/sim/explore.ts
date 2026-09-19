@@ -19,14 +19,17 @@ import { routeTo, tryStep, visibleEnemies } from './movement';
  * march, so the halt is checked after every step and not only at the top of a turn.
  */
 
-/** Explored land beside unexplored land, for this unit's owner. */
-function frontier(state: GameState, playerId: number): Array<[number, number]> {
+/**
+ * Explored ground beside unexplored ground, for this unit's owner: land for a
+ * walker, sea for a ship.
+ */
+function frontier(state: GameState, playerId: number, sea = false): Array<[number, number]> {
   const seen = state.players[playerId].explored;
   const out: Array<[number, number]> = [];
   for (let y = 0; y < state.height; y++) {
     for (let x = 0; x < state.width; x++) {
       const i = idx(x, y, state.width);
-      if (!seen[i] || TERRAIN[state.terrain[i]].water) continue;
+      if (!seen[i] || TERRAIN[state.terrain[i]].water !== sea) continue;
       if (
         DIRS8.some(([dx, dy]) => {
           const nx = x + dx;
@@ -83,7 +86,7 @@ export function advanceExplore(state: GameState, unit: Unit): void {
     // The nearest edge of the unknown there is a way to: the nearest by distance
     // may be across water, and giving up on that would strand an explorer that
     // still has a whole continent to walk.
-    const edges = frontier(state, unit.owner)
+    const edges = frontier(state, unit.owner, unitType(unit.type).sails)
       .map(([x, y]) => ({ x, y, d: distance(unit.x, unit.y, x, y) }))
       .filter((e) => e.d > 0)
       .sort((a, b) => a.d - b.d);

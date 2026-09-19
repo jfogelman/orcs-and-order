@@ -213,6 +213,18 @@ const SILHOUETTES: Record<SilhouetteId, DrawFn> = {
     ctx.fillRect(5, -4, 1, 2);
   },
 
+  // A hull, a mast and a sail in the side's colour. Drawn low and wide, sitting
+  // on the waterline rather than standing on feet.
+  ship: (ctx, body, trim) => {
+    blk(ctx, -12, -7, 24, 6, body); // hull
+    blk(ctx, -9, -2, 18, 2, shift(body, -30)); // keel
+    blk(ctx, -14, -9, 4, 3, shift(body, 14)); // stern
+    blk(ctx, 10, -9, 4, 3, shift(body, 14)); // bow
+    blk(ctx, -1, -26, 2, 19, '#5a4028'); // mast
+    blk(ctx, 1, -24, 9, 12, trim); // sail
+    blk(ctx, 1, -26, 5, 2, shift(trim, 20)); // pennant
+  },
+
   armored: (ctx, body, trim) => {
     blk(ctx, 6, -26, 2, 24, '#5a4028'); // spear
     tri(

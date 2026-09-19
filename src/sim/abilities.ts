@@ -99,7 +99,8 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
   if (type.range > 1) out.push('ranged');
   if (type.healsTo > 0) out.push('heal');
   // Anything that is not itself a piece of artillery can pass one a missile.
-  if (type.ammo <= 0 && !type.settler) out.push('reload');
+  // Nor a ship: it cannot come ashore to hand anything over.
+  if (type.ammo <= 0 && !type.settler && !type.sails) out.push('reload');
   // Only a troll, only a lone one, and only one that learned how. Section 11
   // settled the "lone" part deliberately: a group splitting into another group
   // is an exponent, and this is instead the first thing in the game that gives

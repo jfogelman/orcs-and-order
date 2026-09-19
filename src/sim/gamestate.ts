@@ -16,7 +16,7 @@ import type {
   Unit,
   UnitTypeId,
 } from '../model/types';
-import { generateWorld } from './worldgen';
+import { ARCHIPELAGO, generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
 import { cityFollyBonus, citySightUnblocked } from './follyEffects';
 import { difficultyOf, handicapFor } from './difficulty';
@@ -37,6 +37,8 @@ export interface NewGameOptions {
   playerFaction?: FactionId;
   /** Whether the wilds send raiding parties. Off unless asked for. */
   barbarians?: boolean;
+  /** Islands, for ships. The ordinary world unless asked for. */
+  world?: 'continent' | 'archipelago';
 }
 
 // ------------------------------------------------------------- accessors
@@ -252,10 +254,11 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   const settings: GameSettings = {
     width: opts.width ?? 64,
     height: opts.height ?? 48,
-    landRatio: opts.landRatio ?? 0.34,
+    landRatio: opts.landRatio ?? (opts.world === 'archipelago' ? ARCHIPELAGO.landRatio : 0.34),
     difficulty: opts.difficulty ?? 'normal',
     maxTurns: opts.maxTurns ?? 300,
     barbarians: opts.barbarians === true,
+    ...(opts.world === 'archipelago' ? { world: 'archipelago' as const } : {}),
   };
   const seed = (opts.seed ?? Math.floor(Math.random() * 0xffffffff)) >>> 0;
   const playerFaction = opts.playerFaction ?? 'orc';

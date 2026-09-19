@@ -70,6 +70,20 @@ export function openNewGameMenu(
           </label>
         </div>
 
+        <div class="field-label" style="margin-top:12px">World</div>
+        <div class="choice-row">
+          <label class="choice-card selected" data-world="continent">
+            <input type="radio" name="world" value="continent" checked />
+            <span class="choice-name">A Continent</span>
+            <span class="choice-sub">One great landmass. You can walk to them.</span>
+          </label>
+          <label class="choice-card" data-world="archipelago">
+            <input type="radio" name="world" value="archipelago" />
+            <span class="choice-name">An Archipelago</span>
+            <span class="choice-sub">Islands, and you each start on your own. You will need a boat.</span>
+          </label>
+        </div>
+
         <div class="field-label" style="margin-top:12px">
           Difficulty <span class="muted">(decided now, kept for the whole game)</span>
         </div>
@@ -109,7 +123,13 @@ export function openNewGameMenu(
       // Keep the visual selection in step with the radio buttons.
       root.querySelectorAll<HTMLElement>('.choice-card').forEach((card) => {
         card.addEventListener('click', () => {
-          const group = card.dataset.faction ? 'faction' : card.dataset.difficulty ? 'difficulty' : 'size';
+          const group = card.dataset.faction
+            ? 'faction'
+            : card.dataset.difficulty
+              ? 'difficulty'
+              : card.dataset.world
+                ? 'world'
+                : 'size';
           root
             .querySelectorAll<HTMLElement>(`.choice-card[data-${group}]`)
             .forEach((c) => c.classList.remove('selected'));
@@ -142,10 +162,16 @@ export function openNewGameMenu(
             | DifficultyId
             | undefined) ?? 'normal';
 
+        const world =
+          root.querySelector<HTMLInputElement>('input[name="world"]:checked')?.value === 'archipelago'
+            ? ('archipelago' as const)
+            : ('continent' as const);
+
         close();
         onStart({
           playerFaction: faction,
           difficulty,
+          world,
           ...dims,
           maxTurns: Number.isFinite(maxTurns) ? maxTurns : 300,
           barbarians:

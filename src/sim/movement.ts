@@ -19,6 +19,7 @@ import {
   XP
 } from './combat';
 import { cityAt, log, recomputeVisibility, unitAt, withRng } from './gamestate';
+import { board, canBoard } from './ships';
 import { effectiveMove, terrainMoveCost } from './rules';
 import {
   ROADS,
@@ -91,15 +92,16 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     // Unexplored ground is assumed walkable and ordinary. If it turns out to
     // be sea or occupied, the step is refused when the unit gets there, which
     // is the correct way to find out.
-    if (!owner.explored[i]) return type.flies ? 1 : 1;
+    if (!owner.explored[i]) return 1;
 
     const terrain = state.terrain[i];
-    if (!type.flies && TERRAIN[terrain].water) return null;
+    // Ships keep to the water; everything else but a flyer keeps off it.
+    if (type.sails ? !TERRAIN[terrain].water : !type.flies && TERRAIN[terrain].water) return null;
     // Enemy ground is entered by attacking or capturing, never by pathing.
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
-    const base = type.flies ? 1 : stepCost(state, owner, fromX, fromY, x, y);
+    const base = type.flies || type.sails ? 1 : stepCost(state, owner, fromX, fromY, x, y);
     return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
   };
 }
@@ -147,8 +149,11 @@ export function attackTargets(state: GameState, unit: Unit): Set<number> {
       if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
       const occupant = unitAt(state, x, y);
       const city = cityAt(state, x, y);
+      const atSea = TERRAIN[state.terrain[idx(x, y, state.width)]].water;
+      // Nobody on land fights a ship; a ship takes no town, empty or not.
+      if (atSea && !type.sails && !type.flies) continue;
       if (occupant && occupant.owner !== unit.owner) out.add(idx(x, y, state.width));
-      else if (!occupant && city && city.owner !== unit.owner) out.add(idx(x, y, state.width));
+      else if (!occupant && city && city.owner !== unit.owner && !type.sails) out.add(idx(x, y, state.width));
     }
   }
   return out;
@@ -175,7 +180,7 @@ export function estimateTurns(
   for (let i = 1; i < route.length; i++) {
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
     if (left <= 0) {
       turns++;
       left = perTurn;
@@ -206,7 +211,7 @@ export function stepsThisTurn(
     if (left <= 0) break;
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
     // Any movement left always buys one more step, however rough the ground.
     left -= Math.min(cost, left);
   }
@@ -461,7 +466,19 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     return { kind: 'blocked', reason: `The walls of ${city.name} come down.`, retryable: false };
   }
 
+  // --- boarding --------------------------------------------------------
+  // Stepping onto one of our own carriers with room is going aboard.
+  if (occupant && canBoard(unit, occupant)) {
+    board(state, unit, occupant);
+    return { kind: 'moved' };
+  }
+
   // --- attack ----------------------------------------------------------
+  // Nobody wades out to fight a ship. A ship can hit the shore; the shore
+  // cannot hit back.
+  if (occupant && occupant.owner !== unit.owner && !type.sails && !type.flies && TERRAIN[terrain].water) {
+    return { kind: 'blocked', reason: `${type.name} cannot fight at sea.`, retryable: false };
+  }
   if (occupant && occupant.owner !== unit.owner) {
     if (type.attack <= 0) {
       return {
@@ -573,7 +590,10 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   }
 
   // --- terrain ---------------------------------------------------------
-  if (!type.flies && TERRAIN[terrain].water) {
+  if (type.sails && !TERRAIN[terrain].water) {
+    return { kind: 'blocked', reason: `${type.name} keeps to the water.`, retryable: false };
+  }
+  if (!type.flies && !type.sails && TERRAIN[terrain].water) {
     return {
       kind: 'blocked',
       reason: `${type.name} cannot cross open water.`,
@@ -651,7 +671,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       return { kind: 'blocked', reason: `${city.name} threw them back.`, retryable: false };
     }
   }
-  const cost = type.flies ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
+  const cost = type.flies || type.sails ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
   unit.x = x;
   unit.y = y;
   unit.moves = snapMoves(unit.moves - cost);

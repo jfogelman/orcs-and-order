@@ -1,9 +1,12 @@
 import { flagsOf, hasFlag } from '../sim/rules';
+import { NAVAL, acrossTheWater, actShip, passageWanted, roomAtHome, seekPassage, shipToBuild, stranded } from './naval';
+import type { NavalHelpers } from './naval';
+import { allUnitsOf } from '../sim/ships';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
-import { ammoLeft, headcount, unitType } from '../model/units';
+import { UNIT_TYPES, ammoLeft, headcount, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
@@ -574,16 +577,25 @@ function chooseProduction(
   personality: AiPersonality,
 ): ProductionItem {
   const owner = state.players[city.owner];
-  const options = buildOptions(state, city);
+  const inYard = buildOptions(state, city);
+  // Ships are asked for separately, and never as an army: a warship's attack
+  // would otherwise rate it the best soldier in the yard.
+  const options = { ...inYard, units: inYard.units.filter((u) => !u.sails) };
   if (options.units.length === 0) return { kind: 'coin' };
 
   // A garrison is whoever is standing on or beside the city. Counting only the
   // city tile would never reach two, because only one unit fits on a tile.
   const garrison = state.units.filter(
-    (u) => u.owner === city.owner && distance(u.x, u.y, city.x, city.y) <= 1 && !unitType(u.type).settler,
+    (u) =>
+      u.owner === city.owner &&
+      distance(u.x, u.y, city.x, city.y) <= 1 &&
+      !unitType(u.type).settler &&
+      // A ship in the harbour does not hold the gate.
+      !unitType(u.type).sails,
   ).length;
   const cities = playerCities(state, city.owner).length;
-  const settlers = playerUnits(state, city.owner).filter((u) => unitType(u.type).settler).length;
+  // Aboard a ship counts: a settler on its way across is not a settler to replace.
+  const settlers = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).settler).length;
 
   // 1. Somebody has to hold the gate.
   if (garrison < personality.garrisonPerCity) {
@@ -598,6 +610,12 @@ function chooseProduction(
     const settler = options.units.find((u) => u.settler);
     if (settler) return { kind: 'unit', id: settler.id };
   }
+
+  // 2a. A boat, when somebody is waiting on the shore for one or the empire is
+  // stranded on its island with nobody in sight. Asked of the yard as offered,
+  // since ships were taken out of `options` above.
+  const ship = shipToBuild(state, city, inYard.units);
+  if (ship) return ship;
 
   // 3. Keep the lid on first. A city at its content limit stops growing and
   // produces nothing at all, so a happiness building is worth more than any
@@ -1119,7 +1137,12 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
   // Nowhere safe and nowhere better. A player with no cities at all founds
   // anyway, because having none is worse than having one that may be taken;
   // anybody else walks away and tries again next turn.
-  if (here.ok && cities === 0) foundCity(state, unit);
+  if (here.ok && cities === 0) {
+    foundCity(state, unit);
+    return;
+  }
+  // Nowhere at all on this island: find a boat.
+  if (!best && !roomAtHome(state, unit, navalHelpers(state, personality))) seekPassage(state, unit);
 }
 
 /**
@@ -1476,6 +1499,8 @@ function actSoldier(
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);
+  // Across the water, it is a boat before it is a march.
+  if (target && acrossTheWater(state, unit, target.x, target.y) && seekPassage(state, unit)) return;
   if (target) {
     // The doorstep, not the door. Routing to the target itself asks the
     // pathfinder for a tile it treats as impassable, which is why this never
@@ -1516,6 +1541,15 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
   if (player.researching) return;
   const options = researchableTechs(player);
   if (options.length === 0) return;
+  // Somebody is waiting on the shore, or the empire is stranded on its island,
+  // and nobody knows how to build a boat.
+  if (NAVAL.enabled && (passageWanted(state, player.id) > 0 || stranded(state, player.id))) {
+    const boats = options.find((t) => t.units.some((u) => UNIT_TYPES[u]?.carries && UNIT_TYPES[u].faction === player.faction));
+    if (boats) {
+      setResearch(state, player, boats.id);
+      return;
+    }
+  }
   for (const wanted of personality.techPriority) {
     const match = options.find((t) => t.id === wanted);
     if (match) {
@@ -1744,6 +1778,15 @@ function takePromotions(state: GameState, player: Player): void {
   }
 }
 
+/** What the sea AI borrows from this one. */
+function navalHelpers(state: GameState, personality: AiPersonality): NavalHelpers {
+  return {
+    odds: (a, d) => attackOdds(state, a, d),
+    siteScore: (x, y) => siteScore(state, x, y),
+    caution: personality.caution,
+  };
+}
+
 export function runAiTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
@@ -1767,19 +1810,30 @@ export function runAiTurn(state: GameState, playerId: number): void {
   chooseResearch(state, player, personality);
   takePromotions(state, player);
 
+  const frontier = frontierTiles(state, player);
   for (const city of playerCities(state, playerId)) {
     city.producing = chooseProduction(state, city, personality);
   }
   if (AI_TUNING.rushBuying) spendGold(state, player);
 
-  const frontier = frontierTiles(state, player);
+  // Last turn's requests for a boat have been heard by the yards above. Each
+  // unit asks again this turn if it still needs to.
+  for (const u of state.units) if (u.owner === playerId) delete u.wantsPassage;
 
-  // Snapshot: units can die (or be consumed founding cities) mid-loop.
-  for (const unit of [...playerUnits(state, playerId)]) {
+  // Snapshot: units can die (or be consumed founding cities) mid-loop. Ships go
+  // last, so they know who asked for passage this turn.
+  const mine = [...playerUnits(state, playerId)];
+  const helpers = navalHelpers(state, personality);
+  for (const unit of mine) {
     if (!state.units.includes(unit)) continue;
     if (unit.moves <= 0) continue;
     const type = unitType(unit.type);
+    if (type.sails) continue;
     if (type.settler) actSettler(state, unit, personality);
     else actSoldier(state, unit, personality, frontier);
+  }
+  for (const unit of mine) {
+    if (!state.units.includes(unit) || unit.moves <= 0 || !unitType(unit.type).sails) continue;
+    actShip(state, unit, helpers);
   }
 }

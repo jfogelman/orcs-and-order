@@ -257,6 +257,17 @@ export interface Unit {
    */
   exploring?: boolean;
   /**
+   * Land units riding in this ship, off the map until they step ashore. Only
+   * ever set on a carrier. Absent in every older save.
+   */
+  cargo?: Unit[];
+  /** AI only: a land unit that has somewhere to be across the water. */
+  wantsPassage?: boolean;
+  /** AI only: where a loaded carrier is bound -- the landing, and what it is for. */
+  voyage?: { x: number; y: number; tx: number; ty: number };
+  /** AI only: turns a part-loaded carrier has waited at the shore. */
+  voyageWait?: number;
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *
@@ -469,6 +480,12 @@ export interface GameSettings {
   /** 0..1, share of the map that should end up as land. */
   landRatio: number;
   difficulty: DifficultyId;
+  /**
+   * The shape of the world. `'archipelago'` is islands, the two sides on
+   * separate ones, for ships to matter. Absent is the ordinary world, which is
+   * every save from before ships.
+   */
+  world?: 'continent' | 'archipelago';
   /** After this turn, the highest score wins by default. */
   maxTurns: number;
   /**

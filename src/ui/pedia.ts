@@ -327,7 +327,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <span class="pedia-tech-name">${escapeHtml(t.name)}</span>
         <span class="pedia-tech-cost">${t.food}/${t.shields}/${t.trade}</span>
         <span class="pedia-tech-needs">move ${t.moveCost} &middot; defence x${t.defense}</span>
-        <span class="pedia-flavor">${t.water ? 'Land units cannot enter.' : ''}${
+        <span class="pedia-flavor">${t.water ? 'Land units cannot enter. Ships go nowhere else.' : ''}${
           t.noCity ? ' No cities here.' : ''
         }${t.blocksSight ? ' Blocks line of sight.' : ''}</span>
         ${specials}
@@ -597,6 +597,21 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           reach. When a game is over, <strong>Watch It Again</strong> on the final
           screen plays the whole thing back: each side's land spreading and changing
           hands, the score pulling apart, and every city taken or lost, to jump to.
+        </p>
+        <p class="flavor">
+          <strong>Ships</strong> come with Mapmaking, and a warship with the Horde's
+          Throwing Buddies or the Kingdom's Join the Army. They are built only in a city
+          beside the sea, go into the water next to it, and never come ashore. A
+          carrier takes three land units: <strong>right-click it</strong> from the shore
+          beside it to go aboard, which ends that unit's turn. The ship's panel lists who
+          is aboard; <strong>Ashore</strong> lights the free shore next to the ship for
+          one of them, and <strong>W</strong> puts everybody off. Nobody can land straight
+          into somebody else's town &mdash; land beside it, then attack. If a ship sinks,
+          everybody aboard goes down with it. A warship sinks ships and attacks the shore
+          next to it without landing, and nobody on land can fight back at a ship. Ships
+          need no supply line. On <strong>an Archipelago</strong>, chosen on the new-game
+          screen, each side starts on an island of its own and ships are the only way to
+          meet.
         </p>
         <div class="pedia-controls">${controlsMarkup()}</div>
       </div>`,
