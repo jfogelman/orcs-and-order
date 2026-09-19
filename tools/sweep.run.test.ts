@@ -9,6 +9,7 @@ import { POSTS } from '../src/sim/posts';
 import { SPECIALS } from '../src/model/terrain';
 import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
+import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
@@ -73,6 +74,7 @@ const control = () => {
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
   NAVAL.enabled = true;
+  GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have
   // been measuring a game nobody plays.
@@ -90,25 +92,18 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Ships. On a continent everybody can walk to everybody, so the navy should
-  // barely move the game -- the first two arms check that. The third is the
-  // archipelago, where ships are the only way to meet.
+  // The Goblin Scout: the Horde's Outrider. The AI should rarely build it for an
+  // army, since it is dearer than a Goblin for the same fight, so this is a
+  // check that nothing moved rather than a hope that something did.
   {
-    label: 'continent, no navy',
+    label: 'no scout',
     apply: () => {
       control();
-      NAVAL.enabled = false;
+      GOBLIN_SCOUT.enabled = false;
     },
   },
-  { label: 'continent, navy', apply: control },
-  {
-    label: 'archipelago',
-    apply: () => {
-      control();
-      NEW_GAME.world = 'archipelago';
-    },
-  },
-];
+  { label: 'scout', apply: control },
+]
 
 /**
  * Eighteen seeds a base is the full run. Set SWEEP_PER_BASE=1 to check the

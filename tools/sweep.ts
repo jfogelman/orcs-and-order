@@ -5,6 +5,7 @@ import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } fro
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
+import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
@@ -82,6 +83,7 @@ export const LEVERS: Record<string, object> = {
   AUTO_TILES,
   DIFFICULTIES,
   NAVAL,
+  GOBLIN_SCOUT,
   ATTRITION,
   BEAKERS_PER_TRADE,
   CALM,
