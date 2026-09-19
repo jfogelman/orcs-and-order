@@ -153,7 +153,18 @@ class App {
   /** Turn on which the battle theme may give way to the world theme again. */
   private calmAgainOnTurn = -1;
   /** How much of the log has already been turned into noise. */
-  /** True once End Turn has been pressed with units still waiting. */
+  /**
+   * True once End Turn has been pressed with units still waiting, so the very
+   * next press ends the turn regardless.
+   *
+   * **Only the very next press.** It used to stay armed for the rest of the
+   * turn, which meant a warning given at one moment silently authorised an end
+   * of turn several actions later -- reported from a played game: warned, then
+   * a fortified unit was walked out of a city, then one press ended the turn
+   * with a freshly built unit still standing about with its moves unspent.
+   * Anything the player does in between takes the arming off again, through
+   * `disarmEndTurn`.
+   */
   private endTurnArmed = false;
   /** Where the city cycle got to, so the next press carries on from it. */
   private lastCityLooked: number | null = null;
@@ -201,6 +212,8 @@ class App {
   /** Swap in a different game state — new game, or one loaded from a save. */
   private adopt(state: GameState): void {
     this.state = state;
+    // A new or loaded game is not half way through somebody else's turn.
+    this.endTurnArmed = false;
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
     this.camera.setMapSize(state.width, state.height);
@@ -222,6 +235,16 @@ class App {
 
   private get selected(): Unit | undefined {
     return this.state.units.find((u) => u.id === this.overlay.selectedUnitId);
+  }
+
+  /**
+   * Take the arming off End Turn, because the player has just done something
+   * else. Called from everywhere an action begins.
+   */
+  private disarmEndTurn(): void {
+    if (!this.endTurnArmed) return;
+    this.endTurnArmed = false;
+    this.refreshEndTurn();
   }
 
   private select(unit: Unit | null): void {
@@ -464,6 +487,9 @@ class App {
     // Started before the fight resolves, so the swing is already playing while
     // the result is worked out -- and so it still plays if the attacker dies.
     if (attacking) this.animateAttack(unit);
+    // Moving is doing something else, whether or not it lands: the warning that
+    // armed End Turn was about the board as it stood before this.
+    this.disarmEndTurn();
     const outcome = attacking
       ? tryStep(this.state, unit, x, y)
       : moveToward(this.state, unit, x, y);
@@ -1917,7 +1943,10 @@ class App {
 
   private refreshSidebar(): void {
     // Most unit actions land here rather than in refreshHud, and dealing with a
-    // unit is exactly what changes how many are still waiting.
+    // unit is exactly what changes how many are still waiting -- so this is also
+    // where an armed End Turn stops being armed. The warning press arms itself
+    // *after* its own jump to the next unit, so the escape hatch survives.
+    this.disarmEndTurn();
     this.refreshEndTurn();
     const panel = el('selection');
     const unit = this.selected;
