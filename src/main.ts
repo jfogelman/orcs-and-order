@@ -15,7 +15,7 @@ import {
 import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
-import { idx } from './engine/grid';
+import { distance, idx } from './engine/grid';
 import { FACTIONS } from './model/factions';
 import { TERRAIN, specialAt } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
@@ -65,6 +65,7 @@ import { installTopbarMore } from './ui/topbarMore';
 import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
 import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
 import { canExplore, startExplore } from './sim/explore';
+import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import type { Job } from './sim/terraform';
 
 /** The key each of section 112's jobs answers to, with Shift, on a worker. */
@@ -228,6 +229,7 @@ class App {
     // target.
     this.disarm(false);
     this.roadArmed = false;
+    this.landingArmed = null;
     if (unit && this.overlay.selectedUnitId !== unit.id) audio.play('select');
     this.overlay.selectedUnitId = unit?.id ?? null;
     this.refreshOverlays();
@@ -243,6 +245,11 @@ class App {
         : [];
       this.overlay.targets = new Set(tiles);
       if (tiles.length === 0) this.disarm(false);
+    } else if (this.landingArmed !== null && this.selected) {
+      // Where a passenger can step ashore, lit the way an ability's targets are.
+      this.overlay.targets = new Set(
+        landingTiles(this.state, this.selected).map(([x, y]) => idx(x, y, this.state.width)),
+      );
     } else {
       this.overlay.targets = null;
     }
@@ -432,6 +439,25 @@ class App {
     const attackerType = unit.type;
     const defenderType = unitAt(this.state, x, y)?.type;
 
+    // Going aboard one of our own ships: a step onto it from the shore.
+    const ship = unitAt(this.state, x, y);
+    if (ship && ship.owner === unit.owner && unitType(ship.type).carries > 0) {
+      if (!canBoard(unit, ship)) {
+        this.flash(roomAboard(ship) === 0 ? 'That ship is full.' : `${unitType(unit.type).name} cannot go aboard.`);
+        return;
+      }
+      if (distance(unit.x, unit.y, x, y) !== 1) {
+        this.flash('Walk down to the shore beside the ship first.');
+        return;
+      }
+      tryStep(this.state, unit, x, y);
+      audio.play('move');
+      this.select(ship);
+      this.playLogCues();
+      this.refreshHud();
+      return;
+    }
+
     const targets = attackTargets(this.state, unit);
     const attacking = targets.has(idx(x, y, this.state.width));
     // Started before the fight resolves, so the swing is already playing while
@@ -520,6 +546,10 @@ class App {
   private orderFortify(): void {
     const unit = this.selected;
     if (!unit) return;
+    if (unitType(unit.type).sails) {
+      this.flash('A ship cannot dig in. Sentry keeps it at anchor.');
+      return;
+    }
     unit.order = unit.order === 'fortified' ? 'none' : 'fortified';
     unit.goto = null;
     delete unit.roadTo;
@@ -681,6 +711,73 @@ class App {
 
   /** Section 112: Irrigate To, armed the same way Road To is. */
   private irrigateArmed = false;
+
+  /** A passenger picked to step ashore: the next click on the shore puts it there. */
+  private landingArmed: number | null = null;
+
+  /** Pick one passenger to go ashore, where the player clicks next. */
+  private orderAshore(passengerId: number): void {
+    const ship = this.selected;
+    if (!ship || ship.owner !== this.viewerId) return;
+    if (this.landingArmed === passengerId) {
+      this.landingArmed = null;
+      this.refreshOverlays();
+      this.refreshSidebar();
+      return;
+    }
+    const passenger = ship.cargo?.find((u) => u.id === passengerId);
+    if (!passenger) return;
+    if (passenger.moves <= 0) {
+      this.flash(`${unitType(passenger.type).name} went aboard this turn, and steps off next turn.`);
+      return;
+    }
+    if (landingTiles(this.state, ship).length === 0) {
+      this.flash('There is no free shore next to the ship.');
+      return;
+    }
+    this.disarm(false);
+    this.landingArmed = passengerId;
+    this.refreshOverlays();
+    this.refreshSidebar();
+    this.notify('Ashore: click a lit tile of shore next to the ship. Escape to cancel.');
+  }
+
+  /** Handle a click while a passenger is picked to land. Returns whether it was consumed. */
+  private clickWhileLandingArmed(x: number, y: number): boolean {
+    if (this.landingArmed === null) return false;
+    const id = this.landingArmed;
+    this.landingArmed = null;
+    const ship = this.selected;
+    if (!ship) return true;
+    if (!unload(this.state, ship, id, x, y)) {
+      this.flash('Not there: a free tile of land next to the ship.');
+    } else {
+      audio.play('move');
+      this.playLogCues();
+    }
+    this.refreshOverlays();
+    this.refreshSidebar();
+    return true;
+  }
+
+  /** Everybody off, onto the free shore next to the ship. */
+  private orderAllAshore(): void {
+    const ship = this.selected;
+    if (!ship || ship.owner !== this.viewerId || !ship.cargo?.length) return;
+    const landed = unloadAll(this.state, ship);
+    if (landed === 0) {
+      this.flash(
+        ship.cargo.every((u) => u.moves <= 0)
+          ? 'They went aboard this turn, and step off next turn.'
+          : 'There is no free shore next to the ship.',
+      );
+    } else {
+      audio.play('move');
+      this.playLogCues();
+    }
+    this.refreshOverlays();
+    this.refreshSidebar();
+  }
 
   /**
    * Arm "Irrigate To": the next click on the map sets where the ditches go. The
@@ -1302,6 +1399,7 @@ class App {
         // listening. Reported from a real game at turn 31.
         if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
         if (t && this.clickWhileIrrigateArmed(t.x, t.y)) return;
+        if (t && this.clickWhileLandingArmed(t.x, t.y)) return;
         if (t) this.actOn(t.x, t.y);
         return;
       }
@@ -1568,6 +1666,7 @@ class App {
   private onLeftClick(x: number, y: number): void {
     if (this.clickWhileRoadArmed(x, y)) return;
     if (this.clickWhileIrrigateArmed(x, y)) return;
+    if (this.clickWhileLandingArmed(x, y)) return;
     if (this.clickWhileArmed(x, y)) return;
     const unit = unitAt(this.state, x, y);
     const city = cityAt(this.state, x, y);
@@ -1695,6 +1794,9 @@ class App {
       case 'e':
         this.orderExplore();
         break;
+      case 'w':
+        this.orderAllAshore();
+        break;
       case ',':
         this.cycleCity(-1);
         break;
@@ -1725,9 +1827,11 @@ class App {
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
         // thing, not drop the selection out from under it.
-        if (this.roadArmed || this.irrigateArmed) {
+        if (this.roadArmed || this.irrigateArmed || this.landingArmed !== null) {
           this.roadArmed = false;
           this.irrigateArmed = false;
+          this.landingArmed = null;
+          this.refreshOverlays();
           this.refreshSidebar();
         } else if (this.armed !== null) this.disarm();
         else this.select(null);
@@ -1900,6 +2004,24 @@ class App {
           ${unit.autoWork ? '<div class="chip">working the land by itself</div>' : ''}
           ${unit.exploring ? '<div class="chip">exploring</div>' : ''}
           ${
+            t.carries > 0
+              ? `<div class="chip">aboard: ${unit.cargo?.length ?? 0} of ${t.carries}</div>${(unit.cargo ?? [])
+                  .map(
+                    (p) => `<div class="stat-row cargo-row">
+                      <span class="label">${escapeHtml(unitType(p.type).name)}${
+                        p.moves <= 0 ? ' <span class="muted">(ashore next turn)</span>' : ''
+                      }</span>
+                      ${
+                        unit.owner === this.viewerId
+                          ? `<button class="small${this.landingArmed === p.id ? ' armed' : ''}" data-act="ashore" data-id="${p.id}">Ashore</button>`
+                          : ''
+                      }
+                    </div>`,
+                  )
+                  .join('')}`
+              : ''
+          }
+          ${
             unit.goto
               ? `<div class="chip">marching to (${unit.goto.x}, ${unit.goto.y})${
                   this.overlay.gotoPath ? ` &middot; ~${this.overlay.gotoPath.turns} turns` : ''
@@ -1917,6 +2039,11 @@ class App {
         </div>
         <div class="button-row">
           ${canSettle ? '<button class="small" data-act="found">Found City (B)</button>' : ''}
+          ${
+            unit.owner === this.viewerId && (unit.cargo?.length ?? 0) > 0
+              ? '<button class="small" data-act="allashore" title="Everybody off, onto the free shore next to the ship">All Ashore (W)</button>'
+              : ''
+          }
           ${
             unit.owner === this.viewerId && !t.settler
               ? `<button class="small${unit.exploring ? ' armed' : ''}" data-act="explore" title="Walk toward the unknown, halting at the first new sighting">${
@@ -2037,6 +2164,12 @@ class App {
               break;
             case 'explore':
               this.orderExplore();
+              break;
+            case 'ashore':
+              this.orderAshore(Number(btn.dataset.id));
+              break;
+            case 'allashore':
+              this.orderAllAshore();
               break;
             case 'pillage':
               this.orderPillage();

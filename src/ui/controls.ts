@@ -26,6 +26,8 @@ export const SHORTCUTS: Control[] = [
   { group: 'Units', keys: 'Shift+R', does: 'Lay a road all the way to a tile you click next' },
   { group: 'Units', keys: 'X', does: 'Halt a march, a road or ditch on its way somewhere, or an explorer' },
   { group: 'Units', keys: 'E', does: 'Explore: walk toward the unknown, halting at the first new sighting' },
+  { group: 'Units', keys: 'Right-click your ship', does: 'Go aboard it, from the shore next to it' },
+  { group: 'Units', keys: 'W', does: 'All ashore: everybody off the ship, onto the free shore beside it' },
   { group: 'Units', keys: 'Shift+I', does: 'Irrigate: a worker, after Tree-Hugging, beside water' },
   { group: 'Units', keys: 'Shift+M', does: 'Mine hills or mountains: a worker, after Tree-Hugging' },
   { group: 'Units', keys: 'Shift+C', does: 'Clear a forest or swamp to grassland: a worker' },

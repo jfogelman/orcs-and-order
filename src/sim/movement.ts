@@ -149,8 +149,11 @@ export function attackTargets(state: GameState, unit: Unit): Set<number> {
       if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
       const occupant = unitAt(state, x, y);
       const city = cityAt(state, x, y);
+      const atSea = TERRAIN[state.terrain[idx(x, y, state.width)]].water;
+      // Nobody on land fights a ship; a ship takes no town, empty or not.
+      if (atSea && !type.sails && !type.flies) continue;
       if (occupant && occupant.owner !== unit.owner) out.add(idx(x, y, state.width));
-      else if (!occupant && city && city.owner !== unit.owner) out.add(idx(x, y, state.width));
+      else if (!occupant && city && city.owner !== unit.owner && !type.sails) out.add(idx(x, y, state.width));
     }
   }
   return out;
