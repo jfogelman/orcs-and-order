@@ -1252,7 +1252,7 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
         target = out / f"{key}.png"
         if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
             continue
-        sheet, why = build_frame_strip(keyed, w, h)
+        sheet, why = build_frame_strip(keyed, w, h, idle_sprite(key.split("_")[0]))
         if sheet is None:
             problems.append(f"{key}: {why}")
             continue
@@ -1443,7 +1443,67 @@ def process_citizens(force: bool) -> tuple[int, list[str]]:
     return done, problems
 
 
-def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image | None, str]:
+def idle_sprite(name: str) -> Image.Image | None:
+    """
+    The processed idle sprite a sheet should match, if it has been made yet.
+
+    Variants fall back to the creature they are a variant of: an axethrower
+    with no axe has its own sheets but stands the same height as one with it.
+    """
+    for candidate in (name, name.split("-")[0]):
+        path = OUT / "units" / f"{candidate}.png"
+        if path.is_file():
+            with Image.open(path) as img:
+                return img.convert("RGBA")
+    return None
+
+
+def body_box(img: Image.Image) -> tuple[int, int, int, int] | None:
+    """
+    The rows and columns holding the *bulk* of a figure, ignoring thin props.
+
+    A bounding box is the wrong measure of how big a creature is drawn. The
+    Archer holds a longbow taller than she is: measured by her bounding box she
+    is scaled down until the bow fits, so her body ends up small -- while her
+    weakened sheet, where the bow is held low, measures almost all elf and is
+    scaled to fill the frame. On the map the wounded elf was visibly a size
+    larger than the healthy one standing beside her.
+
+    So rows and columns are counted, and only those carrying at least a quarter
+    of the fullest one are treated as the figure. A bow limb is two pixels
+    across and never reaches that; a torso always does.
+    """
+    alpha = img.getchannel("A")
+    w, h = alpha.size
+    if w == 0 or h == 0:
+        return None
+    data = alpha.tobytes()
+    rows = [0] * h
+    cols = [0] * w
+    for y in range(h):
+        base = y * w
+        row = data[base : base + w]
+        for x, a in enumerate(row):
+            if a > 40:
+                rows[y] += 1
+                cols[x] += 1
+    peak_row = max(rows)
+    peak_col = max(cols)
+    if peak_row == 0 or peak_col == 0:
+        return None
+    keep_rows = [y for y, c in enumerate(rows) if c >= peak_row * 0.25]
+    keep_cols = [x for x, c in enumerate(cols) if c >= peak_col * 0.25]
+    if not keep_rows or not keep_cols:
+        return None
+    return keep_cols[0], keep_rows[0], keep_cols[-1] + 1, keep_rows[-1] + 1
+
+
+def build_frame_strip(
+    keyed: Image.Image,
+    w: int,
+    h: int,
+    reference: Image.Image | None = None,
+) -> tuple[Image.Image | None, str]:
     """
     Cut a sheet of frames into one horizontal strip at unit size.
 
@@ -1451,6 +1511,11 @@ def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image |
     because the awkward parts are the same for all of them: the frames may be a
     row or a grid, the vertical window has to be measured once and held still,
     and the result has to end up the same size on screen as the idle sprite.
+
+    `reference` is that idle sprite, already processed. Given one, the creature
+    is scaled so its **body** matches the body in the idle sprite and its feet
+    land on the same line, which is the only way a sheet drawn in a different
+    pose comes out the same size as the sprite it stands in for.
 
     Returns the strip, or None and a reason.
     """
@@ -1467,7 +1532,8 @@ def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image |
     # a unit the same size whatever state it is in: the idle sprites are
     # trimmed and scaled to fill 90% of the tile, and scaling each frame to
     # fill its own frame instead made a creature suddenly a head taller.
-    first = keyed.crop((0, 0, round(cell_w), round(cell_h))).getbbox()
+    first_frame = keyed.crop((0, 0, round(cell_w), round(cell_h)))
+    first = first_frame.getbbox()
     if first is None:
         return None, "first frame is empty after keying"
     fx0, fy0, fx1, fy1 = first
@@ -1475,11 +1541,24 @@ def build_frame_strip(keyed: Image.Image, w: int, h: int) -> tuple[Image.Image |
     if figure_h <= 0:
         return None, "nothing measurable in the first frame"
 
-    scale = (UNIT_SIZE * 0.90) / figure_h
-    window = UNIT_SIZE / scale
-    # A common floor line, so feet stay planted while the body moves.
-    floor = fy1 + window * 0.06
-    rel_centre = (fx0 + fx1) / 2
+    body = body_box(first_frame)
+    ref_body = body_box(reference) if reference is not None else None
+    if body is not None and ref_body is not None:
+        bx0, by0, bx1, by1 = body
+        rx0, ry0, rx1, ry1 = ref_body
+        # Body to body, so a pose holding its bow low is not scaled up to fill
+        # the frame the way a bounding box would have it.
+        scale = (ry1 - ry0) / max(1, by1 - by0)
+        window = UNIT_SIZE / scale
+        # Feet on the same line as the idle sprite's feet.
+        floor = by1 + (reference.height - ry1) / scale
+        rel_centre = (bx0 + bx1) / 2
+    else:
+        scale = (UNIT_SIZE * 0.90) / figure_h
+        window = UNIT_SIZE / scale
+        # A common floor line, so feet stay planted while the body moves.
+        floor = fy1 + window * 0.06
+        rel_centre = (fx0 + fx1) / 2
 
     sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
     for i in range(frames):
@@ -1657,7 +1736,7 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
             continue
 
         strip = keyed
-        sheet, why = build_frame_strip(strip, w, h)
+        sheet, why = build_frame_strip(strip, w, h, idle_sprite(name))
         if sheet is None:
             problems.append(f"{name}: {why}")
             continue

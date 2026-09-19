@@ -917,6 +917,7 @@ class App {
       entries,
       (x, y) => this.canSee(x, y),
       (x, y) => this.onScreen(x, y),
+      (x, y) => this.hasSeen(x, y),
     );
     for (const entry of entries) {
       // Sound is addressed: you hear about your own empire.
@@ -1656,6 +1657,11 @@ class App {
   /** Can the viewer see this tile right now? */
   private canSee(x: number, y: number): boolean {
     return this.state.players[this.viewerId].visible[idx(x, y, this.state.width)] === 1;
+  }
+
+  /** Ground the viewer has laid eyes on at some point, lit or not. */
+  private hasSeen(x: number, y: number): boolean {
+    return this.state.players[this.viewerId].explored[idx(x, y, this.state.width)] === 1;
   }
 
   private animateAttack(unit: Unit): void {

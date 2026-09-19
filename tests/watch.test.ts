@@ -143,3 +143,41 @@ describe('what the camera turns to look at', () => {
     expect(chooseFocus(state, 0, [entry({ kind: 'good', player: 0, at: [1, 1] })], everywhere, nowhere)).toBeNull();
   });
 });
+
+/**
+ * Reported from play at turn 111: a Goblin was wiped out and the camera stayed
+ * where it was. The goblin was the only thing of ours near that tile, so the
+ * moment it died the ground went dark -- and the camera refused to look at
+ * anything not currently visible. The one death most worth turning to look at
+ * was the one case the rule could not serve.
+ */
+describe('a unit that dies alone', () => {
+  const dying = entry({ kind: 'bad', player: 0, at: [7, 7], text: 'Goblin is wiped out.' });
+
+  it('gets the camera even though its tile has gone dark', () => {
+    const state = board();
+    const look = chooseFocus(state, 0, [dying], nowhere, nowhere, everywhere);
+    expect(look).toEqual([7, 7]);
+  });
+
+  it('still gets nothing if that ground was never seen at all', () => {
+    const state = board();
+    expect(chooseFocus(state, 0, [dying], nowhere, nowhere, nowhere)).toBeNull();
+  });
+
+  it('does not extend the same licence to somebody else s fight in the fog', () => {
+    const state = board();
+    // A fight of theirs, beside a unit of ours, on ground now dark.
+    spawnUnit(state, 0, 'goblin', 8, 8);
+    const theirs = entry({ kind: 'combat', player: 1, at: [7, 7], text: 'Orc defeats Footman.' });
+    expect(chooseFocus(state, 0, [theirs], nowhere, nowhere, everywhere)).toBeNull();
+  });
+
+  it('is still outranked by nothing, and still beats a fight next door', () => {
+    const state = board();
+    spawnUnit(state, 0, 'goblin', 8, 8);
+    const theirs = entry({ kind: 'combat', player: 1, at: [8, 9], text: 'Orc defeats Footman.' });
+    const look = chooseFocus(state, 0, [theirs, dying], everywhere, nowhere, everywhere);
+    expect(look).toEqual([7, 7]);
+  });
+});

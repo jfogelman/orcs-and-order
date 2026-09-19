@@ -80,17 +80,29 @@ export function chooseFocus(
   entries: readonly LogEntry[],
   visible: (x: number, y: number) => boolean,
   onScreen: (x: number, y: number) => boolean,
+  /**
+   * Ground the viewer has seen at some point. Only a loss of their own is
+   * allowed to use it; see below.
+   */
+  explored: (x: number, y: number) => boolean = visible,
 ): [number, number] | null {
   let best = WATCH.no;
   let look: [number, number] | null = null;
   for (const entry of entries) {
     if (!entry.at) continue;
     const [x, y] = entry.at;
-    // Never look at something the viewer cannot see: the camera would swing to
-    // a patch of fog and say plainly that something is there.
-    if (!visible(x, y)) continue;
     const rank = watchRank(state, viewerId, entry);
     if (rank === WATCH.no || rank < best) continue;
+    // Never look at something the viewer cannot see: the camera would swing to
+    // a patch of fog and say plainly that something is there.
+    //
+    // **Except a loss of their own.** A scout dying alone puts out the only
+    // light on that tile, so by the time the message is read the ground is
+    // dark again -- and the one death most worth turning to look at was the one
+    // the camera refused to move for. Nothing is given away: it was our unit,
+    // we knew where it was, and it is the news itself that says it is gone.
+    const reachable = rank === WATCH.yourLoss ? explored(x, y) : visible(x, y);
+    if (!reachable) continue;
     if (onScreen(x, y)) continue;
     best = rank;
     look = [x, y];
