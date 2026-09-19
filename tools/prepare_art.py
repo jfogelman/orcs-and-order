@@ -70,6 +70,8 @@ CREATURES = [
     "deathknight", "dragon", "goblincatapult",
     "peasant", "footman", "outrider", "archer", "knight", "ballista",
     "mage", "paladin",
+    # Ships, a carrier and a warship a side.
+    "raft", "warboat", "barge", "frigate",
 ]
 
 # The wilds, drawn in `art_src/barbarians/` and named for the creature rather
