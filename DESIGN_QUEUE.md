@@ -1116,6 +1116,11 @@ Points worth settling before building:
 - **Two pieces of art sitting unwired**: `broken catapult attack.jpg`, and the
   celebration, unrest and damaged city overlays, which are waiting on the extra
   logic you wanted with them.
+  *Done 2026-09-19.* Celebration and unrest went in with section 92. **Damaged** now
+  means a city that lost something to force in the last five turns (`CITY_DAMAGE`):
+  raiders sacking it, or sappers bringing its walls down. The catapult picture is
+  the `sally` effect, played over a city when a garrison charges out past its Broken
+  Catapult, which is the one thing that building does.
 - **Manual city tile assignment.** Citizens are auto-assigned greedily.
 - **Unit movement animation.** Units teleport between tiles.
 - **End-of-turn summary.** What happened while you were not looking.

@@ -16,7 +16,7 @@ import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
-import { CIVIC_PRIDE, POSTING } from '../sim/city';
+import { CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
 import { ALT_VICTORY } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
 import { TERRAFORM, jobName } from '../sim/terraform';
@@ -597,6 +597,17 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           reach. When a game is over, <strong>Watch It Again</strong> on the final
           screen plays the whole thing back: each side's land spreading and changing
           hands, the score pulling apart, and every city taken or lost, to jump to.
+        </p>
+        <p class="flavor">
+          <strong>City markers.</strong> A small picture at the bottom-left of a city of
+          yours says the one thing most worth knowing about it, worst news first:
+          <em>besieged</em> (enemies next to it), <em>unrest</em> (rioting),
+          <em>starving</em>, <em>ruined</em> (still being resettled after it changed
+          hands), <em>damaged</em> (raiders carried something off or sappers brought the
+          walls down, within the last ${CITY_DAMAGE.turns} turns), <em>idle</em> (banking
+          shields with nothing chosen), <em>supplied</em> (it feeds an army), and last,
+          because it asks for nothing, <em>celebration</em> (big, content with room to
+          spare, and still growing).
         </p>
         <p class="flavor">
           <strong>Ships</strong> come with Mapmaking, and a warship with the Horde's

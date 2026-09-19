@@ -862,6 +862,23 @@ export function resettleTurns(size: number): number {
   return Math.min(RESETTLE.cap, RESETTLE.base + size * RESETTLE.perCitizen);
 }
 
+/**
+ * How long a city shows the marks of a raid or a demolition. Long enough to be
+ * noticed on the turn after, short enough that the marker is news rather than
+ * a scar.
+ */
+export const CITY_DAMAGE = { turns: 5 };
+
+/** Record that this city has just lost something to force. */
+export function markDamaged(state: GameState, city: City): void {
+  city.damagedAt = state.turn;
+}
+
+/** Has this city lost something to force lately? */
+export function isDamaged(state: GameState, city: City): boolean {
+  return city.damagedAt !== undefined && state.turn - city.damagedAt < CITY_DAMAGE.turns;
+}
+
 /** Is this place still being resettled? */
 export function isRuined(state: GameState, city: City): boolean {
   return city.ruinedUntil !== undefined && state.turn < city.ruinedUntil;
@@ -1362,6 +1379,9 @@ export function cityCondition(state: GameState, c: City): string {
   if (c.disorder) return 'unrest';
   if (foodSurplus(state, c) < 0) return 'starving';
   if (isRuined(state, c)) return 'ruined';
+  // Lost something to force lately. Below ruined, which is the larger loss and
+  // says so for longer.
+  if (isDamaged(state, c)) return 'damaged';
   // Below the bad news and above the good. A city with nothing on order is a
   // thing to go and fix: a smaller call than a siege, a larger one than being
   // pleased with itself.

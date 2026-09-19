@@ -3,7 +3,7 @@ import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
-import { assignWorkers, syncCitizens } from './city';
+import { assignWorkers, markDamaged, syncCitizens } from './city';
 import { tryStep } from './movement';
 import { pillage } from './roads';
 import { difficultyOf } from './difficulty';
@@ -371,6 +371,7 @@ function stepToward(state: GameState, raider: Unit, tx: number, ty: number): voi
  * does not level a wall.
  */
 function sack(state: GameState, city: City): void {
+  markDamaged(state, city);
   const breakable = city.buildings.filter((b) => b !== 'walls');
   if (breakable.length > 0) {
     const lost = withRng(state, (rng) => rng.pick(breakable));

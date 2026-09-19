@@ -176,13 +176,12 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Promotion marks | 6 | done and wired |
 | Cities coming apart | 6 | done and wired |
 
-**Two pieces of art exist but are not wired to anything yet**, both waiting on a
-decision rather than on drawing:
+**Everything drawn is wired.** The last two went in on 2026-09-19:
 
-- `art_src/buildings/broken catapult attack.jpg` — the Broken Catapult has no
-  animation, and what should trigger it has not been settled.
-- The **celebration**, **unrest** and **damaged** city overlays, which are held
-  pending the extra logic wanted around them.
+- `broken catapult attack.jpg` plays as the `sally` effect (`art_src/effects/sally.jpg`) when
+  a garrison charges out of a city past its Broken Catapult.
+- The **damaged** city overlay marks a city that lost something to force in the last few
+  turns: raiders carried off a building or people, or sappers brought its walls down.
 
 The only prompts still unanswered are the **city overlays** at the bottom of this
 file, which are new rather than left over.
