@@ -594,7 +594,9 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           turn, and halts the moment it sees something new &mdash; an enemy, a raider,
           a city not yours &mdash; so it is never walked unattended into a fight. It
           will not attack anything, and it gives up when there is nothing left it can
-          reach.
+          reach. When a game is over, <strong>Watch It Again</strong> on the final
+          screen plays the whole thing back: each side's land spreading and changing
+          hands, the score pulling apart, and every city taken or lost, to jump to.
         </p>
         <p class="flavor">
           <strong>Ships</strong> come with Mapmaking, and a warship with the Horde's
