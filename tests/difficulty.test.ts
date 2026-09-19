@@ -46,15 +46,21 @@ describe('difficulty (section 113)', () => {
     expect(raidPace(state)).toEqual({ notBefore: BARBARIANS.notBefore, every: BARBARIANS.every });
   });
 
-  it('gets harder at every step up, on every lever', () => {
+  // Never easier on any lever, and harder on at least one. The two hard levels
+  // share their riot step: the measured ladder asked Doom for a price, not more.
+  it('gets harder at every step up', () => {
     const levels = DIFFICULTIES.map((d) => ({ d, m: measure(gameAt(d.id)), pace: raidPace(gameAt(d.id)) }));
     for (let i = 1; i < levels.length; i++) {
       const [a, b] = [levels[i - 1], levels[i]];
-      expect(b.m.myLimit, `${b.d.name}: cities riot`).toBeLessThan(a.m.myLimit);
-      expect(b.m.theirTech, `${b.d.name}: their research`).toBeLessThan(a.m.theirTech);
+      expect(b.m.myLimit, `${b.d.name}: cities riot`).toBeLessThanOrEqual(a.m.myLimit);
+      expect(b.m.theirTech, `${b.d.name}: their research`).toBeLessThanOrEqual(a.m.theirTech);
       expect(b.m.theirBuild, `${b.d.name}: their builds`).toBeLessThanOrEqual(a.m.theirBuild);
       expect(b.pace.every, `${b.d.name}: raids`).toBeLessThan(a.pace.every);
       expect(b.pace.notBefore).toBeLessThanOrEqual(a.pace.notBefore);
+      expect(
+        b.m.myLimit < a.m.myLimit || b.m.theirTech < a.m.theirTech,
+        `${b.d.name} is no harder than ${a.d.name} at home`,
+      ).toBe(true);
     }
   });
 

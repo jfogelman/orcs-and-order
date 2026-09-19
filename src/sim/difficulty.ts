@@ -9,6 +9,11 @@ import type { DifficultyId, GameSettings, Player } from '../model/types';
  * how much patience the player's cities have, and how often the wilds send
  * somebody.
  *
+ * Measured (section 113), for the player's seat played by the AI: 90%, 69%,
+ * 53%, 38%, 18%. The hard side was first built one step steeper -- Crusade at
+ * 85% prices *and* touchier cities won 18% -- so Crusade kept only the riots and
+ * that combination became Doom.
+ *
  * **Normal is today's game, exactly.** Every lever at Normal is the identity,
  * and a test pins that, so no earlier measurement moves.
  */
@@ -58,18 +63,18 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
   {
     id: 'hard',
     name: 'A Crusade',
-    blurb: 'Touchier cities, a quicker rival, raiders more often.',
+    blurb: 'Touchier cities, and raiders more often.',
     content: -1,
-    aiCost: 0.85,
+    aiCost: 1,
     raidEvery: 12,
     raidNotBefore: 22,
   },
   {
     id: 'hardest',
     name: 'Doom',
-    blurb: 'Everything is on fire, and the rival brought more fire.',
-    content: -2,
-    aiCost: 0.7,
+    blurb: 'Touchier cities, and a rival who gets everything cheaper.',
+    content: -1,
+    aiCost: 0.85,
     raidEvery: 10,
     raidNotBefore: 20,
   },

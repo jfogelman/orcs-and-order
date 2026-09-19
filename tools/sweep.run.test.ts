@@ -86,10 +86,9 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 113: the four levels that are not Normal. The Horde has seat 0, the
-  // player's, so these read as how the player's side fares. Normal is the shipped
-  // game, already measured at Horde 57-51 (section 112), and the harness is
-  // deterministic, so it is not run again here.
+  // Section 113: the four levels that are not Normal, as shipped. The Horde has
+  // seat 0, the player's. Normal is the shipped game, already measured at Horde
+  // 57-51 (section 112), and the harness is deterministic.
   ...(['easiest', 'easy', 'hard', 'hardest'] as const).map((level) => ({
     label: level,
     apply: () => {

@@ -3,6 +3,7 @@ import { ATTRITION } from '../src/model/units';
 import { DRAIN, SPLIT } from '../src/sim/abilities';
 import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } from '../src/sim/city';
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
+import { DIFFICULTIES } from '../src/sim/difficulty';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { RAIDED } from '../src/sim/barbarians';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
@@ -76,6 +77,7 @@ export const LEVERS: Record<string, object> = {
   FOLLIES,
   TERRAFORM,
   AUTO_TILES,
+  DIFFICULTIES,
   ATTRITION,
   BEAKERS_PER_TRADE,
   CALM,
