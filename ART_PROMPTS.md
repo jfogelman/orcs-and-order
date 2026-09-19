@@ -177,7 +177,7 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Promotion marks | 6 | done and wired |
 | Cities coming apart | 6 | done and wired |
 
-**Everything drawn is wired.** The last two went in on 2026-09-19:
+**Everything drawn is wired**, the Goblin Scout included (drawn 2026-09-19, with its attack and weakened sheets). The last two older pieces went in the same day:
 
 - `broken catapult attack.jpg` plays as the `sally` effect (`art_src/effects/sally.jpg`) when
   a garrison charges out of a city past its Broken Catapult.
