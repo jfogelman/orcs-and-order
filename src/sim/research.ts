@@ -2,7 +2,7 @@ import { BUILDINGS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
 import { TECHS_BY_ID, techsForFaction } from '../model/techs';
 import type { TechDef } from '../model/techs';
-import { unitType, UNIT_TYPES } from '../model/units';
+import { GOBLIN_SCOUT, unitType, UNIT_TYPES } from '../model/units';
 import type { UnitTypeDef } from '../model/units';
 import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
@@ -45,6 +45,7 @@ export function unlockedUnits(player: Player): UnitTypeDef[] {
     .filter((id) => UNIT_TYPES[id] !== undefined)
     .map((id) => unitType(id))
     .filter((u) => u.faction === player.faction)
+    .filter((u) => u.base !== 'scout' || GOBLIN_SCOUT.enabled)
     .sort((a, b) => a.cost - b.cost);
 }
 

@@ -1484,7 +1484,9 @@ It steps one tile at a time toward the nearest *reachable* dark edge, checking
 for a new enemy or foreign city after every step, so the halt is mid-turn and
 not just at the top of one. It never attacks: an occupied tile ahead ends the
 order. X, E again, or a move by hand stops it. The AI does not use it; it has
-its own frontier search. The Goblin Scout is still unmade.
+its own frontier search. *The Goblin Scout followed on 2026-09-19:* the Horde's
+Outrider, 1/1, 8 health, 3 moves, sight 3, 15 shields, taught by Goblin "Smarts".
+`GOBLIN_SCOUT` switches it off for a sweep.
 
 ## 16. Choosing which tiles a city works -- DONE
 

@@ -67,7 +67,7 @@ IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 # runtime, so only these are needed as art.
 CREATURES = [
     "peon", "goblin", "sapper", "orc", "axethrower", "troll", "ogre",
-    "deathknight", "dragon", "goblincatapult",
+    "deathknight", "dragon", "goblincatapult", "scout",
     "peasant", "footman", "outrider", "archer", "knight", "ballista",
     "mage", "paladin",
     # Ships, a carrier and a warship a side.

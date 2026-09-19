@@ -119,6 +119,7 @@ should be too.
 |---|---|
 | `peon` | A stooped green-skinned orc labourer in a rough brown loincloth, carrying a heavy iron pickaxe over one shoulder, tired expression, small tusks |
 | `goblin` | A small wiry green goblin with an oversized head, huge pointed ears, yellow eyes, a torn red rag tunic, holding a crude short knife, grinning |
+| `scout` | A skinny green goblin mid-sprint, leaning forward, one hand shading its big yellow eyes as it peers ahead, a tiny rolled map tucked under the other arm, bare feet, a scrap of red cloth tied round its head |
 | `sapper` | A goblin in a scorched leather apron and cracked goggles, clutching a bundle of red explosive sticks to its chest, wide alarmed eyes |
 | `orc` | A broad-shouldered green orc warrior in studded leather armour, lower tusks jutting up, gripping a heavy two-handed iron axe, aggressive stance |
 | `axethrower` | A lean green orc in a fur half-cloak, arm drawn back mid-throw with a throwing axe raised overhead, bandolier of small axes across the chest |
