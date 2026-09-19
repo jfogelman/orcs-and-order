@@ -474,6 +474,12 @@ export interface GameSettings {
   /** 0..1, share of the map that should end up as land. */
   landRatio: number;
   difficulty: DifficultyId;
+  /**
+   * The shape of the world. `'archipelago'` is islands, the two sides on
+   * separate ones, for ships to matter. Absent is the ordinary world, which is
+   * every save from before ships.
+   */
+  world?: 'continent' | 'archipelago';
   /** After this turn, the highest score wins by default. */
   maxTurns: number;
   /**

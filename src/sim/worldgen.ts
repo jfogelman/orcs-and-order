@@ -240,6 +240,47 @@ function landComponents(
   return { labels, sizes };
 }
 
+/**
+ * The archipelago's starts: each side on an island of its own, the biggest
+ * islands first, at the best site on each. Ships are how they meet.
+ */
+function pickIslandStarts(
+  terrain: TerrainId[],
+  specials: number[],
+  w: number,
+  h: number,
+  count: number,
+  minIsland: number,
+): { starts: StartPosition[]; mainlandSize: number } {
+  const { labels, sizes } = landComponents(terrain, w, h);
+  const islands = sizes
+    .map((size, label) => ({ size, label }))
+    .filter((c) => c.size >= minIsland)
+    .sort((a, b) => b.size - a.size);
+  const best = new Map<number, { x: number; y: number; score: number }>();
+  for (let y = 2; y < h - 2; y++) {
+    for (let x = 2; x < w - 2; x++) {
+      const label = labels[idx(x, y, w)];
+      if (label < 0 || sizes[label] < minIsland) continue;
+      const score = siteScore(terrain, specials, x, y, w, h);
+      const held = best.get(label);
+      if (score > 0 && (!held || score > held.score)) best.set(label, { x, y, score });
+    }
+  }
+  const starts: StartPosition[] = [];
+  let smallest = Infinity;
+  for (const island of islands) {
+    const site = best.get(island.label);
+    if (!site) continue;
+    starts.push({ x: site.x, y: site.y });
+    smallest = Math.min(smallest, island.size);
+    if (starts.length === count) break;
+  }
+  // "Mainland" here is the smallest island anybody starts on: the retry asks
+  // that every side got enough ground, not that one of them did.
+  return { starts, mainlandSize: starts.length === count ? smallest : 0 };
+}
+
 function pickStarts(
   terrain: TerrainId[],
   specials: number[],
@@ -292,6 +333,13 @@ function pickStarts(
 // ------------------------------------------------------------------ entry
 
 /**
+ * The archipelago's shape. Blobs a quarter the size of the continent's, and
+ * each side's starting island at least this share of all the land. Chosen by
+ * looking at maps, not by sweep; it decides how the world looks, not who wins.
+ */
+export const ARCHIPELAGO = { cellDivisor: 9, islandShare: 0.14, landRatio: 0.3 };
+
+/**
  * Generate a world, retrying with a nudged seed until the mainland is big
  * enough to hold everybody. A map whose largest continent is a sandbar makes
  * for a very short game.
@@ -301,9 +349,12 @@ export function generateWorld(
   settings: GameSettings,
   playerCount: number,
 ): WorldgenResult {
-  const minMainland = Math.round(settings.width * settings.height * settings.landRatio * 0.45);
+  // On the archipelago each side needs an island of its own, not one continent
+  // big enough for everybody.
+  const share = settings.world === 'archipelago' ? ARCHIPELAGO.islandShare : 0.45;
+  const minMainland = Math.round(settings.width * settings.height * settings.landRatio * share);
   let last = generateAttempt(seed, settings, playerCount);
-  for (let attempt = 1; attempt < 10; attempt++) {
+  for (let attempt = 1; attempt < 20; attempt++) {
     if (last.starts.length >= playerCount && last.mainlandSize >= minMainland) break;
     last = generateAttempt((seed + attempt * 0x9e3779b9) >>> 0, settings, playerCount);
   }
@@ -318,7 +369,9 @@ function generateAttempt(
   const { width: w, height: h } = settings;
   const rng = new Rng(seed);
 
-  const elev = fbm(rng, w, h, 5, Math.max(w, h) / 4);
+  const islands = settings.world === 'archipelago';
+  // Smaller blobs make more of them: islands rather than a continent.
+  const elev = fbm(rng, w, h, 5, Math.max(w, h) / (islands ? ARCHIPELAGO.cellDivisor : 4));
   const moist = fbm(rng, w, h, 4, Math.max(w, h) / 3);
   percentileNormalize(moist);
   applyEdgeFalloff(elev, w, h);
@@ -358,6 +411,15 @@ function generateAttempt(
     }
   }
 
-  const { starts, mainlandSize } = pickStarts(terrain, specials, w, h, playerCount);
+  const { starts, mainlandSize } = islands
+    ? pickIslandStarts(
+        terrain,
+        specials,
+        w,
+        h,
+        playerCount,
+        Math.round(w * h * settings.landRatio * ARCHIPELAGO.islandShare),
+      )
+    : pickStarts(terrain, specials, w, h, playerCount);
   return { terrain, specials, starts, mainlandSize };
 }
