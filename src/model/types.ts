@@ -261,6 +261,12 @@ export interface Unit {
    * ever set on a carrier. Absent in every older save.
    */
   cargo?: Unit[];
+  /** AI only: a land unit that has somewhere to be across the water. */
+  wantsPassage?: boolean;
+  /** AI only: where a loaded carrier is bound -- the landing, and what it is for. */
+  voyage?: { x: number; y: number; tx: number; ty: number };
+  /** AI only: turns a part-loaded carrier has waited at the shore. */
+  voyageWait?: number;
   /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
