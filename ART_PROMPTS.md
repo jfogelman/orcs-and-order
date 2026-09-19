@@ -146,8 +146,9 @@ Four ships, a carrier and a warship for each side, drawn separately per faction 
 way the land units are. They sit on water, so **draw each ship side-on, sitting on
 the waterline**, with no sea drawn under it: the game draws the water. A ship is
 drawn larger than an orc (`artScale` 1.3 for a carrier, 1.4 for a warship), so fill
-the frame as usual. Save them as `art_src/units/<id>.<ext>` like any unit. Until
-they are drawn, a procedural hull, mast and sail in the side's colours stands in.
+the frame as usual. Save them as `art_src/units/<id>.<ext>` like any unit.
+**All four are drawn**, each with an attack strip and a weakened sheet, kept in
+`art_src/unit effects/` and `art_src/unit states/` like everybody else's.
 
 | id | Prompt subject |
 |---|---|
