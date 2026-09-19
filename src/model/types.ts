@@ -423,6 +423,12 @@ export interface City {
    * nothing. Absent on a city that has never changed hands.
    */
   ruinedUntil?: number;
+  /**
+   * The turn this city last lost something to force: raiders carried off a
+   * building or its people, or sappers brought its walls down. Shown on the map
+   * for a few turns. Absent on a city nothing has happened to.
+   */
+  damagedAt?: number;
 }
 
 // ------------------------------------------------------------------ game meta

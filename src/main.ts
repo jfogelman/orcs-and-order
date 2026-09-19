@@ -2390,6 +2390,9 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
   // visible: a unit vanishing from your own line with no explanation reads as
   // a bug rather than as a bargain.
   if (entry.subject === 'death-touch') return 'death-touch';
+  // The Broken Catapult's garrison going out to meet them. The picture was drawn
+  // long before anything said when to show it.
+  if (entry.subject === 'sally') return 'sally';
   switch (entry.cue) {
     case 'explosion':
       return 'explosion';

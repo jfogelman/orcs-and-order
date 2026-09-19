@@ -103,8 +103,9 @@ function garrison(state: GameState, city: City): Unit {
  */
 // Section 112's workers, and cities that stop chasing food at their content limit,
 // changed which games last: of seeds 20 to 50, only 45 and 50 still reach turn 299
-// with both sides standing.
-const LATE_SEED = 45;
+// with both sides standing. The Goblin Scout (2026-09-19) moved 45 off it; of 20 to
+// 60, 37, 50 and 58 still reach the turn limit with both sides alive.
+const LATE_SEED = 50;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];

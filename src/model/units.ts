@@ -257,6 +257,28 @@ export const CREATURES: CreatureDef[] = [
     blurb: 'Fast, cheap, and entirely expendable — a fact the goblins are aware of.',
   },
   {
+    // The Horde's answer to the Outrider, and section 15's Goblin Scout: the
+    // one goblin sent on ahead because it is the one that runs fastest. Built
+    // for Explore (E), which it was asked for alongside.
+    id: 'scout',
+    name: 'Goblin Scout',
+    plural: 'Goblin Scouts',
+    faction: 'orc',
+    role: 'melee',
+    attack: 1,
+    defense: 1,
+    hp: 8,
+    move: 3,
+    cost: 15,
+    sight: 3,
+    counts: [1],
+    artScale: 0.72,
+    silhouette: 'small',
+    body: '#9cb85a',
+    trim: '#6b4a2a',
+    blurb: 'Sent on ahead because it runs fastest. Comes back, eventually, with opinions about what it saw.',
+  },
+  {
     id: 'sapper',
     name: 'Goblin Sapper',
     plural: 'Goblin Sappers',
@@ -738,6 +760,12 @@ const NUMBER_WORDS = [
   'Nine',
   'Ten',
 ];
+
+/**
+ * Switch for the Goblin Scout, so a sweep can measure the game without it. Off,
+ * it is never offered to build.
+ */
+export const GOBLIN_SCOUT = { enabled: true };
 
 /** Groups of this size or larger cannot agree on a direction. */
 export const CROWD_THRESHOLD = 5;

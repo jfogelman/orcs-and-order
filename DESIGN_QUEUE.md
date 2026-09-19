@@ -1116,6 +1116,11 @@ Points worth settling before building:
 - **Two pieces of art sitting unwired**: `broken catapult attack.jpg`, and the
   celebration, unrest and damaged city overlays, which are waiting on the extra
   logic you wanted with them.
+  *Done 2026-09-19.* Celebration and unrest went in with section 92. **Damaged** now
+  means a city that lost something to force in the last five turns (`CITY_DAMAGE`):
+  raiders sacking it, or sappers bringing its walls down. The catapult picture is
+  the `sally` effect, played over a city when a garrison charges out past its Broken
+  Catapult, which is the one thing that building does.
 - **Manual city tile assignment.** Citizens are auto-assigned greedily.
 - **Unit movement animation.** Units teleport between tiles.
 - **End-of-turn summary.** What happened while you were not looking.
@@ -1479,7 +1484,11 @@ It steps one tile at a time toward the nearest *reachable* dark edge, checking
 for a new enemy or foreign city after every step, so the halt is mid-turn and
 not just at the top of one. It never attacks: an occupied tile ahead ends the
 order. X, E again, or a move by hand stops it. The AI does not use it; it has
-its own frontier search. The Goblin Scout is still unmade.
+its own frontier search. *The Goblin Scout followed on 2026-09-19:* the Horde's
+Outrider, 1/1, 8 health, 3 moves, sight 3, 15 shields, taught by Goblin "Smarts".
+`GOBLIN_SCOUT` switches it off for a sweep. Measured 2026-09-19 (108 games an arm): Horde 56–52 without it, 55–53
+with it. The tuned set moved one way and the held-out set the other, which is a new
+option reshuffling games rather than an effect. It ships.
 
 ## 16. Choosing which tiles a city works -- DONE
 
@@ -9077,7 +9086,18 @@ player's seat played by the AI):
   old pair became Doom. The ladder now steps 21, 16, 15, 20.
 - **Caveat: the AI plays the player's seat here.** A person who manages unrest
   better than the AI will find the riot lever gentler than these numbers say.
-- **Raiders were off in all of this.** Their pace per level is unmeasured.
+- **Raiders were off in all of this.** *Measured with them on, 2026-09-19* (108 games a
+  level, A Picnic / Normal / Doom only):
+
+  | level | player's side wins, raiders off | raiders on | cities sacked a game (Horde/Kingdom) |
+  |---|---|---|---|
+  | A Picnic | 90% | 83% | 0.3 / 0.2 |
+  | A War | 53% | 49% | 0.3 / 0.5 |
+  | Doom | 18% | 19% | 0.6 / 0.6 |
+
+  The ladder holds its shape with raiders in it. The faster pace at Doom sacks
+  about twice as often as A Picnic's slow one, and the raiders hit both sides, so
+  the gap between levels barely moves. No change needed.
 
 ## 114. Ships, and the Archipelago
 

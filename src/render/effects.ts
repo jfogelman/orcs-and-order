@@ -41,7 +41,9 @@ export type EffectId =
   | 'heal'
   | 'magic'
   // A troll spending nine tenths of itself to make another one.
-  | 'troll-split';
+  | 'troll-split'
+  // A garrison charging out past the Broken Catapult.
+  | 'sally';
 
 export interface EffectOptions {
   /**

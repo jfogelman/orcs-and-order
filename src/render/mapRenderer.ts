@@ -89,6 +89,7 @@ const CITY_OVERLAY_STATES = [
   'unrest',
   'starving',
   'ruined',
+  'damaged',
   'idle',
   'supplied',
   'celebration',

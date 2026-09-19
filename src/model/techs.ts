@@ -243,7 +243,7 @@ export const TECHS: TechDef[] = [
     faction: 'orc',
     cost: 20,
     prereqs: ['first-orc'],
-    units: ['goblin_x2', 'goblin_x3'],
+    units: ['goblin_x2', 'goblin_x3', 'scout'],
     buildings: [],
     flags: [],
     flavor: 'The goblins work it out first. Nobody enjoys this.',

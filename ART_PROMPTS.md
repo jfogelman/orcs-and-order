@@ -119,6 +119,7 @@ should be too.
 |---|---|
 | `peon` | A stooped green-skinned orc labourer in a rough brown loincloth, carrying a heavy iron pickaxe over one shoulder, tired expression, small tusks |
 | `goblin` | A small wiry green goblin with an oversized head, huge pointed ears, yellow eyes, a torn red rag tunic, holding a crude short knife, grinning |
+| `scout` | A skinny green goblin mid-sprint, leaning forward, one hand shading its big yellow eyes as it peers ahead, a tiny rolled map tucked under the other arm, bare feet, a scrap of red cloth tied round its head |
 | `sapper` | A goblin in a scorched leather apron and cracked goggles, clutching a bundle of red explosive sticks to its chest, wide alarmed eyes |
 | `orc` | A broad-shouldered green orc warrior in studded leather armour, lower tusks jutting up, gripping a heavy two-handed iron axe, aggressive stance |
 | `axethrower` | A lean green orc in a fur half-cloak, arm drawn back mid-throw with a throwing axe raised overhead, bandolier of small axes across the chest |
@@ -176,13 +177,12 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Promotion marks | 6 | done and wired |
 | Cities coming apart | 6 | done and wired |
 
-**Two pieces of art exist but are not wired to anything yet**, both waiting on a
-decision rather than on drawing:
+**Everything drawn is wired**, the Goblin Scout included (drawn 2026-09-19, with its attack and weakened sheets). The last two older pieces went in the same day:
 
-- `art_src/buildings/broken catapult attack.jpg` — the Broken Catapult has no
-  animation, and what should trigger it has not been settled.
-- The **celebration**, **unrest** and **damaged** city overlays, which are held
-  pending the extra logic wanted around them.
+- `broken catapult attack.jpg` plays as the `sally` effect (`art_src/effects/sally.jpg`) when
+  a garrison charges out of a city past its Broken Catapult.
+- The **damaged** city overlay marks a city that lost something to force in the last few
+  turns: raiders carried off a building or people, or sappers brought its walls down.
 
 The only prompts still unanswered are the **city overlays** at the bottom of this
 file, which are new rather than left over.

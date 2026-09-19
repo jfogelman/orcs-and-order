@@ -5,7 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
-import { RUIN, isRuined, resettleTurns } from './city';
+import { RUIN, isRuined, markDamaged, resettleTurns, workingBuildings } from './city';
 import { count } from '../model/advisors';
 import type { CombatResult } from './combat';
 import {
@@ -445,6 +445,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // Kingdom wall -- the rest of the army walks in afterwards.
   if (city && city.owner !== unit.owner && type.demolishes && city.buildings.includes('walls')) {
     city.buildings = city.buildings.filter((b) => b !== 'walls');
+    markDamaged(state, city);
     log(
       state,
       `${type.name} brings the walls of ${city.name} down, and goes with them.`,
@@ -486,6 +487,25 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         reason: `${type.name} cannot attack anything.`,
         retryable: false,
       };
+    }
+    // A garrison charging out past something encouraging -- the Broken
+    // Catapult's whole point -- is said, so the charge can be seen.
+    const home = cityAt(state, unit.x, unit.y);
+    const rallyingPoint =
+      home && home.owner === unit.owner
+        ? workingBuildings(state, home).find((b) => (BUILDINGS[b]?.sallyBonus ?? 0) > 0)
+        : undefined;
+    if (home && rallyingPoint) {
+      log(
+        state,
+        `${type.name} charges out of ${home.name} past the ${BUILDINGS[rallyingPoint]?.name ?? rallyingPoint}.`,
+        'info',
+        unit.owner,
+        undefined,
+        [home.x, home.y],
+        undefined,
+        'sally',
+      );
     }
     const result = resolveCombat(state, unit, occupant);
     unit.moves = 0;

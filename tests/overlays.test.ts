@@ -3,6 +3,9 @@ import type { City, GameState } from '../src/model/types';
 import {
   CALM,
   CELEBRATION,
+  CITY_DAMAGE,
+  isDamaged,
+  markDamaged,
   assignWorkers,
   cityCondition,
   contentLimit,
@@ -11,6 +14,7 @@ import {
   isIdle,
 } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
+import { tryStep } from '../src/sim/movement';
 
 function board(): GameState {
   const state = createGame({ seed: 20260911, width: 24, height: 18 });
@@ -193,5 +197,54 @@ describe('which badge a city wears', () => {
     const city = town(state, { producing: { kind: 'coin' } });
     expect(isCelebrating(state, city)).toBe(true);
     expect(cityCondition(state, city)).toBe('idle');
+  });
+});
+
+/**
+ * The last of the three: `damaged` finally has a meaning. A city that has lost
+ * something to force lately -- raiders carried off a building or its people,
+ * or sappers brought its walls down -- shows it for a few turns.
+ */
+describe('damaged', () => {
+  it('shows for a few turns after a city loses something to force, then goes', () => {
+    const state = board();
+    const c = town(state);
+    expect(cityCondition(state, c)).not.toBe('damaged');
+    markDamaged(state, c);
+    expect(cityCondition(state, c)).toBe('damaged');
+    state.turn += CITY_DAMAGE.turns - 1;
+    expect(cityCondition(state, c)).toBe('damaged');
+    state.turn += 1;
+    expect(cityCondition(state, c)).not.toBe('damaged');
+  });
+
+  it('comes from sappers bringing the walls down', () => {
+    const state = board();
+    const c = town(state, { owner: 1, buildings: ['walls'] });
+    const sapper = spawnUnit(state, 0, 'sapper', c.x - 1, c.y);
+    tryStep(state, sapper, c.x, c.y);
+    expect(c.buildings).not.toContain('walls');
+    expect(isDamaged(state, c)).toBe(true);
+  });
+
+  it('is below a riot, which is still the worse news', () => {
+    const state = board();
+    const c = town(state, { disorder: true });
+    markDamaged(state, c);
+    expect(cityCondition(state, c)).toBe('unrest');
+  });
+});
+
+describe('the Broken Catapult sally', () => {
+  it('is said when a garrison charges out past one, and not otherwise', () => {
+    for (const buildings of [['catapult'], []]) {
+      const state = board();
+      const c = town(state, { buildings });
+      const orc = spawnUnit(state, 0, 'orc', c.x, c.y);
+      spawnUnit(state, 1, 'footman', c.x + 1, c.y);
+      tryStep(state, orc, c.x + 1, c.y);
+      const said = state.log.some((l) => l.subject === 'sally');
+      expect(said, `with ${buildings.join() || 'nothing'}`).toBe(buildings.length > 0);
+    }
   });
 });
