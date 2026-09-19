@@ -1459,6 +1459,12 @@ the save.**
   - a score chart with a cursor;
   - every city taken or lost, as a list to jump to.
 - **Only once the game is over**, because it shows the whole map without fog.
+- **The great works** (2026-09-19, asked for after a played game): every folly and
+  ending work is kept in `state.landmarks` as it is finished, with the turn, the city
+  and whose it was. The replay lists them beside the cities taken and lost, and marks
+  the town holding one with a gold pip from that turn on. There is one of each in the
+  world, so they are what a game is remembered by; without them the replay was a list
+  of towns changing hands.
 
 **A palace.** The capital is currently derived rather than built, which is why
 it could be taken by conquering somebody older (fixed, but it shows the shape of

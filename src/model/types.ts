@@ -579,6 +579,12 @@ export interface GameState {
   history?: TurnRecord[];
   /** Where every city that has ever stood stands, and its name: `[x, y, name]`. */
   sites?: Record<number, [number, number, string]>;
+  /**
+   * The great works: every folly and every ending work, as it was finished.
+   * There is only one of each in the world, so this is the short list of
+   * things a game is remembered by. Part of the replay record.
+   */
+  landmarks?: Array<{ turn: number; city: number; owner: number; id: BuildingId }>;
   winner: number | null;
   /**
    * How the game ended, so the ending can be shown rather than described.

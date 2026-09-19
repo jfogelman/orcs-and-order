@@ -12,6 +12,7 @@ import type { City, GameState, ProductionItem, Unit, AutoBuild, Player, UnitType
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
+import { recordLandmark } from './history';
 import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
 import { follyFinished, follyOffered } from './follies';
 import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
@@ -1165,6 +1166,10 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
         pieceFinished(state, city, BUILDINGS[item.id]);
         follyFinished(state, city, BUILDINGS[item.id]);
         if (isFolly(BUILDINGS[item.id])) events.folly = true;
+        // One of a kind, and worth remembering: the replay is a list of these.
+        if (isFolly(BUILDINGS[item.id]) || isEndingPiece(BUILDINGS[item.id])) {
+          recordLandmark(state, city, item.id);
+        }
       }
     } else if (city.shields >= cost) {
       if (item.kind === 'unit') {
