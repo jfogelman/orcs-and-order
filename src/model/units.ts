@@ -13,7 +13,7 @@ import type { DamageKind, FactionId, UnitTypeId } from './types';
  * lose one battle and you lose all ten of them at once.
  */
 
-export type UnitRole = 'worker' | 'melee' | 'ranged' | 'siege' | 'caster' | 'flying';
+export type UnitRole = 'worker' | 'melee' | 'ranged' | 'siege' | 'caster' | 'flying' | 'naval';
 
 /** Shapes the placeholder art generator knows how to draw. */
 export type SilhouetteId =
@@ -25,7 +25,8 @@ export type SilhouetteId =
   | 'robed'
   | 'winged'
   | 'engine'
-  | 'armored';
+  | 'armored'
+  | 'ship';
 
 export interface CreatureDef {
   id: string;
@@ -66,6 +67,16 @@ export interface CreatureDef {
   expendable?: boolean;
   /** Can found cities. */
   settler?: boolean;
+  /**
+   * Goes on water and only on water. Ships: built in a city beside the sea,
+   * launched onto it, and never set foot ashore.
+   */
+  sails?: boolean;
+  /**
+   * Land units this ship can carry. They ride inside it, off the map, until
+   * they step ashore -- one unit to a tile holds at sea as everywhere else.
+   */
+  carries?: number;
   /** Ignores terrain movement costs. */
   flies?: boolean;
   /**
@@ -615,6 +626,101 @@ export const CREATURES: CreatureDef[] = [
     trim: '#c9a33a',
     blurb: 'Morally certain, heavily armoured, and correct about roughly half of it.',
   },
+
+  // ----------------------------------------------------------------- ships
+  // Four of them, a carrier and a fighter a side. They only go on water, and a
+  // carrier's passengers ride inside it off the map, since one unit to a tile
+  // holds at sea as everywhere else.
+  {
+    id: 'raft',
+    name: 'A Raft (Mostly)',
+    plural: 'Rafts (Mostly)',
+    faction: 'orc',
+    role: 'naval',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 3,
+    cost: 35,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    carries: 3,
+    artScale: 1.3,
+    silhouette: 'ship',
+    body: '#6b5436',
+    trim: '#7e9b46',
+    blurb:
+      'Logs, rope, and a firm belief that orcs float. Carries three units at a ' +
+      'time, and most of the time it carries them all the way.',
+  },
+  {
+    id: 'warboat',
+    name: 'The Big Angry Boat',
+    plural: 'Big Angry Boats',
+    faction: 'orc',
+    role: 'naval',
+    attack: 5,
+    defense: 2,
+    hp: 12,
+    move: 3,
+    cost: 60,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    artScale: 1.4,
+    silhouette: 'ship',
+    body: '#4a3a26',
+    trim: '#b33a2a',
+    blurb:
+      'A raft with a ram, a drum and a crew who were told there would be ' +
+      'boarding. Sinks ships. Throws things at the shore.',
+  },
+  {
+    id: 'barge',
+    name: 'The Committee Barge',
+    plural: 'Committee Barges',
+    faction: 'human',
+    role: 'naval',
+    attack: 0,
+    defense: 2,
+    hp: 10,
+    move: 3,
+    cost: 40,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    carries: 3,
+    artScale: 1.3,
+    silhouette: 'ship',
+    body: '#8a6a44',
+    trim: '#3a64b0',
+    blurb:
+      'Seats three units, in order of precedence. The minutes of every crossing ' +
+      'are kept, and read aloud on arrival.',
+  },
+  {
+    id: 'frigate',
+    name: 'The Strongly Worded Frigate',
+    plural: 'Strongly Worded Frigates',
+    faction: 'human',
+    role: 'naval',
+    attack: 4,
+    defense: 3,
+    hp: 12,
+    move: 3,
+    cost: 60,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    artScale: 1.4,
+    silhouette: 'ship',
+    body: '#d8d0b8',
+    trim: '#3a64b0',
+    blurb:
+      'Cannon, a chaplain, and a letter of complaint for every port. Sinks ' +
+      'ships, and shells the shore while the letter is being drafted.',
+  },
 ];
 
 // ------------------------------------------------------- generated types
@@ -653,6 +759,10 @@ export interface UnitTypeDef {
   sight: number;
   settler: boolean;
   flies: boolean;
+  /** Water only. See CreatureDef.sails. */
+  sails: boolean;
+  /** Land units it can carry; 0 for everything that is not a carrier. */
+  carries: number;
   firstStrikes: number;
   expendable: boolean;
   ammo: number;
@@ -733,6 +843,8 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     sight: c.sight,
     settler: c.settler === true,
     flies: c.flies === true,
+    sails: c.sails === true,
+    carries: c.carries ?? 0,
     firstStrikes: c.firstStrikes ?? 0,
     expendable: c.expendable === true,
     // Not multiplied by the count: three ballistas share the supply wagon.

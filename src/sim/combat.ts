@@ -1,4 +1,5 @@
 import { distance, idx } from '../engine/grid';
+import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { defenseOf } from '../model/terrain';
@@ -865,6 +866,8 @@ export function disband(state: GameState, unit: Unit): number {
 export function destroyUnit(state: GameState, unit: Unit, cause: string): void {
   const i = state.units.indexOf(unit);
   if (i >= 0) state.units.splice(i, 1);
+  // A ship that goes down takes its passengers with it.
+  drownCargo(state, unit);
   const type = unitType(unit.type);
   const owner = state.players[unit.owner];
   // Where it happened, which is the whole of what the camera has to go on.

@@ -257,6 +257,11 @@ export interface Unit {
    */
   exploring?: boolean;
   /**
+   * Land units riding in this ship, off the map until they step ashore. Only
+   * ever set on a carrier. Absent in every older save.
+   */
+  cargo?: Unit[];
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *

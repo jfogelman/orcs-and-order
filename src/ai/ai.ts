@@ -574,13 +574,21 @@ function chooseProduction(
   personality: AiPersonality,
 ): ProductionItem {
   const owner = state.players[city.owner];
-  const options = buildOptions(state, city);
+  const inYard = buildOptions(state, city);
+  // Ships are asked for separately, and never as an army: a warship's attack
+  // would otherwise rate it the best soldier in the yard.
+  const options = { ...inYard, units: inYard.units.filter((u) => !u.sails) };
   if (options.units.length === 0) return { kind: 'coin' };
 
   // A garrison is whoever is standing on or beside the city. Counting only the
   // city tile would never reach two, because only one unit fits on a tile.
   const garrison = state.units.filter(
-    (u) => u.owner === city.owner && distance(u.x, u.y, city.x, city.y) <= 1 && !unitType(u.type).settler,
+    (u) =>
+      u.owner === city.owner &&
+      distance(u.x, u.y, city.x, city.y) <= 1 &&
+      !unitType(u.type).settler &&
+      // A ship in the harbour does not hold the gate.
+      !unitType(u.type).sails,
   ).length;
   const cities = playerCities(state, city.owner).length;
   const settlers = playerUnits(state, city.owner).filter((u) => unitType(u.type).settler).length;
