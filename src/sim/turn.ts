@@ -4,6 +4,7 @@ import { empireBonus, isFolly, onOwnLand } from './follyEffects';
 import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { resumeExplore } from './explore';
+import { recordTurn } from './history';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
@@ -700,6 +701,9 @@ export function endPlayerTurn(state: GameState): void {
   for (let step = 0; step < state.players.length; step++) {
     state.activePlayer++;
     if (state.activePlayer >= state.players.length) {
+      // The turn is over for everybody: keep it for the replay, before the
+      // calendar moves on.
+      recordTurn(state, (id) => playerScore(state, id));
       state.activePlayer = 0;
       state.turn++;
       // Here, not in `beginPlayerTurn`: that runs once per player, so the
