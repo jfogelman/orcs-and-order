@@ -1,3 +1,4 @@
+import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import type { GameState, TurnRecord } from '../model/types';
 import { replayFrames, ROW } from '../sim/history';
@@ -42,6 +43,28 @@ function citiesOf(frame: TurnRecord): Map<number, { owner: number; size: number 
   return out;
 }
 
+/**
+ * Every folly and ending work, as its own moment. There is one of each in the
+ * world, so these are what a game is remembered by -- and the turn the Portal
+ * went up is the turn somebody won.
+ */
+function worksRaised(state: GameState, frames: TurnRecord[]): Moment[] {
+  const sites = state.sites ?? {};
+  return (state.landmarks ?? []).map((w) => {
+    // The frame this turn belongs to, so clicking it lands on the right one.
+    let frame = frames.findIndex((f) => f.turn >= w.turn);
+    if (frame < 0) frame = frames.length - 1;
+    const where = sites[w.city]?.[2];
+    const who = state.players[w.owner]?.name ?? 'Somebody';
+    const what = BUILDINGS[w.id]?.name ?? w.id;
+    return {
+      frame: Math.max(0, frame),
+      turn: w.turn,
+      text: where ? `${who} raises ${what} in ${where}.` : `${who} raises ${what}.`,
+    };
+  });
+}
+
 /** Every city taken or lost, read off the difference between turns. */
 export function momentsOf(state: GameState, frames: TurnRecord[]): Moment[] {
   const sites = state.sites ?? {};
@@ -62,7 +85,8 @@ export function momentsOf(state: GameState, frames: TurnRecord[]): Moment[] {
     }
     before = now;
   });
-  return out;
+  // The works belong in the same list, in the order they happened.
+  return [...out, ...worksRaised(state, frames)].sort((a, b) => a.turn - b.turn);
 }
 
 /** The map at one frame: terrain, each side's land, and its cities. */
@@ -104,6 +128,12 @@ function drawFrame(canvas: HTMLCanvasElement, state: GameState, frame: TurnRecor
   }
   ctx.globalAlpha = 1;
 
+  // Cities holding a work, by this turn: a folly or an ending work is one of a
+  // kind, and where it stands is half the story of the game.
+  const works = new Set(
+    (state.landmarks ?? []).filter((w) => w.turn <= frame.turn).map((w) => w.city),
+  );
+
   // Cities: a square that grows with the city, edged so it reads on any land.
   for (const [id, c] of cities) {
     const site = sites[id];
@@ -115,6 +145,14 @@ function drawFrame(canvas: HTMLCanvasElement, state: GameState, frame: TurnRecor
     ctx.fillRect(cx - r - 1, cy - r - 1, 2 * r + 2, 2 * r + 2);
     ctx.fillStyle = state.players[c.owner]?.color ?? '#888';
     ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    if (works.has(id)) {
+      // A gold pip above the town, which reads at this size where a monument
+      // drawn to scale would be three pixels of mud.
+      ctx.fillStyle = '#0a0806';
+      ctx.fillRect(cx - 2, cy - r - 5, 4, 4);
+      ctx.fillStyle = '#e8c45a';
+      ctx.fillRect(cx - 1.5, cy - r - 4.5, 3, 3);
+    }
   }
 }
 
@@ -196,14 +234,14 @@ export function openReplay(state: GameState, onBack: () => void): void {
         <div class="replay-stats"></div>
         ${
           moments.length
-            ? `<div class="field-label">Cities taken and lost</div>
+            ? `<div class="field-label">What happened</div>
                <div class="replay-moments">${moments
                  .map(
                    (m) =>
                      `<button class="replay-moment" data-frame="${m.frame}"><span class="muted">Turn ${m.turn}</span> ${escapeHtml(m.text)}</button>`,
                  )
                  .join('')}</div>`
-            : '<p class="flavor">No city ever changed hands.</p>'
+            : '<p class="flavor">No city ever changed hands, and nothing great was raised.</p>'
         }
       </div>
       <div class="button-row" style="justify-content:flex-end">

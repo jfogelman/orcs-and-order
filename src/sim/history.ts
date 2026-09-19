@@ -1,4 +1,4 @@
-import type { GameState, TurnRecord } from '../model/types';
+import type { BuildingId, City, GameState, TurnRecord } from '../model/types';
 
 /**
  * The replay record -- section 15's post-game summary, the part that has to
@@ -36,6 +36,16 @@ export function snapshotTurn(state: GameState, score: (playerId: number) => numb
   const cities: number[] = [];
   for (const c of state.cities) cities.push(c.id, c.owner, c.size);
   return { turn: state.turn, players, cities };
+}
+
+/**
+ * Note a folly or an ending work, the turn it was finished. There is one of
+ * each in the world, so these are the landmarks of a game -- the replay is
+ * thin without them, and a player who has just won by Portal wants to see the
+ * turn it went up.
+ */
+export function recordLandmark(state: GameState, city: City, id: BuildingId): void {
+  (state.landmarks ??= []).push({ turn: state.turn, city: city.id, owner: city.owner, id });
 }
 
 /** Keep this turn, and remember where any new city stands. */
