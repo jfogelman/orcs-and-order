@@ -2127,7 +2127,11 @@ class App {
               ? `Break it up here for ${disbandRefund(this.state, unit)} shields`
               : 'Break it up here — but this city is banking its shields, so they would be lost'
           }">Disband</button>
-          <button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>
+          ${
+            t.sails
+              ? ''
+              : `<button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>`
+          }
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
