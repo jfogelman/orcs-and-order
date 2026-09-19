@@ -89,6 +89,7 @@ import { newCrises } from './model/advisors';
 import { STATUS_RULES, statusesOf } from './sim/status';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
+import { canReplay, openReplay } from './ui/replay';
 import { etaText, openTechPanel } from './ui/techPanel';
 
 /** Turns the battle theme keeps playing after the last enemy is lost from sight. */
@@ -1218,6 +1219,11 @@ class App {
               : 'Carry on regardless. Nobody will declare a winner again.'
           }">Keep Playing</button>
           <button class="small" id="btn-load">Load a Game</button>
+          ${
+            canReplay(this.state)
+              ? '<button class="small" id="btn-replay" title="The whole game again, turn by turn">Watch It Again</button>'
+              : ''
+          }
           <button class="primary" id="btn-again">Another Go</button>
         </div>`,
       onMount: (root, close) => {
@@ -1233,6 +1239,10 @@ class App {
         root.querySelector('#btn-load')?.addEventListener('click', () => {
           close();
           this.openSaves();
+        });
+        root.querySelector('#btn-replay')?.addEventListener('click', () => {
+          close();
+          openReplay(this.state, () => this.showVictory());
         });
         root.querySelector('#btn-keep')?.addEventListener('click', () => {
           continuePlaying(this.state);

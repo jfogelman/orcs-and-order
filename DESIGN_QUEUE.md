@@ -1438,6 +1438,23 @@ counts per player would carry most of it, and both are small enough to keep for
 three hundred turns. Worth deciding early whether that record is part of the
 save, because retrofitting it means old saves can never be replayed.
 
+*Done, as **Watch It Again** on the final screen (`src/sim/history.ts`,
+`src/ui/replay.ts`).* It answers the "decide early" question: **the record is in
+the save.**
+- **What is kept:** one `TurnRecord` each time the calendar turns. It holds each
+  side's score, cities, citizens, units and advances, plus every city's owner and
+  size. `state.sites` remembers where each city stood, so a razed city can still
+  be drawn on the turns it existed.
+- **Size:** measured at 27 KB of a 116 KB save at turn 200.
+- **Old saves** replay from the turn they were first loaded, and the replay says so.
+- **What the replay shows:**
+  - the map with each side's land tinted (the city working radius, to the nearest
+    city) and cities sized by population;
+  - a play and scrub bar;
+  - a score chart with a cursor;
+  - every city taken or lost, as a list to jump to.
+- **Only once the game is over**, because it shows the whole map without fog.
+
 **A palace.** The capital is currently derived rather than built, which is why
 it could be taken by conquering somebody older (fixed, but it shows the shape of
 the problem). A palace would make the seat of government a thing you own and can

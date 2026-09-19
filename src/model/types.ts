@@ -482,6 +482,17 @@ export interface GameSettings {
   barbarians?: boolean;
 }
 
+/**
+ * One turn of the replay record (section 15's post-game summary).
+ * `players[id]` is `[score, cities, citizens, units, advances]`; `cities` is
+ * flat triples of `[cityId, owner, size]`.
+ */
+export interface TurnRecord {
+  turn: number;
+  players: number[][];
+  cities: number[];
+}
+
 export interface GameState {
   /** Bumped when the save format changes incompatibly. */
   version: number;
@@ -538,6 +549,13 @@ export interface GameState {
   nextUnitId: number;
   nextCityId: number;
   log: LogEntry[];
+  /**
+   * The replay record, one entry per finished turn. Absent in saves from before
+   * it existed; those replay from the turn they were first loaded.
+   */
+  history?: TurnRecord[];
+  /** Where every city that has ever stood stands, and its name: `[x, y, name]`. */
+  sites?: Record<number, [number, number, string]>;
   winner: number | null;
   /**
    * How the game ended, so the ending can be shown rather than described.
