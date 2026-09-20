@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   RAIDER,
   RAIDER_TIERS,
+  bandSize,
   bountyFor,
   runRaiders,
   summonDue,
@@ -165,6 +166,19 @@ describe('the chieftain calls somebody up', () => {
       spawnUnit(state, chief.owner, RAIDER, chief.x + dx, chief.y + dy);
     }
     expect(trySummon(state, chief)).toBeNull();
+  });
+
+  it('stops calling once the wilds already have a band', () => {
+    const { state, chief } = lair();
+    // The cap counts every raider in the world, not this chieftain's own.
+    for (let i = 0; i < RAIDER_TIERS.leader.bandCap; i++) {
+      spawnUnit(state, chief.owner, RAIDER, 2 + i, 2);
+    }
+    expect(bandSize(state, chief.owner)).toBeGreaterThanOrEqual(RAIDER_TIERS.leader.bandCap);
+    expect(trySummon(state, chief)).toBeNull();
+    // Cut them down and it starts again: this is a cap, not a one-off.
+    state.units = state.units.filter((u) => u.type !== RAIDER || u.id === chief.id);
+    expect(trySummon(state, chief)).not.toBeNull();
   });
 
   it('calls nobody while the tiers are switched off', () => {

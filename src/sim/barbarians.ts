@@ -92,7 +92,16 @@ export const RAIDER = RAIDER_GRUNT;
 
 // Section 115's tiers. They live in `wilds.ts` so that the fighting code can
 // pay a bounty without importing this file, which imports movement in turn.
-export { RAIDER_TIERS, bountyFor, claimBounty, summonDue, trySummon, waveRoster, watchedFromATown } from './wilds';
+export {
+  RAIDER_TIERS,
+  bandSize,
+  bountyFor,
+  claimBounty,
+  summonDue,
+  trySummon,
+  waveRoster,
+  watchedFromATown,
+} from './wilds';
 
 /** Whether this game has raiders at all. */
 export function raidersActive(state: GameState): boolean {

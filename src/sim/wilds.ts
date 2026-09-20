@@ -46,6 +46,17 @@ export const RAIDER_TIERS = {
      * is what this punishes: left alone in the wilds it builds a band.
      */
     summonEvery: 3,
+    /**
+     * Raiders alive in the world before a chieftain stops calling anybody.
+     *
+     * Measured: without this the wilds took the game off the Horde, 42-66
+     * against 56-51 with grunts alone, because one chieftain left alone from
+     * the mid-game on calls up a skirmisher every three turns for the rest of
+     * the game and those bands land on whoever keeps the thinner garrisons.
+     * A band is pressure; an army is a third empire, and section 69 is
+     * emphatic that the wilds must not become one.
+     */
+    bandCap: 8,
   },
 };
 
@@ -119,6 +130,11 @@ function roomBeside(state: GameState, unit: Unit): Array<[number, number]> {
   return out;
 }
 
+/** How many raiders the wilds have on the map. */
+export function bandSize(state: GameState, wildId: number): number {
+  return state.units.filter((u) => u.owner === wildId).length;
+}
+
 /** Whether this unit is a chieftain with somebody due to be called up. */
 export function summonDue(state: GameState, unit: Unit): boolean {
   if (!RAIDER_TIERS.enabled || unit.type !== RAIDER_TIERS.leader.id) return false;
@@ -135,6 +151,9 @@ export function summonDue(state: GameState, unit: Unit): boolean {
  */
 export function trySummon(state: GameState, chief: Unit): Unit | null {
   if (!summonDue(state, chief)) return null;
+  // Enough of them out there already. Counted across the wilds rather than per
+  // chieftain, so two bands cannot quietly add up to an army.
+  if (bandSize(state, chief.owner) >= RAIDER_TIERS.leader.bandCap) return null;
   if (watchedFromATown(state, chief.x, chief.y)) return null;
   const room = roomBeside(state, chief);
   if (room.length === 0) return null;

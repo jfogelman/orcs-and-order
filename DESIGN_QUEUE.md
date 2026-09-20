@@ -9240,6 +9240,16 @@ to be kept on the queue):
 
   That last part is the balance: growing costs it ground, and a chieftain that
   keeps pressing your walls never grows at all.
+
+  **And a cap, which measurement asked for.** Summons as first built took the
+  game off the Horde: 42-66, against 56-51 with grunts alone and 53-55 with the
+  tiers and no summons. One chieftain left alone from the mid-game on calls up a
+  skirmisher every three turns for the rest of the game, and those bands land on
+  whoever keeps the thinner garrisons -- which is the Horde, whose army is out.
+  So a chieftain stops calling once the wilds hold `bandCap` raiders (8),
+  counted across the wilds rather than per chieftain. A band is pressure; an
+  army is a third empire, and section 69 is emphatic that the wilds must not
+  become one.
 - **Ogre Brute intimidate.** *Units next to it attack at -1 next turn.* Needs a
   new status on *our* units, which is a bigger piece: the status layer exists
   (`unit.statuses`, as frozen and spent use), but nothing there currently
