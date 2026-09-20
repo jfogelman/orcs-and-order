@@ -9276,7 +9276,19 @@ to be kept on the queue):
   modifies attack, and the interface would have to say why a unit is swinging
   softly.
 
-Also on the queue from the bible, and further off: the **Sunken Legion**
-(drowned sailors landing from the sea, which ships make possible) and the
-**Tomb Wardens** (guardians waking from ruins, which needs ruins).
+**To revisit** (Jeremy, 2026-09-20), in the order they are worth taking:
+
+1. **The chieftain's summons, once the Horde holds its towns.** The rule is
+   built, tested and documented; only `RAIDER_TIERS.leader.summons` stands
+   between it and the game. The blocker is the Horde AI's garrisons, not the
+   summon, so the honest order is: give the Horde a reason to keep a body at
+   home, sweep *that* on its own, and then switch summons on and sweep again.
+   Expect to retune `summonEvery` and `bandCap` at that point -- the three
+   numbers above were measured against today's thin garrisons.
+2. **Ogre Brute intimidate.** *Units next to it attack at -1 next turn.* Needs a
+   status that modifies attack, which nothing does yet, and a line in the
+   interface saying why a unit is swinging softly.
+3. **The Sunken Legion**: drowned raiders landing from the sea, which section
+   114's ships make possible at last.
+4. **The Tomb Wardens**: guardians waking from ruins, which needs ruins.
 
