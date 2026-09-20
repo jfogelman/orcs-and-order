@@ -79,7 +79,13 @@ CREATURES = [
 # cheapest version -- the rest of that folder stays drafted until a rule needs
 # it. They land in `units/` because the renderer knows raiders as units and
 # should not have to care where their pictures were filed.
-WILDS = {"skirmisher": "beastfolk skirmisher"}
+WILDS = {
+    "skirmisher": "beastfolk skirmisher",
+    # Section 115: the wilds grow with the empires, so two more rungs of the
+    # bible's Wildland Raiders are asked for by name.
+    "brute": "ogre clan brute",
+    "chieftain": "warband chieftain",
+}
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
 

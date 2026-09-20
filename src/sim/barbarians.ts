@@ -6,6 +6,7 @@ import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from '.
 import { assignWorkers, markDamaged, syncCitizens } from './city';
 import { tryStep } from './movement';
 import { pillage } from './roads';
+import { RAIDER_GRUNT, waveRoster } from './wilds';
 import { difficultyOf } from './difficulty';
 
 /**
@@ -86,7 +87,11 @@ export const BARBARIANS = {
 export const RAIDED = 'raided';
 
 /** The grunt. One band, one unit, per section 69's cheapest version. */
-export const RAIDER = 'skirmisher';
+export const RAIDER = RAIDER_GRUNT;
+
+// Section 115's tiers. They live in `wilds.ts` so that the fighting code can
+// pay a bounty without importing this file, which imports movement in turn.
+export { RAIDER_TIERS, bountyFor, claimBounty, waveRoster } from './wilds';
 
 /** Whether this game has raiders at all. */
 export function raidersActive(state: GameState): boolean {
@@ -166,6 +171,8 @@ export function spawnWave(state: GameState): Unit[] {
   if (spots.length === 0) return [];
 
   const size = waveSize(state);
+  // Section 115: what the wave is made of, which grows with the empires.
+  const roster = waveRoster(state, size);
   const born: Unit[] = [];
   withRng(state, (rng) => {
     // One landing place per wave, and the party arrives together. Scattering
@@ -185,7 +192,7 @@ export function spawnWave(state: GameState): Unit[] {
                 !state.units.some((u) => u.x === nx && u.y === ny),
             ) ?? null);
       if (!spot) continue;
-      born.push(spawnUnit(state, wild.id, RAIDER, spot[0], spot[1], false));
+      born.push(spawnUnit(state, wild.id, roster[n] ?? RAIDER, spot[0], spot[1], false));
     }
   });
 

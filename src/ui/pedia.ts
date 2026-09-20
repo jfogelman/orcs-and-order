@@ -11,7 +11,7 @@ import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
-import { BARBARIANS, RAIDER, raidPace } from '../sim/barbarians';
+import { BARBARIANS, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
@@ -553,7 +553,24 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <strong>&ldquo;Raiders spotted&rdquo;</strong>, and the map turns to look at
           them, because that time we really did see them.
         </p>
-        <div class="pedia-grid">${unitCard(UNIT_TYPES[RAIDER])}</div>
+        <p class="flavor">
+          <strong>They grow as you do.</strong> A wave is skirmishers while the world is
+          young. Once the two empires average ${RAIDER_TIERS.elite.from} advances between
+          them an <strong>Ogre Clan Brute</strong> comes with them, and past
+          ${RAIDER_TIERS.leader.from} a <strong>Warband Chieftain</strong> leads them
+          &mdash; one of those in the world at a time. It is counted in advances rather
+          than turns, so a slow game is not punished for being slow and a fast one cannot
+          outrun the wilds.
+        </p>
+        <p class="flavor">
+          The two big ones are worth killing: a Brute is carrying
+          ${RAIDER_TIERS.elite.bounty} gold and a Chieftain ${RAIDER_TIERS.leader.bounty},
+          and whoever puts it down keeps it. A skirmisher is carrying nothing, so a
+          hundred of them are still not a living.
+        </p>
+        <div class="pedia-grid">${[RAIDER, RAIDER_TIERS.elite.id, RAIDER_TIERS.leader.id]
+          .map((id) => unitCard(UNIT_TYPES[id]))
+          .join('')}</div>
       </div>
       <div class="pedia-pane" data-pane="difficulty" hidden>
         <p class="flavor">
