@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   RAIDER,
   RAIDER_TIERS,
@@ -114,6 +114,16 @@ describe('what a dead raider was carrying', () => {
  * not stop it; a town does.
  */
 describe('the chieftain calls somebody up', () => {
+  // Switched off in the shipped game -- three sweeps put it on the Horde's side
+  // of the scales -- so these turn it on to test the rule itself. The switch
+  // being obeyed is its own test, below.
+  beforeEach(() => {
+    RAIDER_TIERS.leader.summons = true;
+  });
+  afterEach(() => {
+    RAIDER_TIERS.leader.summons = false;
+  });
+
   function lair(): { state: GameState; chief: Unit } {
     const state = createGame({ seed: 9, width: 30, height: 20, barbarians: true });
     state.terrain.fill('grass');
@@ -179,6 +189,13 @@ describe('the chieftain calls somebody up', () => {
     // Cut them down and it starts again: this is a cap, not a one-off.
     state.units = state.units.filter((u) => u.type !== RAIDER || u.id === chief.id);
     expect(trySummon(state, chief)).not.toBeNull();
+  });
+
+  it('calls nobody at all while the summons are switched off', () => {
+    const { state, chief } = lair();
+    RAIDER_TIERS.leader.summons = false;
+    expect(summonDue(state, chief)).toBe(false);
+    expect(trySummon(state, chief)).toBeNull();
   });
 
   it('calls nobody while the tiers are switched off', () => {

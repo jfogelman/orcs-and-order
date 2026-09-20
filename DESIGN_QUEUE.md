@@ -9241,6 +9241,26 @@ to be kept on the queue):
   That last part is the balance: growing costs it ground, and a chieftain that
   keeps pressing your walls never grows at all.
 
+  **Measured, and switched off.** Built, tested, documented -- and off in the
+  shipped game, because three sweeps in a row put it on the Horde's side of the
+  scales:
+
+  | arm | Horde-Kingdom |
+  |---|---|
+  | grunts only | 56-51 |
+  | tiers, no summons | 53-55 |
+  | summons every 3, cap 8 | 42-66 |
+  | summons every 3, cap 8 (capped mid-run) | 44-64 |
+  | summons every 6, cap 5 | 47-61 |
+
+  Each of those is close to what a hundred-odd games can produce by chance;
+  three pointing one way is not. **The cause is not the rule.** Extra raiders
+  land hardest on whoever keeps the thinner garrisons, and that is the Horde,
+  whose army is out -- the same asymmetry section 108 found when it tried
+  keeping a soldier in every city. Fix the Horde's garrisons and
+  `RAIDER_TIERS.leader.summons` can come on; the code and its tests are kept
+  for that day.
+
   **And a cap, which measurement asked for.** Summons as first built took the
   game off the Horde: 42-66, against 56-51 with grunts alone and 53-55 with the
   tiers and no summons. One chieftain left alone from the mid-game on calls up a

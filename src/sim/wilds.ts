@@ -42,21 +42,42 @@ export const RAIDER_TIERS = {
     from: 18,
     bounty: 50,
     /**
-     * Turns between the ones it calls up, per the bible. Ignoring a chieftain
-     * is what this punishes: left alone in the wilds it builds a band.
+     * Whether a chieftain calls anybody up. **Off, and measured off.**
+     *
+     * The rule works and reads well -- it retreats out of sight of a town to
+     * grow, which is the right shape -- but three measurements in a row put it
+     * on the Horde's side of the scales: 42-66 at one every three turns with a
+     * cap of eight, 44-64 capped tighter, 47-61 at one every six with a cap of
+     * five, against 53-55 for the tiers with no summons at all and 56-51 for
+     * grunts alone. Each is close to the noise a hundred-odd games can produce;
+     * three pointing the same way is not.
+     *
+     * The cause is not this rule. Extra raiders land hardest on whoever keeps
+     * the thinner garrisons, and that is the Horde, whose army is out. Fix that
+     * and this can come on: the code and its tests stay for that day.
      */
-    summonEvery: 3,
+    summons: false,
+    /**
+     * Turns between the ones it calls up. The bible says three; measurement
+     * says six. At three the wilds took the game off the Horde -- see the cap
+     * below -- because summons added raiders faster than waves do, and the
+     * Horde keeps the thinner garrisons. At six they add pressure at about the
+     * pace a wave already does.
+     */
+    summonEvery: 6,
     /**
      * Raiders alive in the world before a chieftain stops calling anybody.
      *
-     * Measured: without this the wilds took the game off the Horde, 42-66
-     * against 56-51 with grunts alone, because one chieftain left alone from
-     * the mid-game on calls up a skirmisher every three turns for the rest of
-     * the game and those bands land on whoever keeps the thinner garrisons.
+     * Measured: with summons every three turns and a cap of eight the wilds
+     * took the game off the Horde -- 42-66 uncapped, 44-64 capped, against
+     * 56-51 with grunts alone -- because the extra raiders land on whoever
+     * keeps the thinner garrisons, and the Horde's army is out. Eight rarely
+     * bound at all, since a wave brings at most five. Five does.
+     *
      * A band is pressure; an army is a third empire, and section 69 is
      * emphatic that the wilds must not become one.
      */
-    bandCap: 8,
+    bandCap: 5,
   },
 };
 
@@ -137,7 +158,8 @@ export function bandSize(state: GameState, wildId: number): number {
 
 /** Whether this unit is a chieftain with somebody due to be called up. */
 export function summonDue(state: GameState, unit: Unit): boolean {
-  if (!RAIDER_TIERS.enabled || unit.type !== RAIDER_TIERS.leader.id) return false;
+  if (!RAIDER_TIERS.enabled || !RAIDER_TIERS.leader.summons) return false;
+  if (unit.type !== RAIDER_TIERS.leader.id) return false;
   return state.turn >= (unit.summonAt ?? state.turn);
 }
 
