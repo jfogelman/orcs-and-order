@@ -1,11 +1,13 @@
 import { DIRS8, distance, idx, inBounds } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
+import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
 import { assignWorkers, markDamaged, syncCitizens } from './city';
 import { tryStep } from './movement';
 import { pillage } from './roads';
+import { RAIDER_GRUNT, summonDue, trySummon, waveRoster, watchedFromATown } from './wilds';
 import { difficultyOf } from './difficulty';
 
 /**
@@ -86,7 +88,20 @@ export const BARBARIANS = {
 export const RAIDED = 'raided';
 
 /** The grunt. One band, one unit, per section 69's cheapest version. */
-export const RAIDER = 'skirmisher';
+export const RAIDER = RAIDER_GRUNT;
+
+// Section 115's tiers. They live in `wilds.ts` so that the fighting code can
+// pay a bounty without importing this file, which imports movement in turn.
+export {
+  RAIDER_TIERS,
+  bandSize,
+  bountyFor,
+  claimBounty,
+  summonDue,
+  trySummon,
+  waveRoster,
+  watchedFromATown,
+} from './wilds';
 
 /** Whether this game has raiders at all. */
 export function raidersActive(state: GameState): boolean {
@@ -166,6 +181,8 @@ export function spawnWave(state: GameState): Unit[] {
   if (spots.length === 0) return [];
 
   const size = waveSize(state);
+  // Section 115: what the wave is made of, which grows with the empires.
+  const roster = waveRoster(state, size);
   const born: Unit[] = [];
   withRng(state, (rng) => {
     // One landing place per wave, and the party arrives together. Scattering
@@ -185,7 +202,7 @@ export function spawnWave(state: GameState): Unit[] {
                 !state.units.some((u) => u.x === nx && u.y === ny),
             ) ?? null);
       if (!spot) continue;
-      born.push(spawnUnit(state, wild.id, RAIDER, spot[0], spot[1], false));
+      born.push(spawnUnit(state, wild.id, roster[n] ?? RAIDER, spot[0], spot[1], false));
     }
   });
 
@@ -292,8 +309,30 @@ export function runRaiders(state: GameState, playerId: number): void {
   const wild = state.players[playerId];
   if (!wild?.barbarian) return;
 
-  for (const raider of playerUnits(state, playerId)) {
+  for (const raider of [...playerUnits(state, playerId)]) {
     if (raider.moves <= 0) continue;
+
+    // Section 115: a chieftain with somebody due goes and gets them, which
+    // means giving ground first. It cannot call anybody up where a town can see
+    // it, so the one turn in three that it wants a body, it walks away from the
+    // nearest town rather than at it -- and a band grows out in the wilds,
+    // where nobody is looking, which is exactly where a band should grow.
+    if (summonDue(state, raider)) {
+      const called = trySummon(state, raider);
+      if (called) {
+        log(
+          state,
+          `Somebody answers ${unitType(raider.type).name}. There are more of them than there were.`,
+          'bad',
+          null,
+          undefined,
+          [called.x, called.y],
+        );
+        continue;
+      }
+      if (retreatToSummon(state, raider)) continue;
+    }
+
     const target = nearestPrey(state, raider);
     if (!target) continue;
     // Section 96: the road underfoot, when there is nothing within reach worth
@@ -304,6 +343,38 @@ export function runRaiders(state: GameState, playerId: number): void {
     if (distance(raider.x, raider.y, target.x, target.y) > 1 && pillage(state, raider)) continue;
     stepToward(state, raider, target.x, target.y);
   }
+}
+
+/**
+ * Back away from the nearest town, so that somebody can be called up next turn.
+ *
+ * Only when there is a reason to: a chieftain standing where no town can see it
+ * and simply penned in by its own band does better to carry on raiding than to
+ * wander looking for elbow room.
+ */
+function retreatToSummon(state: GameState, chief: Unit): boolean {
+  if (!watchedFromATown(state, chief.x, chief.y)) return false;
+  const town = state.cities
+    .filter((c) => !state.players[c.owner]?.barbarian)
+    .sort((a, b) => distance(a.x, a.y, chief.x, chief.y) - distance(b.x, b.y, chief.x, chief.y))[0];
+  if (!town) return false;
+  let best: [number, number] | null = null;
+  let furthest = distance(chief.x, chief.y, town.x, town.y);
+  for (const [dx, dy] of DIRS8) {
+    const x = chief.x + dx;
+    const y = chief.y + dy;
+    if (!inBounds(x, y, state.width, state.height)) continue;
+    if (TERRAIN[state.terrain[idx(x, y, state.width)]].water) continue;
+    if (state.units.some((u) => u.x === x && u.y === y)) continue;
+    if (state.cities.some((c) => c.x === x && c.y === y)) continue;
+    const away = distance(x, y, town.x, town.y);
+    if (away > furthest) {
+      furthest = away;
+      best = [x, y];
+    }
+  }
+  if (!best) return false;
+  return tryStep(state, chief, best[0], best[1]).kind === 'moved';
 }
 
 function nearestPrey(state: GameState, raider: Unit): { x: number; y: number } | null {

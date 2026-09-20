@@ -237,6 +237,56 @@ export const CREATURES: CreatureDef[] = [
   },
 
   {
+    // The wilds' second rung. Section 115: a wave of grunts stops being news
+    // once an empire has an army, so the wilds grow with the empires -- the
+    // Ogre Clan Brute turns up once both sides are some way along.
+    id: 'brute',
+    name: 'Ogre Clan Brute',
+    plural: 'Ogre Clan Brutes',
+    faction: 'orc',
+    wild: true,
+    role: 'melee',
+    // Between an Orc and a Troll: two garrisoned units, or one good one.
+    attack: 4,
+    defense: 3,
+    hp: 12,
+    move: 2,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 1.2,
+    silhouette: 'brute',
+    body: '#8a7a52',
+    trim: '#c9b98a',
+    blurb:
+      'Nomad ogre with a bone-studded club and a clan tattoo nobody can read. ' +
+      'Arrives with the wave, leaves with whatever it can carry.',
+  },
+  {
+    // The third rung, and the one worth hunting: it carries the warband's
+    // takings, which is what makes chasing it down worth a detour.
+    id: 'chieftain',
+    name: 'Warband Chieftain',
+    plural: 'Warband Chieftains',
+    faction: 'orc',
+    wild: true,
+    role: 'melee',
+    attack: 5,
+    defense: 3,
+    hp: 14,
+    move: 2,
+    cost: 0,
+    sight: 3,
+    counts: [1],
+    artScale: 1.26,
+    silhouette: 'armored',
+    body: '#7a6a44',
+    trim: '#d8c07a',
+    blurb:
+      'Feathered headdress, bone totems, and a very large curved axe. Leads ' +
+      'from the front, which is the one good thing about it.',
+  },
+  {
     id: 'goblin',
     expendable: true,
     name: 'Goblin',

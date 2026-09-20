@@ -9190,3 +9190,105 @@ cross water, so islands were dead ground.
   across the water.
 - Measuring raiders on the archipelago, since they spawn on land.
 
+## 115. Raiders that grow with the empires
+
+Asked for 2026-09-19: "additional raider units, harder ones as the average
+faction strength increases."
+
+Waves already grew in *number* with the average advances the two empires know
+(`waveSize`), but every raider was a Beastfolk Skirmisher, so a wave that was
+news at turn thirty was a chore at turn a hundred and thirty.
+
+**Jeremy's decisions (2026-09-20):** elite and leader tiers; keyed to advances
+known rather than the turn; no special rules in this slice; gold for killing the
+two big ones.
+
+**As built** (`src/sim/wilds.ts`, lever `RAIDER_TIERS`):
+
+| rung | unit | joins a wave at | stats | pays |
+|---|---|---|---|---|
+| grunt | Beastfolk Skirmisher | always | 2/1, 8 health, 3 moves | nothing |
+| elite | Ogre Clan Brute | 8 advances averaged | 4/3, 12 health, 2 moves | 20 gold |
+| leader | Warband Chieftain | 18 advances averaged | 5/3, 14 health, 2 moves | 50 gold |
+
+- **The mix, not a replacement.** About a third of a wave arrives as brutes once
+  they are coming at all; the rest stay grunts.
+- **One chieftain in the world at a time.** A late game is a parade of waves, and
+  a parade of chieftains is a war rather than a raid.
+- **Why advances and not turns:** the same reason `waveSize` uses them -- a slow
+  game is not punished for being slow and a fast one cannot outrun the wilds.
+- **The purse** is what makes hunting one worth the detour. Only the two big ones
+  carry anything, so a hundred grunts are still not a living. Paid on either kill
+  path: ours attacking them, and theirs dying on our garrison.
+- **Where the rules live:** `wilds.ts` rather than `barbarians.ts`, so the
+  fighting code can pay a bounty without importing a file that imports movement.
+- **Art** was already drawn, from the raider bible: both come with an attack
+  strip and a weakened sheet.
+
+**The two specials from the bible, deliberately skipped** (Jeremy asked for them
+to be kept on the queue):
+
+- **Chieftain summons: built the same day**, to Jeremy's design. Every three
+  turns a chieftain calls up one skirmisher, and three things hold it down:
+  - only onto **free land beside it**, so one unit to a tile is the cap and a
+    penned-in chieftain calls nobody;
+  - never **within sight of a town** -- a *city's* sight, not a unit's, so a
+    patrol walking past does not pin it and a town does;
+  - so on the turn it wants a body it **retreats** from the nearest town rather
+    than attacking it, and the band grows out in the wilds where nobody is
+    looking.
+
+  That last part is the balance: growing costs it ground, and a chieftain that
+  keeps pressing your walls never grows at all.
+
+  **Measured, and switched off.** Built, tested, documented -- and off in the
+  shipped game, because three sweeps in a row put it on the Horde's side of the
+  scales:
+
+  | arm | Horde-Kingdom |
+  |---|---|
+  | grunts only | 56-51 |
+  | tiers, no summons | 53-55 |
+  | summons every 3, cap 8 | 42-66 |
+  | summons every 3, cap 8 (capped mid-run) | 44-64 |
+  | summons every 6, cap 5 | 47-61 |
+
+  Each of those is close to what a hundred-odd games can produce by chance;
+  three pointing one way is not. **The cause is not the rule.** Extra raiders
+  land hardest on whoever keeps the thinner garrisons, and that is the Horde,
+  whose army is out -- the same asymmetry section 108 found when it tried
+  keeping a soldier in every city. Fix the Horde's garrisons and
+  `RAIDER_TIERS.leader.summons` can come on; the code and its tests are kept
+  for that day.
+
+  **And a cap, which measurement asked for.** Summons as first built took the
+  game off the Horde: 42-66, against 56-51 with grunts alone and 53-55 with the
+  tiers and no summons. One chieftain left alone from the mid-game on calls up a
+  skirmisher every three turns for the rest of the game, and those bands land on
+  whoever keeps the thinner garrisons -- which is the Horde, whose army is out.
+  So a chieftain stops calling once the wilds hold `bandCap` raiders (8),
+  counted across the wilds rather than per chieftain. A band is pressure; an
+  army is a third empire, and section 69 is emphatic that the wilds must not
+  become one.
+- **Ogre Brute intimidate.** *Units next to it attack at -1 next turn.* Needs a
+  new status on *our* units, which is a bigger piece: the status layer exists
+  (`unit.statuses`, as frozen and spent use), but nothing there currently
+  modifies attack, and the interface would have to say why a unit is swinging
+  softly.
+
+**To revisit** (Jeremy, 2026-09-20), in the order they are worth taking:
+
+1. **The chieftain's summons, once the Horde holds its towns.** The rule is
+   built, tested and documented; only `RAIDER_TIERS.leader.summons` stands
+   between it and the game. The blocker is the Horde AI's garrisons, not the
+   summon, so the honest order is: give the Horde a reason to keep a body at
+   home, sweep *that* on its own, and then switch summons on and sweep again.
+   Expect to retune `summonEvery` and `bandCap` at that point -- the three
+   numbers above were measured against today's thin garrisons.
+2. **Ogre Brute intimidate.** *Units next to it attack at -1 next turn.* Needs a
+   status that modifies attack, which nothing does yet, and a line in the
+   interface saying why a unit is swinging softly.
+3. **The Sunken Legion**: drowned raiders landing from the sea, which section
+   114's ships make possible at last.
+4. **The Tomb Wardens**: guardians waking from ruins, which needs ruins.
+

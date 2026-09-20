@@ -268,6 +268,11 @@ export interface Unit {
   /** AI only: turns a part-loaded carrier has waited at the shore. */
   voyageWait?: number;
   /**
+   * The wilds only: the turn a Warband Chieftain may next call somebody. Absent
+   * on everything else, and on every save from before section 115.
+   */
+  summonAt?: number;
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *

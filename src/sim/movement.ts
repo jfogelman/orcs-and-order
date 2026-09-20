@@ -31,6 +31,7 @@ import {
   startRoad,
   stepCost,
 } from './roads';
+import { claimBounty } from './wilds';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
 
@@ -535,6 +536,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // Killing teaches most. Nothing is awarded for the blast above, which
       // the sapper's victims did not choose to be part of.
       awardXp(state, unit, XP.kill);
+      // Section 115: a raider worth killing was carrying something.
+      claimBounty(state, unit, occupant);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
       if (blastVictims.some((v) => v.id === unit.id)) {
@@ -577,6 +580,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       if (!withdrawn) {
         destroyUnit(state, unit, result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking');
         awardXp(state, occupant, XP.kill);
+        // A raider that threw itself at a garrison and lost pays the same purse.
+        claimBounty(state, occupant, unit);
       } else {
         awardXp(state, occupant, XP.survive);
       }

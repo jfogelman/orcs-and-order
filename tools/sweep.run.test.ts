@@ -11,6 +11,7 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
+import { RAIDER_TIERS } from '../src/sim/wilds';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -74,6 +75,7 @@ const control = () => {
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
   NAVAL.enabled = true;
+  RAIDER_TIERS.enabled = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have
@@ -92,18 +94,25 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // The Goblin Scout: the Horde's Outrider. The AI should rarely build it for an
-  // army, since it is dearer than a Goblin for the same fight, so this is a
-  // check that nothing moved rather than a hope that something did.
+  // Section 115: raiders that grow with the empires, against raiders that do
+  // not. Raiders are on in both arms -- the question is what a wave is made of,
+  // not whether there are any.
   {
-    label: 'no scout',
+    label: 'grunts only',
     apply: () => {
       control();
-      GOBLIN_SCOUT.enabled = false;
+      NEW_GAME.barbarians = true;
+      RAIDER_TIERS.enabled = false;
     },
   },
-  { label: 'scout', apply: control },
-]
+  {
+    label: 'brutes and chiefs',
+    apply: () => {
+      control();
+      NEW_GAME.barbarians = true;
+    },
+  },
+];
 
 /**
  * Eighteen seeds a base is the full run. Set SWEEP_PER_BASE=1 to check the
