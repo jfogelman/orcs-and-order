@@ -9292,3 +9292,56 @@ to be kept on the queue):
    114's ships make possible at last.
 4. **The Tomb Wardens**: guardians waking from ruins, which needs ruins.
 
+## 116. Diplomacy: peace, tribute, and going back on it
+
+Asked for 2026-09-20. Two advisors have carried a diplomacy brief since section
+88 with nothing to advise on: the Troll Headhunter ("Dey want peace talks. We
+bring dem a gift. I know a good... gift") and the Herald ("The orcs demand
+tribute. I recall a similar demand from their ancestors, four centuries ago. We
+said no then, too"). The voices were written long before the subject existed.
+
+**The difficulty, stated first.** Diplomacy in Civ2 matters because there are six
+AIs to play against each other. Here there is one other empire, so a peace is
+simply an agreement to stop. That is only a decision because the game now has
+endings that do not need a war -- the Portal, the Object, dominance, points -- so
+peace is time to build and favours whoever is ahead on works, while war favours
+whoever is ahead on army. It stops being a decision the moment breaking a peace
+is free.
+
+**Jeremy's decisions (2026-09-20):**
+
+- **What can be agreed:** peace and tribute. A ceasefire either side may offer,
+  with gold demanded or offered to get one. No advance trading: in a
+  two-player game handing over an advance can hand over the game.
+- **What breaking it costs:** unrest at home for a few turns, and the AI
+  remembers. Both are visible in play; neither needs a new screen.
+- **How talks happen:** a council dialog, open from the top bar at any time, in
+  the style the council already uses -- the diplomacy advisor puts the case and
+  somebody objects.
+- **How long it lasts:** a fixed term, renewable, so that two sides sitting
+  still cannot quietly turn every game into a points win at the turn limit.
+
+**Defaults taken without asking** (all levers, all measurable):
+
+- A peace runs **20 turns** and may be renewed while it holds.
+- Tribute is gold only, in either direction: pay them to accept, or demand
+  payment as the price of accepting.
+- Breaking a peace leaves your cities restless for **5 turns**.
+- The AI's willingness leans on its personality: the Horde is cheaper to buy and
+  quicker to break, the Kingdom slower to agree and slower to renege.
+
+**What to watch when it is measured:** whether peace makes the turn limit the
+usual ending. That is the least satisfying ending the game has, and the fixed
+term exists to stop it. If points wins climb, shorten the term rather than
+making peace harder to get.
+
+**Still open, to settle while building:**
+
+- Whether a peace stops units *entering* each other's land, or only stops the
+  fighting. Leaning to fighting only: borders are not drawn in this game, and a
+  rule nobody can see is a rule nobody can plan around.
+- What the AI asks for, and whether it ever opens talks itself rather than only
+  answering.
+- Whether raiders change the sums. A wave landing on both sides is the classic
+  reason to shake hands, and the wilds are already in the game.
+
