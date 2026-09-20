@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { RAIDER, RAIDER_TIERS, bountyFor, waveRoster } from '../src/sim/barbarians';
+import {
+  RAIDER,
+  RAIDER_TIERS,
+  bountyFor,
+  runRaiders,
+  summonDue,
+  trySummon,
+  watchedFromATown,
+  waveRoster,
+} from '../src/sim/barbarians';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { tryStep } from '../src/sim/movement';
 import { addRaiders } from '../src/sim/barbarians';
 import { unitType } from '../src/model/units';
-import type { GameState } from '../src/model/types';
+import type { GameState, Unit } from '../src/model/types';
 
 /** A game with the wilds in it, and both empires at a chosen number of advances. */
 function wilds(advances: number): GameState {
@@ -94,5 +103,77 @@ describe('what a dead raider was carrying', () => {
   it('pays nothing for a grunt', () => {
     const grunt = fight(RAIDER);
     expect(grunt.gold).toBe(grunt.before);
+  });
+});
+
+/**
+ * Jeremy's design for the chieftain's summons (2026-09-20): the tile limit caps
+ * it, it may only call somebody onto free land beside it, and never where a
+ * *city* can see it -- so it has to retreat to grow. A unit walking past does
+ * not stop it; a town does.
+ */
+describe('the chieftain calls somebody up', () => {
+  function lair(): { state: GameState; chief: Unit } {
+    const state = createGame({ seed: 9, width: 30, height: 20, barbarians: true });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    const wild = state.players.find((p) => p.barbarian) ?? state.players[0];
+    const chief = spawnUnit(state, wild.id, RAIDER_TIERS.leader.id, 15, 10);
+    state.turn = 40;
+    return { state, chief };
+  }
+
+  it('calls one up out in the wilds, then waits its turns', () => {
+    const { state, chief } = lair();
+    expect(trySummon(state, chief)).not.toBeNull();
+    expect(state.units.filter((u) => u.type === RAIDER).length).toBe(1);
+    // Not again the very next turn.
+    state.turn += 1;
+    expect(summonDue(state, chief)).toBe(false);
+    expect(trySummon(state, chief)).toBeNull();
+    state.turn += RAIDER_TIERS.leader.summonEvery;
+    expect(trySummon(state, chief)).not.toBeNull();
+  });
+
+  it('will not do it where a town can see it', () => {
+    const { state, chief } = lair();
+    state.cities.push({
+      id: 1, owner: 0, name: 'Watchpost', x: chief.x + 2, y: chief.y, size: 3, food: 0,
+      shields: 0, buildings: [], producing: { kind: 'coin' }, workedTiles: [],
+      disorder: false, foundedTurn: 1,
+    } as never);
+    expect(watchedFromATown(state, chief.x, chief.y)).toBe(true);
+    expect(trySummon(state, chief)).toBeNull();
+    // It backs off, and once it is clear of the town it can call somebody.
+    runRaiders(state, chief.owner);
+    expect(watchedFromATown(state, chief.x, chief.y)).toBe(false);
+    chief.moves = 2;
+    expect(trySummon(state, chief)).not.toBeNull();
+  });
+
+  it('is not stopped by a unit standing next to it', () => {
+    const { state, chief } = lair();
+    spawnUnit(state, 0, 'outrider', chief.x + 1, chief.y);
+    expect(trySummon(state, chief)).not.toBeNull();
+  });
+
+  it('is capped by the tiles around it', () => {
+    const { state, chief } = lair();
+    // Hemmed in on all eight sides: nowhere for anybody to stand.
+    for (const [dx, dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]) {
+      spawnUnit(state, chief.owner, RAIDER, chief.x + dx, chief.y + dy);
+    }
+    expect(trySummon(state, chief)).toBeNull();
+  });
+
+  it('calls nobody while the tiers are switched off', () => {
+    const { state, chief } = lair();
+    RAIDER_TIERS.enabled = false;
+    try {
+      expect(trySummon(state, chief)).toBeNull();
+    } finally {
+      RAIDER_TIERS.enabled = true;
+    }
   });
 });

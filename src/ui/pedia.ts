@@ -563,6 +563,15 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           outrun the wilds.
         </p>
         <p class="flavor">
+          <strong>A Chieftain left alone grows a band.</strong> Every
+          ${RAIDER_TIERS.leader.summonEvery} turns it calls somebody up &mdash; but only
+          onto free ground beside it, and never where one of your towns can see it
+          happening. So it backs away from your walls to do it, and a band grows out in
+          the wilds where nobody is watching. A unit standing next to it does not stop
+          it; a town does, and so does penning it in, since one unit to a tile holds for
+          them too.
+        </p>
+        <p class="flavor">
           The two big ones are worth killing: a Brute is carrying
           ${RAIDER_TIERS.elite.bounty} gold and a Chieftain ${RAIDER_TIERS.leader.bounty},
           and whoever puts it down keeps it. A skirmisher is carrying nothing, so a

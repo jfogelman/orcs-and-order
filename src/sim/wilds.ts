@@ -1,6 +1,9 @@
+import { DIRS8, distance, idx } from '../engine/grid';
+import { TERRAIN } from '../model/terrain';
 import type { GameState, Unit, UnitTypeId } from '../model/types';
 import { unitType } from '../model/units';
-import { barbarianOf, contenders, log } from './gamestate';
+import { barbarianOf, contenders, log, spawnUnit } from './gamestate';
+import { citySight } from './rules';
 
 /**
  * Section 115: the wilds grow with the empires.
@@ -38,6 +41,11 @@ export const RAIDER_TIERS = {
     id: 'chieftain' as UnitTypeId,
     from: 18,
     bounty: 50,
+    /**
+     * Turns between the ones it calls up, per the bible. Ignoring a chieftain
+     * is what this punishes: left alone in the wilds it builds a band.
+     */
+    summonEvery: 3,
   },
 };
 
@@ -77,6 +85,63 @@ export function waveRoster(state: GameState, size: number): UnitTypeId[] {
   }
   while (out.length < size) out.push(RAIDER_GRUNT);
   return out.slice(0, size);
+}
+
+/**
+ * Whether this tile is watched from a town.
+ *
+ * A **city's** own sight, not a unit's: a chieftain will not call anybody up
+ * where a town can see it happening, so it has to give ground to grow -- which
+ * is the whole balance of the thing. A patrol that walks past does not stop it,
+ * because a band that could be pinned by one wandering scout would never grow
+ * at all.
+ */
+export function watchedFromATown(state: GameState, x: number, y: number): boolean {
+  return state.cities.some((c) => {
+    const owner = state.players[c.owner];
+    if (!owner || owner.barbarian) return false;
+    return distance(c.x, c.y, x, y) <= citySight(owner);
+  });
+}
+
+/** Free land beside this unit: where somebody called up could stand. */
+function roomBeside(state: GameState, unit: Unit): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const [dx, dy] of DIRS8) {
+    const x = unit.x + dx;
+    const y = unit.y + dy;
+    if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
+    if (TERRAIN[state.terrain[idx(x, y, state.width)]].water) continue;
+    if (state.units.some((u) => u.x === x && u.y === y)) continue;
+    if (state.cities.some((c) => c.x === x && c.y === y)) continue;
+    out.push([x, y]);
+  }
+  return out;
+}
+
+/** Whether this unit is a chieftain with somebody due to be called up. */
+export function summonDue(state: GameState, unit: Unit): boolean {
+  if (!RAIDER_TIERS.enabled || unit.type !== RAIDER_TIERS.leader.id) return false;
+  return state.turn >= (unit.summonAt ?? state.turn);
+}
+
+/**
+ * Call somebody up, if the chieftain is somewhere it can.
+ *
+ * Three things hold it down, and between them they are the balance: one unit to
+ * a tile, so only the free ground beside it counts; nothing on water and nothing
+ * in a town; and never within sight of a town, so a chieftain that wants a band
+ * has to walk away from the fighting to get one.
+ */
+export function trySummon(state: GameState, chief: Unit): Unit | null {
+  if (!summonDue(state, chief)) return null;
+  if (watchedFromATown(state, chief.x, chief.y)) return null;
+  const room = roomBeside(state, chief);
+  if (room.length === 0) return null;
+  const [x, y] = room[0];
+  const called = spawnUnit(state, chief.owner, RAIDER_GRUNT, x, y);
+  chief.summonAt = state.turn + RAIDER_TIERS.leader.summonEvery;
+  return called;
 }
 
 /** What killing this raider pays, if anything. */

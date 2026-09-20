@@ -9228,11 +9228,18 @@ two big ones.
 **The two specials from the bible, deliberately skipped** (Jeremy asked for them
 to be kept on the queue):
 
-- **Chieftain summons.** *Calls one Beastfolk Skirmisher every three turns while
-  it lives.* This is the one worth doing next: it turns ignoring a leader into a
-  snowball, which is what makes hunting it a decision rather than a bonus. Wants
-  a spawn rule beside the band's own brain in `runRaiders`, and a check that a
-  chieftain penned in behind a wall cannot farm an infinite army.
+- **Chieftain summons: built the same day**, to Jeremy's design. Every three
+  turns a chieftain calls up one skirmisher, and three things hold it down:
+  - only onto **free land beside it**, so one unit to a tile is the cap and a
+    penned-in chieftain calls nobody;
+  - never **within sight of a town** -- a *city's* sight, not a unit's, so a
+    patrol walking past does not pin it and a town does;
+  - so on the turn it wants a body it **retreats** from the nearest town rather
+    than attacking it, and the band grows out in the wilds where nobody is
+    looking.
+
+  That last part is the balance: growing costs it ground, and a chieftain that
+  keeps pressing your walls never grows at all.
 - **Ogre Brute intimidate.** *Units next to it attack at -1 next turn.* Needs a
   new status on *our* units, which is a bigger piece: the status layer exists
   (`unit.statuses`, as frozen and spent use), but nothing there currently
