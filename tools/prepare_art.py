@@ -209,6 +209,24 @@ ADVISOR_PORTRAITS = {
     "ogre-quartermaster": "ogre quartermaster",
 }
 
+# Section 46's talking cycles, one per advisor, in `advisors/Talking Cycles/`.
+# Named for the advisor rather than the id, and two of them for a shorter name
+# than the portrait's -- "Ogre" is the Quartermaster and "Troll" the Headhunter.
+ADVISOR_TALKING = {
+    "knight-marshal": "knight-marshal talking",
+    "paladin": "paladin talking",
+    "stonewarden": "stonewarden talking",
+    "ledger-thane": "ledger thane talking",
+    "herald": "herald talking",
+    "archmage": "archmage talking",
+    "blademaster": "blademaster talking",
+    "goblin-overseer": "goblin overseer talking",
+    "troll-headhunter": "troll talking",
+    "death-mage": "death mage talking",
+    "death-knight": "death knight talking",
+    "ogre-quartermaster": "ogre talking",
+}
+
 # Big enough to read a face at, small enough that twelve of them are not a
 # download. They sit beside a paragraph of text, not on the map.
 PORTRAIT_SIZE = 128
@@ -1509,6 +1527,8 @@ def build_frame_strip(
     w: int,
     h: int,
     reference: Image.Image | None = None,
+    size: int = UNIT_SIZE,
+    strict_framing: bool = False,
 ) -> tuple[Image.Image | None, str]:
     """
     Cut a sheet of frames into one horizontal strip at unit size.
@@ -1555,18 +1575,24 @@ def build_frame_strip(
         # Body to body, so a pose holding its bow low is not scaled up to fill
         # the frame the way a bounding box would have it.
         scale = (ry1 - ry0) / max(1, by1 - by0)
-        window = UNIT_SIZE / scale
+        window = size / scale
         # Feet on the same line as the idle sprite's feet.
         floor = by1 + (reference.height - ry1) / scale
         rel_centre = (bx0 + bx1) / 2
+        # Drawn much closer in than the still it stands in for: matching it would
+        # mean a window bigger than the frame, and the result is a tiny figure
+        # with bits of its neighbours round it. Refused rather than mangled, so
+        # the still is used until the sheet is redrawn at the same framing.
+        if strict_framing and window > 1.25 * min(cell_w, cell_h):
+            return None, "framed much closer in than its still -- needs redrawing at the still's framing"
     else:
-        scale = (UNIT_SIZE * 0.90) / figure_h
-        window = UNIT_SIZE / scale
+        scale = (size * 0.90) / figure_h
+        window = size / scale
         # A common floor line, so feet stay planted while the body moves.
         floor = fy1 + window * 0.06
         rel_centre = (fx0 + fx1) / 2
 
-    sheet = Image.new("RGBA", (frames * UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
+    sheet = Image.new("RGBA", (frames * size, size), (0, 0, 0, 0))
     for i in range(frames):
         # Reading order: left to right, then top to bottom.
         ox = (i % cols) * cell_w
@@ -1578,8 +1604,14 @@ def build_frame_strip(
             round(cx + window / 2),
             round(oy + floor),
         )
-        frame = keyed.crop(box).resize((UNIT_SIZE, UNIT_SIZE), Image.LANCZOS)
-        sheet.paste(frame, (i * UNIT_SIZE, 0), frame)
+        # Cut from this frame's own cell, so a window that reaches past its edge
+        # picks up empty space rather than the top of the next frame -- which is
+        # what left a sliver of the next pose along the bottom of several
+        # advisors' cycles.
+        cell = keyed.crop((round(ox), round(oy), round(ox + cell_w), round(oy + cell_h)))
+        local = (box[0] - round(ox), box[1] - round(oy), box[2] - round(ox), box[3] - round(oy))
+        frame = cell.crop(local).resize((size, size), Image.LANCZOS)
+        sheet.paste(frame, (i * size, 0), frame)
     return sheet, ""
 
 
@@ -1887,6 +1919,160 @@ VICTORY_SCREENS = (
 # Wide enough to stay sharp on a high-density screen: the modal these fill is at
 # most 600 CSS pixels across.
 VICTORY_WIDTH = 1024
+
+
+def inset_talking(keyed: Image.Image, still: Image.Image) -> tuple[Image.Image | None, str]:
+    """
+    A talking cycle drawn as a close-up of its own portrait, put back into it.
+
+    Two of the twelve were generated closer in than their stills: the
+    Blademaster's is his face cut off at the chest, and the Ogre
+    Quartermaster's is one of his two heads. Each is still a crop of the same
+    picture, so rather than refuse them this finds where that crop sits in the
+    still -- the scale and position at which the first frame best matches it,
+    searched coarsely and then refined -- and pastes every frame back in at
+    that spot with a feathered edge. Everything outside the face is the still,
+    untouched: the Blademaster keeps his shoulders and the Quartermaster's
+    other head carries on eating.
+    """
+    import numpy as np
+
+    w, h = keyed.size
+    cols, rows = grid_of(w, h, keyed)
+    frames = cols * rows
+    cell_w, cell_h = w / cols, h / rows
+    cells = [
+        keyed.crop((round((i % cols) * cell_w), round((i // cols) * cell_h),
+                    round((i % cols + 1) * cell_w), round((i // cols + 1) * cell_h)))
+        for i in range(frames)
+    ]
+    first = cells[0]
+    bbox = first.getbbox()
+    if bbox is None:
+        return None, "first talking frame is empty after keying"
+
+    S = still.width
+    ref = np.asarray(still.convert("RGBA"), dtype=np.float32)
+
+    def score(scale: float, dx: int, dy: int, src: np.ndarray, target: np.ndarray) -> float:
+        fh, fw = src.shape[:2]
+        th, tw = target.shape[:2]
+        x0, y0 = max(0, dx), max(0, dy)
+        x1, y1 = min(tw, dx + fw), min(th, dy + fh)
+        if x1 - x0 < fw * 0.6 or y1 - y0 < fh * 0.6:
+            return float("inf")
+        a = src[y0 - dy:y1 - dy, x0 - dx:x1 - dx]
+        b = target[y0:y1, x0:x1]
+        both = (a[..., 3] > 128) & (b[..., 3] > 128)
+        if both.sum() < 0.35 * a.shape[0] * a.shape[1]:
+            return float("inf")
+        return float(np.abs(a[..., :3][both] - b[..., :3][both]).mean())
+
+    def search(target_img: Image.Image, scales, positions_step: int, around=None):
+        target = np.asarray(target_img.convert("RGBA"), dtype=np.float32)
+        tw = target_img.width
+        best = (float("inf"), 1.0, 0, 0)
+        # `sc` is the close-up's width as a share of the still's, so the same
+        # number means the same thing at the coarse size and the full one.
+        for sc in scales:
+            fw = max(4, round(sc * tw))
+            fh = max(4, round(sc * tw * first.height / first.width))
+            src = np.asarray(first.resize((fw, fh), Image.LANCZOS), dtype=np.float32)
+            if around is None:
+                xs = range(-fw // 3, tw - fw // 2, positions_step)
+                ys = range(-fh // 3, target_img.height - fh // 2, positions_step)
+            else:
+                cx, cy = around
+                xs = range(cx - 3, cx + 4)
+                ys = range(cy - 3, cy + 4)
+            for dy in ys:
+                for dx in xs:
+                    v = score(sc, dx, dy, src, target)
+                    if v < best[0]:
+                        best = (v, sc, dx, dy)
+        return best
+
+    # Coarse, on a quarter-size still: which scale and roughly where.
+    small = still.resize((S // 4, S // 4), Image.LANCZOS)
+    coarse = search(small, [x / 100 for x in range(15, 101, 3)], 1)
+    if coarse[0] == float("inf"):
+        return None, "no place in the still that looks like this close-up"
+    _, sc, cdx, cdy = coarse
+    # Refine at full size, near the coarse answer.
+    fine = search(still, [sc + d / 200 for d in range(-6, 7)], 1, around=(cdx * 4, cdy * 4))
+    err, sc, dx, dy = fine
+    if err > 60:
+        return None, f"best match in the still is too poor to trust ({err:.0f})"
+
+    fw = round(sc * S)
+    fh = round(sc * S * first.height / first.width)
+    # A soft edge, so the seam between the close-up and the still does not show.
+    feather = Image.new("L", (fw, fh), 0)
+    edge = max(3, fw // 14)
+    from PIL import ImageDraw, ImageFilter
+    ImageDraw.Draw(feather).rectangle((edge, edge, fw - edge, fh - edge), fill=255)
+    feather = feather.filter(ImageFilter.GaussianBlur(edge / 2))
+
+    sheet = Image.new("RGBA", (frames * S, S), (0, 0, 0, 0))
+    for i, cell in enumerate(cells):
+        frame = cell.resize((fw, fh), Image.LANCZOS)
+        mask = Image.fromarray(
+            (np.asarray(frame.getchannel("A"), dtype=np.float32) * np.asarray(feather, dtype=np.float32) / 255)
+            .astype("uint8")
+        )
+        base = still.copy()
+        base.paste(frame, (dx, dy), mask)
+        sheet.paste(base, (i * S, 0))
+    return sheet, ""
+
+
+def process_talking(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Section 46's talking cycles: four frames of each advisor mid-sentence.
+
+    They arrive both ways round -- nine as a column of frames, three as a row --
+    and `grid_of` reads either. Each is matched to that advisor's still portrait
+    by body, the way unit sheets are matched to their sprite, so the face does
+    not jump a size larger the moment it starts to speak. Written as a row of
+    portrait-sized frames beside the still, as `<id>_talking.png`.
+    """
+    src = SRC / "advisors" / "Talking Cycles"
+    out = OUT / "advisors"
+    if not src.is_dir():
+        return 0, list(ADVISOR_TALKING), []
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    problems: list[str] = []
+    for out_id, stem in ADVISOR_TALKING.items():
+        path = find_source(src, stem)
+        if path is None:
+            missing.append(out_id)
+            continue
+        target = out / f"{out_id}_talking.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        keyed, cut_out = remove_background(Image.open(path))
+        if not cut_out:
+            problems.append(f"{out_id}: background would not key")
+            continue
+        still = out / f"{out_id}.png"
+        reference = Image.open(still).convert("RGBA") if still.is_file() else None
+        w, h = keyed.size
+        sheet, why = build_frame_strip(keyed, w, h, reference, size=PORTRAIT_SIZE, strict_framing=True)
+        if sheet is None and reference is not None and "closer in" in why:
+            # Drawn as a close-up of its own portrait: put it back into the still.
+            sheet, why = inset_talking(keyed, reference)
+            if sheet is not None:
+                print(f"  advisors/{out_id}_talking.png: a close-up, set back into its still")
+        if sheet is None:
+            problems.append(f"{out_id}: {why}")
+            continue
+        sheet.save(target, optimize=True)
+        cols, rows = grid_of(w, h, keyed)
+        print(f"  advisors/{out_id}_talking.png ({cols * rows} frames from {w}x{h})")
+        done += 1
+    return done, missing, problems
 
 
 def process_victory(
@@ -2357,6 +2543,12 @@ def main() -> int:
     portraits, missing_portraits, failed_portraits = process_aliased(
         "advisors", ADVISOR_PORTRAITS, force, PORTRAIT_SIZE
     )
+    # After the stills, since each cycle is matched to its still.
+    print("Advisor talking cycles:")
+    talking, missing_talking, talking_problems = process_talking(force)
+    failed_portraits.extend(talking_problems)
+    missing_portraits.extend(f"{m} talking" for m in missing_talking)
+    portraits += talking
     print("Standing order icons:")
     oicons, missing_oicons, failed_oicons = process_cutouts(
         "orders", ORDER_ICONS, force, size=ICON_SIZE, quiet_missing=True

@@ -1,4 +1,5 @@
 import { BUILDINGS } from '../model/buildings';
+import { takeTurns } from './talking';
 import type { FactionId, GameState } from '../model/types';
 import { unitType } from '../model/units';
 import {
@@ -453,6 +454,9 @@ export function openAdvisors(
         });
         const objections = objectionsTo(who, lines.get(who.id) ?? null);
         if (objections.length === 0) return;
+        // The one asked speaks first, then each who objects, in turn.
+        const ownLine = holder.querySelector<HTMLElement>('.advisor-line')?.textContent ?? '';
+        const speaker = holder.querySelector<HTMLImageElement>('.advisor-face');
         replies.innerHTML = objections
           .map(
             (o) => `
@@ -469,6 +473,11 @@ export function openAdvisors(
         replies.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
           img.addEventListener('error', () => img.remove());
         });
+        const faces = [...replies.querySelectorAll<HTMLImageElement>('.advisor-reply-face')];
+        void takeTurns([
+          { img: speaker, id: who.id, line: ownLine },
+          ...objections.map((o, i) => ({ img: faces[i] ?? null, id: o.advisor.id, line: o.says })),
+        ]);
       };
 
       root.querySelectorAll<HTMLElement>('.advisor.contested').forEach((holder) => {
