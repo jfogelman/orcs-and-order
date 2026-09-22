@@ -9348,6 +9348,38 @@ making peace harder to get.
 landing on both sides is the classic reason to shake hands, and the wilds are in
 the game.
 
+**As built** (`src/sim/diplomacy.ts`, `src/ai/diplomacy.ts`, `src/ui/talks.ts`):
+
+- **The rules.** `hostile` is asked everywhere a fight can start: melee,
+  ranged shots, a sapper's demolition, a capture, the AI's targets and threat
+  counts, and the besieged marker. At peace an attack is *refused*, never taken
+  as breaking the peace, so a mis-click cannot start a war.
+- **Peace ends a war.** The AI only asks once the two sides have actually fought
+  in the last 15 turns (`lastClash`). Without that, the first version had the AIs
+  make peace at turn ten and renew it all game; a balance test caught a seed with
+  no fighting in it at all.
+- **The AI's mind** is one number, `wantPeace`: how the war is going by strength,
+  plus its own ending under way, minus the other side's, plus raiders at its
+  gates, minus the other side's betrayals, plus a lean by side (the Horde cheaper
+  and quicker to renege, the Kingdom slower both ways).
+- **The talks** use the council's style and the two scene banners.
+
+**Measured** (2026-09-22, 216 games, AI against AI):
+
+| arm | Horde-Kingdom | endings (cq/dm/pt/po/ob) | fights a game |
+|---|---|---|---|
+| no diplomacy | 55-53 | 41/8/9/27/23 | 24 / 28 |
+| diplomacy | 52-56 | 50/5/10/22/21 | 20 / 24 |
+
+- **Balance holds**, within what a hundred-odd games can produce by chance.
+- **The feared drift to points wins did not happen**: 9 to 10.
+- **Conquest went up**, 41 to 50, with fewer fights but more captures. Peace lets
+  an army build, and a broken peace ends in a decisive war rather than a long
+  scrappy one -- which is the shape a peace should give a game.
+- **It is used**: across twelve watched games, seven had a peace -- eight made,
+  thirteen renewals, five broken, three left to lapse -- with the first between
+  turns 72 and 189.
+
 **Queued for later -- visible borders** (Jeremy, 2026-09-21). Each side's land drawn
 on the map, most likely the tiles its cities work or could work, as the replay
 already tints them. That is what would make a "stay out of our land" term possible:

@@ -12,6 +12,7 @@ import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { RAIDER_TIERS } from '../src/sim/wilds';
+import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -76,6 +77,7 @@ const control = () => {
   NEW_GAME.difficulty = 'normal';
   NAVAL.enabled = true;
   RAIDER_TIERS.enabled = true;
+  PEACE.enabled = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have
@@ -94,24 +96,17 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 115: raiders that grow with the empires, against raiders that do
-  // not. Raiders are on in both arms -- the question is what a wave is made of,
-  // not whether there are any.
+  // Section 116: the two AIs able to make peace, against the game before they
+  // could. What to watch is the ending mix -- whether peace turns the turn limit
+  // into the usual way a game ends -- as much as who wins.
   {
-    label: 'grunts only',
+    label: 'no diplomacy',
     apply: () => {
       control();
-      NEW_GAME.barbarians = true;
-      RAIDER_TIERS.enabled = false;
+      PEACE.enabled = false;
     },
   },
-  {
-    label: 'brutes and chiefs',
-    apply: () => {
-      control();
-      NEW_GAME.barbarians = true;
-    },
-  },
+  { label: 'diplomacy', apply: control },
 ];
 
 /**
