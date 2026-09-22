@@ -1,4 +1,5 @@
 import { DIRS8, distance, idx } from '../engine/grid';
+import { hostile, noteClash } from './diplomacy';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
 import { heldFollies } from './follyEffects';
@@ -165,6 +166,8 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       // Exactly at reach: a ranged unit cannot lob one at somebody standing
       // next to it, which is the drawback that makes the range worth having.
       if (other.owner === unit.owner) return false;
+      // Section 116: nobody shoots at a side it has made peace with.
+      if (!hostile(state, unit.owner, other.owner)) return false;
       // Section 111: a mage from the Rumbling Archive may also stand further back.
       return d >= type.range && d <= unitReach(unit);
     }
@@ -218,6 +221,7 @@ export interface AbilityOutcome {
  * capture a capital from outside the walls.
  */
 function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
+  noteClash(state, unit.owner, target.owner);
   const type = unitType(unit.type);
   const atk = attackStrength(state, unit, target);
   const def = defenseStrength(state, target, unit);

@@ -1,4 +1,6 @@
 import { flagsOf, hasFlag } from '../sim/rules';
+import { hostile } from '../sim/diplomacy';
+import { aiDiplomacy } from './diplomacy';
 import { NAVAL, acrossTheWater, actShip, passageWanted, roomAtHome, seekPassage, shipToBuild, stranded } from './naval';
 import type { NavalHelpers } from './naval';
 import { allUnitsOf } from '../sim/ships';
@@ -362,6 +364,8 @@ function nearestEnemyTarget(
 
   for (const c of state.cities) {
     if (c.owner === playerId) continue;
+    // Section 116: a town of a side at peace with us is not a target.
+    if (!hostile(state, playerId, c.owner)) continue;
     const i = idx(c.x, c.y, state.width);
     let hardness = 0.5;
     if (player.visible[i]) {
@@ -375,7 +379,7 @@ function nearestEnemyTarget(
     consider(c.x, c.y, endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1, hardness);
   }
   for (const u of state.units) {
-    if (u.owner !== playerId && player.visible[idx(u.x, u.y, state.width)]) {
+    if (u.owner !== playerId && hostile(state, playerId, u.owner) && player.visible[idx(u.x, u.y, state.width)]) {
       consider(u.x, u.y, 1.6, 0);
     }
   }
@@ -792,6 +796,8 @@ function threatNear(state: GameState, playerId: number, x: number, y: number, ra
   for (const u of state.units) {
     if (u.owner === playerId) continue;
     if (unitType(u.type).attack <= 0) continue;
+    // A side at peace with us is standing about, not threatening anybody.
+    if (!hostile(state, playerId, u.owner)) continue;
     if (!seen[u.y * w + u.x]) continue;
     if (distance(u.x, u.y, x, y) <= radius) count++;
   }
@@ -1381,7 +1387,10 @@ function actSoldier(
   // stacked multipliers, so single units thrown at it die one at a time and
   // the war never resolves. Gather next to it first, then everyone goes in.
   const targetCity = state.cities.find(
-    (c) => c.owner !== unit.owner && distance(unit.x, unit.y, c.x, c.y) === 1,
+    (c) =>
+      c.owner !== unit.owner &&
+      hostile(state, unit.owner, c.owner) &&
+      distance(unit.x, unit.y, c.x, c.y) === 1,
   );
   if (targetCity) {
     const besiegers = state.units.filter(
@@ -1804,6 +1813,10 @@ export function runAiTurn(state: GameState, playerId: number): void {
   // the thing it must not be, and the Orcpedia tells players they walk at the
   // nearest thing. For most of their movement, they did not.
   if (player.barbarian) return;
+  // Section 116: the table first, so an army does not march on a side it is
+  // about to make peace with -- or keep standing still beside one it is about to
+  // stop being at peace with.
+  aiDiplomacy(state, playerId);
   manageRates(state, player);
   const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
 

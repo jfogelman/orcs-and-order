@@ -13,6 +13,7 @@ import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, with
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 import { recordLandmark } from './history';
+import { hostile, shameContent } from './diplomacy';
 import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
 import { follyFinished, follyOffered } from './follies';
 import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
@@ -332,6 +333,8 @@ export function contentLimit(state: GameState, city: City): number {
   let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
   // Section 113: the level's patience, on the player's side only.
   limit += handicapContent(owner);
+  // Section 116: a people ashamed of the peace their rulers just broke.
+  limit -= shameContent(state, city.owner);
   // Section 111: the Long Peace, felt in every city of the empire holding it.
   limit += empireBonus(state, city.owner, (b) => b.empireContent);
   // Section 102: a hut with a soldier standing in it, out on the city's own
@@ -1376,6 +1379,8 @@ export function cityCondition(state: GameState, c: City): string {
   const besieged = state.units.some(
     (u) =>
       u.owner !== c.owner &&
+      // A neighbour at peace is standing there, not besieging anybody.
+      hostile(state, u.owner, c.owner) &&
       unitType(u.type).attack > 0 &&
       Math.abs(u.x - c.x) <= 1 &&
       Math.abs(u.y - c.y) <= 1,
