@@ -87,6 +87,38 @@ function answerLine(them: Player, yes: boolean): string {
     : 'Dey laugh. One of dem throws a bone at your envoy. Dat is a no.';
 }
 
+/**
+ * What your diplomacy advisor makes of an offer somebody has put to you.
+ *
+ * The same sum the other side's AI uses, read from our chair: how the war is
+ * going, plus whatever gold is on the table. It is advice and not arithmetic,
+ * so it comes out as four degrees of enthusiasm rather than a number -- and it
+ * is the advisor's own opinion, which means it is in character and occasionally
+ * wrong.
+ */
+function counsel(state: GameState, me: Player, them: Player, terms: PeaceTerms): string {
+  const worth = wantPeace(state, me, them) + terms.gold / 100;
+  const owed = betrayals(state, them.id) > 0;
+  if (me.faction === 'orc') {
+    if (worth >= 0.5) {
+      return owed
+        ? 'Take it, boss. Dey broke der word before, so watch dem -- but we are da ones who need da quiet right now.'
+        : 'Take it, boss. We are not winning dis. Peace now, axes later, when da axes are bigger.';
+    }
+    if (worth >= 0) return 'It is not a bad deal. Heads stay on. Dat is usually worth something.';
+    if (worth >= -0.5) return 'We do not need dis. Dey are da ones sweating. Still -- gold is gold, boss.';
+    return 'No. We are winning. You do not shake hands wid somebody you are already standing on.';
+  }
+  if (worth >= 0.5) {
+    return owed
+      ? 'Accept. They have broken their word before and will again, but we need the years more than we need to be right about them.'
+      : 'Accept. This war costs us more than it costs them, and a treaty is cheaper than a season of it.';
+  }
+  if (worth >= 0) return 'A reasonable proposal, on reasonable terms. I would sign it and keep the men ready.';
+  if (worth >= -0.5) return 'We are not the ones who need this. Refuse, or accept and take their gold for the trouble.';
+  return 'Decline. They are asking because they must, which is precisely the moment one does not agree.';
+}
+
 /** The one other empire the talks are with. */
 function rivalOf(state: GameState, viewerId: number): Player | undefined {
   return state.players.find((p) => p.id !== viewerId && !p.barbarian && p.alive);
@@ -246,6 +278,15 @@ export function openPeaceOffer(state: GameState, viewerId: number, onChange: () 
     body: `
       <img class="victory-art talks-art" src="${scene('talks')}" alt="" />
       <div class="panel-body"><p style="font-size:15px">${escapeHtml(ask)}</p></div>
+      <div class="advisors talks-voices">
+        <div class="advisor talks-voice">
+          <img class="advisor-face" src="${portraitPath(VOICES[me.faction].peace.id)}" alt="" />
+          <div class="advisor-who"><span class="advisor-name">${escapeHtml(
+            VOICES[me.faction].peace.name,
+          )}</span></div>
+          <div class="advisor-line">${escapeHtml(counsel(state, me, them, terms))}</div>
+        </div>
+      </div>
       <div class="button-row" style="justify-content:flex-end">
         <button class="small" id="offer-no">Refuse</button>
         <button class="primary" id="offer-yes" ${affordable(state, terms) ? '' : 'disabled title="You cannot pay that"'}>Accept</button>
@@ -254,6 +295,17 @@ export function openPeaceOffer(state: GameState, viewerId: number, onChange: () 
       root.querySelector<HTMLImageElement>('.talks-art')?.addEventListener('error', (e) =>
         (e.target as HTMLElement).remove(),
       );
+      root.querySelector<HTMLImageElement>('.advisor-face')?.addEventListener('error', (e) =>
+        (e.target as HTMLElement).remove(),
+      );
+      // They say their piece while you decide.
+      void takeTurns([
+        {
+          img: root.querySelector<HTMLImageElement>('.talks-voice .advisor-face'),
+          id: VOICES[me.faction].peace.id,
+          line: root.querySelector<HTMLElement>('.talks-voice .advisor-line')?.textContent ?? '',
+        },
+      ]);
       root.querySelector('#offer-yes')?.addEventListener('click', () => {
         signPeace(state, terms);
         close();

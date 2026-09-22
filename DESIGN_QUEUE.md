@@ -9386,7 +9386,12 @@ the game.
   plus its own ending under way, minus the other side's, plus raiders at its
   gates, minus the other side's betrayals, plus a lean by side (the Horde cheaper
   and quicker to renege, the Kingdom slower both ways).
-- **The talks** use the council's style and the two scene banners.
+- **The talks** use the council's style and the two scene banners. The advisors
+  animate while they speak (section 46): the case for, then the case against, and
+  again after every answer. An offer put to you carries your diplomacy advisor's
+  read of it -- the same sum the other side uses, from our chair, said in four
+  degrees of enthusiasm rather than as a number, so it is advice and occasionally
+  wrong.
 
 **Measured** (2026-09-22, 216 games, AI against AI):
 
