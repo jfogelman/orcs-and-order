@@ -1598,8 +1598,9 @@ Either side can break a peace, so this one must not blame anybody in particular.
 ## Advisor prompts
 
 The two little bubbles that sit on the corner of an advisor's portrait and say
-whether there is anything more there. They exist as plain white stock shapes;
-these are the drawn replacements, in the game's own ink.
+whether there is anything more there. **Drawn and wired (2026-09-22)**, in place
+of the plain white stock shapes, which are still in `art_src/advisors/` under
+their original names and read by nothing.
 
 Save as `art_src/advisors/bubble_speech.<ext>` and `bubble_thought.<ext>`, on
 **flat magenta**, square, and **leave the middle clear** &mdash; the game writes
