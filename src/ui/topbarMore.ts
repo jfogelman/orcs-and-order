@@ -16,7 +16,7 @@
  */
 
 /** Folded first to last: the least-used button goes first. End Turn is not here. */
-const FOLD_ORDER = ['btn-new', 'btn-save', 'btn-pedia', 'btn-advisors', 'btn-report', 'btn-tech', 'btn-mute'];
+const FOLD_ORDER = ['btn-new', 'btn-save', 'btn-pedia', 'btn-talks', 'btn-advisors', 'btn-report', 'btn-tech', 'btn-mute'];
 
 export function installTopbarMore(): void {
   const bar = document.getElementById('topbar');

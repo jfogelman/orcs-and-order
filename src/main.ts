@@ -66,6 +66,8 @@ import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove 
 import { canIrrigateTo, startIrrigateTo } from './sim/autowork';
 import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
+import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
+import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
 import type { Job } from './sim/terraform';
 
 /** The key each of section 112's jobs answers to, with Shift, on a worker. */
@@ -214,6 +216,8 @@ class App {
     this.state = state;
     // A new or loaded game is not half way through somebody else's turn.
     this.endTurnArmed = false;
+    // Nor does it replay a peace broken before it was loaded.
+    this.peaceNewsSeen = state.log.length;
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
     this.camera.setMapSize(state.width, state.height);
@@ -1073,6 +1077,13 @@ class App {
     this.promptFollyNews();
     if (isModalOpen()) return chain();
 
+    // Section 116: a peace broken since you last looked, then an offer the
+    // other side has made. Broken first, since an offer after it is read in its
+    // light.
+    this.promptPeaceNews();
+    if (isModalOpen()) return chain();
+    if (openPeaceOffer(this.state, this.viewerId, () => this.afterTalks())) return chain();
+
     if (!this.askedResearch) {
       this.askedResearch = true;
       this.promptResearchIfIdle();
@@ -1129,6 +1140,31 @@ class App {
    * each shared folly in the whole game, so somebody else starting one changes
    * what your cities should be building.
    */
+  /** How far through the log the peace news has been read. */
+  private peaceNewsSeen = 0;
+
+  /** A peace broken since the last look, said over the picture of it. */
+  private promptPeaceNews(): void {
+    if (isOver(this.state)) return;
+    const fresh = this.state.log.slice(this.peaceNewsSeen);
+    this.peaceNewsSeen = this.state.log.length;
+    const broken = fresh.find((e) => e.subject === BROKEN && e.player === this.viewerId);
+    if (!broken) return;
+    // Whoever broke it is the one whose own line says "its own people".
+    const breaker =
+      fresh.find((e) => e.subject === BROKEN && e.text.includes('Its own people'))?.player ?? this.viewerId;
+    openPeaceBroken(this.state, this.viewerId, breaker ?? this.viewerId);
+  }
+
+  /** After anything in the talks changed: the HUD, the map and the log. */
+  private afterTalks(): void {
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+    this.playLogCues();
+    this.promptPeaceNews();
+  }
+
   private promptFollyNews(): void {
     if (isOver(this.state)) return;
     const fresh = this.state.log.slice(this.follyNewsSeen);
@@ -1509,6 +1545,9 @@ class App {
     el<HTMLButtonElement>('btn-save').addEventListener('click', () => this.openSaves());
     el<HTMLButtonElement>('btn-advisors').addEventListener('click', () =>
       openAdvisors(this.state, this.viewerId),
+    );
+    el<HTMLButtonElement>('btn-talks').addEventListener('click', () =>
+      openTalks(this.state, this.viewerId, () => this.afterTalks()),
     );
     el<HTMLButtonElement>('btn-report').addEventListener('click', () =>
       openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud()),
@@ -1920,6 +1959,11 @@ class App {
     el('stat-civ').textContent = faction.civName;
     el('stat-turn').textContent = `Turn ${this.state.turn}`;
     el('stat-gold').textContent = `${p.gold}g`;
+    // Section 116: the talks, and how long the peace has left while there is one.
+    const talks = el<HTMLButtonElement>('btn-talks');
+    const rival = this.state.players.find((o) => o.id !== p.id && !o.barbarian && o.alive);
+    talks.hidden = !PEACE.enabled || !rival;
+    talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state)}` : 'Talks';
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;
     // The turns are on the chip and not only behind the advances screen: doing

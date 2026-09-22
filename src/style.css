@@ -1906,3 +1906,23 @@ kbd {
   text-align: left;
   white-space: normal;
 }
+
+/* Section 116: the talks. */
+.talks-voices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .talks-voices {
+    grid-template-columns: 1fr;
+  }
+}
+.talks-said {
+  font-style: italic;
+  color: var(--gold);
+}
+.talks-offers {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

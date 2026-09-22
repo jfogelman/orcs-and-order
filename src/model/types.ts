@@ -590,6 +590,24 @@ export interface GameState {
    * things a game is remembered by. Part of the replay record.
    */
   landmarks?: Array<{ turn: number; city: number; owner: number; id: BuildingId }>;
+  /**
+   * Section 116: how the two empires stand. Absent on every save from before
+   * diplomacy, which is a war that nobody has ever tried to end.
+   */
+  diplomacy?: {
+    /** The peace, while there is one: when it was made and when it lapses. */
+    peace?: { since: number; until: number };
+    /** Times each side has broken a peace, by player id. */
+    distrust?: Record<number, number>;
+    /** The turn each side's cities stop being ashamed of it, by player id. */
+    shameUntil?: Record<number, number>;
+    /** The turn each AI last made an offer of its own, by player id. */
+    lastOffer?: Record<number, number>;
+    /** An offer waiting for the human to answer, made by the AI. */
+    pending?: { from: number; to: number; gold: number };
+    /** The turn the two empires last fought, so a peace ends a war. */
+    lastClash?: number;
+  };
   winner: number | null;
   /**
    * How the game ended, so the ending can be shown rather than described.

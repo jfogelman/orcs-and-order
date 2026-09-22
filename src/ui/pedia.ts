@@ -13,6 +13,7 @@ import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
+import { PEACE } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
@@ -373,6 +374,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
         <button class="pedia-tab" data-tab="wilds">The Wilds</button>
         <button class="pedia-tab" data-tab="difficulty">Difficulty</button>
+        <button class="pedia-tab" data-tab="diplomacy">Diplomacy</button>
         <button class="pedia-tab" data-tab="controls">Controls</button>
       </div>
 
@@ -608,6 +610,38 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
             ).join('')}
           </tbody>
         </table>
+      </div>
+      <div class="pedia-pane" data-pane="diplomacy" hidden>
+        <p class="flavor">
+          There is one other empire, so a peace is simply an agreement to stop. It is worth
+          having because the game can be won without a war &mdash; the ending works,
+          dominance, the turn limit &mdash; and a peace is time to build. Whoever is ahead
+          on works likes peace; whoever is ahead on armies likes war.
+        </p>
+        <p class="flavor">
+          <strong>The talks</strong> are on the top bar. Offer peace for nothing, pay them
+          gold to take it, or demand gold of them as the price of stopping. They answer at
+          once, and you can see beforehand how keen they seem. They will also come to you:
+          once the two of you have actually fought, a side that is losing, or building an
+          ending, or beset by raiders, may ask &mdash; and offers made to you wait for the
+          start of your turn.
+        </p>
+        <p class="flavor">
+          <strong>A peace stops the fighting, and only the fighting.</strong> Nobody
+          attacks, nobody shoots, no walls come down and no town changes hands. Units still
+          walk wherever they like. The raiders are never part of it: they refuse every
+          conversation.
+        </p>
+        <p class="flavor">
+          <strong>It lasts ${PEACE.term} turns,</strong> then lapses unless somebody renews
+          it. The button on the top bar counts it down while it holds.
+        </p>
+        <p class="flavor">
+          <strong>Breaking it</strong> is done in the talks, deliberately &mdash; an attack
+          while at peace is refused rather than starting a war by accident. The side that
+          breaks it has cities a citizen less patient for ${PEACE.shameTurns} turns, and
+          the other side remembers: every broken peace makes the next one harder to get.
+        </p>
       </div>
       <div class="pedia-pane" data-pane="controls" hidden>
         <p class="flavor">

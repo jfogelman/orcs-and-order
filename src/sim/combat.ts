@@ -1,4 +1,5 @@
 import { distance, idx } from '../engine/grid';
+import { noteClash } from './diplomacy';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
@@ -558,6 +559,8 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
 }
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
+  // Section 116: a war is something that has actually been fought.
+  noteClash(state, attacker.owner, defender.owner);
   if (canExecute(attacker, defender)) {
     const executed = withRng(state, (rng) => rng.chance(unitType(attacker.type).executeChance));
     if (executed) {

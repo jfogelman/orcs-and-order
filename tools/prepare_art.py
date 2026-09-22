@@ -1872,6 +1872,9 @@ def process_status(force: bool) -> tuple[int, list[str]]:
     return done, problems
 
 
+# Section 116's banners: the talks, and the talks going badly.
+DIPLOMACY_SCENES = ("talks", "peace-broken")
+
 VICTORY_SCREENS = (
     "conquest-orc",
     "conquest-human",
@@ -1886,7 +1889,11 @@ VICTORY_SCREENS = (
 VICTORY_WIDTH = 1024
 
 
-def process_victory(force: bool) -> tuple[int, list[str]]:
+def process_victory(
+    force: bool,
+    folder: str = "victory",
+    expected: tuple[str, ...] = VICTORY_SCREENS,
+) -> tuple[int, list[str]]:
     """
     Full-scene illustrations shown when a game ends.
 
@@ -1903,10 +1910,10 @@ def process_victory(force: bool) -> tuple[int, list[str]]:
     Only ever downscaled. An undersized source is left alone rather than blown
     up, which would add nothing but bytes.
     """
-    src = SRC / "victory"
-    out = OUT / "victory"
+    src = SRC / folder
+    out = OUT / folder
     if not src.is_dir():
-        return 0, list(VICTORY_SCREENS)
+        return 0, list(expected)
     out.mkdir(parents=True, exist_ok=True)
 
     best: dict[str, Path] = {}
@@ -1930,10 +1937,10 @@ def process_victory(force: bool) -> tuple[int, list[str]]:
             height = round(scene.height * VICTORY_WIDTH / scene.width)
             scene = scene.resize((VICTORY_WIDTH, height), Image.LANCZOS)
         scene.save(target, quality=82, optimize=True, progressive=True)
-        print(f"  victory/{name}.jpg ({scene.width}x{scene.height})")
+        print(f"  {folder}/{name}.jpg ({scene.width}x{scene.height})")
         done += 1
 
-    return done, [w for w in VICTORY_SCREENS if w not in best]
+    return done, [w for w in expected if w not in best]
 
 
 def process_audio() -> tuple[int, int, int]:
@@ -2395,6 +2402,12 @@ def main() -> int:
     mark_problems.extend(status_problems)
     print("Victory screens:")
     wins, missing_wins = process_victory(force)
+    # Section 116's two scenes are the same kind of picture: full banners that
+    # own their background, shown once in a dialog.
+    print("Diplomacy scenes:")
+    talks, missing_talks = process_victory(force, "diplomacy", DIPLOMACY_SCENES)
+    missing_wins.extend(missing_talks)
+    wins += talks
     mark_problems.extend(ruin_problems)
     folk_problems.extend(mark_problems)
     state_problems.extend(folk_problems)

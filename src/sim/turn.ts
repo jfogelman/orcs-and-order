@@ -5,6 +5,7 @@ import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { resumeExplore } from './explore';
 import { recordTurn } from './history';
+import { lapsePeace } from './diplomacy';
 import { refreshCargo } from './ships';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
@@ -709,6 +710,8 @@ export function endPlayerTurn(state: GameState): void {
       recordTurn(state, (id) => playerScore(state, id));
       state.activePlayer = 0;
       state.turn++;
+      // Section 116: a peace that has run its term lapses as the calendar turns.
+      lapsePeace(state);
       // Here, not in `beginPlayerTurn`: that runs once per player, so the
       // dominance countdown said itself six times a turn until it was moved.
       // The calendar advances exactly here and nowhere else.

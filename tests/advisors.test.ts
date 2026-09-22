@@ -413,6 +413,25 @@ describe('advisors who talk back', () => {
     expect(advisorConcern(advisor, s)?.about).not.toBe('the-land');
   });
 
+  // Section 116: the diplomacy advisors, with something to advise on at last.
+  it('has the diplomacy advisor warn when a peace is about to lapse, on both sides', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const advisor = advisorsFor(faction).find((a) => a.role === 'diplomacy')!;
+      const s: Situation = { ...calm(), faction, peaceLeft: 2 };
+      const line = advisorConcern(advisor, s);
+      expect(line?.about, `${advisor.id} said nothing about the peace`).toBe('peace');
+      expect(line?.say(s)).toMatch(/two turns/);
+    }
+  });
+
+  it('has them mind a peace we broke, and say nothing of peace at war', () => {
+    for (const faction of ['orc', 'human'] as const) {
+      const advisor = advisorsFor(faction).find((a) => a.role === 'diplomacy')!;
+      expect(advisorConcern(advisor, { ...calm(), faction, ashamed: true })?.about).toBe('peace');
+      expect(advisorConcern(advisor, { ...calm(), faction, peaceLeft: 0 })?.about).not.toBe('peace');
+    }
+  });
+
   it('lets somebody argue with the arcane advisor about magic', () => {
     const arcane = advisorsFor('orc').find((a) => a.role === 'arcane')!;
     // The state that puts his magic line on top: an army, and nobody in it who

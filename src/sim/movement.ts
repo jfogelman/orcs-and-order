@@ -32,6 +32,7 @@ import {
   stepCost,
 } from './roads';
 import { claimBounty } from './wilds';
+import { hostile } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
 
@@ -153,8 +154,12 @@ export function attackTargets(state: GameState, unit: Unit): Set<number> {
       const atSea = TERRAIN[state.terrain[idx(x, y, state.width)]].water;
       // Nobody on land fights a ship; a ship takes no town, empty or not.
       if (atSea && !type.sails && !type.flies) continue;
-      if (occupant && occupant.owner !== unit.owner) out.add(idx(x, y, state.width));
-      else if (!occupant && city && city.owner !== unit.owner && !type.sails) out.add(idx(x, y, state.width));
+      // Section 116: a side we have made peace with is not a target.
+      if (occupant && occupant.owner !== unit.owner) {
+        if (hostile(state, unit.owner, occupant.owner)) out.add(idx(x, y, state.width));
+      } else if (!occupant && city && city.owner !== unit.owner && !type.sails && hostile(state, unit.owner, city.owner)) {
+        out.add(idx(x, y, state.width));
+      }
     }
   }
   return out;
@@ -444,7 +449,13 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // A sapper walked into a walled city brings the walls down and is spent
   // doing it. Cheap, one-use, and the only way the Horde gets through a
   // Kingdom wall -- the rest of the army walks in afterwards.
-  if (city && city.owner !== unit.owner && type.demolishes && city.buildings.includes('walls')) {
+  if (
+    city &&
+    city.owner !== unit.owner &&
+    type.demolishes &&
+    city.buildings.includes('walls') &&
+    hostile(state, unit.owner, city.owner)
+  ) {
     city.buildings = city.buildings.filter((b) => b !== 'walls');
     markDamaged(state, city);
     log(
@@ -480,6 +491,16 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // cannot hit back.
   if (occupant && occupant.owner !== unit.owner && !type.sails && !type.flies && TERRAIN[terrain].water) {
     return { kind: 'blocked', reason: `${type.name} cannot fight at sea.`, retryable: false };
+  }
+  // Section 116: at peace, nobody swings. Refused rather than treated as
+  // breaking the peace, so a mis-click never starts a war -- going back on your
+  // word is done in the talks, on purpose.
+  if (occupant && occupant.owner !== unit.owner && !hostile(state, unit.owner, occupant.owner)) {
+    return {
+      kind: 'blocked',
+      reason: `You are at peace with ${state.players[occupant.owner].name}. Break it in the talks first.`,
+      retryable: false,
+    };
   }
   if (occupant && occupant.owner !== unit.owner) {
     if (type.attack <= 0) {
@@ -628,6 +649,14 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
 
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
+  // Nor does a town change hands while the peace holds.
+  if (capturing && city && !hostile(state, unit.owner, city.owner)) {
+    return {
+      kind: 'blocked',
+      reason: `You are at peace with ${state.players[city.owner].name}. Their towns are theirs.`,
+      retryable: false,
+    };
+  }
 
   // Raiders never take a city, whoever is steering them.
   //
