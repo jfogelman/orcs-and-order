@@ -1561,3 +1561,37 @@ for any future re-roll:
 > field, no grass, no shadow across the tile. Thick dark outline on the object only,
 > earthy browns, mid-1990s fantasy strategy game style, no text, no border.
 
+## Diplomacy scenes
+
+Two banners for section 116's talks, in the style of the victory screens: **full
+scenes with their own background**, no magenta, no keying, a wide **16:9** banner
+(1024x576 is ideal), and **no text anywhere** -- the terms are written by the game.
+Save as `art_src/diplomacy/<id>.<ext>`. Until they exist the dialog shows the two
+diplomacy advisors, who are already drawn, and nothing is missing.
+
+### `talks` -- the top of the talks dialog
+
+The joke is that the two sides are not attending the same meeting.
+
+> A long rough wooden table set up in a muddy field under a grey sky. Along one side
+> sits a delegation of green-skinned orc warlords in dented armour: one pounding the
+> table with a fist, one eating the centrepiece, one asleep. Along the other side sits
+> a neat human committee in blue robes with gold trim, quills poised over tall stacks
+> of paper, and an elf herald at the end looking pained. A single white flag is stuck
+> in the mud between them, slightly singed. Mid-1990s fantasy strategy game
+> illustration, pixel art, muted earth tones with the blue and green of the two sides,
+> gentle comedy, no text, no lettering, no writing on the papers, wide 16:9
+> composition.
+
+### `peace-broken` -- the dialog that says a peace has been broken
+
+Either side can break a peace, so this one must not blame anybody in particular.
+
+> The same long wooden table in the same muddy field, now snapped clean in half, chairs
+> overturned, papers blowing away across the mud. A treaty scroll is skewered on a pike
+> planted in the ground where the white flag used to be. In the distance two small
+> armies are already marching towards each other. A lone clerk still sits at the
+> broken table, determinedly reading aloud from a page to nobody. Mid-1990s fantasy
+> strategy game illustration, pixel art, darker sky than the talks scene, gentle
+> comedy, no text, no lettering, no writing on the papers, wide 16:9 composition.
+

@@ -9335,13 +9335,21 @@ usual ending. That is the least satisfying ending the game has, and the fixed
 term exists to stop it. If points wins climb, shorten the term rather than
 making peace harder to get.
 
-**Still open, to settle while building:**
+**Settled 2026-09-21:**
 
-- Whether a peace stops units *entering* each other's land, or only stops the
-  fighting. Leaning to fighting only: borders are not drawn in this game, and a
-  rule nobody can see is a rule nobody can plan around.
-- What the AI asks for, and whether it ever opens talks itself rather than only
-  answering.
-- Whether raiders change the sums. A wave landing on both sides is the classic
-  reason to shake hands, and the wilds are already in the game.
+- **A peace stops the fighting, and only the fighting.** Units may still walk
+  through each other's land. Borders are not drawn in this game, and a rule nobody
+  can see is a rule nobody can plan around.
+- **The AI opens talks itself,** not only answers them: when it is losing, when its
+  own ending is nearly finished, or when raiders are hurting it. An AI that never
+  asks makes diplomacy a vending machine.
+
+**Still open, to settle while building:** whether raiders change the sums. A wave
+landing on both sides is the classic reason to shake hands, and the wilds are in
+the game.
+
+**Queued for later -- visible borders** (Jeremy, 2026-09-21). Each side's land drawn
+on the map, most likely the tiles its cities work or could work, as the replay
+already tints them. That is what would make a "stay out of our land" term possible:
+until borders can be seen, a peace can only be about fighting.
 
