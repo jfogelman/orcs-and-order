@@ -22,8 +22,16 @@ import { escapeHtml, openModal } from './dom';
 const PX = 6;
 /** How far a city's land reaches on the replay map. Its working radius. */
 const REACH = 2;
-/** Turns a second while playing. */
+/**
+ * Turns a second while playing, and the speeds the buttons offer.
+ *
+ * A three-hundred-turn game at eight turns a second is forty seconds, which is
+ * a long time to watch a map that changes slowly in the middle; and the first
+ * thirty turns of any game are two villages sitting still, which is where you
+ * want to skip. So the speed is a control rather than a constant.
+ */
 const SPEED = 8;
+const SPEEDS = [0.5, 1, 2, 4];
 
 /** "1 city", "5 cities": figures, not words, in a row of them. */
 const n = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
@@ -229,6 +237,12 @@ export function openReplay(state: GameState, onBack: () => void): void {
           <button class="small" id="replay-play">Play</button>
           <input type="range" id="replay-turn" min="0" max="${last}" value="0" />
           <span class="replay-turn-label"></span>
+          <span class="replay-speeds">${SPEEDS.map(
+            (x) =>
+              `<button class="small${x === 1 ? ' armed' : ''}" data-speed="${x}" title="${
+                x * SPEED
+              } turns a second">${x === 0.5 ? '&frac12;' : x}&times;</button>`,
+          ).join('')}</span>
         </div>
         ${chart(state, frames)}
         <div class="replay-stats"></div>
@@ -256,6 +270,8 @@ export function openReplay(state: GameState, onBack: () => void): void {
       const play = root.querySelector<HTMLButtonElement>('#replay-play')!;
       const base = terrainImage(state);
       let timer: number | null = null;
+      // Kept across a pause, so starting again carries on at the speed you chose.
+      let rate = 1;
 
       const show = (f: number) => {
         const frame = frames[f];
@@ -288,12 +304,27 @@ export function openReplay(state: GameState, onBack: () => void): void {
           const next = Number(slider.value) + 1;
           if (next > last) return stop();
           show(next);
-        }, 1000 / SPEED);
+        }, 1000 / (SPEED * rate));
       });
       slider.addEventListener('input', () => {
         stop();
         show(Number(slider.value));
       });
+      root.querySelectorAll<HTMLButtonElement>('[data-speed]').forEach((b) =>
+        b.addEventListener('click', () => {
+          rate = Number(b.dataset.speed);
+          root
+            .querySelectorAll<HTMLElement>('[data-speed]')
+            .forEach((o) => o.classList.toggle('armed', o === b));
+          // Changing speed while it plays keeps it playing, at the new one.
+          if (timer !== null) {
+            const was = Number(slider.value);
+            stop();
+            play.click();
+            show(was);
+          }
+        }),
+      );
       root.querySelectorAll<HTMLElement>('.replay-moment').forEach((b) =>
         b.addEventListener('click', () => {
           stop();
