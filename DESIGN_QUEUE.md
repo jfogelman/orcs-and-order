@@ -3548,6 +3548,30 @@ Still to do: the talking cycles themselves. Vertical strips of 512x2064, four
 frames of 512x516, two filenames that do not match their ids, and the
 Blademaster possibly wanting a redraw. All still true, all still art plumbing.
 
+### Done, 2026-09-22
+
+All twelve cycles are wired (`tools/prepare_art.py` `process_talking`,
+`src/ui/talking.ts`):
+
+- **Both ways round.** Nine sheets are a column of frames and three a row;
+  `grid_of` already read either, so the strip builder only needed a size.
+- **Matched to the still by body,** the way unit sheets are, so a face does not
+  jump a size larger the moment it speaks.
+- **Three were drawn closer in than their stills** -- the Blademaster's face cut
+  at the chest, the Ogre Quartermaster's single head, and the Goblin Overseer a
+  little. Jeremy's read of it: each is a crop of the same picture, so it should
+  be put back into that picture. `inset_talking` finds where the first frame sits
+  in the still (a coarse search for scale and place, then a fine one) and pastes
+  every frame back in with a feathered edge. The Blademaster keeps his shoulders,
+  and the Quartermaster's other head goes on eating while the first one talks. No
+  redraw needed after all.
+- **Each frame is cut from its own cell,** so a crop window that reaches past
+  its frame picks up nothing rather than a sliver of the next pose. That applied
+  to every unit sheet too; all 58 were re-checked against their sprites.
+- **Only while somebody speaks.** Ask one and their face moves for about as long
+  as the line takes to read; then each who objects takes a turn. The talks do the
+  same with the case for and the case against. Nothing loops.
+
 ## 47. A default nobody adjusts is not a default, it is a rule
 
 Section 45 said of the three-way trade split: *"the AI still leaves it on even,

@@ -12,6 +12,7 @@ import {
   type PeaceTerms,
 } from '../sim/diplomacy';
 import { portraitPath } from './advisors';
+import { takeTurns } from './talking';
 import { confirmAction, escapeHtml, openModal } from './dom';
 
 /**
@@ -162,6 +163,19 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
     body: `<div class="talks">${render()}</div>`,
     onMount: (root) => {
       const holder = root.querySelector<HTMLElement>('.talks')!;
+      // Section 46: the case for, then the case against, each face moving while
+      // its owner speaks.
+      const argue = () => {
+        const voices = VOICES[me.faction];
+        const faces = [...holder.querySelectorAll<HTMLImageElement>('.talks-voice .advisor-face')];
+        const said = [...holder.querySelectorAll<HTMLElement>('.talks-voice .advisor-line')].map(
+          (l) => l.textContent ?? '',
+        );
+        void takeTurns([
+          { img: faces[0] ?? null, id: voices.peace.id, line: said[0] ?? '' },
+          { img: faces[1] ?? null, id: voices.war.id, line: said[1] ?? '' },
+        ]);
+      };
       const wire = () => {
         holder.querySelector<HTMLImageElement>('.talks-art')?.addEventListener('error', (e) =>
           (e.target as HTMLElement).remove(),
@@ -178,6 +192,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
             if (yes) signPeace(state, terms);
             holder.innerHTML = render(answerLine(them, yes));
             wire();
+            argue();
             onChange();
           }),
         );
@@ -197,6 +212,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         });
       };
       wire();
+      argue();
     },
   });
 }

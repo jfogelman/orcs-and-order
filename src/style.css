@@ -1926,3 +1926,9 @@ kbd {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+/* Section 46: the one speaking, lit a little, so the eye goes where the mouth is. */
+.advisor-face.speaking,
+.advisor-reply-face.speaking {
+  filter: drop-shadow(0 0 6px rgba(232, 196, 90, 0.55));
+}
