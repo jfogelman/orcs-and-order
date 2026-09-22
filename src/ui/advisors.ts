@@ -390,8 +390,10 @@ export function openAdvisors(
       <img class="advisor-face" src="${portraitPath(a.id)}" alt="" />
       ${
         mark
-          ? `<img class="advisor-bubble ${mark}" src="${portraitPath(`bubble_${mark}`)}"
-                  alt="" title="${escapeHtml(markTitle)}" />`
+          ? `<span class="advisor-prompt ${mark}" title="${escapeHtml(markTitle)}">
+               <img class="advisor-bubble ${mark}" src="${portraitPath(`bubble_${mark}`)}" alt="" />
+               <span class="advisor-prompt-mark">${contested ? '!' : '&hellip;'}</span>
+             </span>`
           : ''
       }
       <div class="advisor-who">
@@ -445,6 +447,7 @@ export function openAdvisors(
           // Asking again puts the room away rather than repeating itself.
           replies.hidden = true;
           replies.innerHTML = '';
+          holder.classList.remove('arguing');
           return;
         }
         // Close anybody else's, so only one argument is running at a time.
@@ -452,6 +455,8 @@ export function openAdvisors(
           r.hidden = true;
           r.innerHTML = '';
         });
+        root.querySelectorAll<HTMLElement>('.advisor').forEach((a) => a.classList.remove('arguing'));
+        holder.classList.add('arguing');
         const objections = objectionsTo(who, lines.get(who.id) ?? null);
         if (objections.length === 0) return;
         // The one asked speaks first, then each who objects, in turn.

@@ -1932,3 +1932,93 @@ kbd {
 .advisor-reply-face.speaking {
   filter: drop-shadow(0 0 6px rgba(232, 196, 90, 0.55));
 }
+
+/* The replay's speed buttons, kept together at the end of its controls. */
+.replay-speeds {
+  display: inline-flex;
+  gap: 2px;
+}
+.replay-speeds button {
+  min-width: 34px;
+  padding: 2px 4px;
+}
+
+/*
+ * The prompt on a portrait: a bubble with a mark in it, so the thing that says
+ * "there is more here" reads as somebody wanting to speak rather than as a
+ * sticker. It bobs, gently and slowly -- six of them on one screen is as much
+ * movement as a screen being read can take.
+ */
+.advisor-prompt {
+  position: absolute;
+  /* Big enough to read the mark inside it, which is the whole job: at
+     twenty-two pixels the bubble was a smudge on the corner of a face. */
+  top: -4px;
+  left: 44px;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  animation: advisor-bob 2.6s ease-in-out infinite;
+}
+
+.advisor-prompt.thought {
+  width: 28px;
+  height: 28px;
+  opacity: 0.82;
+  /* A thought is not an invitation, so it holds still. */
+  animation: none;
+}
+
+.advisor-prompt .advisor-bubble {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The mark inside the bubble, in the bubble's own ink. */
+.advisor-prompt-mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1b1712;
+  text-shadow: none;
+}
+
+.advisor-prompt.thought .advisor-prompt-mark {
+  font-size: 15px;
+  padding-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+@keyframes advisor-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* While they are talking, the prompt has been answered. */
+.advisor.arguing .advisor-prompt {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+
+/* The argument arriving, rather than appearing. */
+.advisor.arguing .advisor-replies {
+  animation: advisor-unfold 0.22s ease-out;
+}
+
+@keyframes advisor-unfold {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .advisor-prompt,
+  .advisor.arguing .advisor-replies {
+    animation: none;
+  }
+}

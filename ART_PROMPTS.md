@@ -1595,3 +1595,27 @@ Either side can break a peace, so this one must not blame anybody in particular.
 > strategy game illustration, pixel art, darker sky than the talks scene, gentle
 > comedy, no text, no lettering, no writing on the papers, wide 16:9 composition.
 
+## Advisor prompts
+
+The two little bubbles that sit on the corner of an advisor's portrait and say
+whether there is anything more there. **Drawn and wired (2026-09-22)**, in place
+of the plain white stock shapes, which are still in `art_src/advisors/` under
+their original names and read by nothing.
+
+Save as `art_src/advisors/bubble_speech.<ext>` and `bubble_thought.<ext>`, on
+**flat magenta**, square, and **leave the middle clear** &mdash; the game writes
+the mark inside them (an exclamation for "ask them", an ellipsis for "they mind
+about something"), so a bubble with its own lettering would collide with it.
+
+Both want a **thick dark outline and an off-white, slightly parchment fill**
+rather than pure white, so they sit in the palette beside the portraits, and a
+tail pointing **down and to the left**, at the face they belong to.
+
+| id | Prompt subject |
+|---|---|
+| `bubble_speech` | A rounded speech balloon with a thick black outline and a warm off-white fill, empty in the middle, a short tail at the lower left, pixel art, flat magenta background, centred, no text, no lettering, 90s fantasy strategy game interface icon |
+| `bubble_thought` | A small cloud-shaped thought bubble with a thick black outline and a warm off-white fill, empty in the middle, two small round bubbles trailing from its lower left corner, pixel art, flat magenta background, centred, no text, no lettering, 90s fantasy strategy game interface icon |
+
+They are drawn at 48x48 today and shown at 32; anything square and larger is
+fine, since the pipeline scales them down.
+

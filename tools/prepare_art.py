@@ -139,9 +139,12 @@ CITY_OVERLAYS = {
 # magenta to key out. `remove_background` leaves them alone and reports as much,
 # which is correct and not a failure -- the trim afterwards works off the alpha
 # they already have.
+# Drawn for section 46's prompts, and named for what they are. The two stock
+# shapes they replaced are still in `art_src/advisors/` under their original
+# names, and nothing reads them.
 ADVISOR_BUBBLES = {
-    "bubble_speech": "maky_orel-comic-book-bubble-2684015_1920",
-    "bubble_thought": "clker-free-vector-images-bubble-296488_1920",
+    "bubble_speech": "bubble_speech",
+    "bubble_thought": "bubble_thought",
 }
 
 # Advance icons, keyed by tech id from src/model/techs.ts. Optional: the tech
