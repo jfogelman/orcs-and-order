@@ -111,6 +111,14 @@ export interface Situation {
   idleWorkers?: number;
   landToWork?: number;
   /**
+   * Section 116, as the diplomacy advisors see it: turns the peace has left
+   * (0 at war), whether our own people are ashamed of a peace we broke, and
+   * whether the other side has ever broken one. Optional, as above.
+   */
+  peaceLeft?: number;
+  ashamed?: boolean;
+  theyBroke?: boolean;
+  /**
    * Turns until somebody wins by holding most of the world, and who.
    *
    * Null when nobody is close. Reported here rather than shouted into the log
@@ -207,7 +215,9 @@ export type Topic =
   | 'the-treasury'
   | 'raiders'
   // Section 112: the land itself, and the workers standing about beside it.
-  | 'the-land';
+  | 'the-land'
+  // Section 116: the peace, and what is owed for having broken one.
+  | 'peace';
 
 export interface AdvisorDef {
   id: string;
@@ -875,6 +885,28 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Elf. Patient to the point of insult.',
     concerns: [
       {
+        // Section 116: four centuries of waiting, and finally a treaty to mind.
+        about: 'peace',
+        when: (s) => (s.peaceLeft ?? 0) > 0 && (s.peaceLeft ?? 0) <= 3,
+        say: (s) =>
+          `The peace lapses in ${count(s.peaceLeft ?? 0, 'turn')}. It can be renewed. It can ` +
+          `also be allowed to lapse, which the orcs will take as an invitation.`,
+      },
+      {
+        about: 'peace',
+        when: (s) => !!s.ashamed,
+        say: () =>
+          `We gave our word and then took it back. The people have noticed. So, I assure ` +
+          `you, have the orcs, who keep a very short list of such things.`,
+      },
+      {
+        about: 'peace',
+        when: (s) => !!s.theyBroke && (s.peaceLeft ?? 0) > 0,
+        say: () =>
+          `A treaty with a people who have broken one before. I have signed worse. I have ` +
+          `rarely signed one I trusted less.`,
+      },
+      {
         when: (s) => s.cities < 3,
         say: (s) =>
           `${count(s.cities, 'city', 'cities')}. A modest holding. Modest holdings become great ones by ` +
@@ -1135,6 +1167,21 @@ const HORDE: AdvisorDef[] = [
     faction: 'orc',
     blurb: 'Draped in bones. Disturbingly calm about it.',
     concerns: [
+      {
+        // Section 116: at last, something that is actually his to mind.
+        about: 'peace',
+        when: (s) => (s.peaceLeft ?? 0) > 0 && (s.peaceLeft ?? 0) <= 3,
+        say: (s) =>
+          `Da peace runs out in ${count(s.peaceLeft ?? 0, 'turn')}. Talk to dem, boss, or ` +
+          `sharpen something. Doing neither is how heads come off.`,
+      },
+      {
+        about: 'peace',
+        when: (s) => !!s.ashamed,
+        say: () =>
+          `We broke our word. Da lads are ashamed, which I did not know orcs could be. ` +
+          `It passes. Do not do it again soon.`,
+      },
       {
         when: (s) => s.undefended > 0,
         say: (s) =>
