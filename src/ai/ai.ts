@@ -1,7 +1,19 @@
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
 import { aiDiplomacy } from './diplomacy';
-import { NAVAL, acrossTheWater, actShip, passageWanted, roomAtHome, seekPassage, shipToBuild, stranded } from './naval';
+import {
+  NAVAL,
+  acrossTheWater,
+  actShip,
+  bestAbroad,
+  holdTheBeach,
+  passageWanted,
+  roomAbroad,
+  roomAtHome,
+  seekPassage,
+  shipToBuild,
+  stranded,
+} from './naval';
 import type { NavalHelpers } from './naval';
 import { allUnitsOf } from '../sim/ships';
 import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
@@ -272,7 +284,7 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
 
 // -------------------------------------------------------------- evaluation
 
-function siteScore(state: GameState, x: number, y: number): number {
+export function siteScore(state: GameState, x: number, y: number): number {
   let score = 0;
   let land = 0;
   for (const i of fatCrossIndices(x, y, state.width, state.height)) {
@@ -609,8 +621,15 @@ function chooseProduction(
     if (defender) return { kind: 'unit', id: defender.id };
   }
 
-  // 2. Expand while there is room to expand into.
-  if (cities + settlers < personality.targetCities) {
+  // 2. Expand while there is room to expand into -- and past the usual target
+  // when the room is across the water. Section 114 measured the archipelago as
+  // a building race because an island holds about as many towns as the AI wants
+  // in total, so it stopped making settlers with half a world unclaimed.
+  const roomOverseas =
+    NAVAL.enabled &&
+    cities + settlers < personality.targetCities + NAVAL.overseasExtra &&
+    roomAbroad(state, city.owner, (x, y) => siteScore(state, x, y));
+  if (cities + settlers < personality.targetCities || roomOverseas) {
     const settler = options.units.find((u) => u.settler);
     if (settler) return { kind: 'unit', id: settler.id };
   }
@@ -1066,8 +1085,52 @@ function wantsKeeper(state: GameState, city: City): boolean {
   });
 }
 
+/**
+ * The best site within a walk of this settler, as it scores them.
+ *
+ * Deliberately local: what this is weighed against is a sea voyage, so the
+ * question is where *this* settler should go rather than where the empire's
+ * best remaining ground is.
+ */
+function bestAtHome(state: GameState, unit: Unit, radius = 8): number {
+  let best = 0;
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const x = unit.x + dx;
+      const y = unit.y + dy;
+      if (x < 1 || y < 1 || x >= state.width - 1 || y >= state.height - 1) continue;
+      if (!canFoundCity(state, unit, x, y).ok) continue;
+      const score = siteScore(state, x, y) - distance(unit.x, unit.y, x, y) * 4;
+      if (score > best) best = score;
+    }
+  }
+  return best;
+}
+
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
   const cities = playerCities(state, unit.owner).length;
+
+  // Section 114: a boat, before anything else this settler might be given.
+  //
+  // This sits at the top because of where it used to sit. Once an empire has
+  // the towns it wants, its settlers become road crews and diggers in the
+  // branches just below -- so a crossing tested after them was never reached,
+  // and the archipelago stayed two empires on two islands with better ground
+  // between them. Traced from a played-out game: every carrier in it was full
+  // of soldiers and no settler ever asked for one.
+  if (
+    NAVAL.enabled &&
+    unit.order === 'none' &&
+    !unit.roadTo &&
+    !unit.autoWork &&
+    cities < personality.targetCities + NAVAL.overseasExtra &&
+    // One at a time. A queue of settlers on the shore is an empire that has
+    // stopped working, and a carrier crosses with one of them anyway.
+    !state.units.some((u) => u.id !== unit.id && u.wantsPassage && unitType(u.type).settler)
+  ) {
+    const abroad = bestAbroad(state, unit.owner, (x, y) => siteScore(state, x, y));
+    if (abroad > bestAtHome(state, unit) * NAVAL.crossFor && seekPassage(state, unit)) return;
+  }
 
   // Once there is nothing left to found, a worker digs. Below the target it is a
   // settler exactly as before.
@@ -1087,6 +1150,8 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     if (unit.order === 'improve') return;
     if (takeImproveJob(state, unit)) return;
   }
+  const helpers = navalHelpers(state, personality);
+
   if (cities >= personality.targetCities + 2) {
     // Enough cities; park it somewhere safe rather than wandering forever.
     unit.order = 'sentry';
@@ -1124,6 +1189,16 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     }
   }
 
+  // Section 114: ground across the water, clearly better than anything left
+  // within a walk. Measured: an island is never actually *full*, so waiting for
+  // it to be was waiting for something that never happens -- what sends a
+  // settler to sea is that the sea leads somewhere better.
+  if (NAVAL.enabled) {
+    const abroad = bestAbroad(state, unit.owner, helpers.siteScore);
+    const athome = Math.max(hereScore, best?.score ?? 0);
+    if (abroad > athome * NAVAL.crossFor && seekPassage(state, unit)) return;
+  }
+
   if (best && best.score > hereScore) {
     if (!routeTo(state, unit, best.x, best.y)) {
       if (here.ok && !exposed) foundCity(state, unit);
@@ -1148,7 +1223,7 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     return;
   }
   // Nowhere at all on this island: find a boat.
-  if (!best && !roomAtHome(state, unit, navalHelpers(state, personality))) seekPassage(state, unit);
+  if (!best && !roomAtHome(state, unit, helpers)) seekPassage(state, unit);
 }
 
 /**
@@ -1367,6 +1442,11 @@ function actSoldier(
     fireIfPossible(state, unit);
     return;
   }
+
+  // Section 114: newly ashore on somebody else's island with the rest of the
+  // party still at sea. Hold the beach rather than walking into a town in ones
+  // and twos, which is what made invasions land and achieve nothing.
+  if (holdTheBeach(state, unit)) return;
 
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);

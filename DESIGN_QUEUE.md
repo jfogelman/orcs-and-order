@@ -9444,3 +9444,68 @@ work; it is drawn as a coloured edge; and it does nothing mechanically yet.
 **Still nothing is forbidden by it.** That was the decision, and it leaves the
 door open: a "keep out of our land" term in the talks is now a thing that could
 be asked for, since both sides can see the line.
+
+## 118. The archipelago, revisited: settled, but still not a war
+
+Section 114 left the islands as a building race -- five conquests in 108 games,
+settlers that never crossed -- and listed the levers. This is what happened when
+they were pulled (2026-09-23).
+
+### What was wrong, and how it was found
+
+**Settlers never asked for a boat.** Traced through a played-out game: every
+carrier in it was full of soldiers. The reason was ordering, not intent --
+once an empire has the towns it wants, `actSettler` hands its settlers to
+roads, posts and terraforming in branches that run *before* any thought of
+crossing, so the crossing was unreachable. It is now the first thing a settler
+considers.
+
+**"No room at home" was never true.** The first crossing rule waited for the
+home island to fill. Measured at turn 120: the home island still had **454
+legal sites at a median score of 110**, while the islands nobody had settled
+ran to **152**. An island is not full; it is simply the only place anybody
+looked. So the test is comparative -- ground a fifth better across the water
+earns a voyage (`NAVAL.crossFor`), one settler at a time.
+
+**Nobody knew the world.** Ships were built only when somebody was already
+waiting for one, so an empire that had never crossed did not know there was
+anywhere to cross to. It now keeps one hull looking while any sea is dark --
+*but only once everything it can walk to has been walked*, so a continent never
+buys a raft it does not need. Without that guard it fired everywhere, and a
+test caught it: `game.test.ts` asserted no unit stands in the sea, which a
+ship legitimately does. That test now exempts ships, and a new one says a ship
+is never on dry land.
+
+### Measured (2026-09-23, 108 games an arm)
+
+| world | arm | Horde-Kingdom | cities H/K | population | captures a game | conquests |
+|---|---|---|---|---|---|---|
+| continent | before | 55-53 | 5.3/5.6 | 43/42 | 6.4 | 43 |
+| continent | after | 55-53 | 5.5/5.9 | 46/44 | 6.1 | 42 |
+| archipelago | before | 53-55 | 5.5/6.4 | 55/61 | 2.3 | 3 |
+| archipelago | after | 47-61 | 6.6/7.5 | 68/75 | 1.2 | 2 |
+
+- **The continent is untouched**, which is what the guard was for.
+- **Expansion works.** Island empires hold about a town more each, a quarter
+  more people, and half again as much road.
+- **The war did not arrive.** Two conquests in 108 games. The Portal or the
+  Object still decides about 95% of island games.
+
+### The beachhead is off, and measured off
+
+Soldiers newly ashore waiting for the rest before going at a town sounded
+right and did the opposite: **captures halved**, 1.2 a game against 2.6, with
+two conquests either way. Troops wait for a second boatload that mostly never
+comes. `NAVAL.beachhead` is 1 -- off -- with the rule kept behind it.
+
+### What an actual war would need
+
+Not more tuning. The pieces are: warships that bombard a town's garrison the
+turn before a landing; carriers that pick weakly-held towns rather than the
+nearest; and several carriers arriving together rather than in sequence. That
+is multi-turn coordination, which is where this AI is weakest, and it should be
+taken as its own piece of work rather than as more levers on this one.
+
+**Until then the archipelago is a building race with raiding at the edges** --
+a different game from the continent, which is a fair thing for a second world
+type to be, and it is now a *populated* one.

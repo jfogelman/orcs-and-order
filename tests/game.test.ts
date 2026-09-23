@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { unitType } from '../src/model/units';
 import { runAiTurn } from '../src/ai/ai';
 import { idx } from '../src/engine/grid';
 import { TERRAIN } from '../src/model/terrain';
@@ -150,7 +151,17 @@ describe('a full game', () => {
   it('never leaves a land unit standing in the sea', () => {
     const state = playOut(999, 200);
     for (const u of state.units) {
+      // Ships, since section 114, are on water on purpose and nowhere else.
+      if (unitType(u.type).sails) continue;
       expect(TERRAIN[state.terrain[idx(u.x, u.y, state.width)]].water).toBe(false);
+    }
+  });
+
+  it('never leaves a ship standing on dry land', () => {
+    const state = playOut(999, 200);
+    for (const u of state.units) {
+      if (!unitType(u.type).sails) continue;
+      expect(TERRAIN[state.terrain[idx(u.x, u.y, state.width)]].water).toBe(true);
     }
   });
 

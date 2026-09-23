@@ -76,6 +76,9 @@ const control = () => {
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
   NAVAL.enabled = true;
+  NAVAL.overseasExtra = 3;
+  NAVAL.crossFor = 1.2;
+  NAVAL.beachhead = 1;
   RAIDER_TIERS.enabled = true;
   PEACE.enabled = true;
   GOBLIN_SCOUT.enabled = true;
@@ -96,18 +99,27 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 116: the two AIs able to make peace, against the game before they
-  // could. What to watch is the ending mix -- whether peace turns the turn limit
-  // into the usual way a game ends -- as much as who wins.
+  // Which half of the archipelago work did what. The expansion half is in both
+  // arms; the beachhead -- soldiers ashore waiting for the rest before they go
+  // at a town -- is the only difference. Measured because fights and captures
+  // both *fell* when the two went in together.
   {
-    label: 'no diplomacy',
+    label: 'no beachhead',
     apply: () => {
       control();
-      PEACE.enabled = false;
+      NAVAL.beachhead = 1;
+      NEW_GAME.world = 'archipelago';
     },
   },
-  { label: 'diplomacy', apply: control },
+  {
+    label: 'beachhead',
+    apply: () => {
+      control();
+      NEW_GAME.world = 'archipelago';
+    },
+  },
 ];
+
 
 /**
  * Eighteen seeds a base is the full run. Set SWEEP_PER_BASE=1 to check the

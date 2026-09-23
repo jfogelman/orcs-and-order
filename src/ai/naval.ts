@@ -3,7 +3,7 @@ import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, ProductionItem, TerrainId, Unit } from '../model/types';
 import type { UnitTypeDef } from '../model/units';
-import { canFoundCity } from '../sim/city';
+import { MIN_CITY_SPACING, canFoundCity } from '../sim/city';
 import { playerCities } from '../sim/gamestate';
 import { moveToward, routeTo, tryStep } from '../sim/movement';
 import { canBoard, isCoastal, roomAboard, unloadAll } from '../sim/ships';
@@ -40,6 +40,44 @@ export const NAVAL = {
   invasionWait: 8,
   /** How far a warship will go to sink something or to keep a carrier company. */
   huntRange: 8,
+  /**
+   * Towns past its usual target an empire will found *overseas*, when its own
+   * island is full and there is good ground across the water.
+   *
+   * Section 114 measured the archipelago as a building race: settlers seldom
+   * crossed, because each island already held about as many towns as the AI
+   * wants in total, so it stopped making settlers long before it ran out of
+   * world. An island is a reason to want more towns than usual, not fewer.
+   */
+  overseasExtra: 3,
+  /**
+   * Soldiers ashore on a foreign island before they go at a town. **One, which
+   * is to say off**, and measured off.
+   *
+   * The reasoning was sound: they arrive three to a boat, and three soldiers
+   * walking one at a time into a defended town are three dead soldiers. The
+   * measurement disagreed. Holding the beach *halved* the towns taken --
+   * 1.2 a game against 2.6 -- and won nothing: two conquests in 108 games
+   * either way. Troops wait on the sand for a second boatload that mostly
+   * never comes, and a beachhead nobody reinforces is just an army standing
+   * still in somebody else's country.
+   *
+   * Kept, with its rule, for the day carriers run in pairs; see section 114.
+   */
+  beachhead: 1,
+  /** Turns a beachhead waits for the rest before going in anyway. */
+  beachWait: 10,
+  /**
+   * How much better ground across the water has to be before a settler takes a
+   * boat rather than walking.
+   *
+   * Measured on an archipelago at turn 120: the home island still had 454 legal
+   * sites at a median score of 110, while the islands nobody had settled ran to
+   * 152 -- so "no room at home" was never true and nobody ever crossed. The
+   * question is not whether there is room but whether the room is better, and a
+   * fifth better is worth a sea voyage.
+   */
+  crossFor: 1.2,
 };
 
 /** What the land AI lends the sea AI, so neither file has to import the other. */
@@ -120,6 +158,82 @@ export function roomAtHome(state: GameState, unit: Unit, helpers: NavalHelpers):
     if (canFoundCity(state, unit, x, y).ok && helpers.siteScore(x, y) > 0) return true;
   }
   return false;
+}
+
+/**
+ * Somewhere across the water worth founding a town on: explored, dry, far
+ * enough from every existing town, and on ground nobody of ours lives on.
+ *
+ * Asked of the empire rather than of a settler, because it decides whether to
+ * *make* a settler at all.
+ */
+export function roomAbroad(state: GameState, playerId: number, siteScore: (x: number, y: number) => number): boolean {
+  const labels = landmasses(state);
+  const seen = state.players[playerId].explored;
+  const ours = new Set(playerCities(state, playerId).map((c) => labels[idx(c.x, c.y, state.width)]));
+  for (let i = 0; i < labels.length; i++) {
+    if (labels[i] < 0 || !seen[i] || ours.has(labels[i])) continue;
+    const x = i % state.width;
+    const y = Math.floor(i / state.width);
+    if (state.cities.some((c) => Math.max(Math.abs(c.x - x), Math.abs(c.y - y)) < MIN_CITY_SPACING)) continue;
+    if (siteScore(x, y) > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * The best site across the water, as this empire sees it: explored, legal, and
+ * on ground none of our towns stand on. Zero if there is nowhere.
+ */
+let abroadCache: { key: string; best: number } | null = null;
+
+export function bestAbroad(state: GameState, playerId: number, siteScore: (x: number, y: number) => number): number {
+  // Once per player per turn: it walks the map, and several settlers ask it the
+  // same question on the same turn.
+  const key = `${playerId}:${state.turn}:${state.cities.length}`;
+  if (abroadCache?.key === key) return abroadCache.best;
+  const labels = landmasses(state);
+  const seen = state.players[playerId].explored;
+  const ours = new Set(playerCities(state, playerId).map((c) => labels[idx(c.x, c.y, state.width)]));
+  let best = 0;
+  for (let i = 0; i < labels.length; i++) {
+    if (labels[i] < 0 || !seen[i] || ours.has(labels[i])) continue;
+    const x = i % state.width;
+    const y = Math.floor(i / state.width);
+    if (state.cities.some((c) => Math.max(Math.abs(c.x - x), Math.abs(c.y - y)) < MIN_CITY_SPACING)) continue;
+    const score = siteScore(x, y);
+    if (score > best) best = score;
+  }
+  abroadCache = { key, best };
+  return best;
+}
+
+/**
+ * A soldier newly ashore on somebody else's island: hold the beach until the
+ * rest of the party lands.
+ *
+ * Only where we have no town of our own, so this never fires at home. Returns
+ * whether the unit's turn was spent waiting.
+ */
+export function holdTheBeach(state: GameState, unit: Unit): boolean {
+  if (!NAVAL.enabled) return false;
+  const labels = landmasses(state);
+  const here = labels[idx(unit.x, unit.y, state.width)];
+  if (here < 0) return false;
+  if (playerCities(state, unit.owner).some((c) => labels[idx(c.x, c.y, state.width)] === here)) {
+    return false;
+  }
+  const ashore = state.units.filter(
+    (u) => u.owner === unit.owner && !unitType(u.type).sails && labels[idx(u.x, u.y, state.width)] === here,
+  );
+  if (ashore.length >= NAVAL.beachhead) return false;
+  // Somebody is still coming: a carrier with our people aboard, bound here.
+  const coming = carriers(state, unit.owner).some((c) => (c.cargo?.length ?? 0) > 0);
+  const waited = (unit.beachedAt ??= state.turn);
+  if (!coming || state.turn - waited >= NAVAL.beachWait) return false;
+  // Dig in where we stand. A beachhead that wanders is not a beachhead.
+  unit.order = 'fortified';
+  return true;
 }
 
 /** Whether a target on land is somewhere this unit cannot walk to. */
@@ -442,6 +556,41 @@ export function passageWanted(state: GameState, playerId: number): number {
 }
 
 /**
+ * Sea left to look at: explored water with unexplored ground beside it.
+ *
+ * An empire that has never crossed the water does not know there is anywhere
+ * to cross *to*, so it never wants a boat, so it never finds out -- which is
+ * how the archipelago stayed a building race. One hull, kept looking while any
+ * of the sea is still dark, is what breaks that circle.
+ */
+export function homeFullyKnown(state: GameState, playerId: number): boolean {
+  const seen = state.players[playerId].explored;
+  const labels = landmasses(state);
+  const ours = new Set(playerCities(state, playerId).map((c) => labels[idx(c.x, c.y, state.width)]));
+  if (ours.size === 0) return false;
+  for (let i = 0; i < labels.length; i++) {
+    if (ours.has(labels[i]) && !seen[i]) return false;
+  }
+  return true;
+}
+
+export function moreSeaToSee(state: GameState, playerId: number): boolean {
+  const seen = state.players[playerId].explored;
+  for (let y = 0; y < state.height; y++) {
+    for (let x = 0; x < state.width; x++) {
+      if (!seen[idx(x, y, state.width)] || !isWater(state, x, y)) continue;
+      for (const [dx, dy] of DIRS8) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= state.width || ny >= state.height) continue;
+        if (!seen[idx(nx, ny, state.width)]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Stranded: no enemy town known, and every island we hold has been walked
  * end to end. The one case where a ship is wanted before anybody has asked.
  *
@@ -482,7 +631,16 @@ export function shipToBuild(
 
   const waiting = passageWanted(state, city.owner);
   const lost = stranded(state, city.owner);
-  if (carrier && (waiting > 0 || lost)) {
+  // Or: everything we can walk to has been walked, there is sea nobody has
+  // looked at, and nothing afloat to look with. One hull then pays for itself
+  // in knowing where the world is -- and the condition is *our own ground is
+  // exhausted*, so on a continent, where there is always more to see on foot,
+  // this never fires and nobody wastes forty shields on a raft.
+  const blind =
+    carriers(state, city.owner).length + warships(state, city.owner).length === 0 &&
+    homeFullyKnown(state, city.owner) &&
+    moreSeaToSee(state, city.owner);
+  if (carrier && (waiting > 0 || lost || blind)) {
     const want = Math.min(NAVAL.maxCarriers, Math.max(1, Math.ceil(waiting / carrier.carries)));
     const have = carriers(state, city.owner).length + building((t) => t.carries > 0);
     if (have < want) return { kind: 'unit', id: carrier.id };
