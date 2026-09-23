@@ -9414,3 +9414,33 @@ on the map, most likely the tiles its cities work or could work, as the replay
 already tints them. That is what would make a "stay out of our land" term possible:
 until borders can be seen, a peace can only be about fighting.
 
+## 117. Visible borders
+
+Asked for 2026-09-21, while section 116 was being settled: a peace could only
+be about fighting, because there was no way to see whose land was whose, and
+"a rule nobody can see is a rule nobody can plan around".
+
+**Jeremy's decisions (2026-09-22):** a side's land is what its cities could
+work; it is drawn as a coloured edge; and it does nothing mechanically yet.
+
+**As built** (`src/sim/borders.ts`, `drawBorders` in the renderer):
+
+- **The claim is the fat cross** -- the twenty-one tiles a city can put a
+  citizen on, the shape `assignWorkers` already uses. The border therefore
+  means something the rules already know: past this line you are standing on
+  ground they farm.
+- **Overlaps go to the nearer town, ties to the older one,** so a border never
+  flickers between owners from one turn to the next.
+- **Drawn as edges,** in the owner's colour, along the sides of tiles the
+  viewer has explored -- never as a wash over the terrain art, and never
+  through fog, which would map an empire nobody has found. Coast counts as an
+  edge: their land stops at the water and the line says so.
+- **Worked out when the towns change,** not per frame, keyed by who holds what,
+  where, and when it was founded. Founding order was missing from that key in
+  the first version and a test caught it: two boards alike but for which town
+  was older shared one answer.
+- **V** hides and shows them; the Orcpedia says so.
+
+**Still nothing is forbidden by it.** That was the decision, and it leaves the
+door open: a "keep out of our land" term in the talks is now a thing that could
+be asked for, since both sides can see the line.

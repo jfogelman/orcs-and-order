@@ -663,6 +663,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           hands, the score pulling apart, and every city taken or lost, to jump to.
         </p>
         <p class="flavor">
+          <strong>Borders.</strong> Each town claims the twenty-one tiles it could put a
+          citizen on, and the map edges that land in its owner's colour. Where two towns
+          want the same tile the nearer one has it, and a tie goes to the older town.
+          Nothing is forbidden by a border &mdash; you may walk wherever you like, at
+          peace or at war &mdash; but it shows at a glance whose fields you are standing
+          in. <strong>V</strong> hides them and shows them again.
+        </p>
+        <p class="flavor">
           <strong>City markers.</strong> A small picture at the bottom-left of a city of
           yours says the one thing most worth knowing about it, worst news first:
           <em>besieged</em> (enemies next to it), <em>unrest</em> (rioting),

@@ -1,4 +1,5 @@
 import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
+import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
@@ -52,6 +53,8 @@ export interface MapOverlay {
   /** Tiles worked by the city currently open, drawn as a highlight ring. */
   workRing: Set<number> | null;
   showGrid: boolean;
+  /** Section 117: each side's land, edged in its own colour. */
+  showBorders: boolean;
 }
 
 export const EMPTY_OVERLAY: MapOverlay = {
@@ -64,6 +67,7 @@ export const EMPTY_OVERLAY: MapOverlay = {
   gotoPath: null,
   workRing: null,
   showGrid: true,
+  showBorders: true,
 };
 
 const VOID_COLOR = '#0a0806';
@@ -501,6 +505,13 @@ export class MapRenderer {
     // Over the road, because a post beside a crossroads should read as standing
     // on it rather than under it.
     if (state.posts) this.drawPosts(ctx, state, viewer, cam, size);
+
+    // --- borders ---------------------------------------------------------
+    // Over the ground and under everything that stands on it: a border is a
+    // fact about the land, not a thing in the way.
+    if (overlay.showBorders && size >= 16) {
+      this.drawBorders(ctx, state, viewer, cam, size, x0, y0, x1, y1);
+    }
 
     // --- grid ------------------------------------------------------------
     if (overlay.showGrid && size >= 24) {
@@ -1002,6 +1013,67 @@ export class MapRenderer {
       ctx.fillStyle = '#f2e6c8';
       ctx.fillText(label, s.x + size / 2, s.y + size - 1);
     }
+  }
+
+  /**
+   * Section 117: a line in the owner's colour wherever their land stops.
+   *
+   * Drawn edge by edge rather than as a filled wash, so it never sits over the
+   * terrain art; and only along the sides of tiles the viewer has actually
+   * seen, since a border drawn through fog would map an empire nobody has
+   * found. A stretch of coast counts as an edge too -- their land stops at the
+   * water, and the line says so.
+   */
+  private drawBorders(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+  ): void {
+    const owners = claims(state);
+    const w = state.width;
+    ctx.save();
+    ctx.lineWidth = Math.max(2, Math.round(size * 0.07));
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.85;
+    // One path per side, so the colour is set a couple of times rather than
+    // once per edge: a busy map has hundreds of these.
+    for (const p of state.players) {
+      if (p.barbarian) continue;
+      ctx.strokeStyle = p.color;
+      ctx.beginPath();
+      let any = false;
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const i = idx(x, y, w);
+          if (owners[i] !== p.id || !viewer.explored[i]) continue;
+          const s = cam.tileToScreen(x, y);
+          const sides: Array<[number, number, number, number]> = [];
+          const other = (nx: number, ny: number): boolean =>
+            nx < 0 ||
+            ny < 0 ||
+            nx >= state.width ||
+            ny >= state.height ||
+            owners[idx(nx, ny, w)] !== p.id;
+          if (other(x, y - 1)) sides.push([s.x, s.y, s.x + size, s.y]);
+          if (other(x, y + 1)) sides.push([s.x, s.y + size, s.x + size, s.y + size]);
+          if (other(x - 1, y)) sides.push([s.x, s.y, s.x, s.y + size]);
+          if (other(x + 1, y)) sides.push([s.x + size, s.y, s.x + size, s.y + size]);
+          for (const [ax, ay, bx, by] of sides) {
+            ctx.moveTo(Math.round(ax) + 0.5, Math.round(ay) + 0.5);
+            ctx.lineTo(Math.round(bx) + 0.5, Math.round(by) + 0.5);
+            any = true;
+          }
+        }
+      }
+      if (any) ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private drawUnit(

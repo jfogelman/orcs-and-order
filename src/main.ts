@@ -221,7 +221,11 @@ class App {
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
     this.camera.setMapSize(state.width, state.height);
-    this.overlay = { ...EMPTY_OVERLAY, showGrid: this.overlay.showGrid };
+    this.overlay = {
+      ...EMPTY_OVERLAY,
+      showGrid: this.overlay.showGrid,
+      showBorders: this.overlay.showBorders,
+    };
     this.centerOnHome();
     this.refreshHud();
   }
@@ -1853,6 +1857,11 @@ class App {
         break;
       case 'g':
         this.overlay.showGrid = !this.overlay.showGrid;
+        break;
+      case 'v':
+        // Section 117: each side's land, on or off.
+        this.overlay.showBorders = !this.overlay.showBorders;
+        this.notify(this.overlay.showBorders ? 'Borders shown.' : 'Borders hidden.');
         break;
       case 'm':
         this.toggleMute();
