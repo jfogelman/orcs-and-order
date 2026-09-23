@@ -78,7 +78,7 @@ const control = () => {
   NAVAL.enabled = true;
   NAVAL.overseasExtra = 3;
   NAVAL.crossFor = 1.2;
-  NAVAL.beachhead = 4;
+  NAVAL.beachhead = 1;
   RAIDER_TIERS.enabled = true;
   PEACE.enabled = true;
   GOBLIN_SCOUT.enabled = true;
@@ -99,28 +99,20 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 114's follow-up: settlers that cross to better ground, and landing
-  // parties that wait on the beach for the rest. Measured on both worlds,
-  // because the crossing rule can fire on a continent too -- there are islands
-  // out there as well.
+  // Which half of the archipelago work did what. The expansion half is in both
+  // arms; the beachhead -- soldiers ashore waiting for the rest before they go
+  // at a town -- is the only difference. Measured because fights and captures
+  // both *fell* when the two went in together.
   {
-    label: 'continent, before',
+    label: 'no beachhead',
     apply: () => {
       control();
-      asShipped();
-    },
-  },
-  { label: 'continent, after', apply: control },
-  {
-    label: 'archipelago, before',
-    apply: () => {
-      control();
-      asShipped();
+      NAVAL.beachhead = 1;
       NEW_GAME.world = 'archipelago';
     },
   },
   {
-    label: 'archipelago, after',
+    label: 'beachhead',
     apply: () => {
       control();
       NEW_GAME.world = 'archipelago';
@@ -128,12 +120,6 @@ const ARMS: Arm[] = [
   },
 ];
 
-/** The naval AI as section 114 shipped it: no crossing for better ground, no beachhead. */
-function asShipped(): void {
-  NAVAL.overseasExtra = 0;
-  NAVAL.crossFor = Infinity;
-  NAVAL.beachhead = 1;
-}
 
 /**
  * Eighteen seeds a base is the full run. Set SWEEP_PER_BASE=1 to check the

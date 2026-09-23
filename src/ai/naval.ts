@@ -51,14 +51,20 @@ export const NAVAL = {
    */
   overseasExtra: 3,
   /**
-   * Soldiers ashore on a foreign island before they go at a town.
+   * Soldiers ashore on a foreign island before they go at a town. **One, which
+   * is to say off**, and measured off.
    *
-   * They arrive three to a boat, and three soldiers walking one at a time into
-   * a defended town are three dead soldiers -- five conquests in 108 games.
-   * So the first ones ashore hold the beach until enough of them are standing
-   * on it.
+   * The reasoning was sound: they arrive three to a boat, and three soldiers
+   * walking one at a time into a defended town are three dead soldiers. The
+   * measurement disagreed. Holding the beach *halved* the towns taken --
+   * 1.2 a game against 2.6 -- and won nothing: two conquests in 108 games
+   * either way. Troops wait on the sand for a second boatload that mostly
+   * never comes, and a beachhead nobody reinforces is just an army standing
+   * still in somebody else's country.
+   *
+   * Kept, with its rule, for the day carriers run in pairs; see section 114.
    */
-  beachhead: 4,
+  beachhead: 1,
   /** Turns a beachhead waits for the rest before going in anyway. */
   beachWait: 10,
   /**
