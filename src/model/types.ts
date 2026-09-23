@@ -273,6 +273,11 @@ export interface Unit {
    */
   summonAt?: number;
   /**
+   * AI only: the turn this unit first stood on an island where we have no
+   * town, so a beachhead knows how long it has been waiting for the rest.
+   */
+  beachedAt?: number;
+  /**
    * A road this worker is laying all the way to a tile: dig wherever the ground
    * wants a road, walk over road that is already there, stop at the end.
    *

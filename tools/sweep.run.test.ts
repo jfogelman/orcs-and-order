@@ -76,6 +76,9 @@ const control = () => {
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
   NAVAL.enabled = true;
+  NAVAL.overseasExtra = 3;
+  NAVAL.crossFor = 1.2;
+  NAVAL.beachhead = 4;
   RAIDER_TIERS.enabled = true;
   PEACE.enabled = true;
   GOBLIN_SCOUT.enabled = true;
@@ -96,18 +99,41 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 116: the two AIs able to make peace, against the game before they
-  // could. What to watch is the ending mix -- whether peace turns the turn limit
-  // into the usual way a game ends -- as much as who wins.
+  // Section 114's follow-up: settlers that cross to better ground, and landing
+  // parties that wait on the beach for the rest. Measured on both worlds,
+  // because the crossing rule can fire on a continent too -- there are islands
+  // out there as well.
   {
-    label: 'no diplomacy',
+    label: 'continent, before',
     apply: () => {
       control();
-      PEACE.enabled = false;
+      asShipped();
     },
   },
-  { label: 'diplomacy', apply: control },
+  { label: 'continent, after', apply: control },
+  {
+    label: 'archipelago, before',
+    apply: () => {
+      control();
+      asShipped();
+      NEW_GAME.world = 'archipelago';
+    },
+  },
+  {
+    label: 'archipelago, after',
+    apply: () => {
+      control();
+      NEW_GAME.world = 'archipelago';
+    },
+  },
 ];
+
+/** The naval AI as section 114 shipped it: no crossing for better ground, no beachhead. */
+function asShipped(): void {
+  NAVAL.overseasExtra = 0;
+  NAVAL.crossFor = Infinity;
+  NAVAL.beachhead = 1;
+}
 
 /**
  * Eighteen seeds a base is the full run. Set SWEEP_PER_BASE=1 to check the
