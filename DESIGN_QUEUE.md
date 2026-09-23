@@ -9509,3 +9509,46 @@ taken as its own piece of work rather than as more levers on this one.
 **Until then the archipelago is a building race with raiding at the edges** --
 a different game from the continent, which is a fair thing for a second world
 type to be, and it is now a *populated* one.
+
+## 119. The one with something to say says it when asked
+
+Section 77 put marks on the portraits -- a speech bubble for "ask this one and
+somebody will argue back", a thought bubble for "they mind about this, but the
+room agrees". Reported from play (2026-09-23): the bubble was the only thing
+that changed, and **the panel still printed all six opinions before anybody was
+asked**, so the contested advisor's line was already read by the time the mark
+was noticed. Asking then repeated what was on the screen.
+
+### The line is theirs until you ask for it
+
+A card with a speech bubble now shows, in place of its line:
+
+> *Wants a word.* Ask them -- somebody will disagree.
+
+Click, and the line goes up **as they start to say it**, and each objection
+appears as its owner cuts in, rather than the argument arriving as a finished
+block of text with a face moving somewhere above it. Asking again puts it all
+away and the invitation comes back. `takeTurns` gained an optional `before` for
+this: a turn may bring its own words on screen as it begins, which is the whole
+difference between a room talking and a transcript.
+
+The five who are only agreeing are unchanged -- their lines are still printed,
+because there is nothing to draw out of them and hiding those behind a click
+would be six clicks for six pieces of flavour.
+
+### And it looks like the one thing worth doing
+
+The contested card gets the warm ground, a gold edge and a little light around
+it; the rest stay the flat brown they were. The bobbing bubble said the same
+thing in twenty-six pixels, which is not enough to catch an eye scanning six
+faces at once.
+
+The council's own note now explains both marks, so the rule ships with the
+screen that uses it rather than living only here.
+
+### One thing fixed in passing
+
+Five advisor lines began with a spelled number straight out of `spell`, which
+is lower case: "Orcs. one of them, in the open, unpunished." They are wrapped in
+`sentence` now. Visible in the Knight-Marshal's war line, which is exactly the
+one this section makes you click for.

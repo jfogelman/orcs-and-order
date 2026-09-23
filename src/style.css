@@ -1429,15 +1429,45 @@ kbd {
 
 /* ------------------------------------------- advisors that argue, section 46 */
 
-/* Only the ones somebody would talk back to look clickable. */
+/*
+ * Only the ones somebody would talk back to look clickable -- and now they look
+ * it from across the panel rather than on hover. Five of the six are agreeing
+ * with you; the sixth is the only thing on the screen worth doing, so it gets
+ * the warm ground, the gold edge and the light around it, and the rest stay the
+ * flat brown they were. The bubble bobbing on the corner said the same thing in
+ * twenty-six pixels, which is not enough to catch an eye scanning six faces.
+ */
 .advisor.contested {
   cursor: pointer;
+  border-color: rgba(240, 198, 74, 0.5);
+  background: linear-gradient(180deg, #3a2f1c, #2b2317);
+  box-shadow: 0 0 10px rgba(240, 198, 74, 0.12);
 }
 
 .advisor.contested:hover,
 .advisor.contested:focus-visible {
   border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(240, 198, 74, 0.26);
   outline: none;
+}
+
+/*
+ * What stands in for the line while it is still theirs to give: the card says
+ * there is something here and what asking will cost you -- an argument -- and
+ * says nothing at all about what they think. Six opinions printed in a list
+ * before anybody is asked is the panel section 46 was trying not to be.
+ */
+.advisor-ask {
+  grid-column: 2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  font-style: italic;
+  color: var(--gold);
+}
+
+.advisor-ask-hint {
+  font-style: normal;
+  font-size: 11.5px;
 }
 
 .advisor-replies {
@@ -2006,8 +2036,9 @@ kbd {
   transition: opacity 0.18s ease-out;
 }
 
-/* The argument arriving, rather than appearing. */
-.advisor.arguing .advisor-replies {
+/* Each voice arriving as it speaks, rather than the argument appearing whole. */
+.advisor.arguing .advisor-line,
+.advisor.arguing .advisor-reply {
   animation: advisor-unfold 0.22s ease-out;
 }
 
@@ -2018,7 +2049,8 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .advisor-prompt,
-  .advisor.arguing .advisor-replies {
+  .advisor.arguing .advisor-line,
+  .advisor.arguing .advisor-reply {
     animation: none;
   }
 }

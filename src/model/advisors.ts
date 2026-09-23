@@ -585,7 +585,7 @@ const KINGDOM: AdvisorDef[] = [
         about: 'war',
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
-          `Orcs. ${spell(s.enemiesSeen)} of them, in the open, unpunished. Every hour we do not ` +
+          `Orcs. ${sentence(spell(s.enemiesSeen))} of them, in the open, unpunished. Every hour we do not ` +
           `ride out is an hour they will tell their children about.`,
       },
       {
@@ -848,7 +848,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.rates.coin < 3,
         say: (s) =>
-          `${spell(s.rates.coin)} parts in twelve to the treasury. I have seen shipwrecks with ` +
+          `${sentence(spell(s.rates.coin))} parts in twelve to the treasury. I have seen shipwrecks with ` +
           `better arrangements. At least they were *trying* to keep the gold aboard.`,
       },
       {
@@ -868,7 +868,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.gold > 400,
         say: (s) =>
-          `${spell(s.gold)} in the vault. Beautiful. Do not touch it. I shall know.`,
+          `${sentence(spell(s.gold))} in the vault. Beautiful. Do not touch it. I shall know.`,
       },
     ],
     idle: [
@@ -958,7 +958,7 @@ const KINGDOM: AdvisorDef[] = [
       {
         when: (s) => s.rates.beakers < 3,
         say: (s) =>
-          `${spell(s.rates.beakers)} parts in twelve to study. One cannot discover very much on ` +
+          `${sentence(spell(s.rates.beakers))} parts in twelve to study. One cannot discover very much on ` +
           `${spell(s.rates.beakers)}. One can barely discover the problem.`,
       },
       {
@@ -1043,7 +1043,7 @@ const HORDE: AdvisorDef[] = [
         about: 'war',
         when: (s) => s.enemiesSeen > 0,
         say: (s) =>
-          `${spell(s.enemiesSeen)} of them. Standing there. Being alive. I do not know what else ` +
+          `${sentence(spell(s.enemiesSeen))} of them. Standing there. Being alive. I do not know what else ` +
           `you want me to say about it.`,
       },
       {

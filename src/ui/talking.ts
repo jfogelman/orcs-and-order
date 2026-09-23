@@ -94,9 +94,18 @@ export async function talk(img: HTMLImageElement | null, id: string, ms: number)
   });
 }
 
-/** Take turns: each speaker finishes before the next begins. */
+/**
+ * Take turns: each speaker finishes before the next begins.
+ *
+ * A turn may bring its own words on screen as it starts (`before`), so a room
+ * can arrive a voice at a time rather than as a finished block of text with a
+ * face twitching somewhere above it.
+ */
 export async function takeTurns(
-  turns: Array<{ img: HTMLImageElement | null; id: string; line: string }>,
+  turns: Array<{ img: HTMLImageElement | null; id: string; line: string; before?: () => void }>,
 ): Promise<void> {
-  for (const t of turns) await talk(t.img, t.id, speakingTime(t.line));
+  for (const t of turns) {
+    t.before?.();
+    await talk(t.img, t.id, speakingTime(t.line));
+  }
 }

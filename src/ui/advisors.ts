@@ -401,7 +401,16 @@ export function openAdvisors(
         <span class="advisor-role muted">${escapeHtml(ROLE_NAMES[a.role])}</span>
         <span class="advisor-blurb muted">${escapeHtml(a.blurb)}</span>
       </div>
-      <div class="advisor-line">${escapeHtml(advisorLine(a, situation, concern))}</div>
+      <div class="advisor-line" data-line="${escapeHtml(advisorLine(a, situation, concern))}"${
+        contested ? ' hidden' : ''
+      }>${contested ? '' : escapeHtml(advisorLine(a, situation, concern))}</div>
+      ${
+        contested
+          ? `<div class="advisor-ask">Wants a word.
+               <span class="advisor-ask-hint muted">Ask them &mdash; somebody will disagree.</span>
+             </div>`
+          : ''
+      }
       <div class="advisor-replies" hidden></div>
     </div>`;
   };
@@ -413,6 +422,10 @@ export function openAdvisors(
       <div class="panel-body advisor-note muted">
         Six people with opinions. They are not experts and they do not agree;
         each one wants what they have always wanted, and will find a reason.
+        A <strong>speech bubble</strong> means asking will start an argument, and
+        that one keeps its opinion to itself until you do; a
+        <strong>thought bubble</strong> means something they mind about is
+        happening, but the room agrees and there is nothing to draw out.
       </div>
       ${
         raised.length > 0
@@ -438,6 +451,28 @@ export function openAdvisors(
       // movement on a screen somebody is reading, and six opinions in a list is
       // not an argument. You pick somebody, and only those who *disagree* say
       // anything back -- which is what turns a panel of characters into a room.
+      /**
+       * Put a card back to how it sat before it was asked: the argument gone,
+       * and the advisor's own line back behind the invitation to ask for it.
+       * The line is kept on the element rather than re-derived, so closing and
+       * asking again cannot produce a different opinion.
+       */
+      const hush = (holder: HTMLElement) => {
+        const replies = holder.querySelector<HTMLElement>('.advisor-replies');
+        if (replies) {
+          replies.hidden = true;
+          replies.innerHTML = '';
+        }
+        holder.classList.remove('arguing');
+        const line = holder.querySelector<HTMLElement>('.advisor-line');
+        const ask = holder.querySelector<HTMLElement>('.advisor-ask');
+        if (ask && line) {
+          line.textContent = '';
+          line.hidden = true;
+          ask.hidden = false;
+        }
+      };
+
       const speak = (holder: HTMLElement) => {
         const who = advisors.find((a) => a.id === holder.dataset.advisor);
         if (!who) return;
@@ -445,27 +480,24 @@ export function openAdvisors(
         if (!replies) return;
         if (!replies.hidden) {
           // Asking again puts the room away rather than repeating itself.
-          replies.hidden = true;
-          replies.innerHTML = '';
-          holder.classList.remove('arguing');
+          hush(holder);
           return;
         }
         // Close anybody else's, so only one argument is running at a time.
-        root.querySelectorAll<HTMLElement>('.advisor-replies').forEach((r) => {
-          r.hidden = true;
-          r.innerHTML = '';
-        });
-        root.querySelectorAll<HTMLElement>('.advisor').forEach((a) => a.classList.remove('arguing'));
+        root.querySelectorAll<HTMLElement>('.advisor').forEach(hush);
         holder.classList.add('arguing');
         const objections = objectionsTo(who, lines.get(who.id) ?? null);
         if (objections.length === 0) return;
-        // The one asked speaks first, then each who objects, in turn.
-        const ownLine = holder.querySelector<HTMLElement>('.advisor-line')?.textContent ?? '';
+        // The one asked speaks first, then each who objects, in turn. Nothing is
+        // on screen yet: the line the card was holding back goes up as they
+        // start to say it, and each objection as its owner cuts in.
+        const line = holder.querySelector<HTMLElement>('.advisor-line');
+        const ownLine = line?.dataset.line ?? line?.textContent ?? '';
         const speaker = holder.querySelector<HTMLImageElement>('.advisor-face');
         replies.innerHTML = objections
           .map(
             (o) => `
-            <div class="advisor-reply">
+            <div class="advisor-reply" hidden>
               <img class="advisor-reply-face" src="${portraitPath(o.advisor.id)}" alt="" />
               <div>
                 <span class="advisor-name">${escapeHtml(o.advisor.name)}</span>
@@ -478,10 +510,27 @@ export function openAdvisors(
         replies.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
           img.addEventListener('error', () => img.remove());
         });
+        const said = [...replies.querySelectorAll<HTMLElement>('.advisor-reply')];
         const faces = [...replies.querySelectorAll<HTMLImageElement>('.advisor-reply-face')];
         void takeTurns([
-          { img: speaker, id: who.id, line: ownLine },
-          ...objections.map((o, i) => ({ img: faces[i] ?? null, id: o.advisor.id, line: o.says })),
+          {
+            img: speaker,
+            id: who.id,
+            line: ownLine,
+            before: () => {
+              holder.querySelector<HTMLElement>('.advisor-ask')?.setAttribute('hidden', '');
+              if (line) {
+                line.textContent = ownLine;
+                line.hidden = false;
+              }
+            },
+          },
+          ...objections.map((o, i) => ({
+            img: faces[i] ?? null,
+            id: o.advisor.id,
+            line: o.says,
+            before: () => said[i]?.removeAttribute('hidden'),
+          })),
         ]);
       };
 
