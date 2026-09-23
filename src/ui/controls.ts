@@ -28,6 +28,7 @@ export const SHORTCUTS: Control[] = [
   { group: 'Units', keys: 'E', does: 'Explore: walk toward the unknown, halting at the first new sighting' },
   { group: 'Units', keys: 'Right-click your ship', does: 'Go aboard it, from the shore next to it' },
   { group: 'Units', keys: 'W', does: 'All ashore: everybody off the ship, onto the free shore beside it' },
+  { group: 'Map', keys: 'V', does: "Show or hide each side's land, edged in its own colour" },
   { group: 'Units', keys: 'Shift+I', does: 'Irrigate: a worker, after Tree-Hugging, beside water' },
   { group: 'Units', keys: 'Shift+M', does: 'Mine hills or mountains: a worker, after Tree-Hugging' },
   { group: 'Units', keys: 'Shift+C', does: 'Clear a forest or swamp to grassland: a worker' },
