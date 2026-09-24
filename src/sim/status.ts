@@ -37,7 +37,24 @@ export const STATUS_RULES: Record<StatusKind, { label: string; blurb: string }> 
   frozen: { label: 'Frozen', blurb: 'Moves at half pace until it thaws.' },
   confused: { label: 'Confused', blurb: 'Cannot tell friend from enemy.' },
   spent: { label: 'Spent', blurb: 'Cannot regenerate for the moment.' },
+  cowed: { label: 'Cowed', blurb: 'Swings softly: something enormous shouted at it.' },
 };
+
+/**
+ * What being shouted at costs, section 121.
+ *
+ * The first status that touches a *number* rather than movement, health or
+ * healing -- taken off the base attack before every multiplier, so ten orcs
+ * that have been bellowed at swing like ten orcs each a point worse, rather
+ * than the stack losing one point between them.
+ *
+ * **Never below `floor`.** A flat minus one would switch the cheapest units in
+ * the game off entirely -- a Goblin attacks at one -- and section 120 is the
+ * standing warning about rules from the wilds that happen to fall on whoever
+ * fields the cheap units, which is the Horde. Every unit still swings; the ones
+ * worth being frightened of swing worse.
+ */
+export const COWED = { attack: 1, floor: 1 };
 
 /** Share of maximum health lost per turn while alight. */
 export const BURN_DAMAGE = 0.1;

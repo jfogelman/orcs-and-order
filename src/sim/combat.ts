@@ -9,7 +9,7 @@ import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
 import { hasFlag } from './rules';
-import { SPELL_TURNS, applyStatus } from './status';
+import { COWED, SPELL_TURNS, applyStatus, hasStatus } from './status';
 import { empireBonus, heldFollies, isMounted } from './follyEffects';
 
 /**
@@ -107,6 +107,8 @@ export interface StrengthBreakdown {
   /** Attack multiplier from sallying out of a city that has the means. */
   sallyMult: number;
   berserk: boolean;
+  /** Section 121: something enormous shouted at it, and it is swinging softly. */
+  cowed?: boolean;
 }
 
 /**
@@ -342,6 +344,12 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
 
   // Section 111: built beside the Loudest Rock, and it swings a little harder for good.
   let total = type.attack + (attacker.drilled ?? 0);
+  // Section 121: and a point off it for anything an Ogre Clan Brute bellowed at
+  // last turn. Taken here, off the base, so it scales with the stack the way
+  // every other attack number does -- and floored, so the cheapest units are
+  // made worse rather than switched off.
+  const cowed = hasStatus(attacker, 'cowed');
+  if (cowed) total = Math.max(COWED.floor, total - COWED.attack);
   // Losses. Ten Orcs that have taken half the damage they can take are Five
   // Orcs, and swing like five, which is what stops a big enough stack being
   // the answer to every question in the game. A singleton is unaffected.
@@ -369,6 +377,7 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
     siegeMult,
     sallyMult,
     berserk,
+    cowed,
   };
 }
 

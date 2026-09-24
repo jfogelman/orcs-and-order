@@ -46,6 +46,7 @@ import {
   tileYield,
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
+import { COWED, hasStatus } from '../sim/status';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
@@ -301,7 +302,13 @@ function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
-  const atk = a.attack * rankBonus(attacker) * (attacker.hp / a.hp);
+  // Section 121: something bellowed at it last turn, and this is the number the
+  // real fight will use. Left out, the AI would throw cowed units at things on
+  // odds it no longer has -- which is exactly the mistake the rule is for.
+  const swing = hasStatus(attacker, 'cowed')
+    ? Math.max(COWED.floor, a.attack - COWED.attack)
+    : a.attack;
+  const atk = swing * rankBonus(attacker) * (attacker.hp / a.hp);
   const def =
     d.defense *
     rankBonus(defender) *

@@ -89,7 +89,7 @@ import type { AbilityId } from './sim/abilities';
 import { controlsMarkup } from './ui/controls';
 import { chooseFocus } from './ui/watch';
 import { newCrises } from './model/advisors';
-import { STATUS_RULES, statusesOf } from './sim/status';
+import { COWED, STATUS_RULES, hasStatus, statusesOf } from './sim/status';
 import { openAudioMenu, openNewGameMenu, openPerkMenu, openSaveMenu, openTitleMenu } from './ui/menus';
 import { openPedia } from './ui/pedia';
 import { canReplay, openReplay } from './ui/replay';
@@ -2032,7 +2032,14 @@ class App {
              title="Look it up in the Orcpedia">${escapeHtml(t.name)}</a>${unit.rank > 0 ? ` <span class="muted">· ${RANK_NAMES[unit.rank] ?? 'veteran'}</span>` : ''}
         </div>
         <div class="panel-body">
-          <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${t.attack} / ${t.defense}</span></div>
+          <div class="stat-row"><span class="label">Attack / Defence</span><span class="value">${
+            // Section 121: the number it will actually swing with, when an ogre
+            // has been shouting at it. A panel that still reads "4" while the
+            // fight uses three is a panel telling you something untrue.
+            hasStatus(unit, 'cowed')
+              ? `<span class="k-bad">${Math.max(COWED.floor, t.attack - COWED.attack)}</span> / ${t.defense}`
+              : `${t.attack} / ${t.defense}`
+          }</span></div>
           <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${t.hp}</span></div>
           <div class="stat-row"><span class="label">Movement</span><span class="value">${formatMoves(unit.moves)} / ${t.move}</span></div>
           ${
