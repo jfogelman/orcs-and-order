@@ -114,14 +114,16 @@ describe('what a dead raider was carrying', () => {
  * not stop it; a town does.
  */
 describe('the chieftain calls somebody up', () => {
-  // Switched off in the shipped game -- three sweeps put it on the Horde's side
-  // of the scales -- so these turn it on to test the rule itself. The switch
-  // being obeyed is its own test, below.
+  // On in the shipped game since section 120, which found what the three
+  // sweeps that switched it off were actually seeing: the wilds hunted whoever
+  // was out walking, and the Horde is the side that marches. Set and restored
+  // rather than assumed, so these test the rule and not the default.
+  const shipped = RAIDER_TIERS.leader.summons;
   beforeEach(() => {
     RAIDER_TIERS.leader.summons = true;
   });
   afterEach(() => {
-    RAIDER_TIERS.leader.summons = false;
+    RAIDER_TIERS.leader.summons = shipped;
   });
 
   function lair(): { state: GameState; chief: Unit } {

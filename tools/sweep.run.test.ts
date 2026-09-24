@@ -12,6 +12,7 @@ import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { RAIDER_TIERS } from '../src/sim/wilds';
+import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
@@ -80,6 +81,13 @@ const control = () => {
   NAVAL.crossFor = 1.2;
   NAVAL.beachhead = 1;
   RAIDER_TIERS.enabled = true;
+  RAIDER_TIERS.leader.summons = false;
+  // Section 120: what a band walks at. On in the shipped game; off is the old
+  // rule, which is the arm this was measured against.
+  PREY.enabled = true;
+  PREY.town = 4;
+  PREY.works = 3;
+  PREY.mob = 3;
   PEACE.enabled = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
@@ -99,23 +107,35 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Which half of the archipelago work did what. The expansion half is in both
-  // arms; the beachhead -- soldiers ashore waiting for the rest before they go
-  // at a town -- is the only difference. Measured because fights and captures
-  // both *fell* when the two went in together.
+  // Section 120, and the whole question in three arms. All three have raiders
+  // in them, which the shipped baseline does not: a rule about what a raiding
+  // band walks at cannot be measured in a game with no raiders.
+  //
+  //   1. the wilds as they shipped -- the nearest thing, whatever it is
+  //   2. the same wilds going for what somebody built instead
+  //   3. and then the chieftain's summons switched on, on top of 2, which is
+  //      what section 115 parked and what this is all for
   {
-    label: 'no beachhead',
+    label: 'nearest thing',
     apply: () => {
       control();
-      NAVAL.beachhead = 1;
-      NEW_GAME.world = 'archipelago';
+      NEW_GAME.barbarians = true;
+      PREY.enabled = false;
     },
   },
   {
-    label: 'beachhead',
+    label: "somebody's work",
     apply: () => {
       control();
-      NEW_GAME.world = 'archipelago';
+      NEW_GAME.barbarians = true;
+    },
+  },
+  {
+    label: 'work + summons',
+    apply: () => {
+      control();
+      NEW_GAME.barbarians = true;
+      RAIDER_TIERS.leader.summons = true;
     },
   },
 ];

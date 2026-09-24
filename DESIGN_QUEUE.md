@@ -9285,6 +9285,12 @@ to be kept on the queue):
   `RAIDER_TIERS.leader.summons` can come on; the code and its tests are kept
   for that day.
 
+  > **That diagnosis was wrong, and section 120 is the correction.** Measured
+  > rather than reasoned: the Horde keeps its towns better than the Kingdom
+  > does, and sacking is even. What the extra raiders took off the Horde was
+  > *soldiers in the field*, because a band walked at the nearest thing and the
+  > Horde is the side that marches. The rule changed instead of the garrisons.
+
   **And a cap, which measurement asked for.** Summons as first built took the
   game off the Horde: 42-66, against 56-51 with grunts alone and 53-55 with the
   tiers and no summons. One chieftain left alone from the mid-game on calls up a
@@ -9552,3 +9558,112 @@ Five advisor lines began with a spelled number straight out of `spell`, which
 is lower case: "Orcs. one of them, in the open, unpunished." They are wrapped in
 `sentence` now. Visible in the Knight-Marshal's war line, which is exactly the
 one this section makes you click for.
+
+## 120. What a raiding band is out here for
+
+Asked for as **"the Horde's garrisons"** -- section 115 switched the chieftain's
+summons off and named the cause: *"extra raiders land hardest on whoever keeps
+the thinner garrisons, and that is the Horde, whose army is out."* That was
+reasoning, not measurement, and it was wrong.
+
+### The probe that said so
+
+`tools/garrison.run.test.ts` (`npm run garrison`), which plays whole games with
+raiders on and watches where each side's army stands. It counts towns with
+nobody on the tile, soldiers at home against soldiers afield, and -- because
+there is no "a unit died" event to read -- works out who killed what by watching
+the board: a unit that was there last half-turn and is not there now, with a
+raider beside where it stood, was killed by raiders.
+
+Seventy-two games, two seed sets, summons off and on:
+
+| | Horde | Kingdom |
+|---|---|---|
+| towns standing open | **25%** | **45%** |
+| sacks a game | 0.39-0.44 | 0.39-0.50 |
+| soldiers lost to raiders a game | **10.7-11.7** | **3.6-6.2** |
+| settlers lost to raiders a game | 0.2-0.5 | 0.1-0.2 |
+
+**The Horde keeps its towns better than the Kingdom does**, and sacking is not
+where the damage is: four tenths of a game each, about evenly. What the wilds
+actually take off the Horde is *soldiers in the field* -- three times as many.
+
+### Why the old rule had a side to it
+
+Raiders walked at **the nearest thing that was not theirs**, and `nearestPrey`
+counted units and cities alike. The Horde's army is the one out walking, so a
+rule that hunts whatever is nearest is a tax on marching -- and every raider
+added to the game charged it again. That is why three separate sweeps put the
+chieftain's summons on the Horde's side of the scales, and no amount of tuning
+`summonEvery` was ever going to fix it.
+
+### What they want now (Jeremy, 2026-09-23)
+
+> Raiders go for towns and terrain improvements, several times over a unit, but
+> they will attack a unit if the raider is alone and cannot easily escape, or
+> there are a lot of them (even much weaker).
+
+Built as `PREY` in `src/sim/barbarians.ts`:
+
+- **A town** is worth walking `town` (4) times as far as a body in a field.
+- **A road, a ditch, a mine or a post** is worth `works` (3) times as far, within
+  `worksRange` (8) of where the band is standing. Scored as distance over
+  weight, so a ditch three steps off still beats a town across the map.
+- **Bodies count only to a mob**: `mob` (3) raiders or more within `together`
+  (3) tiles of each other, and then they will have a go at anything, however
+  badly it ends.
+- **One of them, cornered**, fights: alone, somebody adjacent, and every tile it
+  could step to leaves it just as close. Backing away from a fight it cannot
+  leave would be worse than swinging.
+- Somebody **in the way** is still hit, because the step into them is an attack.
+  That is unchanged, and it is most of the fighting raiders ever do.
+
+Two things fell out of building it, both caught by tests:
+
+- **Never the tile underfoot.** Nothing is nearer than where you are standing,
+  so a ditch there scored zero and beat a town one step away -- a band tearing
+  up a road beside an open gate. Underfoot is the pillage rule's business.
+- **A long road is not a trail of targets.** With every neighbouring road tile
+  scoring as prey, a band walked the length of the road for ever, each tile
+  promising the next. So the pillage rule now turns on *what* is adjacent: a
+  town or a body is dealt with first, more road is not.
+
+### Measured
+
+108 games an arm, two seed sets, **all three with raiders in them** -- a rule
+about what a band walks at cannot be measured in a quiet game.
+
+| arm | Horde-Kingdom | cities H/K | population | sacked H/K | roads joined |
+|---|---|---|---|---|---|
+| the wilds as they were | **47-61** | 5.05/6.45 | 47.4/49.8 | 0.7/0.6 | 69%/70% |
+| after somebody's work | **52-55** | 5.54/6.19 | 48.2/49.1 | 1.1/0.9 | 67%/65% |
+| ...and the summons on | **55-52** | 5.27/6.24 | 45.7/48.9 | 1.1/0.9 | 66%/69% |
+
+- **The wilds stop taxing whoever marches.** Fourteen games in the Kingdom's
+  favour becomes three, and the city gap closes from 1.40 to 0.65. Both seed
+  sets move the same way (23-31 to 25-29, and 24-30 to 27-26), which is what
+  makes a five-game shift worth believing at this sample size.
+- **Sacking roughly doubles**, 0.7 to 1.1 a game, and that is the rule doing
+  what it says: bands walk at towns now. It lands about evenly on the two
+  sides, which is the whole difference from the old rule.
+- **Roads survive.** The share of towns joined to their capital is within a few
+  points across all three arms, so bands tearing up roads has not quietly
+  undone section 106's trade routes.
+
+### And the summons come on
+
+Section 115 parked `RAIDER_TIERS.leader.summons` with a plan: fix the cause,
+sweep that alone, then switch summoning on and sweep again. The third arm is
+that second sweep, and it says **55-52** -- a game the Horde is very slightly
+ahead in, against 42-66 and 47-61 when the same rule was measured against the
+old wilds. Whatever those three sweeps were seeing, it was not the summons.
+
+`summonEvery` (6) and `bandCap` (5) are unchanged. They were tuned against the
+old rule and could be looked at again, but nothing in this arm asks for it.
+
+### What is still true from section 115
+
+A band is pressure, not a third empire. One chieftain in the world, five
+raiders in the wilds, and they still cannot take a city -- section 69's line
+holds, and none of this touches how a game is won.
+

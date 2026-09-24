@@ -79,6 +79,50 @@ export const BARBARIANS = {
 };
 
 /**
+ * What a raiding band is actually out here for. Section 120.
+ *
+ * They used to walk at **the nearest thing that was not theirs**, and a unit
+ * standing in a field counted the same as a town. That is a rule with a side to
+ * it, which took three sweeps and a probe to see: the Horde's army is the one
+ * out walking, so the Horde lost **eleven soldiers a game** to the wilds
+ * against the Kingdom's four, while towns were sacked about four tenths of a
+ * game each and the two sides' *garrisons* turned out to be the wrong suspect
+ * entirely -- the Horde keeps a body in its towns rather more often than the
+ * Kingdom does. Adding raiders therefore taxed whoever marched, which is why
+ * the chieftain's summons could never be switched on.
+ *
+ * So a band now goes for **what somebody built**: a town first, and after that
+ * a road, a ditch, a mine or a post -- each weighed several times over a body
+ * in a field. Somebody in the way is still hit, because the step into them is
+ * an attack, and two things still make a band turn on a unit on purpose:
+ *
+ * - **a mob**, `mob` of them or more within sight of each other, which will
+ *   have a go at anything however badly it ends;
+ * - **one of them, cornered**, with somebody adjacent and nowhere to back off
+ *   to, which fights because the alternative is being cut down walking away.
+ *
+ * Weights rather than a flat rule, so that a ditch three steps off still beats
+ * a town across the map and each of them is one number to move in a sweep. What
+ * is *underfoot* is not a target at all -- nothing is nearer than where you are
+ * already standing, so it won every contest it entered -- and tearing that up
+ * is left to the pillage rule it always belonged to.
+ */
+export const PREY = {
+  /** Off is section 69's original rule: the nearest thing, whatever it is. */
+  enabled: true,
+  /** How much further a band will walk for a town than for somebody wandering. */
+  town: 4,
+  /** ...and for a road, a ditch, a mine or a post: something somebody dug. */
+  works: 3,
+  /** Raiders within sight of each other before the band will take on anything it meets. */
+  mob: 3,
+  /** How near they have to be to count as one band for that. */
+  together: 3,
+  /** How far around itself a band looks for somebody's diggings. */
+  worksRange: 8,
+};
+
+/**
  * Marks a log entry as a city of somebody's being raided.
  *
  * So it can be counted by something that is not reading the wording: the sweep
@@ -333,14 +377,37 @@ export function runRaiders(state: GameState, playerId: number): void {
       if (retreatToSummon(state, raider)) continue;
     }
 
+    // Cornered, and on its own: swing rather than be cut down walking away.
+    const pinned = PREY.enabled ? cornered(state, raider) : null;
+    if (pinned) {
+      tryStep(state, raider, pinned.x, pinned.y);
+      continue;
+    }
+
     const target = nearestPrey(state, raider);
-    if (!target) continue;
+    // Nothing anywhere worth walking at -- no towns standing, nobody's diggings
+    // within reach. Wreck whatever is underfoot rather than stand in a field
+    // looking at it. Only reachable on a board with no cities at all, which is
+    // to say almost never, but "does nothing for ever" is not a good default.
+    if (!target) {
+      pillage(state, raider);
+      continue;
+    }
     // Section 96: the road underfoot, when there is nothing within reach worth
     // hitting. Raiders who stopped to dig with a city next door would be doing
     // the empire a favour, and a band that tore up every tile it crossed would
     // never arrive anywhere -- so this is what they do instead of a step they
     // were not going to profit from.
-    if (distance(raider.x, raider.y, target.x, target.y) > 1 && pillage(state, raider)) continue;
+    //
+    // Section 120 turns this on what is *adjacent* rather than on distance
+    // alone, because diggings are now something they walk towards. A town or a
+    // body one step away is dealt with first; more road one step away is not,
+    // or a band on a long road would walk the length of it for ever, each tile
+    // promising the next. So: nothing urgent next door, wreck what is underfoot.
+    const urgent =
+      distance(raider.x, raider.y, target.x, target.y) <= 1 &&
+      (!PREY.enabled || target.kind !== 'works');
+    if (!urgent && pillage(state, raider)) continue;
     stepToward(state, raider, target.x, target.y);
   }
 }
@@ -377,21 +444,117 @@ function retreatToSummon(state: GameState, chief: Unit): boolean {
   return tryStep(state, chief, best[0], best[1]).kind === 'moved';
 }
 
-function nearestPrey(state: GameState, raider: Unit): { x: number; y: number } | null {
-  let best: { x: number; y: number } | null = null;
-  let bestAway = Infinity;
-  const consider = (x: number, y: number) => {
-    const away = distance(raider.x, raider.y, x, y);
-    if (away < bestAway) {
-      bestAway = away;
-      best = { x, y };
+/** Raiders close enough to this one to be the same band. */
+function bandAround(state: GameState, raider: Unit): number {
+  return state.units.filter(
+    (u) =>
+      u.owner === raider.owner && distance(u.x, u.y, raider.x, raider.y) <= PREY.together,
+  ).length;
+}
+
+/** Whether somebody has dug, built or laid anything on this tile. */
+function somebodysWork(state: GameState, x: number, y: number): boolean {
+  const i = idx(x, y, state.width);
+  return (
+    state.roads?.[i] === 1 ||
+    state.posts?.[i] === 1 ||
+    state.irrigation?.[i] === 1 ||
+    state.mines?.[i] === 1
+  );
+}
+
+/**
+ * The one of them on its own, with somebody on top of it and nowhere to back
+ * off to. Returns who to swing at, or null.
+ *
+ * "Cannot easily escape" is meant literally: every neighbouring tile it could
+ * stand on leaves it just as close to whoever is adjacent. A band with room to
+ * walk away walks away -- it is not out here to fight soldiers -- and one with
+ * its back to the water or its own friends does not get to.
+ */
+function cornered(state: GameState, raider: Unit): Unit | null {
+  if (bandAround(state, raider) > 1) return null;
+  const foes = state.units.filter(
+    (u) => u.owner !== raider.owner && distance(u.x, u.y, raider.x, raider.y) <= 1,
+  );
+  if (foes.length === 0) return null;
+  const clearOf = (x: number, y: number) =>
+    foes.reduce((near, f) => Math.min(near, distance(f.x, f.y, x, y)), Infinity);
+  for (const [dx, dy] of DIRS8) {
+    const x = raider.x + dx;
+    const y = raider.y + dy;
+    if (!inBounds(x, y, state.width, state.height)) continue;
+    if (TERRAIN[state.terrain[idx(x, y, state.width)]].water) continue;
+    if (state.units.some((u) => u.x === x && u.y === y)) continue;
+    if (state.cities.some((c) => c.x === x && c.y === y)) continue;
+    if (clearOf(x, y) > 1) return null;
+  }
+  // Nowhere to go: the one it is likeliest to survive, which is the weakest.
+  return [...foes].sort(
+    (a, b) => unitType(a.type).defense - unitType(b.type).defense || a.id - b.id,
+  )[0];
+}
+
+/** What a band is walking at, and which sort of thing it is. */
+interface Prey {
+  x: number;
+  y: number;
+  /** Diggings are the one kind that waits: see the pillage rule in `runRaiders`. */
+  kind: 'town' | 'works' | 'body';
+}
+
+/**
+ * What this band walks at: the best of what is worth having, by ground covered.
+ *
+ * Scored as distance over weight, so a town four times a unit's weight is worth
+ * walking four times as far for. Section 120; see `PREY`.
+ */
+function nearestPrey(state: GameState, raider: Unit): Prey | null {
+  let best: Prey | null = null;
+  let bestScore = Infinity;
+  const weigh = (x: number, y: number, weight: number, kind: Prey['kind']) => {
+    const score = distance(raider.x, raider.y, x, y) / weight;
+    if (score < bestScore) {
+      bestScore = score;
+      best = { x, y, kind };
     }
   };
-  for (const u of state.units) {
-    if (u.owner === raider.owner) continue;
-    consider(u.x, u.y);
+
+  if (!PREY.enabled) {
+    for (const u of state.units) if (u.owner !== raider.owner) weigh(u.x, u.y, 1, 'body');
+    for (const c of state.cities) weigh(c.x, c.y, 1, 'town');
+    return best;
   }
-  for (const c of state.cities) consider(c.x, c.y);
+
+  for (const c of state.cities) {
+    if (state.players[c.owner]?.barbarian) continue;
+    weigh(c.x, c.y, PREY.town, 'town');
+  }
+  // Somebody's diggings, within a walk. Bounded rather than whole-map because
+  // this runs for every raider every turn, and because a ditch on the far side
+  // of the world is not what a band standing here is going to go and ruin.
+  const r = PREY.worksRange;
+  for (let y = raider.y - r; y <= raider.y + r; y++) {
+    for (let x = raider.x - r; x <= raider.x + r; x++) {
+      if (!inBounds(x, y, state.width, state.height)) continue;
+      // Never the tile underfoot. Nothing is nearer than where you are already
+      // standing, so a ditch there scored zero and beat a town one step away --
+      // and a band that tears up a road beside an open gate has missed the
+      // point of a raid. What is underfoot is the pillage rule's business,
+      // below, and it fires when there is nothing adjacent worth doing first.
+      if (x === raider.x && y === raider.y) continue;
+      if (!somebodysWork(state, x, y)) continue;
+      weigh(x, y, PREY.works, 'works');
+    }
+  }
+  // Bodies, only when there are enough of them to fancy it. One raider walking
+  // past a soldier is a raider with something better to do.
+  if (bandAround(state, raider) >= PREY.mob) {
+    for (const u of state.units) {
+      if (u.owner === raider.owner) continue;
+      weigh(u.x, u.y, 1, 'body');
+    }
+  }
   return best;
 }
 

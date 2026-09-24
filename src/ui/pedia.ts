@@ -11,7 +11,7 @@ import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
-import { BARBARIANS, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
+import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
@@ -546,6 +546,17 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           anything that would trouble a wall.
           <strong>One unit in a city is usually enough to stop them</strong>, which is the
           entire lesson.
+        </p>
+        <p class="flavor">
+          <strong>They are after what somebody built.</strong> A band walks at the nearest
+          town, and after that at roads, ditches, mines and garrison posts &mdash; each
+          worth several times the walk they would make for somebody standing in a field.
+          A unit in the way is still hit, because the step into it is an attack, and two
+          things make them turn on one on purpose: <strong>a mob</strong> of
+          ${PREY.mob} or more of them within sight of each other, which will have a go at
+          anything however badly it ends, and <strong>one of them cornered</strong>, with
+          somebody next to it and nowhere to back off to. A lone raider with room to walk
+          away will walk away: soldiers are not what it came for.
         </p>
         <p class="flavor">
           You are told twice, and the two mean different things. When a wave lands

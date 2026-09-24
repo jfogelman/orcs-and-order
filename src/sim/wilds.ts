@@ -42,7 +42,7 @@ export const RAIDER_TIERS = {
     from: 18,
     bounty: 50,
     /**
-     * Whether a chieftain calls anybody up. **Off, and measured off.**
+     * Whether a chieftain calls anybody up. **On since section 120.**
      *
      * The rule works and reads well -- it retreats out of sight of a town to
      * grow, which is the right shape -- but three measurements in a row put it
@@ -52,17 +52,36 @@ export const RAIDER_TIERS = {
      * grunts alone. Each is close to the noise a hundred-odd games can produce;
      * three pointing the same way is not.
      *
-     * The cause is not this rule. Extra raiders land hardest on whoever keeps
-     * the thinner garrisons, and that is the Horde, whose army is out. Fix that
-     * and this can come on: the code and its tests stay for that day.
+     * The cause is not this rule, and the cause written here was wrong.
+     * Section 120 went and measured it: the Horde keeps a body in its towns
+     * *more* often than the Kingdom does (towns standing open 25% against 45%),
+     * and sacking is four tenths of a game each. What the wilds actually took
+     * off the Horde was soldiers in the field -- eleven a game against four --
+     * because raiders walked at the nearest thing and the Horde's army is the
+     * one out walking. Every raider added charged that tax again, which is what
+     * these three measurements were seeing.
+     *
+     * With that rule changed -- a band goes for towns and diggings now, not for
+     * whoever is nearest -- this was measured again over 108 games an arm, and
+     * the thing it was blamed for is gone:
+     *
+     *   the wilds as they were, no summons   47-61
+     *   bands after somebody's work          52-55
+     *   ...and the chieftain calling people  **55-52**
+     *
+     * Summoning costs the Horde nothing it can be shown to mind once the wilds
+     * stop taxing whoever marches, so it comes on. `summonEvery` and `bandCap`
+     * are unchanged: they were tuned against the old rule, and the arm above
+     * says they need no second look yet.
      */
-    summons: false,
+    summons: true,
     /**
      * Turns between the ones it calls up. The bible says three; measurement
      * says six. At three the wilds took the game off the Horde -- see the cap
-     * below -- because summons added raiders faster than waves do, and the
-     * Horde keeps the thinner garrisons. At six they add pressure at about the
-     * pace a wave already does.
+     * below -- because summons added raiders faster than waves do, and every
+     * extra raider was another tax on the side that marches (section 120). At
+     * six they add pressure at about the pace a wave already does, and six is
+     * what the arm that switched summoning on was measured at.
      */
     summonEvery: 6,
     /**
@@ -70,9 +89,9 @@ export const RAIDER_TIERS = {
      *
      * Measured: with summons every three turns and a cap of eight the wilds
      * took the game off the Horde -- 42-66 uncapped, 44-64 capped, against
-     * 56-51 with grunts alone -- because the extra raiders land on whoever
-     * keeps the thinner garrisons, and the Horde's army is out. Eight rarely
-     * bound at all, since a wave brings at most five. Five does.
+     * 56-51 with grunts alone. (Section 120 found the real reason for that: the
+     * wilds hunted whoever was out walking. The cap stays regardless.) Eight
+     * rarely bound at all, since a wave brings at most five. Five does.
      *
      * A band is pressure; an army is a third empire, and section 69 is
      * emphatic that the wilds must not become one.
