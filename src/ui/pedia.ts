@@ -12,6 +12,7 @@ import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
+import { COWED } from '../sim/status';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
@@ -588,6 +589,16 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         </p>`
             : ''
         }
+        <p class="flavor">
+          <strong>Standing next to an Ogre Clan Brute costs you the first blow.</strong>
+          Anything of yours within reach of one at the end of their turn is
+          <em>cowed</em>: it attacks at ${COWED.attack} less for that turn, never below
+          ${COWED.floor}. Anything that already swings at ${COWED.floor} is not marked at all
+          &mdash; a Goblin cannot be made worse at fighting, and is too stupid to be
+          frightened besides. Killing the brute afterwards does not undo it; the only way
+          out of it is not to be standing there when the horn goes. The brute swings no
+          harder for any of it, which is not what it is for.
+        </p>
         <p class="flavor">
           The two big ones are worth killing: a Brute is carrying
           ${RAIDER_TIERS.elite.bounty} gold and a Chieftain ${RAIDER_TIERS.leader.bounty},

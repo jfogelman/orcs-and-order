@@ -410,6 +410,7 @@ export function runRaiders(state: GameState, playerId: number): void {
     if (!urgent && pillage(state, raider)) continue;
     stepToward(state, raider, target.x, target.y);
   }
+
 }
 
 /**

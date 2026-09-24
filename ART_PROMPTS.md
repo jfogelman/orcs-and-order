@@ -1619,3 +1619,21 @@ tail pointing **down and to the left**, at the face they belong to.
 They are drawn at 48x48 today and shown at 32; anything square and larger is
 fine, since the pipeline scales them down.
 
+## The `cowed` overlay (section 121)
+
+The Ogre Clan Brute's bellow marks whoever is standing next to it, and a unit
+that quietly swings a point softer with nothing drawn on it reads as a bug --
+the same argument that got the other four conditions their overlays. Same
+recipe as those: **hollow through the middle**, no creature, tile-sized, and a
+guttering second version for its last turn.
+
+Save as `art_src/status/cowed.<ext>` and `art_src/status/cowed-fading.<ext>`.
+
+| id | prompt |
+|---|---|
+| `cowed` | Three curved white motion arcs recoiling outward from the upper left, like something flinching away from a shout, hollow through the centre, pixel art, thick black outline, flat magenta background, no ground, no creature, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+| `cowed-fading` | The same three curved white recoil arcs, thinner and half as many, fading at the ends, hollow through the centre, pixel art, thick black outline, flat magenta background, no ground, no creature, single frame, 90s fantasy strategy game effect |
+
+Until they land the rule still works and says so in the unit panel -- the
+overlay loader remembers a miss and draws nothing.
+

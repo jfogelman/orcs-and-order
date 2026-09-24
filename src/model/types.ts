@@ -308,7 +308,7 @@ export type AutoBuild = 'ask' | 'repeat' | 'coin';
  * Deliberately separate from `disarmed`, which is a bare boolean with no
  * duration and ends by killing something rather than by waiting.
  */
-export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent';
+export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed';
 
 export interface Status {
   kind: StatusKind;

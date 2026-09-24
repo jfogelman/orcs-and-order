@@ -9667,3 +9667,92 @@ A band is pressure, not a third empire. One chieftain in the world, five
 raiders in the wilds, and they still cannot take a city -- section 69's line
 holds, and none of this touches how a game is won.
 
+## 121. The Ogre Clan Brute shouts at people
+
+The second of the two specials section 115 skipped, and the one it said was
+blocked: *"Units next to it attack at -1 next turn. Needs a new status on our
+units, which is a bigger piece: the status layer exists, but nothing there
+currently modifies attack."*
+
+### The status layer grows a number
+
+`cowed` joins burning, frozen, confused and spent, and is the first condition in
+the game that touches a **fighting number** rather than movement, health or
+healing. `COWED` lives in `status.ts` beside `BURN_DAMAGE` and `FREEZE_SLOW`,
+because that file's whole job is to have the magnitudes in one readable place:
+
+- **`attack: 1`**, taken off the base before every multiplier, so ten orcs that
+  have been bellowed at swing like ten orcs each a point worse rather than the
+  stack losing one point between them.
+- **`floor: 1`**, and this is section 120's lesson applied before it could bite
+  again: a flat minus one switches off the cheapest units in the game -- a
+  Goblin attacks at one -- and a rule from the wilds that falls hardest on
+  whoever fields cheap units is a rule that falls on the Horde. Anything already
+  swinging at the floor is **not marked at all**, so no panel says "swings
+  softly" over a number that has not moved.
+
+### Asked at the top of the turn, not when the ogre moves
+
+First built as a thing the brute did when it finished moving, which was wrong
+twice over: a brute walks on most turns, so it caught almost nobody, and whether
+you were cowed depended on the order the wilds happened to move in. The rule
+reads *units next to it attack at -1 next turn*, so the question is now asked at
+the **start of each side's turn**, of whoever is standing beside a brute right
+then -- after conditions tick down, so the mark laid is the one that turn's
+fighting uses. Asking it again every turn is also what ends it.
+
+That makes the cost clean: **standing next to an ogre when the horn goes costs
+you the first blow.** Killing the brute afterwards does not undo it. Walking
+away does.
+
+### The rest of it
+
+- **The brute swings no harder.** It is already the hardest thing in a wave, and
+  an ability that improved its own attacks as well would be two rules in one
+  name.
+- **The AI's `attackOdds` knows about it**, or it would throw cowed units at
+  things on odds it no longer has -- which is precisely the mistake the rule
+  exists to create for a *player*.
+- **The panel shows the number it will actually swing with**, in red, plus the
+  standing status line. A panel reading 3 while the fight uses 2 is a panel
+  telling you something untrue.
+- **Art:** one more hollow overlay, `cowed` and `cowed-fading`, prompted in
+  ART_PROMPTS.md. Until it lands the rule still works and still says so in the
+  panel; the overlay loader remembers a miss and draws nothing.
+
+### Measured
+
+108 games an arm, two seed sets, raiders on and carrying section 120's wilds --
+an ability only a raider has cannot be measured in a quiet game.
+
+| arm | Horde-Kingdom | cities H/K | population | fights | captures |
+|---|---|---|---|---|---|
+| a quiet ogre | 55-52 | 5.27/6.24 | 45.7/48.9 | 22.5 | 5.1 |
+| it shouts | 52-56 | 5.24/6.33 | 46.0/50.4 | 21.5 | 4.8 |
+
+**Three games, and not established.** Both sets lean the same way -- 27-26 to
+26-28 and 28-26 to 26-28 -- which is the first of the two things that make a
+shift this size worth believing, but the second is missing: nothing else moved.
+Cities are flat to two decimal places on the Horde's side, population is up a
+point and a half for the Kingdom, and fights and captures are each down about
+half a one. That is a game with a new tactical wrinkle in it, not a game whose
+balance moved.
+
+**The direction is the one to expect, and worth naming.** A penalty on
+*attacking* costs the side that attacks, and that is the Horde by design -- the
+same family of asymmetry section 120 spent itself on. It is much smaller here,
+because the mark is one point, floored, and only lands on somebody who chose to
+stand next to an ogre. If a later raider change leans the same way again, these
+three games are part of the pattern to re-measure rather than a result to
+inherit.
+
+Shipping on. `INTIMIDATE.enabled` switches it off, and `COWED.floor` is the
+knob that blunts it without removing it.
+
+### What is left of the raider bible
+
+Two of the four specials are now in: the chieftain's summons (section 115, on
+since 120) and this. The **Sunken Legion** -- drowned raiders landing from the
+sea, which section 114's ships make possible -- and the **Tomb Wardens** --
+guardians waking from ruins, which needs ruins -- are still queued.
+

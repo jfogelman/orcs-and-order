@@ -27,6 +27,7 @@ import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
+import { intimidateNeighbours } from './wilds';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
@@ -676,6 +677,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   }
 
   tickUnitStatuses(state, playerId);
+  // Section 121: and then anybody who woke up next to an Ogre Clan Brute is
+  // marked afresh. After the tick, so the mark is the one this turn uses.
+  intimidateNeighbours(state, playerId);
   refreshUnits(state, player);
   // Passengers get their legs back too, so they can step ashore this turn.
   refreshCargo(state, playerId);

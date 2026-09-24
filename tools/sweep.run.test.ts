@@ -11,7 +11,7 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
-import { RAIDER_TIERS } from '../src/sim/wilds';
+import { INTIMIDATE, RAIDER_TIERS } from '../src/sim/wilds';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -81,7 +81,11 @@ const control = () => {
   NAVAL.crossFor = 1.2;
   NAVAL.beachhead = 1;
   RAIDER_TIERS.enabled = true;
-  RAIDER_TIERS.leader.summons = false;
+  // Section 120 measured the chieftain's summons on and shipped them on, so a
+  // control that left them off would be measuring a game nobody plays.
+  RAIDER_TIERS.leader.summons = true;
+  // Section 121's bellow, likewise on in the shipped game; the arms move it.
+  INTIMIDATE.enabled = true;
   // Section 120: what a band walks at. On in the shipped game; off is the old
   // rule, which is the arm this was measured against.
   PREY.enabled = true;
@@ -107,35 +111,23 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 120, and the whole question in three arms. All three have raiders
-  // in them, which the shipped baseline does not: a rule about what a raiding
-  // band walks at cannot be measured in a game with no raiders.
-  //
-  //   1. the wilds as they shipped -- the nearest thing, whatever it is
-  //   2. the same wilds going for what somebody built instead
-  //   3. and then the chieftain's summons switched on, on top of 2, which is
-  //      what section 115 parked and what this is all for
+  // Section 121: the Ogre Clan Brute's bellow, which costs whoever is standing
+  // beside it a point of attack for a turn. Both arms have raiders in them --
+  // an ability only a raider has cannot be measured in a quiet game -- and both
+  // carry section 120's wilds, which is the game as it now ships.
   {
-    label: 'nearest thing',
+    label: 'a quiet ogre',
     apply: () => {
       control();
       NEW_GAME.barbarians = true;
-      PREY.enabled = false;
+      INTIMIDATE.enabled = false;
     },
   },
   {
-    label: "somebody's work",
+    label: 'it shouts',
     apply: () => {
       control();
       NEW_GAME.barbarians = true;
-    },
-  },
-  {
-    label: 'work + summons',
-    apply: () => {
-      control();
-      NEW_GAME.barbarians = true;
-      RAIDER_TIERS.leader.summons = true;
     },
   },
 ];
