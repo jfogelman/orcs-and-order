@@ -10,7 +10,7 @@ import { PEACE } from '../src/sim/diplomacy';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
-import { RAIDED } from '../src/sim/barbarians';
+import { PREY, RAIDED } from '../src/sim/barbarians';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
@@ -88,6 +88,7 @@ export const LEVERS: Record<string, object> = {
   NAVAL,
   GOBLIN_SCOUT,
   RAIDER_TIERS,
+  PREY,
   PEACE,
   DIPLOMACY_AI,
   ATTRITION,
