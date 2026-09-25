@@ -689,6 +689,61 @@ def process_cutouts(
     return done, missing, failed
 
 
+# A ruin is drawn over one tile, the way a city is, so it wants the tile's own
+# size at 2x rather than a unit's.
+RUIN_SIZE = 64
+
+
+def process_ruins(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Section 123's ruins: one per land terrain, plus the `awake` overlay.
+
+    Two shapes in one folder, and they are told apart by name rather than by a
+    table. The six ruins are single objects and are squared like any other
+    cutout; `awake` is an animation strip and is sliced like an effect, because
+    what it does is flicker over whichever ruin is underneath it.
+
+    Frame count comes off the *keyed* image rather than the file, for the reason
+    section 122's `surf` drop taught: a generator that leaves a band of magenta
+    above and below a four-frame strip makes it look like a two-frame one.
+    """
+    src = SRC / "ruins"
+    out = OUT / "ruins"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    failed: list[str] = []
+
+    wanted = [t for t in TERRAINS if t not in ("water", "deep")] + ["awake"]
+    for name in wanted:
+        path = find_source(src, name)
+        if path is None:
+            missing.append(name)
+            continue
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        keyed, cut_out = remove_background(Image.open(path))
+        if name == "awake":
+            box = keyed.getbbox()
+            if box:
+                keyed = keyed.crop(box)
+            frames = max(1, round(keyed.width / max(1, keyed.height)))
+            sheet = slice_strip(keyed, frames, RUIN_SIZE)
+            sheet.save(target, optimize=True)
+            print(f"  ruins/{name}.png ({frames} frames)")
+        else:
+            trim_and_square(keyed, RUIN_SIZE).save(target, optimize=True)
+            flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+            print(f"  ruins/{name}.png  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            failed.append(name)
+        done += 1
+    return done, missing, failed
+
+
 def cluster_layout(n: int) -> list[tuple[float, float]]:
     """
     Where each stamp sits, as a fraction of the icon, mirroring the layout the
@@ -2611,6 +2666,8 @@ def main() -> int:
     folk, folk_problems = process_citizens(force)
     print("Cities coming apart:")
     ruins, ruin_problems = process_city_effects(force)
+    print("Ruins:")
+    old_ruins, old_missing, old_failed = process_ruins(force)
     print("Promotion marks:")
     marks, mark_problems = process_promotions(force)
     print("Status overlays:")
@@ -2636,7 +2693,7 @@ def main() -> int:
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
         f"{states} state sheets, {folk} citizen sheets, {marks} promotion marks, "
         f"{status} status overlays, {wins} victory screens, "
-        f"{ruins} ruin animations, "
+        f"{ruins} ruin animations, {old_ruins} ruins, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )
