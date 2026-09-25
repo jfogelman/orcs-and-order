@@ -12,6 +12,7 @@ import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
+import { LEGION } from '../sim/wilds';
 import { COWED } from '../sim/status';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
@@ -608,6 +609,38 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <div class="pedia-grid">${[RAIDER, RAIDER_TIERS.elite.id, RAIDER_TIERS.leader.id]
           .map((id) => unitCard(UNIT_TYPES[id]))
           .join('')}</div>
+        ${
+          LEGION.enabled
+            ? `<p class="flavor">
+          <strong>And some of them come out of the sea.</strong> Where there is a coast,
+          about ${Math.round(LEGION.share * 100)} waves in a hundred are the
+          <strong>Sunken Legion</strong> instead: drowned sailors who stand up in the
+          shallows and walk ashore. They are not extra &mdash; a Legion wave lands
+          <em>instead of</em> one out of the wilds, on the same clock &mdash; and an
+          inland map never sees one.
+        </p>
+        <p class="flavor">
+          They <strong>wade</strong>, which nothing else in the game does: shallow water
+          and dry land both, never the deep. So they can be met at the water's edge, and
+          hit while they are still in it &mdash; a unit on the beach may swing at a
+          drowned thing standing in the surf, and it may swing back. Slow, and hard to
+          shift: every one of them moves one tile a turn and would rather be hit than
+          killed.
+        </p>
+        <p class="flavor">
+          A <strong>Bilge Wraith</strong> walks through walls. Not over them and not
+          through a gate: a city's walls, and anything else standing that adds to its
+          defence, simply do not count against one. The ground underfoot, fortifying and
+          veterancy still do. A <strong>Drowned Captain</strong> is worse dead than alive
+          &mdash; ${LEGION.leader.lastWords} of his crew stand up where he fell, and if
+          one of your ships is within ${LEGION.leader.dragsUnder} tiles when he goes, it
+          goes with him. Kill him with soldiers, and keep the boats out of it.
+        </p>
+        <div class="pedia-grid">${[LEGION.grunt.id, LEGION.elite.id, LEGION.leader.id]
+          .map((id) => unitCard(UNIT_TYPES[id]))
+          .join('')}</div>`
+            : ''
+        }
       </div>
       <div class="pedia-pane" data-pane="difficulty" hidden>
         <p class="flavor">

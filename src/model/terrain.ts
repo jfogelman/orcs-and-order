@@ -70,6 +70,13 @@ export interface TerrainDef {
   trade: number;
   /** Water tiles cannot be entered by land units. */
   water: boolean;
+  /**
+   * Open sea rather than the shallows, for the one rule that tells them apart.
+   *
+   * Section 122: a wader may stand in shallow water and may not cross this.
+   * Absent means shallow, so only the deep has to say so.
+   */
+  deepWater?: boolean;
   /** Cities cannot be founded here. */
   noCity: boolean;
   /** Blocks line of sight past this tile. */
@@ -100,6 +107,7 @@ export interface TerrainDef {
 export const TERRAIN: Record<TerrainId, TerrainDef> = {
   deep: {
     id: 'deep',
+    deepWater: true,
     name: 'Deep Water',
     moveCost: 1,
     defense: 1,

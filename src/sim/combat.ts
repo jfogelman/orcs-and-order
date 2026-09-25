@@ -405,14 +405,20 @@ export function defenseStrength(
   // Siege units bring the walls down; that is what they are for. Anything a
   // siege engine cannot simply knock over still counts.
   const siegeAttacker = attacker !== undefined && unitType(attacker.type).siegeBonus > 1;
-  const wallsMult = city
-    ? workingBuildings(state, city).reduce((mult, id) => {
-        const def = BUILDINGS[id];
-        if (!def?.defenseMult) return mult;
-        if (siegeAttacker && def.negatedBySiege) return mult;
-        return mult * def.defenseMult;
-      }, 1)
-    : 1;
+  // Section 122: and a Bilge Wraith simply comes through them. Every wall in
+  // the city, siege-proof or not -- it is not knocking anything down, it is
+  // ignoring the question. Note it takes nothing off the defender's own
+  // strength, the ground it stands on or its fortifying: only the buildings.
+  const throughWalls = attacker !== undefined && unitType(attacker.type).ignoresWalls;
+  const wallsMult =
+    city && !throughWalls
+      ? workingBuildings(state, city).reduce((mult, id) => {
+          const def = BUILDINGS[id];
+          if (!def?.defenseMult) return mult;
+          if (siegeAttacker && def.negatedBySiege) return mult;
+          return mult * def.defenseMult;
+        }, 1)
+      : 1;
   const fortified = defender.order === 'fortified' || city !== undefined;
 
   // Section 111: the Long Vigil, for anything that rides.

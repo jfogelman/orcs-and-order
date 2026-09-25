@@ -85,6 +85,12 @@ WILDS = {
     # bible's Wildland Raiders are asked for by name.
     "brute": "ogre clan brute",
     "chieftain": "warband chieftain",
+    # Section 122: the Sunken Legion, the bible's coastal faction. All three
+    # rungs arrived in the same drop as the Wildland ones and have been sitting
+    # in `barbarians/` and `unit states/` since, drawn and unused.
+    "drowned": "drowned sailor",
+    "wraith": "bilge wraith",
+    "captain": "drowned captain",
 }
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
@@ -1151,10 +1157,18 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
     be nearly all fire would otherwise be read as having a different background
     from its neighbours and come out cut differently.
 
-    Frames are never trimmed or re-centred, which the unit pipeline does and
-    this one must not: trimming each frame to its own content would re-centre
-    an expanding fireball on itself every frame, and the explosion would sit
-    still while merely getting bigger.
+    **The ratio is taken after keying, off what is actually drawn**, because a
+    generator that leaves a band of background above and below the strip makes
+    a four-frame sheet look like a two-frame one -- which is exactly what
+    section 122's `surf` drop did: 1408x768 of picture, of which the wave band
+    was 1380x345. Keyed first, the content measures four frames wide and the
+    file needs no re-rolling.
+
+    Individual frames are still never trimmed or re-centred, which the unit
+    pipeline does and this one must not: trimming each frame to its own content
+    would re-centre an expanding fireball on itself every frame, and the
+    explosion would sit still while merely getting bigger. Trimming the strip
+    as a whole moves every frame by the same amount and keeps them in step.
     """
     src = SRC / "effects"
     out = OUT / "effects"
@@ -1174,13 +1188,12 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
         name = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
         with Image.open(path) as probe:
             w, h = probe.size
-        frames = max(1, round(w / h))
-        if name not in best or frames > best[name][0]:
-            best[name] = (frames, path, w, h)
+        if name not in best or (w / max(1, h)) > (best[name][1] / max(1, best[name][2])):
+            best[name] = (path, w, h)
 
     done = 0
     failed: list[str] = []
-    for name, (frames, path, w, h) in sorted(best.items()):
+    for name, (path, w, h) in sorted(best.items()):
         target = out / f"{name}.png"
         if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
             continue
@@ -1190,9 +1203,17 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
             failed.append(name)
             continue
 
+        # What is actually drawn, rather than what the file happens to be. See
+        # the note above: background margins are not frames.
+        box = strip.getbbox()
+        if box:
+            strip = strip.crop(box)
+        cw, ch = strip.size
+        frames = max(1, round(cw / max(1, ch)))
+
         sheet = slice_strip(strip, frames, EFFECT_SIZE)
         sheet.save(target, optimize=True)
-        print(f"  effects/{name}.png ({frames} frames from {w}x{h})")
+        print(f"  effects/{name}.png ({frames} frames from {cw}x{ch}, file {w}x{h})")
         done += 1
     return done, failed
 

@@ -1637,3 +1637,36 @@ Save as `art_src/status/cowed.<ext>` and `art_src/status/cowed-fading.<ext>`.
 Until they land the rule still works and says so in the unit panel -- the
 overlay loader remembers a miss and draws nothing.
 
+## The Sunken Legion comes ashore (section 122)
+
+The three units were **already drawn** -- `Drowned Sailor`, `Bilge Wraith` and
+`Drowned Captain` have been sitting in `art_src/barbarians/` with their attack
+strips, and their weakened sheets in `art_src/unit states/`, since the same drop
+that brought the Wildland Raiders. They are processed now and need nothing.
+
+What is missing is **the wave itself**: the moment a Legion party rises out of
+the shallows, played on each water tile a drowned thing surfaces on. Without it
+they simply appear on the sea, which reads as a bug rather than as an arrival --
+the same argument that got every other condition in the game an effect.
+
+One effect strip, to the effect-sheet recipe above (64px frames, flat magenta
+background, keyed out, no characters, no scenery):
+
+| id | Effect |
+|---|---|
+| `surf` | a white-green breaker rising and curling over, spray bursting off the crest, collapsing into foam and streaks of pale sea-green that run outward and sink |
+
+Two things this one specifically must not do, both learned from the overlays:
+
+- **No creature, not even a silhouette.** The drowned sailor is drawn already
+  and will be standing in the middle of it; anything figure-shaped in the spray
+  reads as a second, badly drawn unit.
+- **Foam, not a wall of water.** It is composited over a sea tile that is
+  already blue -- a solid mass of water hides the tile and the thing standing on
+  it, and a wave nobody can see past is just a blue square.
+
+Optional second frame-strip, if the first reads well: `surf-still`, the same
+foam a shade quieter and without the crest, drawn once rather than as a strip,
+for the tiles a wader is *standing* in between turns. Not required -- the rule
+works without it.
+

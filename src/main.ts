@@ -2488,6 +2488,11 @@ function effectFor(entry: { kind: string; cue?: string; subject?: string }): Eff
   // The Broken Catapult's garrison going out to meet them. The picture was drawn
   // long before anything said when to show it.
   if (entry.subject === 'sally') return 'sally';
+  // Section 122: a Legion wave standing up out of the shallows. Only ever
+  // logged to somebody who can see the tile, so it cannot paint a picture over
+  // fog -- and it is drawn where they surfaced, which is the one thing a rumour
+  // about the wilds could never tell you.
+  if (entry.subject === 'surf') return 'surf';
   switch (entry.cue) {
     case 'explosion':
       return 'explosion';

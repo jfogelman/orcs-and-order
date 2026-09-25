@@ -5,7 +5,7 @@ import { CALM, DISORDER, MILITIA, POSTING, RESETTLE, RUIN, SETTLER, SUPPLY } fro
 import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
-import { INTIMIDATE, RAIDER_TIERS } from '../src/sim/wilds';
+import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { PEACE } from '../src/sim/diplomacy';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
@@ -89,6 +89,7 @@ export const LEVERS: Record<string, object> = {
   GOBLIN_SCOUT,
   RAIDER_TIERS,
   INTIMIDATE,
+  LEGION,
   PREY,
   PEACE,
   DIPLOMACY_AI,
