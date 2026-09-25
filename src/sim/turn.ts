@@ -28,6 +28,7 @@ import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
+import { claimRuins, tickRuins } from './ruins';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
@@ -672,6 +673,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   if (player.barbarian) {
     refreshUnits(state, player);
     spawnWave(state);
+    // Section 123: whatever has been woken and not finished gets its Keeper on
+    // the wilds' own turn, which is when everything else of theirs happens.
+    tickRuins(state);
     runRaiders(state, playerId);
     return;
   }
@@ -680,6 +684,11 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // Section 121: and then anybody who woke up next to an Ogre Clan Brute is
   // marked afresh. After the tick, so the mark is the one this turn uses.
   intimidateNeighbours(state, playerId);
+  // Section 123: a ruin held overnight with nothing left standing over it is a
+  // ruin that has been cleared, and hands over what was in it. Before the
+  // units get their movement back, so holding it is what earns it rather than
+  // walking in and out again.
+  claimRuins(state, playerId);
   refreshUnits(state, player);
   // Passengers get their legs back too, so they can step ashore this turn.
   refreshCargo(state, playerId);

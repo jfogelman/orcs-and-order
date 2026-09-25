@@ -105,12 +105,25 @@ function garrison(state: GameState, city: City): Unit {
 // changed which games last: of seeds 20 to 50, only 45 and 50 still reach turn 299
 // with both sides standing. The Goblin Scout (2026-09-19) moved 45 off it; of 20 to
 // 60, 37, 50 and 58 still reach the turn limit with both sides alive.
-const LATE_SEED = 50;
+/**
+ * A game that goes the distance.
+ *
+ * Was 50, which reached the deadline until section 123 put ruins on the map and
+ * that game started ending at turn 194 by conquest instead. Ruins do not
+ * shorten games in general -- over the same five seeds the average length is
+ * unchanged, 231 turns against 232 -- they change *which* game each seed is.
+ * This one still runs to 301 and ends on points, which is what the late
+ * fixtures are for.
+ */
+const LATE_SEED = 19;
 
 function lateSnapshots(): Map<number, GameState> {
   const want = [200, 269, 299];
   const found = new Map<number, GameState>();
-  playGame(LATE_SEED, 620, (state) => {
+  // Three seats, not two: since section 123 a game acquires a wilds slot the
+  // first time somebody walks into a ruin, and a budget counted in half-turns
+  // has to allow for it or the game stops in the two-hundreds.
+  playGame(LATE_SEED, 930, (state) => {
     for (const turn of want) {
       if (state.turn >= turn && !found.has(turn)) {
         const snap = structuredClone(state);

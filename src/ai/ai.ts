@@ -47,6 +47,7 @@ import {
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
 import { COWED, hasStatus } from '../sim/status';
+import { RUINS, isWarden, standingRuins } from '../sim/ruins';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
@@ -845,6 +846,53 @@ const THREAT_PENALTY = 45;
 
 /** Whether any city of this player's is not yet joined to its capital by road. */
 /**
+ * Walk at the nearest ruin worth walking at, and stand in it.
+ *
+ * What counts as worth it, and why each guard is here:
+ *
+ * - **Explored ground only.** An AI that walked to a ruin it had not found
+ *   would be reading the map through the fog, which is the one thing section 51
+ *   says the AI must never do.
+ * - **Healthy units only.** Whatever is standing in there defends far better
+ *   than it attacks, so arriving at half health is how you feed it. At three
+ *   quarters it is a fight worth having.
+ * - **Nothing already cleared, and nothing too far.** `RUIN_RANGE` keeps this a
+ *   local errand rather than a march across the map, which is what would
+ *   actually cost the war.
+ *
+ * Standing on a cleared one is not "arriving" -- `claimRuins` hands the prize
+ * over at the top of the next turn, so the unit simply holds its ground for a
+ * turn, which is also what stops it walking in and out again.
+ */
+const RUIN_RANGE = 10;
+
+function seekRuin(state: GameState, unit: Unit): boolean {
+  const type = unitType(unit.type);
+  if (type.settler || type.attack <= 0 || type.sails) return false;
+  if (unit.hp < type.hp * 0.75) return false;
+  const seen = state.players[unit.owner].explored;
+  const here = standingRuins(state)
+    .filter((r) => seen[idx(r.x, r.y, state.width)] === 1)
+    .sort(
+      (a, b) =>
+        distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y) ||
+        a.x - b.x ||
+        a.y - b.y,
+    )[0];
+  if (!here) return false;
+  const away = distance(unit.x, unit.y, here.x, here.y);
+  if (away > RUIN_RANGE) return false;
+  // Already in the doorway: hold it, and the prize comes in the morning.
+  if (away === 0) {
+    unit.order = 'fortified';
+    return true;
+  }
+  if (!routeTo(state, unit, here.x, here.y)) return false;
+  moveToward(state, unit, here.x, here.y);
+  return true;
+}
+
+/**
  * Cities of ours that want a garrison post and have not got enough.
  *
  * Only cities that are actually unhappy -- at their content limit or one short
@@ -1465,7 +1513,17 @@ function actSoldier(
     const odds = defender ? attackOdds(state, unit, defender) : 1; // empty city = free
     if (!bestTarget || odds > bestTarget.odds) bestTarget = { x, y, odds };
   }
-  if (bestTarget && bestTarget.odds >= personality.caution) {
+  // Section 123: a fight nobody has to pick is held to a higher bar. The Horde
+  // attacks at one-in-four odds, which is the right setting for a war and a
+  // disaster against something standing in a doorway that was never going to
+  // come to it. Measured: ruins as first built cost the Horde fifteen games,
+  // not by being taken more often by the Kingdom -- the Horde opens more of
+  // them -- but by eating the army of the side that attacks.
+  const optional =
+    bestTarget !== null &&
+    state.units.some((u) => u.x === bestTarget!.x && u.y === bestTarget!.y && isWarden(u));
+  const bar = optional ? Math.max(personality.caution, RUINS.aiOdds) : personality.caution;
+  if (bestTarget && bestTarget.odds >= bar) {
     tryStep(state, unit, bestTarget.x, bestTarget.y);
     return;
   }
@@ -1592,6 +1650,16 @@ function actSoldier(
       return;
     }
   }
+
+  // Section 123: something old, standing, with something in it.
+  //
+  // Deliberately here -- after the cities have somebody in them and before the
+  // march -- because a ruin is what a soldier does when the empire is safe and
+  // the enemy is far away. Sections 37 and 38 are the standing warning about
+  // this: a mechanic the AI has no route to is a mechanic that does not happen,
+  // and a player who is the only one cracking ruins is playing a different game
+  // from the one being measured.
+  if (RUINS.enabled && seekRuin(state, unit)) return;
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);

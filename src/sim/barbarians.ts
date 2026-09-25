@@ -3,7 +3,7 @@ import { BUILDINGS } from '../model/buildings';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
-import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
+import { barbarianOf, contenders, log, makePlayer, playerUnits, spawnUnit, withRng } from './gamestate';
 import { assignWorkers, markDamaged, syncCitizens } from './city';
 import { canStandOn, tryStep } from './movement';
 import { pillage } from './roads';
@@ -16,6 +16,7 @@ import {
   watchedFromATown,
 } from './wilds';
 import { difficultyOf } from './difficulty';
+import { isWarden, standWatch } from './ruins';
 
 /**
  * Raiding parties out of the unclaimed wilds.
@@ -403,11 +404,21 @@ export function reportSightings(state: GameState, viewerId: number): void {
     mine.reduce((best, m) => Math.min(best, distance(m.x, m.y, u.x, u.y)), Infinity);
   const nearest = fresh.reduce((a, b) => (closeness(a) <= closeness(b) ? a : b));
 
+  // Section 123: what a thing standing in a doorway is called is not "raiders".
+  // Both lines are the same news -- something out there is not ours -- but a
+  // report of a raiding party, for a statue that has not moved in six hundred
+  // years and is not going to, reads as the game not knowing what it is looking
+  // at.
+  const stony = fresh.every(isWarden);
   log(
     state,
-    fresh.length === 1
-      ? 'Raiders spotted. We do not trust them, on account of them not being us.'
-      : `Raiders spotted, ${fresh.length} of them. We do not trust them, on account of them not being us.`,
+    stony
+      ? fresh.length === 1
+        ? 'Something is standing in the ruin, and it was not standing there before.'
+        : `${fresh.length} of them are standing in the ruin, and none of them were before.`
+      : fresh.length === 1
+        ? 'Raiders spotted. We do not trust them, on account of them not being us.'
+        : `Raiders spotted, ${fresh.length} of them. We do not trust them, on account of them not being us.`,
     'bad',
     viewerId,
     undefined,
@@ -471,6 +482,11 @@ export function runRaiders(state: GameState, playerId: number): void {
       }
       if (retreatToSummon(state, raider)) continue;
     }
+
+    // Section 123: a thing that stands in a ruin is not a raiding band and does
+    // not behave like one. It hits what is beside it, walks back to its
+    // doorway if something moved it, and never follows anybody home.
+    if (standWatch(state, raider, (tx, ty) => stepToward(state, raider, tx, ty))) continue;
 
     // Cornered, and on its own: swing rather than be cut down walking away.
     const pinned = PREY.enabled ? cornered(state, raider) : null;
@@ -810,10 +826,23 @@ export function returnRaiderHeldCities(state: GameState): void {
 /** Make the raiding band, once, when a game is set up with them. */
 export function addRaiders(state: GameState, tileCount: number, make: (id: number) => Player): void {
   if (!state.settings.barbarians || barbarianOf(state)) return;
+  addRaidersInner(state, tileCount, make);
+}
+
+/** The slot, once something has decided there should be one. */
+function addRaidersInner(
+  state: GameState,
+  tileCount: number,
+  make: (id: number) => Player,
+): void {
+  if (barbarianOf(state)) return;
   const wild = make(state.players.length);
   wild.barbarian = true;
   wild.controller = 'ai';
-  wild.name = 'The Wildland Raiders';
+  // Named for what a game will mostly meet: waves, where there are waves, and
+  // otherwise whatever has been standing in the ruins.
+  wild.name = state.settings.barbarians ? 'The Wildland Raiders' : 'Whatever Was Here First';
+  wild.leader = state.settings.barbarians ? wild.leader : 'Nobody At All';
   wild.leader = 'Nobody In Particular';
   wild.color = '#a8894e';
   // They know nothing and are owed nothing. `makePlayer` hands out the advances
@@ -829,4 +858,29 @@ export function addRaiders(state: GameState, tileCount: number, make: (id: numbe
   wild.explored = new Array(tileCount).fill(1);
   wild.visible = new Array(tileCount).fill(1);
   state.players.push(wild);
+}
+
+/**
+ * The wilds, made on demand. Section 123.
+ *
+ * A game with no raiders has two players in it, and a great deal of this
+ * project -- tests, the deadline report, the dominance clock -- is written
+ * knowing that. Ruins would have broken it for every game on the board, so the
+ * slot is created **the first time something actually stands up**, which in a
+ * quiet game may be never.
+ *
+ * Returns the wilds, or null if there is nowhere to put them.
+ */
+export function ensureWilds(state: GameState): Player | null {
+  const already = barbarianOf(state);
+  if (already) return already;
+  const tileCount = state.width * state.height;
+  addRaidersSlot(state, tileCount);
+  return barbarianOf(state);
+}
+
+/** The slot itself, shared by the two doors into it. */
+function addRaidersSlot(state: GameState, tileCount: number): void {
+  const faction = state.players[0]?.faction ?? 'orc';
+  addRaidersInner(state, tileCount, (id) => makePlayer(id, faction, 'ai', tileCount));
 }

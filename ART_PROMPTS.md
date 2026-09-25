@@ -1670,3 +1670,49 @@ foam a shade quieter and without the crest, drawn once rather than as a strip,
 for the tiles a wader is *standing* in between turns. Not required -- the rule
 works without it.
 
+## Ruins, one per ground (section 123)
+
+A ruin is a thing that has been standing on that tile for a very long time, so
+it should be made of what is *around* it -- a drowned temple in the swamp is not
+the same object as a wind-scoured one in the desert. **Six pictures, one per
+land terrain**, plus one shared overlay for when a ruin has been disturbed.
+
+They sit on top of the tile the way a settlement does rather than being stamped
+in a corner the way a terrain special is, so they are drawn at tile size, not
+special size. Save as `art_src/ruins/<terrain>.<ext>`.
+
+Preamble for all six:
+
+> pixel art, a single ruined ancient structure seen from a low three-quarter
+> angle, mid-1990s fantasy strategy game map sprite, thick black outline, flat
+> magenta background (#FF00FF), no ground or terrain drawn under it, no
+> characters, no text, no frame, centred with a little space around it
+
+| id | Ruin |
+|---|---|
+| `grass` | a toppled stone archway and two broken pillars, pale weathered granite, long grass growing up through the cracked flagstones |
+| `forest` | a moss-swallowed shrine of dark stone, roots prising the blocks apart, one carved face still visible under the moss |
+| `hills` | a collapsed watchtower of stacked grey stone, half its wall fallen downhill in a scatter of blocks |
+| `mountains` | a doorway cut into bare rock, its lintel carved with worn symbols, the dark opening going back further than it should |
+| `desert` | a half-buried step pyramid of sun-bleached sandstone, only the top three courses above the dune, wind-scoured on one side |
+| `swamp` | a sunken temple leaning badly in black water, green staining up its columns, one broken statue face-down in the mud |
+
+### Awake
+
+The bible's own suggestion for the Tomb Wardens was to *"show the ruin itself
+growing more ominous as it wakes"*, and that is cheaper and better than six more
+pictures: one overlay, composited over whichever ruin is standing there, the way
+the status overlays already work.
+
+| id | Overlay |
+|---|---|
+| `awake` | a ring of pale blue glowing runes and rising dust motes, hollow through the middle, brightest at the base, pixel art, thick black outline, flat magenta background, no ground, no creature, no structure, 4-frame horizontal animation strip, 90s fantasy strategy game effect |
+
+**Hollow through the middle**, for the reason every other overlay is: the ruin it
+is describing is drawn underneath it, and an overlay that hides its own subject
+is worse than none. Save as `art_src/ruins/awake.<ext>`.
+
+The three guardians -- **Bone Sentinel**, **Animated Guardian** and **Vault
+Keeper** -- are already drawn, in `art_src/barbarians/` with their attack strips
+and weakened sheets in `art_src/unit states/`, and need nothing.
+

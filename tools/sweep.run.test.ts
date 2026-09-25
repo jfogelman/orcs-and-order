@@ -12,6 +12,7 @@ import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
+import { RUINS } from '../src/sim/ruins';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -89,6 +90,14 @@ const control = () => {
   // Section 122: the Sunken Legion, and how often a due wave comes by sea.
   LEGION.enabled = true;
   LEGION.share = 0.2;
+  // Section 123: ruins are a map feature rather than a raider one, so they are
+  // on in the quiet game too -- which is the game this baseline measures.
+  RUINS.enabled = true;
+  RUINS.perLand = 100;
+  RUINS.wardenDefence = 1;
+  RUINS.aiOdds = 0.25;
+  RUINS.wardensHold = true;
+  RUINS.soldiersOnly = true;
   // Section 120: what a band walks at. On in the shipped game; off is the old
   // rule, which is the arm this was measured against.
   PREY.enabled = true;
@@ -114,35 +123,27 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 122, second pass. The first measured the Legion as built against no
-  // Legion at all and found eight games moving to the Horde -- not because the
-  // sea faction is strong, but because a wave that goes to the coast is a wave
-  // that did not go inland, and the Kingdom is the more coastal side on these
-  // maps. Horde sackings fell 1.45 to 1.20 while the Kingdom's rose 1.10 to
-  // 1.30, which is the whole story in one column.
+  // Section 123, fifth pass, and the probe rather than the guessing found this
+  // one. With the prize bug fixed the Horde still lost ground -- and it was
+  // opening *more* ruins than the Kingdom and taking more of every prize while
+  // finishing with fewer cities than it had on a map with no ruins at all
+  // (6.00 down to 5.22, held-out). Settlers were walking over doorways, waking
+  // what slept there, and dying in them, and a dead Peon is a town that never
+  // happened.
   //
-  // So this asks the only question left: how much sea is balance-neutral.
+  // So a ruin is a soldier's business: a worker neither wakes one nor is
+  // touched by what stands in it. This is that arm.
   {
-    label: 'wilds only',
+    label: 'empty map',
     apply: () => {
       control();
-      NEW_GAME.barbarians = true;
-      LEGION.enabled = false;
+      RUINS.enabled = false;
     },
   },
   {
-    label: 'sea at 0.4',
+    label: 'ruins',
     apply: () => {
       control();
-      NEW_GAME.barbarians = true;
-    },
-  },
-  {
-    label: 'sea at 0.2',
-    apply: () => {
-      control();
-      NEW_GAME.barbarians = true;
-      LEGION.share = 0.2;
     },
   },
 ];

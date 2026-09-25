@@ -33,6 +33,7 @@ import {
   stepCost,
 } from './roads';
 import { claimBounty, lastWords } from './wilds';
+import { disturb, isWarden, ruinAt } from './ruins';
 import { hostile } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
@@ -792,6 +793,25 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     // A city sacked out of existence was not captured; the unit is simply
     // standing on the ground where one used to be.
     return held ? { kind: 'captured', city } : { kind: 'moved' };
+  }
+
+  // Section 123: and if the tile it just stepped onto had something old standing
+  // on it, that something is now awake. Deliberately here, at the end of a move
+  // that actually happened, rather than in the AI or the interface: a ruin does
+  // not care who walked in or why.
+  //
+  // The rest of the turn is spent, too. Walking into a ruin and strolling out
+  // of it again the same turn would make the guardians a formality, and the
+  // whole shape of this is that you have decided to be here.
+  const ruin = ruinAt(state, x, y);
+  if (ruin && ruin.wokeOn === undefined && ruin.takenOn === undefined && !isWarden(unit)) {
+    disturb(state, ruin, unit);
+    // Only if something actually woke. A worker crossing the tile disturbs
+    // nothing and keeps the rest of its turn -- see `RUINS.soldiersOnly`.
+    if (ruin.wokeOn !== undefined) {
+      unit.moves = 0;
+      unit.goto = null;
+    }
   }
   return { kind: 'moved' };
 }

@@ -355,6 +355,17 @@ export class SpriteCache {
       .catch(() => {});
   }
 
+  /**
+   * Section 123's ruins -- `ruins/<terrain>.png`, one per ground, plus the
+   * shared `awake` overlay. Absent, the map draws a ruin itself, the way it
+   * drew roads before they had art.
+   */
+  installRuinArt(name: string, onLoaded: (img: HTMLImageElement) => void): void {
+    loadImage(`${this.base}ruins/${name}.png`)
+      .then(onLoaded)
+      .catch(() => {});
+  }
+
   installSpecialArt(
     into: Map<string, HTMLImageElement>,
     ids: TerrainId[],
