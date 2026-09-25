@@ -153,6 +153,13 @@ describe('a full game', () => {
     for (const u of state.units) {
       // Ships, since section 114, are on water on purpose and nowhere else.
       if (unitType(u.type).sails) continue;
+      // And the Sunken Legion, since section 122, stands in the shallows on
+      // purpose -- but never in the deep, which is the half of that rule worth
+      // guarding here.
+      if (unitType(u.type).wades) {
+        expect(TERRAIN[state.terrain[idx(u.x, u.y, state.width)]].deepWater ?? false).toBe(false);
+        continue;
+      }
       expect(TERRAIN[state.terrain[idx(u.x, u.y, state.width)]].water).toBe(false);
     }
   });

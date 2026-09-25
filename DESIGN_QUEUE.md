@@ -9756,3 +9756,109 @@ since 120) and this. The **Sunken Legion** -- drowned raiders landing from the
 sea, which section 114's ships make possible -- and the **Tomb Wardens** --
 guardians waking from ruins, which needs ruins -- are still queued.
 
+## 122. The Sunken Legion
+
+The third of the raider bible's four specials, and the first time the wilds
+have had **two factions** in them. Asked for 2026-09-24.
+
+### Jeremy's decisions
+
+1. **They wade in from the shallows** -- a new movement capability rather than a
+   spawn rule dressed as one.
+2. **The same waves, chosen by place.** One wave clock: a due wave rolls for the
+   sea where there is one, and a Legion wave lands *instead of* a Wildland wave.
+3. **All three specials**, with one constraint of his own on the captain: he may
+   sink a ship *"only if it's within 2 vision spots, not any"*.
+
+### Wading, which nothing else does
+
+The game had two answers about water -- a ship keeps to it, everything else
+keeps off it -- and now has three. A wader may stand in **shallow water or on
+dry land, and never in the deep**. That is `canStandOn` in `movement.ts`, one
+function the pathfinder, the step rule and the raiders' own brain all ask, and
+`TerrainDef.deepWater` is the one new fact the terrain had to carry.
+
+What it buys is the whole point of the faction: they rise a few tiles offshore
+and walk in, so you can see them coming, meet them at the water's edge, and hit
+them while they are still in it. A unit on the beach may swing at a drowned
+thing standing in the surf, and it may swing back -- the old rule that *nobody
+wades out to fight a ship* now asks whether the thing in the water is a ship.
+
+One bug that fell out of it, found in play rather than by a test: a Drowned
+Sailor facing a channel of deep water stood still for ever, because the raiders'
+`stepToward` picked the tile nearest its target without asking whether it could
+stand there. It now skips ground it cannot use -- unless somebody is standing on
+it, because that is an attack rather than a step.
+
+### The three of them, to the bible's shape
+
+| rung | unit | in this game | the bible |
+|---|---|---|---|
+| grunt | Drowned Sailor | 2/2, 10 health, 1 move | 1/2 |
+| elite | Bilge Wraith | 3/2, 11 health, walls do not count | 3/2, ignores walls |
+| leader | Drowned Captain | 4/5, 14 health, worse dead | 4/5 |
+
+Built once at 2/3, 4/3 and 5/5, which was wrong and was caught by playing it:
+an Orc attacking a Drowned Sailor came out at **even odds**, and the bible's
+rule for a grunt is that it *loses to one garrisoned unit most of the time*. At
+defence two it is three in five to the Orc, and the sailor is still the tougher
+grunt in the game -- the Skirmisher defends at one. The Legion is the slow,
+hard-to-shift faction whose teeth are its specials, not its numbers.
+
+- **The Bilge Wraith walks through walls.** Not `siegeBonus`, which would also
+  make it hit cities harder: this takes the *defender's* buildings out of the
+  sum and leaves the ground, the fortifying and the veterancy alone.
+- **The Drowned Captain is worse dead than alive.** Two of his crew stand up
+  where he fell -- in the shallows as readily as on the sand -- and a ship
+  within two tiles goes down with him. Jeremy's constraint, and the right one: a
+  captain drowning a transport across the map would be a die roll dressed as a
+  rule. Bring the fleet to the fight and it is part of the fight.
+
+### The sea was a thumb on the scales, and the number says how much
+
+First measured as built, at four waves in ten coming by sea, against no Legion
+at all. 108 games an arm:
+
+| arm | Horde-Kingdom | cities H/K | population H/K | sacked H/K |
+|---|---|---|---|---|
+| wilds only | **48-60** | 5.10/6.35 | 42.7/48.2 | 1.45/1.10 |
+| sea at 0.4 | **56-52** | 5.51/6.03 | 49.7/46.0 | 1.20/1.30 |
+| sea at 0.2 | **48-60** | 5.10/6.38 | 44.0/48.2 | 1.45/1.15 |
+
+Eight games to the Horde at 0.4, both seed sets agreeing and the supporting
+columns moving with it, which by section 121's rule makes it real rather than
+noise.
+
+**And the cause is in the sackings column, not in the units.** Because a Legion
+wave lands *instead of* a Wildland one, the share decides how much of the wilds'
+pressure moves from inland to the coast -- and the two empires do not own the
+same amount of coastline. The Horde was raided less than before (1.45 down to
+1.20) and the Kingdom more (1.10 up to 1.30). Nothing about the drowned
+themselves was doing it; it was where the waves stopped going.
+
+**At a fifth, every column is back where the control had it**, and a coastal map
+still sees three or four Legion waves in a game. So `LEGION.share` is 0.2, and
+it is documented as a *balance* lever: moving it moves the game, and not through
+the door anybody would expect.
+
+### Art, and one pipeline fix
+
+All three were drawn in the same drop as the Wildland Raiders and had been
+sitting unused since -- sprites in `art_src/barbarians/`, weakened sheets in
+`art_src/unit states/`. They needed three lines in the pipeline's name map.
+
+The wave they arrive in was new, and prompted: `surf`, a four-frame breaker
+played on each tile they surface on, and **only where somebody of ours could see
+it happen** -- an effect drawn over fog would say where the raiders are.
+
+The drop arrived with magenta margins above and below the strip, and the
+pipeline read 1408x768 as *two* frames, because it took the frame count from the
+file's proportions. It now keys the background first and measures what is
+actually drawn: 1329x315, which is four. Per-frame trimming is still refused,
+for the reason the old comment gives -- it would re-centre an expanding fireball
+on itself every frame.
+
+### What is left of the bible
+
+One: the **Tomb Wardens**, guardians waking from ruins, which still needs ruins.
+

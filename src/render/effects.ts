@@ -43,7 +43,9 @@ export type EffectId =
   // A troll spending nine tenths of itself to make another one.
   | 'troll-split'
   // A garrison charging out past the Broken Catapult.
-  | 'sally';
+  | 'sally'
+  // Section 122: the sea breaking white as the Sunken Legion stands up in it.
+  | 'surf';
 
 export interface EffectOptions {
   /**

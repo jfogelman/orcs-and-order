@@ -80,6 +80,25 @@ export interface CreatureDef {
   /** Ignores terrain movement costs. */
   flies?: boolean;
   /**
+   * Walks out of the shallows. Section 122's Sunken Legion, and nothing else.
+   *
+   * Not `sails` and not `flies`: a wader may stand in **shallow water** and on
+   * land, and may not cross the deep. That is the whole rule, and it is what
+   * makes a coastline a thing to watch rather than a wall -- they rise a few
+   * tiles out and come ashore, and you can see them coming.
+   */
+  wades?: boolean;
+  /**
+   * Walls are no help against it. The Bilge Wraith, out of the raider bible.
+   *
+   * A defender otherwise multiplies its strength by whatever its city has
+   * standing; this ignores the buildings that are walls and leaves the rest of
+   * the stack -- ground, fortifying, veterancy -- exactly as it was. Note it is
+   * *not* `siegeBonus`, which also makes the attacker hit a city harder: this
+   * takes something off the defence and adds nothing to the attack.
+   */
+  ignoresWalls?: boolean;
+  /**
    * What this creature's blows are made of. Physical unless stated.
    *
    * Only matters against something that resists a kind. Setting it changes
@@ -285,6 +304,98 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Feathered headdress, bone totems, and a very large curved axe. Leads ' +
       'from the front, which is the one good thing about it.',
+  },
+  /*
+   * Section 122: the Sunken Legion, the bible's second barbarian faction and
+   * the coastal counterpart to the Wildland Raiders above.
+   *
+   * Slow, hard to kill, and they arrive from the one direction nobody garrisons.
+   * Where a Skirmisher is quick and thin -- 2/1 at three moves -- every one of
+   * these is 1 move and expensive to shift, so a coastline is answered by being
+   * ready rather than by chasing.
+   */
+  {
+    id: 'drowned',
+    name: 'Drowned Sailor',
+    plural: 'Drowned Sailors',
+    faction: 'human',
+    wild: true,
+    wades: true,
+    role: 'melee',
+    // The bible's grunt, at this game's scale, and checked against the fight
+    // maths rather than guessed at. The design note that governs a grunt is
+    // that it *loses to one garrisoned unit most of the time*: at defence three
+    // an Orc attacking one was a coin flip, which is not most of the time. At
+    // two it is three in five to the Orc, and the sailor is still the tougher
+    // grunt in the game -- the Skirmisher defends at one -- which is the
+    // Legion's whole shape. Slow, hard to shift, no threat in a hurry.
+    attack: 2,
+    defense: 2,
+    hp: 10,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 0.9,
+    silhouette: 'small',
+    body: '#4e6f63',
+    trim: '#9fc4a8',
+    blurb:
+      'Bloated, barnacled, and still wearing most of a coat. Walks up out of ' +
+      'the surf at the pace of a man with nowhere in particular to be.',
+  },
+  {
+    id: 'wraith',
+    name: 'Bilge Wraith',
+    plural: 'Bilge Wraiths',
+    faction: 'human',
+    wild: true,
+    wades: true,
+    ignoresWalls: true,
+    role: 'melee',
+    // Weaker in the hand than the Ogre Clan Brute it sits level with -- the
+    // bible has the wraith at 3/2 against the brute's 4/3 -- because what it
+    // brings is not strength, it is that your walls are scenery.
+    attack: 3,
+    defense: 2,
+    hp: 11,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 1.0,
+    silhouette: 'robed',
+    body: '#3f6b66',
+    trim: '#bfe6d2',
+    blurb:
+      'Comes through the wall rather than over it, trailing weed and a smell ' +
+      'of low tide. A gate is a courtesy it has never needed.',
+  },
+  {
+    id: 'captain',
+    name: 'Drowned Captain',
+    plural: 'Drowned Captains',
+    faction: 'human',
+    wild: true,
+    wades: true,
+    role: 'melee',
+    // The mirror of the Warband Chieftain, which is 5/3: the captain hits less
+    // hard and is far harder to put down, which is the bible's own shape for
+    // the two leaders and makes killing him a job rather than a lucky swing.
+    attack: 4,
+    defense: 5,
+    hp: 14,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 1.2,
+    silhouette: 'armored',
+    body: '#35564f',
+    trim: '#d8cfa0',
+    blurb:
+      'Still has the hat, the coat, and the crew. Takes a dim view of ' +
+      'floating things, and of anybody who has not drowned yet.',
   },
   {
     id: 'goblin',
@@ -839,6 +950,10 @@ export interface UnitTypeDef {
   flies: boolean;
   /** Water only. See CreatureDef.sails. */
   sails: boolean;
+  /** Shallow water and land both. See CreatureDef.wades. */
+  wades: boolean;
+  /** A city's walls do nothing against it. See CreatureDef.ignoresWalls. */
+  ignoresWalls: boolean;
   /** Land units it can carry; 0 for everything that is not a carrier. */
   carries: number;
   firstStrikes: number;
@@ -922,6 +1037,8 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     settler: c.settler === true,
     flies: c.flies === true,
     sails: c.sails === true,
+    wades: c.wades === true,
+    ignoresWalls: c.ignoresWalls === true,
     carries: c.carries ?? 0,
     firstStrikes: c.firstStrikes ?? 0,
     expendable: c.expendable === true,

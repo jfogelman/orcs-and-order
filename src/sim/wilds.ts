@@ -4,6 +4,7 @@ import type { GameState, Unit, UnitTypeId } from '../model/types';
 import { unitType } from '../model/units';
 import { barbarianOf, contenders, log, spawnUnit } from './gamestate';
 import { COWED, applyStatus } from './status';
+import { destroyUnit } from './combat';
 import { citySight } from './rules';
 
 /**
@@ -104,6 +105,72 @@ export const RAIDER_TIERS = {
 /** The grunt, and what a wave is made of until the empires grow. */
 export const RAIDER_GRUNT = 'skirmisher' as UnitTypeId;
 
+/**
+ * Section 122: the Sunken Legion, the raider bible's second faction.
+ *
+ * The wilds' coastal half. Where the Wildland Raiders come out of the long
+ * grass and run at you, these walk **up out of the shallows** -- slow, hard to
+ * shift, and arriving from the one direction nobody garrisons. Three rungs
+ * again, paced off the same measure of how far along the empires are, because a
+ * second clock would be a second thing to tune for no gain.
+ *
+ * Same pressure, not more of it: a wave that is due rolls for the sea when the
+ * map offers one, and a Legion wave lands **instead of** a Wildland wave rather
+ * than as well as. That was the decision (Jeremy, 2026-09-24), and it is what
+ * keeps this a new kind of game rather than a harder one.
+ */
+export const LEGION = {
+  /** The switch, for sweeps. Off is the game with the Wildland Raiders alone. */
+  enabled: true,
+  /**
+   * Share of due waves that come out of the sea, where there is a sea to come
+   * out of. A coastal map therefore sees both kinds and an inland one sees none
+   * of these, which is the rule doing its own geography.
+   *
+   * **A balance lever, not a flavour one, and measured twice.** Because a
+   * Legion wave lands *instead of* a Wildland one, this number decides how much
+   * of the wilds' pressure moves from inland to the coast -- and the two
+   * empires do not have the same amount of coast. At 0.4 the Horde was raided
+   * less than it used to be (sackings 1.45 a game down to 1.20) and the Kingdom
+   * more (1.10 up to 1.30), and eight games moved with it: 48-60 became 56-52
+   * across 108 games an arm, both seed sets agreeing, cities and population
+   * moving too.
+   *
+   * At **0.2 every one of those columns is back where the control had it** --
+   * 48-60, cities 5.10/6.38, sackings 1.45/1.15 -- while a coastal map still
+   * sees three or four Legion waves in a game. So the sea gets a fifth of the
+   * waves, and the faction is a new kind of raid rather than a thumb on the
+   * scales.
+   */
+  share: 0.2,
+  /** How far off a coast the shallows may be and still land a wave. */
+  shoreReach: 2,
+  grunt: { id: 'drowned' as UnitTypeId },
+  elite: {
+    id: 'wraith' as UnitTypeId,
+    /** Average advances known before one joins a wave -- the brute's measure. */
+    from: 8,
+    share: 0.34,
+    bounty: 20,
+  },
+  leader: {
+    id: 'captain' as UnitTypeId,
+    from: 18,
+    bounty: 50,
+    /** Drowned sailors left standing when a captain goes down. */
+    lastWords: 2,
+    /**
+     * How near a ship has to be for a dying captain to take it with him.
+     *
+     * Jeremy's constraint (2026-09-24): *within 2 vision spots, not any*. A
+     * captain drowning a boat on the far side of the map would be a die roll
+     * rather than a rule -- this way it is something that happens to a fleet
+     * that came to the fight, and the answer is to kill him with soldiers.
+     */
+    dragsUnder: 2,
+  },
+};
+
 /** The average number of advances the empires know, which paces the wilds. */
 function empireProgress(state: GameState): number {
   const empires = contenders(state);
@@ -118,24 +185,26 @@ function empireProgress(state: GameState): number {
  * **One chieftain in the world at a time.** A late game is a parade of waves,
  * and a parade of chieftains is a war rather than a raid.
  */
-export function waveRoster(state: GameState, size: number): UnitTypeId[] {
-  if (!RAIDER_TIERS.enabled) return new Array(size).fill(RAIDER_GRUNT);
+export function waveRoster(state: GameState, size: number, fromSea = false): UnitTypeId[] {
+  const tiers = fromSea
+    ? { grunt: LEGION.grunt.id, elite: LEGION.elite, leader: LEGION.leader }
+    : { grunt: RAIDER_GRUNT, elite: RAIDER_TIERS.elite, leader: RAIDER_TIERS.leader };
+  // The tiers lever governs both factions: off is grunts, whichever shore they
+  // came from.
+  if (!RAIDER_TIERS.enabled) return new Array(size).fill(tiers.grunt);
   const advances = empireProgress(state);
   const out: UnitTypeId[] = [];
-  if (
-    advances >= RAIDER_TIERS.leader.from &&
-    !state.units.some((u) => u.type === RAIDER_TIERS.leader.id)
-  ) {
-    out.push(RAIDER_TIERS.leader.id);
+  if (advances >= tiers.leader.from && !state.units.some((u) => u.type === tiers.leader.id)) {
+    out.push(tiers.leader.id);
   }
-  if (advances >= RAIDER_TIERS.elite.from) {
+  if (advances >= tiers.elite.from) {
     const elites = Math.min(
       Math.max(0, size - out.length),
-      Math.max(1, Math.round(size * RAIDER_TIERS.elite.share)),
+      Math.max(1, Math.round(size * tiers.elite.share)),
     );
-    for (let i = 0; i < elites; i++) out.push(RAIDER_TIERS.elite.id);
+    for (let i = 0; i < elites; i++) out.push(tiers.elite.id);
   }
-  while (out.length < size) out.push(RAIDER_GRUNT);
+  while (out.length < size) out.push(tiers.grunt);
   return out.slice(0, size);
 }
 
@@ -157,13 +226,17 @@ export function watchedFromATown(state: GameState, x: number, y: number): boolea
 }
 
 /** Free land beside this unit: where somebody called up could stand. */
-function roomBeside(state: GameState, unit: Unit): Array<[number, number]> {
+function roomBeside(state: GameState, unit: Unit, wading = false): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   for (const [dx, dy] of DIRS8) {
     const x = unit.x + dx;
     const y = unit.y + dy;
     if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
-    if (TERRAIN[state.terrain[idx(x, y, state.width)]].water) continue;
+    const def = TERRAIN[state.terrain[idx(x, y, state.width)]];
+    // Section 122: for the Legion the shallows are room as well -- a drowned
+    // thing standing up out of the water is where it ought to be -- but the
+    // deep is nobody's.
+    if (def.water && !(wading && !def.deepWater)) continue;
     if (state.units.some((u) => u.x === x && u.y === y)) continue;
     if (state.cities.some((c) => c.x === x && c.y === y)) continue;
     out.push([x, y]);
@@ -210,6 +283,10 @@ export function bountyFor(unit: Unit): number {
   if (!RAIDER_TIERS.enabled) return 0;
   if (unit.type === RAIDER_TIERS.leader.id) return RAIDER_TIERS.leader.bounty;
   if (unit.type === RAIDER_TIERS.elite.id) return RAIDER_TIERS.elite.bounty;
+  // The Legion's two big ones carry the same purses as the Wildland ones. A
+  // drowned captain's takings are wetter and spend the same.
+  if (unit.type === LEGION.leader.id) return LEGION.leader.bounty;
+  if (unit.type === LEGION.elite.id) return LEGION.elite.bounty;
   return 0;
 }
 
@@ -311,4 +388,72 @@ export function intimidateNeighbours(state: GameState, playerId: number): void {
     undefined,
     [where.x, where.y],
   );
+}
+
+/**
+ * What a Drowned Captain does on the way down. Section 122.
+ *
+ * Two things, both out of the raider bible, and both deliberately narrow:
+ *
+ * - **The crew is still with him.** `lastWords` sailors stand up beside where
+ *   he fell -- in the shallows as readily as on the sand -- so a captain is
+ *   never quite dead when you thought he was, and killing one with your last
+ *   healthy unit is a decision rather than a formality.
+ * - **He takes a boat with him**, but only one that was *there*: within
+ *   `dragsUnder` tiles, which is his own sight. Jeremy's constraint, and the
+ *   right one -- a captain drowning a transport on the far side of the map
+ *   would be a die roll dressed as a rule. Bring the fleet to the fight and it
+ *   is part of the fight; kill him with soldiers and the fleet is fine.
+ *
+ * Nothing happens for a captain that dies with no room and no boats nearby,
+ * which is the usual case and should be.
+ */
+export function lastWords(state: GameState, killer: Unit, victim: Unit): void {
+  if (!RAIDER_TIERS.enabled || !LEGION.enabled) return;
+  if (victim.type !== LEGION.leader.id) return;
+  const wild = barbarianOf(state);
+  if (!wild || victim.owner !== wild.id || killer.owner === wild.id) return;
+
+  // The crew, up out of the water beside him.
+  const room = roomBeside(state, victim, true);
+  const called = Math.min(LEGION.leader.lastWords, room.length);
+  for (let n = 0; n < called; n++) {
+    spawnUnit(state, wild.id, LEGION.grunt.id, room[n][0], room[n][1], false);
+  }
+  if (called > 0) {
+    log(
+      state,
+      called === 1
+        ? 'The Drowned Captain goes down, and one of his crew stands up in his place.'
+        : `The Drowned Captain goes down, and ${called} of his crew stand up in his place.`,
+      'bad',
+      killer.owner,
+      undefined,
+      [victim.x, victim.y],
+    );
+  }
+
+  // And whatever of ours was floating close enough to be noticed.
+  const boat = state.units
+    .filter(
+      (u) =>
+        unitType(u.type).sails &&
+        !state.players[u.owner]?.barbarian &&
+        distance(u.x, u.y, victim.x, victim.y) <= LEGION.leader.dragsUnder,
+    )
+    .sort(
+      (a, b) =>
+        distance(a.x, a.y, victim.x, victim.y) - distance(b.x, b.y, victim.x, victim.y) ||
+        a.id - b.id,
+    )[0];
+  if (!boat) return;
+  log(
+    state,
+    `${unitType(boat.type).name} is pulled under after him. Whatever that was, it was not a drowning man.`,
+    'bad',
+    boat.owner,
+    undefined,
+    [boat.x, boat.y],
+  );
+  destroyUnit(state, boat, 'is dragged under');
 }

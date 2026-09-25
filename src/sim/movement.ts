@@ -4,7 +4,8 @@ import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
 import { unitType } from '../model/units';
-import type { City, GameState, Player, Unit } from '../model/types';
+import type { City, GameState, Player, TerrainId, Unit } from '../model/types';
+import type { UnitTypeDef } from '../model/units';
 import { RUIN, isRuined, markDamaged, resettleTurns, workingBuildings } from './city';
 import { count } from '../model/advisors';
 import type { CombatResult } from './combat';
@@ -31,7 +32,7 @@ import {
   startRoad,
   stepCost,
 } from './roads';
-import { claimBounty } from './wilds';
+import { claimBounty, lastWords } from './wilds';
 import { hostile } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
@@ -97,8 +98,9 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     if (!owner.explored[i]) return 1;
 
     const terrain = state.terrain[i];
-    // Ships keep to the water; everything else but a flyer keeps off it.
-    if (type.sails ? !TERRAIN[terrain].water : !type.flies && TERRAIN[terrain].water) return null;
+    // Ships keep to the water, waders may have the shallows, and everything
+    // else but a flyer keeps off it. Section 122.
+    if (!canStandOn(type, terrain)) return null;
     // Enemy ground is entered by attacking or capturing, never by pathing.
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
@@ -106,6 +108,30 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     const base = type.flies || type.sails ? 1 : stepCost(state, owner, fromX, fromY, x, y);
     return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
   };
+}
+
+/**
+ * Whether this unit may stand on this terrain at all. Section 122.
+ *
+ * Three answers, not two. A ship keeps to the water and a soldier keeps off
+ * it, as they always have; a **wader** -- the Sunken Legion, and nothing else
+ * in the game -- may stand in the shallows or on dry land, and may not cross
+ * the deep. That last part is the whole shape of them: they come out of the
+ * surf, they do not cross oceans, and a coastline is a thing to watch rather
+ * than a wall.
+ */
+export function canStandOn(type: UnitTypeDef, terrain: TerrainId): boolean {
+  const def = TERRAIN[terrain];
+  if (type.flies) return true;
+  if (type.sails) return def.water;
+  if (!def.water) return true;
+  return type.wades && !def.deepWater;
+}
+
+/** Whether whatever is standing here is one of the Legion, wading. */
+function occupantWades(state: GameState, x: number, y: number): boolean {
+  const there = unitAt(state, x, y);
+  return !!there && unitType(there.type).wades;
 }
 
 /** Ids of enemy units this player can currently see. */
@@ -151,9 +177,14 @@ export function attackTargets(state: GameState, unit: Unit): Set<number> {
       if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
       const occupant = unitAt(state, x, y);
       const city = cityAt(state, x, y);
-      const atSea = TERRAIN[state.terrain[idx(x, y, state.width)]].water;
-      // Nobody on land fights a ship; a ship takes no town, empty or not.
-      if (atSea && !type.sails && !type.flies) continue;
+      const there = state.terrain[idx(x, y, state.width)];
+      const atSea = TERRAIN[there].water;
+      // Nobody on land fights a ship; a ship takes no town, empty or not. A
+      // wader standing in the shallows is another matter: it is within reach of
+      // the beach, which is the entire point of it, so anything that could
+      // stand there may swing at it (section 122).
+      const reachable = canStandOn(type, there) || (atSea && occupantWades(state, x, y));
+      if (atSea && !reachable) continue;
       // Section 116: a side we have made peace with is not a target.
       if (occupant && occupant.owner !== unit.owner) {
         if (hostile(state, unit.owner, occupant.owner)) out.add(idx(x, y, state.width));
@@ -489,7 +520,15 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // --- attack ----------------------------------------------------------
   // Nobody wades out to fight a ship. A ship can hit the shore; the shore
   // cannot hit back.
-  if (occupant && occupant.owner !== unit.owner && !type.sails && !type.flies && TERRAIN[terrain].water) {
+  if (
+    occupant &&
+    occupant.owner !== unit.owner &&
+    TERRAIN[terrain].water &&
+    !canStandOn(type, terrain) &&
+    // Section 122: unless what is standing there is wading, in which case it is
+    // close enough to the beach to be reached from it.
+    !unitType(occupant.type).wades
+  ) {
     return { kind: 'blocked', reason: `${type.name} cannot fight at sea.`, retryable: false };
   }
   // Section 116: at peace, nobody swings. Refused rather than treated as
@@ -559,6 +598,8 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       awardXp(state, unit, XP.kill);
       // Section 115: a raider worth killing was carrying something.
       claimBounty(state, unit, occupant);
+      // Section 122: and a Drowned Captain is not finished when he falls over.
+      lastWords(state, unit, occupant);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
       if (blastVictims.some((v) => v.id === unit.id)) {
@@ -601,8 +642,10 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       if (!withdrawn) {
         destroyUnit(state, unit, result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking');
         awardXp(state, occupant, XP.kill);
-        // A raider that threw itself at a garrison and lost pays the same purse.
+        // A raider that threw itself at a garrison and lost pays the same purse,
+        // and a captain that died on somebody's spear still has his crew.
         claimBounty(state, occupant, unit);
+        lastWords(state, occupant, unit);
       } else {
         awardXp(state, occupant, XP.survive);
       }
@@ -639,10 +682,13 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   if (type.sails && !TERRAIN[terrain].water) {
     return { kind: 'blocked', reason: `${type.name} keeps to the water.`, retryable: false };
   }
-  if (!type.flies && !type.sails && TERRAIN[terrain].water) {
+  if (!canStandOn(type, terrain)) {
     return {
       kind: 'blocked',
-      reason: `${type.name} cannot cross open water.`,
+      // A wader is refused too, but only by the deep, and is told which.
+      reason: type.wades
+        ? `${type.name} keeps to the shallows.`
+        : `${type.name} cannot cross open water.`,
       retryable: false,
     };
   }

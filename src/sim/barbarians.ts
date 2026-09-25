@@ -5,9 +5,16 @@ import { unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { barbarianOf, contenders, log, playerUnits, spawnUnit, withRng } from './gamestate';
 import { assignWorkers, markDamaged, syncCitizens } from './city';
-import { tryStep } from './movement';
+import { canStandOn, tryStep } from './movement';
 import { pillage } from './roads';
-import { RAIDER_GRUNT, summonDue, trySummon, waveRoster, watchedFromATown } from './wilds';
+import {
+  LEGION,
+  RAIDER_GRUNT,
+  summonDue,
+  trySummon,
+  waveRoster,
+  watchedFromATown,
+} from './wilds';
 import { difficultyOf } from './difficulty';
 
 /**
@@ -211,6 +218,38 @@ function landingSpots(state: GameState): number[] {
 }
 
 /**
+ * Shallow water within reach of a coast, and clear of anybody's town.
+ *
+ * Section 122: where the Sunken Legion comes up. Shallows only -- they do not
+ * cross the deep -- and near land, because a wave that surfaced in the middle
+ * of a bay would spend ten turns walking and arrive as a rumour.
+ */
+function seaSpots(state: GameState): number[] {
+  const out: number[] = [];
+  for (let y = 0; y < state.height; y++) {
+    for (let x = 0; x < state.width; x++) {
+      const i = idx(x, y, state.width);
+      const def = TERRAIN[state.terrain[i]];
+      if (!def.water || def.deepWater) continue;
+      if (state.units.some((u) => u.x === x && u.y === y)) continue;
+      if (state.cities.some((c) => distance(c.x, c.y, x, y) < BARBARIANS.clearOfCities)) continue;
+      // Within a walk of somewhere to walk to.
+      let shore = false;
+      for (let dy = -LEGION.shoreReach; dy <= LEGION.shoreReach && !shore; dy++) {
+        for (let dx = -LEGION.shoreReach; dx <= LEGION.shoreReach && !shore; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!inBounds(nx, ny, state.width, state.height)) continue;
+          if (!TERRAIN[state.terrain[idx(nx, ny, state.width)]].water) shore = true;
+        }
+      }
+      if (shore) out.push(i);
+    }
+  }
+  return out;
+}
+
+/**
  * Put a wave on the map, if one is due.
  *
  * Everything it draws comes off the game's own seeded stream, so a game with
@@ -222,19 +261,33 @@ export function spawnWave(state: GameState): Unit[] {
   if (!wild || !waveDue(state)) return [];
 
   const spots = landingSpots(state);
-  if (spots.length === 0) return [];
+  const shallows = LEGION.enabled ? seaSpots(state) : [];
+  if (spots.length === 0 && shallows.length === 0) return [];
 
   const size = waveSize(state);
-  // Section 115: what the wave is made of, which grows with the empires.
-  const roster = waveRoster(state, size);
   const born: Unit[] = [];
+  let fromSea = false;
   withRng(state, (rng) => {
+    // Section 122: a due wave rolls for the sea where there is one to roll for,
+    // and a Legion wave lands *instead of* a Wildland one. Same clock, same
+    // pressure, a different shore -- and an inland map never rolls it at all,
+    // which is the rule doing its own geography.
+    fromSea = shallows.length > 0 && (spots.length === 0 || rng.float() < LEGION.share);
+    const pool = fromSea ? shallows : spots;
+    // Section 115: what the wave is made of, which grows with the empires.
+    const roster = waveRoster(state, size, fromSea);
     // One landing place per wave, and the party arrives together. Scattering
     // them individually reads as bad luck; a band arriving somewhere reads as a
     // thing that has happened and can be answered.
-    const at = spots[rng.int(spots.length)];
+    const at = pool[rng.int(pool.length)];
     const x = at % state.width;
     const y = Math.floor(at / state.width);
+    // The Legion fills in across the shallows it came up through; everybody
+    // else fills in across dry land.
+    const standable = (nx: number, ny: number): boolean => {
+      const def = TERRAIN[state.terrain[idx(nx, ny, state.width)]];
+      return fromSea ? def.water && !def.deepWater : !def.water;
+    };
     for (let n = 0; n < size; n++) {
       const spot =
         n === 0
@@ -242,13 +295,42 @@ export function spawnWave(state: GameState): Unit[] {
           : (DIRS8.map(([dx, dy]) => [x + dx, y + dy]).find(
               ([nx, ny]) =>
                 inBounds(nx, ny, state.width, state.height) &&
-                !TERRAIN[state.terrain[idx(nx, ny, state.width)]].water &&
+                standable(nx, ny) &&
                 !state.units.some((u) => u.x === nx && u.y === ny),
             ) ?? null);
       if (!spot) continue;
-      born.push(spawnUnit(state, wild.id, roster[n] ?? RAIDER, spot[0], spot[1], false));
+      born.push(
+        spawnUnit(
+          state,
+          wild.id,
+          roster[n] ?? (fromSea ? LEGION.grunt.id : RAIDER),
+          spot[0],
+          spot[1],
+          false,
+        ),
+      );
     }
   });
+
+  // Section 122: whoever was watching that stretch of water saw it happen, and
+  // gets the picture as well as the news. Everybody else gets the rumour below
+  // and nothing to look at, which is the rule this game has about fog.
+  if (born.length > 0 && fromSea) {
+    for (const p of contenders(state)) {
+      const watched = born.filter((u) => p.visible[idx(u.x, u.y, state.width)] === 1);
+      if (watched.length === 0) continue;
+      log(
+        state,
+        'The sea breaks white, and something walks up out of it.',
+        'bad',
+        p.id,
+        undefined,
+        [watched[0].x, watched[0].y],
+        undefined,
+        SURFACED,
+      );
+    }
+  }
 
   if (born.length > 0) {
     for (const p of contenders(state)) {
@@ -265,7 +347,11 @@ export function spawnWave(state: GameState): Unit[] {
       // separate event, below.
       log(
         state,
-        `Something has come out of the wilds. ${born.length === 1 ? 'One of them' : `${born.length} of them`}, by the sound of it, and they are not from here.`,
+        `${
+          fromSea
+            ? 'Something has come up out of the water.'
+            : 'Something has come out of the wilds.'
+        } ${born.length === 1 ? 'One of them' : `${born.length} of them`}, by the sound of it, and they are not from here.`,
         'bad',
         p.id,
       );
@@ -340,6 +426,15 @@ export function reportSightings(state: GameState, viewerId: number): void {
  * it is the same bad news with a claim attached: we can see this.
  */
 export const SIGHTING = 'raiders-sighted';
+
+/**
+ * Marks the moment a Legion wave stands up out of the water. Section 122.
+ *
+ * Logged **only to a player who can see the tile**, which is what separates it
+ * from the rumour every wave sends: if we are drawing the sea breaking white
+ * somewhere, somebody of ours watched it happen.
+ */
+export const SURFACED = 'raiders-surfaced';
 
 /**
  * What a raiding party does with its turn.
@@ -561,12 +656,21 @@ function nearestPrey(state: GameState, raider: Unit): Prey | null {
 
 /** One step, and a swing if the step lands on somebody. */
 function stepToward(state: GameState, raider: Unit, tx: number, ty: number): void {
+  const type = unitType(raider.type);
   let pick: [number, number] | null = null;
   let closest = distance(raider.x, raider.y, tx, ty);
   for (const [dx, dy] of DIRS8) {
     const nx = raider.x + dx;
     const ny = raider.y + dy;
     if (!inBounds(nx, ny, state.width, state.height)) continue;
+    // Section 122: ground this one could not stand on is not a step, it is a
+    // turn spent standing still -- which is what a Drowned Sailor facing a
+    // channel of deep water did before this, every turn, for ever. A tile with
+    // somebody on it is still worth picking: that is an attack, not a step.
+    const occupied =
+      state.units.some((u) => u.x === nx && u.y === ny) ||
+      state.cities.some((c) => c.x === nx && c.y === ny);
+    if (!occupied && !canStandOn(type, state.terrain[idx(nx, ny, state.width)])) continue;
     const away = distance(nx, ny, tx, ty);
     if (away < closest) {
       closest = away;

@@ -11,7 +11,7 @@ import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
-import { INTIMIDATE, RAIDER_TIERS } from '../src/sim/wilds';
+import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -86,6 +86,9 @@ const control = () => {
   RAIDER_TIERS.leader.summons = true;
   // Section 121's bellow, likewise on in the shipped game; the arms move it.
   INTIMIDATE.enabled = true;
+  // Section 122: the Sunken Legion, and how often a due wave comes by sea.
+  LEGION.enabled = true;
+  LEGION.share = 0.2;
   // Section 120: what a band walks at. On in the shipped game; off is the old
   // rule, which is the arm this was measured against.
   PREY.enabled = true;
@@ -111,23 +114,35 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 121: the Ogre Clan Brute's bellow, which costs whoever is standing
-  // beside it a point of attack for a turn. Both arms have raiders in them --
-  // an ability only a raider has cannot be measured in a quiet game -- and both
-  // carry section 120's wilds, which is the game as it now ships.
+  // Section 122, second pass. The first measured the Legion as built against no
+  // Legion at all and found eight games moving to the Horde -- not because the
+  // sea faction is strong, but because a wave that goes to the coast is a wave
+  // that did not go inland, and the Kingdom is the more coastal side on these
+  // maps. Horde sackings fell 1.45 to 1.20 while the Kingdom's rose 1.10 to
+  // 1.30, which is the whole story in one column.
+  //
+  // So this asks the only question left: how much sea is balance-neutral.
   {
-    label: 'a quiet ogre',
+    label: 'wilds only',
     apply: () => {
       control();
       NEW_GAME.barbarians = true;
-      INTIMIDATE.enabled = false;
+      LEGION.enabled = false;
     },
   },
   {
-    label: 'it shouts',
+    label: 'sea at 0.4',
     apply: () => {
       control();
       NEW_GAME.barbarians = true;
+    },
+  },
+  {
+    label: 'sea at 0.2',
+    apply: () => {
+      control();
+      NEW_GAME.barbarians = true;
+      LEGION.share = 0.2;
     },
   },
 ];
