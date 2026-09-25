@@ -9999,3 +9999,32 @@ The levers, if a later measurement disagrees: `RUINS.perLand` (a hundred tiles
 of land per ruin) halves the whole feature in one number, `wardenDefence`
 softens what stands in them, and `enabled` takes the map back to what it was.
 
+### Confirmed at double the sample, and it is real
+
+The five-game gap above was called *not established* on the strength of one
+seed set staying level. Re-run at **216 games an arm** it is neither five games
+nor noise:
+
+| arm | Horde-Kingdom | cities H/K | population H/K | conquests |
+|---|---|---|---|---|
+| empty map | **117-99** | 5.80/5.50 | 47.0/42.5 | 80 |
+| ruins | **97-119** | 5.55/6.64 | 49.1/53.1 | 58 |
+
+Twenty games, both sets moving the same way (58-50 to 50-58, and 59-49 to
+47-61), with cities, population and conquests moving with them. **Ruins as they
+stand lean Kingdom**, and the earlier "tuned set is level" was the sample being
+too small to say so -- which is section 121's rule earning its keep in the
+direction nobody enjoys.
+
+**The hypothesis to test first, next time.** The Kingdom gains 1.1 cities and
+ten people a game; the Horde gains neither. `PERSONALITIES.orc.targetCities` is
+5 and the Kingdom's is 6, and an AI at its target stops founding -- so the free
+worker in a ruin becomes a *town* for the Kingdom and a *road crew* for the
+Horde. That is the settler-prize bug wearing a second coat: the prize is
+symmetric, and what the two sides can do with it is not. Cheapest arms to try:
+the prize as a soldier for both sides, and `RUINS.perLand` doubled.
+
+**Not merged.** The branch is `feat/ruins`, the work is sound and the rules are
+the right ones; the number is not, and shipping a twenty-game lean because the
+feature was interesting would be the thing this file exists to prevent.
+
