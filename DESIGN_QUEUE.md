@@ -9899,8 +9899,7 @@ are design and are queued below with what they will cost.
 2. ~~A visible Portal countdown.~~ **Done, below.**
 3. ~~The magic advisor should ask for the Portal, and advisors should have an
    opinion on diplomacy.~~ **Done, below.**
-4. **The two diplomacy advisors, talking to each other** on the talks screen.
-   Section 46's talking animation already does the mouths; this is the staging.
+4. ~~The two diplomacy advisors, talking to each other.~~ **Done, below.**
 5. **Auto-placate and auto-study** per city: a city set to calm itself or study
    when it has nothing better to do.
 6. **A finished palace should mean something** -- a permanent contentment
@@ -9965,4 +9964,21 @@ council is better for the curation -- six voices on one clock is the panel
 section 46 exists to avoid. The mages tell you about the clock; the diplomat
 tells you about the score. One test changed to say so, rather than being worked
 around: it asserted they *say nothing of peace at war*, which was the bug.
+
+### Somebody else in the room
+
+The talks screen had your envoy making the case and your war advisor objecting,
+which is a council meeting rather than a negotiation: the other side was a line
+of narration and, eventually, a yes or a no.
+
+**Their envoy now answers**, below a dashed rule that is the table, in their own
+colours, portrait flipped so the two of them face each other, and captioned with
+whose envoy he is. What he says comes off `wantPeace` -- **the same number their
+AI decides with** -- so he is not bluffing: a Herald who says the realm is
+listening is a realm that will take the offer, and one who says the committee
+has made plans is a wasted turn.
+
+The exchange runs **yours, theirs, then your war advisor**, and the order is the
+joke: the objection lands after the other side has spoken, which is how it goes
+at every table anybody has ever sat at.
 

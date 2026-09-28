@@ -67,6 +67,34 @@ function forWar(faction: FactionId, peace: boolean, weWant: number): string {
     : 'We have them. A peace now hands back everything the dead paid for.';
 }
 
+/**
+ * What their diplomat says back, across the table. Section 124.
+ *
+ * Asked for from play: *"in the diplomacy screen I think it would be fun to
+ * see the two factions' diplo advisors talking"*. It was your own two arguing
+ * with each other, which is a council meeting rather than a negotiation -- the
+ * other side was a line of narration and a yes or no.
+ *
+ * Written from the same number their AI decides with (`wantPeace`), so the
+ * envoy is not bluffing: a Herald who says the Kingdom is listening is a
+ * Kingdom that will take the offer. It is the one place in the game where the
+ * other side speaks for itself, and it should be worth reading for that alone.
+ */
+function theirWord(faction: FactionId, peace: boolean, theyWant: number): string {
+  if (faction === 'orc') {
+    if (peace) return 'Da treaty is on da wall in da big tent. Nobody has eaten it yet. Dat is respect.';
+    if (theyWant >= 0.35) return 'We is listening, elf. Say a number. Say it slow, we is not good wif numbers.';
+    if (theyWant >= 0) return 'We could stop. We is not tired, you understand. We could just stop. For a price.';
+    if (theyWant >= -0.5) return 'Why would we stop? You is losing interestingly. Bring gold and we will pretend to think.';
+    return 'No. Da lads have made plans. Dere is a rota.';
+  }
+  if (peace) return 'The treaty stands, filed in triplicate, and I have read all three. Let us both keep it that way.';
+  if (theyWant >= 0.35) return 'We are, I will admit it plainly, receptive. Name your terms before somebody senior arrives and I have to stop admitting things.';
+  if (theyWant >= 0) return 'The realm is willing to hear a proposal. Willing. That is the word I am authorised to use.';
+  if (theyWant >= -0.5) return 'The realm is not seeking an arrangement. Gold has been known to reopen a file that was closed.';
+  return 'No. And the committee asked me to say it in that tone.';
+}
+
 /** How the other side seems to feel about it, in words. */
 function mood(want: number): string {
   if (want >= 0.35) return 'They want this, and would probably say yes to it for nothing.';
@@ -160,10 +188,15 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         ? `You have gone back on yours ${betrayals(state, me.id) === 1 ? 'once' : `${betrayals(state, me.id)} times`}, and they know it.`
         : '',
     ].filter(Boolean);
-    const voice = (who: { id: string; name: string }, line: string) => `
-      <div class="advisor talks-voice">
+    // `across` is their envoy rather than one of ours: the portrait is flipped
+    // so the two of them face each other, and the card is lit the other side's
+    // colour so there is never a moment's doubt about who just said that.
+    const voice = (who: { id: string; name: string }, line: string, across = false) => `
+      <div class="advisor talks-voice${across ? ' talks-them' : ''}">
         <img class="advisor-face" src="${portraitPath(who.id)}" alt="" />
-        <div class="advisor-who"><span class="advisor-name">${escapeHtml(who.name)}</span></div>
+        <div class="advisor-who"><span class="advisor-name">${escapeHtml(who.name)}</span>${
+          across ? `<span class="advisor-role muted">${escapeHtml(them.name)}</span>` : ''
+        }</div>
         <div class="advisor-line">${escapeHtml(line)}</div>
       </div>`;
     return `
@@ -177,6 +210,9 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
       <div class="advisors talks-voices">
         ${voice(voices.peace, forPeace(me.faction, peace, weWant))}
         ${voice(voices.war, forWar(me.faction, peace, weWant))}
+      </div>
+      <div class="advisors talks-voices talks-across">
+        ${voice(VOICES[them.faction].peace, theirWord(them.faction, peace, theyWant), true)}
       </div>
       <div class="button-row talks-offers">
         ${offers(me, peace)
@@ -203,8 +239,13 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         const said = [...holder.querySelectorAll<HTMLElement>('.talks-voice .advisor-line')].map(
           (l) => l.textContent ?? '',
         );
+        // Section 124: your envoy makes the case, **their envoy answers**, and
+        // then your war advisor says what he thinks of all that. The order is
+        // the joke: the objection lands after the other side has spoken, which
+        // is how it goes at every table anybody has ever sat at.
         void takeTurns([
           { img: faces[0] ?? null, id: voices.peace.id, line: said[0] ?? '' },
+          { img: faces[2] ?? null, id: VOICES[them.faction].peace.id, line: said[2] ?? '' },
           { img: faces[1] ?? null, id: voices.war.id, line: said[1] ?? '' },
         ]);
       };

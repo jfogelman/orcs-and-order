@@ -2096,3 +2096,32 @@ kbd {
   }
 }
 
+/* ------------------------------ the other side of the table, section 124 */
+
+/*
+ * Their envoy, answering yours.
+ *
+ * Set apart rather than listed with your own two: a negotiation with everybody
+ * on one side of the page is a council meeting, and the whole point of this is
+ * that somebody else is in the room. The rule above it is the table.
+ */
+.talks-across {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(240, 198, 74, 0.28);
+}
+
+.advisor.talks-them {
+  border-color: rgba(120, 170, 220, 0.45);
+  background: linear-gradient(180deg, #1b2431, #161d27);
+}
+
+/* Facing yours, which is the cheapest way to say "across from you". */
+.advisor.talks-them .advisor-face {
+  transform: scaleX(-1);
+}
+
+.advisor.talks-them .advisor-name {
+  color: #cfe3ff;
+}
+
