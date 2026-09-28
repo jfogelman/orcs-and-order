@@ -9895,15 +9895,8 @@ are design and are queued below with what they will cost.
 
 ### Queued, with what each is
 
-1. **Critical news should interrupt.** Jeremy: *"the log is extremely easy to
-   ignore"*. The machinery exists -- `openNotice` and the cue-driven prompts --
-   and what is missing is a policy about which events earn a modal and a sound:
-   an ending opened, a folly finished under you, a peace broken, a raider at the
-   gate. This is the biggest of them and the one that changes how the game
-   *feels* most.
-2. **A visible Portal countdown**, with a fiery edge. Fifteen turns of holding
-   the thing is the tensest stretch in the game and it is currently a line of
-   text. Wants a HUD element, not a log entry.
+1. ~~Critical news should interrupt.~~ **Done, below.**
+2. ~~A visible Portal countdown.~~ **Done, below.**
 3. **The magic advisor should ask for the Portal** once it is within reach, and
    advisors should have an opinion on whether to talk to the other side. Both
    are lines in `model/advisors.ts` plus the `Situation` fields to trigger them.
@@ -9915,3 +9908,33 @@ are design and are queued below with what they will cost.
    bonus -- and **knowing every advance** should too. Both are end-of-tree
    rewards for a game that is already won, so they want a light hand.
 
+### The news that stops the turn, and the clock that says how long
+
+Two of the six, built together because they are the same complaint: *"the log is
+extremely easy to ignore"*.
+
+**A short list is the whole design.** A dialog that opens every turn is the log
+again with an extra click, so exactly three things interrupt:
+
+- an **ending opened, or a work towards one finished**, by either side -- the
+  clock everybody is now playing against, which is why `pieceFinished` and the
+  opening now carry an `ending` cue;
+- a **town of yours lost**;
+- **raiders at the gate** -- not sighted somewhere, but standing next to one of
+  your towns, which is the moment a garrison is worth more than whatever that
+  city was building. Read off the board rather than the log, because nothing
+  logs *"they are still there"*, and remembered per town so one band earns one
+  warning.
+
+All three ring `alarm`, a new sound id borrowing `city-lost.mp3` until a horn is
+recorded for it (asked for in ART_PROMPTS).
+
+**The countdown is a chip in the top bar**, shown to both sides, because the
+opening is told to everybody -- it is the one secret the game deliberately does
+not keep -- and the side that did not build it needs the number more. It burns:
+a two-second pulse on two box-shadows, and a faster, redder one when the clock
+belongs to somebody else. No art; it is CSS.
+
+One bug found on the way: `follyNewsSeen` was never reset when a game was
+swapped in, so a new game carried the old game's index and quietly dropped its
+first notices. All three news counters reset in `adopt` now.

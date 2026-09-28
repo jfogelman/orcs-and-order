@@ -175,7 +175,10 @@ function tellEverybody(
 ): void {
   for (const p of contenders(state)) {
     const mine = p.id === builder;
-    log(state, mine ? ours : theirs, mine ? 'good' : 'bad', p.id, undefined, at);
+    // Section 124: cued, because this is the news the game most wants you to
+    // have actually read. The interface decides what that means -- a sound,
+    // and a dialog rather than a line in a log that scrolls.
+    log(state, mine ? ours : theirs, mine ? 'good' : 'bad', p.id, 'ending', at);
   }
 }
 

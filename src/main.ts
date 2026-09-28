@@ -60,6 +60,7 @@ import {
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
+import { endingTurnsLeft, portalOpen } from './sim/endings';
 import { installOverflowTips } from './ui/overflowTips';
 import { installTopbarMore } from './ui/topbarMore';
 import { JOBS, JOB_VERB, TERRAFORM, canImprove, jobName, jobTurns, startImprove } from './sim/terraform';
@@ -216,8 +217,16 @@ class App {
     this.state = state;
     // A new or loaded game is not half way through somebody else's turn.
     this.endTurnArmed = false;
-    // Nor does it replay a peace broken before it was loaded.
+    // Nor does it replay a peace broken before it was loaded -- nor the
+    // follies, nor anything critical, which is the same rule three times: news
+    // from before you sat down is not news. (The follies had this bug the
+    // other way round, holding an index from the *previous* game that was
+    // longer than the new log, so the first few notices of a new game were
+    // silently dropped.)
     this.peaceNewsSeen = state.log.length;
+    this.follyNewsSeen = state.log.length;
+    this.criticalSeen = state.log.length;
+    this.raidersAtTheGate.clear();
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
     this.camera.setMapSize(state.width, state.height);
@@ -759,6 +768,10 @@ class App {
   private roadArmed = false;
   /** How much of the log has already been raised as folly news. Section 111. */
   private follyNewsSeen = 0;
+  /** How far into the log the critical-news check has read. Section 124. */
+  private criticalSeen = 0;
+  /** Towns already warned about, so one band earns one warning. */
+  private raidersAtTheGate = new Set<number>();
 
   /**
    * Arm "Road To": the next click on the map sets where the road goes.
@@ -1121,6 +1134,11 @@ class App {
     this.promptPrideIfDue();
     if (isModalOpen()) return chain();
 
+    // Before the follies and everything else: this is the list that changes
+    // what the turn is for.
+    this.promptCriticalNews();
+    if (isModalOpen()) return chain();
+
     this.promptFollyNews();
     if (isModalOpen()) return chain();
 
@@ -1210,6 +1228,68 @@ class App {
     this.refreshSidebar();
     this.playLogCues();
     this.promptPeaceNews();
+  }
+
+  /**
+   * Section 124: the news that stops the turn.
+   *
+   * Reported from play: *"the log is extremely easy to ignore, critical
+   * notifications should be modal popups instead with appropriate sound
+   * effects"*. He is right, and the fix is not more logging -- it is deciding
+   * which handful of things are allowed to interrupt somebody, and then
+   * interrupting them properly.
+   *
+   * **The list is short on purpose.** A dialog that opens every turn is a
+   * dialog that gets clicked away without reading, which is the log's problem
+   * again with an extra click. Four things qualify, and each of them changes
+   * what you should do next:
+   *
+   * - **an ending opened or a work towards one finished** (`ending`), by either
+   *   side: the clock everybody is now playing against;
+   * - **a city of yours lost** (`city-lost`), which is the game's worst news;
+   * - **raiders at the gate** -- not merely sighted, but standing next to a
+   *   town of yours, which is the moment a garrison is worth more than whatever
+   *   that city was building.
+   *
+   * Follies keep their own notice below, since they had one first and it works.
+   */
+  private promptCriticalNews(): void {
+    if (isOver(this.state)) return;
+    const fresh = this.state.log.slice(this.criticalSeen);
+    this.criticalSeen = this.state.log.length;
+    const lines = fresh
+      .filter(
+        (e) =>
+          (e.cue === 'ending' || e.cue === 'city-lost') &&
+          (e.player === null || e.player === this.viewerId),
+      )
+      .map((e) => e.text);
+
+    // And the one that is read off the board rather than the log, because
+    // nothing logs "they are still there": a band within reach of a town.
+    const wild = this.state.players.find((p) => p.barbarian);
+    if (wild) {
+      const atTheGate = this.state.cities.filter(
+        (c) =>
+          c.owner === this.viewerId &&
+          this.state.units.some(
+            (u) => u.owner === wild.id && Math.max(Math.abs(u.x - c.x), Math.abs(u.y - c.y)) <= 1,
+          ),
+      );
+      for (const city of atTheGate) {
+        if (this.raidersAtTheGate.has(city.id)) continue;
+        this.raidersAtTheGate.add(city.id);
+        lines.push(`There are raiders at the gate of ${city.name}. Somebody should be standing in it.`);
+      }
+      // Forgotten once they have gone, so the next band gets its own warning.
+      for (const id of [...this.raidersAtTheGate]) {
+        if (!atTheGate.some((c) => c.id === id)) this.raidersAtTheGate.delete(id);
+      }
+    }
+
+    if (lines.length === 0) return;
+    audio.play('alarm', 0);
+    openNotice(lines.length === 1 ? 'Something has happened' : 'Things have happened', lines);
   }
 
   private promptFollyNews(): void {
@@ -2007,6 +2087,42 @@ class App {
 
   // ------------------------------------------------------------------- HUD
 
+  /**
+   * Section 124: the countdown, where it can be seen.
+   *
+   * Fifteen turns of holding a city is the tensest stretch the game has, and
+   * it was a line of text in a log that scrolls. Reported from play: *"for the
+   * portal we should visibly see a countdown of turns left in the UI"*.
+   *
+   * Shown to **both sides**, because the opening is told to everybody -- it is
+   * the one secret the game deliberately does not keep -- and the side that
+   * did not build it needs the number far more than the side that did. The
+   * edge burns while it is somebody else's.
+   */
+  private refreshEndingClock(): void {
+    const chip = el('stat-ending');
+    const open = this.state.cities
+      .map((c) => ({ city: c, left: endingTurnsLeft(this.state, c) }))
+      .filter((o): o is { city: City; left: number } => o.left !== null)
+      // The one about to land, if somehow two are running.
+      .sort((a, b) => a.left - b.left)[0];
+    if (!open) {
+      chip.hidden = true;
+      chip.classList.remove('theirs');
+      return;
+    }
+    const mine = open.city.owner === this.viewerId;
+    const what = portalOpen(open.city) ? 'Portal' : 'Object';
+    chip.hidden = false;
+    chip.classList.toggle('theirs', !mine);
+    chip.textContent = mine
+      ? `${what} · ${open.left} ${open.left === 1 ? 'turn' : 'turns'} to hold`
+      : `${what} in ${open.city.name} · ${open.left} ${open.left === 1 ? 'turn' : 'turns'}`;
+    chip.title = mine
+      ? 'Hold the city until this runs out.'
+      : 'Take that city before this runs out.';
+  }
+
   private refreshHud(): void {
     this.refreshEndTurn();
     const p = this.state.players[this.viewerId];
@@ -2027,6 +2143,7 @@ class App {
       ? `${research.name} — ${p.beakers}/${techCost(p, research)} · ${etaText(this.state, p.id)}`
       : 'Researching nothing in particular';
 
+    this.refreshEndingClock();
     this.refreshLog();
     this.refreshOverlays();
     this.refreshSidebar();
