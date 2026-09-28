@@ -103,6 +103,26 @@ function healUnits(state: GameState, playerId: number): void {
   }
 }
 
+/**
+ * Anybody who dug in to heal and has finished healing gets up.
+ *
+ * After `healUnits`, so a unit that was made whole this morning is up the same
+ * morning rather than a turn later, and before the idle cycle is asked for:
+ * the whole point is that it offers itself back to you.
+ */
+function wakeTheMended(state: GameState, playerId: number): void {
+  for (const unit of state.units) {
+    if (unit.owner !== playerId || !unit.mending) continue;
+    if (unit.hp < unitType(unit.type).hp) continue;
+    delete unit.mending;
+    unit.order = 'none';
+    log(state, `${unitType(unit.type).name} is patched up and ready.`, 'good', playerId, undefined, [
+      unit.x,
+      unit.y,
+    ]);
+  }
+}
+
 function refreshUnits(state: GameState, player: Player): void {
   // Section 111: the Long March, once per turn rather than once per unit.
   const march = empireBonus(state, player.id, (b) => b.homeMoves);
@@ -338,6 +358,8 @@ export const PRIDE = { step: 35 };
 export function prideDue(state: GameState, playerId: number): boolean {
   const player = state.players[playerId];
   if (!player || player.barbarian) return false;
+  // One a turn, whatever the score did. See `Player.prideTurn`.
+  if (player.prideTurn === state.turn) return false;
   if (prideOffer(player).length === 0) return false;
   if (!civicPride(state, playerId)) return false;
   return Math.floor(playerScore(state, playerId) / PRIDE.step) > (player.prideTaken ?? 0);
@@ -684,6 +706,7 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // Passengers get their legs back too, so they can step ashore this turn.
   refreshCargo(state, playerId);
   healUnits(state, playerId);
+  wakeTheMended(state, playerId);
   runEconomy(state, player);
   resumeGotoOrders(state, playerId);
   // After the digging above has advanced, so a worker that finished a stretch

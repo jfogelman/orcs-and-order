@@ -588,7 +588,42 @@ class App {
     unit.order = unit.order === 'fortified' ? 'none' : 'fortified';
     unit.goto = null;
     delete unit.roadTo;
+    // Waking by hand ends a mending watch too: you have decided it is well
+    // enough, which is your call to make.
+    delete unit.mending;
     this.refreshSidebar();
+  }
+
+  /**
+   * Dig in, and stay dug in until the wounds close. Section 124.
+   *
+   * Fortifying is already the fastest way to heal; this is the part that was
+   * missing, which is being told when it is done. `wakeTheMended` puts the
+   * unit back in the idle cycle the morning it is whole.
+   */
+  private orderMend(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const type = unitType(unit.type);
+    if (type.sails) {
+      this.flash('A ship cannot dig in. Sentry keeps it at anchor.');
+      return;
+    }
+    if (unit.mending) {
+      delete unit.mending;
+      unit.order = 'none';
+      this.refreshSidebar();
+      return;
+    }
+    if (unit.hp >= type.hp) {
+      this.flash('Nothing to mend.');
+      return;
+    }
+    unit.mending = true;
+    unit.order = 'fortified';
+    unit.goto = null;
+    delete unit.roadTo;
+    this.selectNextIdle();
   }
 
   private orderSentry(): void {
@@ -604,7 +639,15 @@ class App {
     const unit = this.selected;
     if (!unit) return;
     unit.order = 'skip';
-    unit.moves = 0;
+    // **Its movement is left alone.** Skip used to spend the turn, which made
+    // it a decision rather than a deferral: a unit skipped by accident, or
+    // skipped while you looked at something else, could not be picked up again
+    // until next turn. Reported from play (2026-09-28).
+    //
+    // Dropping out of the cycle is `order`'s doing, not the movement's --
+    // `idleUnits` asks for `order === 'none'` -- so the unit stops being
+    // offered, stays selectable, and can still act if you come back to it.
+    // `refreshUnits` clears the order at the top of the next turn as before.
     this.selectNextIdle();
   }
 
@@ -1840,6 +1883,9 @@ class App {
       case 'f':
         this.orderFortify();
         break;
+      case 'h':
+        this.orderMend();
+        break;
       case 's':
         this.orderSentry();
         break;
@@ -2083,7 +2129,7 @@ class App {
           }
           ${
             !inSupply(this.state, unit)
-              ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from any city of yours &middot; fights weakly and cannot heal</span></div>`
+              ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from your capital, an outpost or a town you have long held &middot; fights weakly and cannot heal</span></div>`
               : ''
           }
           ${
@@ -2237,6 +2283,16 @@ class App {
               ? ''
               : `<button class="small" data-act="fortify">${unit.order === 'fortified' ? 'Wake (F)' : 'Fortify (F)'}</button>`
           }
+          ${
+            // Only when there is something to mend, and not to a ship: a unit
+            // at full health being offered "until healed" is a button that
+            // does nothing, which is worse than no button.
+            !t.sails && unit.hp < t.hp
+              ? `<button class="small" data-act="mend">${
+                  unit.mending ? 'Stop mending (H)' : 'Until healed (H)'
+                }</button>`
+              : ''
+          }
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
@@ -2297,6 +2353,9 @@ class App {
               break;
             case 'fortify':
               this.orderFortify();
+              break;
+            case 'mend':
+              this.orderMend();
               break;
             case 'sentry':
               this.orderSentry();

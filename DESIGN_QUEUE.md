@@ -9862,3 +9862,56 @@ on itself every frame.
 
 One: the **Tomb Wardens**, guardians waking from ruins, which still needs ruins.
 
+## 124. Notes off a played-out game
+
+Jeremy played a full game (2026-09-28), used diplomacy, and won on the Demonic
+Portal. Eleven notes came back. Five had a right answer and are done; the rest
+are design and are queued below with what they will cost.
+
+### Done
+
+- **Skip no longer spends the turn.** It set `moves = 0`, so a unit skipped by
+  accident could not be picked up again until tomorrow. Dropping out of the
+  cycle is `order`'s doing -- `idleUnits` asks for `order === 'none'` -- so the
+  movement never needed taking.
+- **"Out of supply" was telling a lie.** It said *too far from any city of
+  yours*, and the rule is the capital, an outpost, or a town held long enough to
+  count (`supplyChain`). The rule is right and worth keeping -- it is what
+  outposts are *for* -- so the message now says what it means. Two Death Knights
+  standing in the gate of an ordinary town, out of supply, were the report.
+- **One piece of the capital a turn.** A good turn can cross two milestones at
+  once and the council offered two and three pieces in a breath. `Player.prideTurn`
+  holds the ceremony to one a day; nothing is lost, since the milestone is
+  counted against what has been taken.
+- **Fortify until healed** (H). Digging in was already the fastest way to mend;
+  what was missing was being told when it was done. `unit.mending` keeps it out
+  of the idle cycle and `wakeTheMended` puts it back the morning it is whole.
+- **The raider sighting was investigated and is not broken.** A test says the
+  camera does turn for a first sighting, and that a raider which leaves view is
+  forgotten and announced again when it returns. Two things can still leave the
+  screen still: the raider was already on screen, which is deliberate, or
+  something of yours died in the same batch and outranked it, which is also
+  deliberate. The real complaint is the next item.
+
+### Queued, with what each is
+
+1. **Critical news should interrupt.** Jeremy: *"the log is extremely easy to
+   ignore"*. The machinery exists -- `openNotice` and the cue-driven prompts --
+   and what is missing is a policy about which events earn a modal and a sound:
+   an ending opened, a folly finished under you, a peace broken, a raider at the
+   gate. This is the biggest of them and the one that changes how the game
+   *feels* most.
+2. **A visible Portal countdown**, with a fiery edge. Fifteen turns of holding
+   the thing is the tensest stretch in the game and it is currently a line of
+   text. Wants a HUD element, not a log entry.
+3. **The magic advisor should ask for the Portal** once it is within reach, and
+   advisors should have an opinion on whether to talk to the other side. Both
+   are lines in `model/advisors.ts` plus the `Situation` fields to trigger them.
+4. **The two diplomacy advisors, talking to each other** on the talks screen.
+   Section 46's talking animation already does the mouths; this is the staging.
+5. **Auto-placate and auto-study** per city: a city set to calm itself or study
+   when it has nothing better to do.
+6. **A finished palace should mean something** -- a permanent contentment
+   bonus -- and **knowing every advance** should too. Both are end-of-tree
+   rewards for a game that is already won, so they want a light hand.
+

@@ -77,6 +77,8 @@ export function openPrideOffer(
           const tier = (palaceOf(player)[id] ?? 0) + 1;
           if (!takePride(player, id)) return;
           player.prideTaken = (player.prideTaken ?? 0) + 1;
+          // And that is this turn's ceremony over with.
+          player.prideTurn = state.turn;
           const module = offers.find((o) => o.module.id === id)!.module;
           log(
             state,

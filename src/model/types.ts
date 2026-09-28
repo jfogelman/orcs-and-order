@@ -87,6 +87,15 @@ export interface Player {
    */
   prideTaken?: number;
   /**
+   * The turn the last piece of the capital was taken.
+   *
+   * One a turn. A good turn can push the score past two milestones at once --
+   * a city founded, a folly finished, an advance in -- and the council then
+   * offered a second and a third piece in the same breath, which read as a
+   * bug and rather spoiled the ceremony. Reported from play (2026-09-28).
+   */
+  prideTurn?: number;
+  /**
    * Trade routes this player had last turn, as `linkKey` strings.
    *
    * Kept so the turn can say what opened and what closed rather than only
@@ -256,6 +265,17 @@ export interface Unit {
    * sighting. Section 15's auto-scout. Absent in every older save.
    */
   exploring?: boolean;
+  /**
+   * Fortified, and staying fortified until the wounds close. Asked for from
+   * play (2026-09-28).
+   *
+   * Digging in is already how a hurt unit heals fastest, and the tedious part
+   * was remembering to come back for it: a unit set to heal was either woken
+   * by hand every turn to see how it was doing, or forgotten in a corner for
+   * forty turns. This wakes it the moment it is whole -- and only then, so it
+   * stays out of the idle cycle in the meantime.
+   */
+  mending?: boolean;
   /**
    * Land units riding in this ship, off the map until they step ashore. Only
    * ever set on a carrier. Absent in every older save.
