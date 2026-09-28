@@ -21,6 +21,27 @@ export function knowsTech(player: Player, id: TechId): boolean {
 }
 
 /** Advances whose prerequisites are all met and which are not yet known. */
+/**
+ * What knowing the whole tree is worth, section 124.
+ *
+ * Asked for from play: *"if we learn all beakers, perm joy/fight bonus"*. A
+ * finished tree currently means the beakers go nowhere at all, which is a odd
+ * reward for the thing the whole counting ladder is pointed at.
+ *
+ * **One content citizen everywhere, and a tenth on every attack.** Small, and
+ * late, and the same lap-of-honour argument as the finished palace -- by the
+ * time a side knows everything it is usually winning, so this is for the
+ * feeling rather than for the outcome. The attack share is the half that suits
+ * the Horde, whose whole tree is a joke about learning to hit things.
+ */
+export const OMNISCIENCE = { content: 1, attack: 0.1 };
+
+/** Whether this side has learned everything its faction can learn. */
+export function knowsEverything(player: Player): boolean {
+  const all = techsForFaction(player.faction);
+  return all.length > 0 && all.every((t) => knowsTech(player, t.id));
+}
+
 export function researchableTechs(player: Player): TechDef[] {
   return techsForFaction(player.faction).filter(
     (t) =>

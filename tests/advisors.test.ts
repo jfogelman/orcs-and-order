@@ -424,11 +424,27 @@ describe('advisors who talk back', () => {
     }
   });
 
-  it('has them mind a peace we broke, and say nothing of peace at war', () => {
+  it('has them mind a peace we broke, and an opinion about making one', () => {
     for (const faction of ['orc', 'human'] as const) {
       const advisor = advisorsFor(faction).find((a) => a.role === 'diplomacy')!;
       expect(advisorConcern(advisor, { ...calm(), faction, ashamed: true })?.about).toBe('peace');
-      expect(advisorConcern(advisor, { ...calm(), faction, peaceLeft: 0 })?.about).not.toBe('peace');
+
+      // Section 124, and this is the line that changed: at war they used to say
+      // nothing at all about peace, so the Talks button sat there for a whole
+      // game with nobody ever mentioning it. Now they have a view, and it is
+      // read off the score rather than off a preference.
+      const quietAndWinning = advisorConcern(advisor, { ...calm(), faction, peaceLeft: 0 });
+      expect(quietAndWinning?.about).toBe('peace');
+      expect(quietAndWinning?.say({ ...calm(), faction, peaceLeft: 0 })).toMatch(/not talk|worst possible moment/i);
+
+      const losing = advisorConcern(advisor, {
+        ...calm(),
+        faction,
+        peaceLeft: 0,
+        dominance: { turnsLeft: 8, theirs: true },
+      });
+      expect(losing?.about).toBe('peace');
+      expect(losing?.say({ ...calm(), faction, peaceLeft: 0 })).toMatch(/behind|losing/i);
     }
   });
 

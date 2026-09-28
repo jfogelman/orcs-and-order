@@ -50,7 +50,15 @@ export type SfxId =
   // Section 111: a folly is finished, which deserves a fanfare.
   | 'folly'
   // And the race for a shared one: somebody has started, or somebody has won.
-  | 'folly-race';
+  | 'folly-race'
+  /**
+   * Section 124: news that stops the turn.
+   *
+   * A horn, and the only sound in the game whose job is to make somebody look
+   * up. Kept to the short list in `CRITICAL` -- a warning that goes off every
+   * turn is a warning nobody hears.
+   */
+  | 'alarm';
 
 /**
  * Exported so tests can check that every cue the simulation emits names a
@@ -66,6 +74,7 @@ const FADE_MS = 140;
  * before the next one happens.
  */
 const LINGERING: ReadonlySet<SfxId> = new Set<SfxId>([
+  'alarm',
   'discovery',
   'promote',
   'city-founded',
@@ -116,6 +125,9 @@ export const SFX_FILES: Record<SfxId, string> = {
   folly: 'geoffreyburch-handy-introduction-022-glbml-21786.mp3',
   // The advance chime: the news is that somebody now knows something.
   'folly-race': 'discovery.mp3',
+  // Section 124: the horn a watchman blows off a wall. The one sound in the
+  // game whose job is to make somebody look up from what they were doing.
+  alarm: 'freesound_community-dramatic-horn-44005.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */

@@ -10027,4 +10027,149 @@ the prize as a soldier for both sides, and `RUINS.perLand` doubled.
 **Not merged.** The branch is `feat/ruins`, the work is sound and the rules are
 the right ones; the number is not, and shipping a twenty-game lean because the
 feature was interesting would be the thing this file exists to prevent.
+## 124. Notes off a played-out game
+
+Jeremy played a full game (2026-09-28), used diplomacy, and won on the Demonic
+Portal. Eleven notes came back. Five had a right answer and are done; the rest
+are design and are queued below with what they will cost.
+
+### Done
+
+- **Skip no longer spends the turn.** It set `moves = 0`, so a unit skipped by
+  accident could not be picked up again until tomorrow. Dropping out of the
+  cycle is `order`'s doing -- `idleUnits` asks for `order === 'none'` -- so the
+  movement never needed taking.
+- **"Out of supply" was telling a lie.** It said *too far from any city of
+  yours*, and the rule is the capital, an outpost, or a town held long enough to
+  count (`supplyChain`). The rule is right and worth keeping -- it is what
+  outposts are *for* -- so the message now says what it means. Two Death Knights
+  standing in the gate of an ordinary town, out of supply, were the report.
+- **One piece of the capital a turn.** A good turn can cross two milestones at
+  once and the council offered two and three pieces in a breath. `Player.prideTurn`
+  holds the ceremony to one a day; nothing is lost, since the milestone is
+  counted against what has been taken.
+- **Fortify until healed** (H). Digging in was already the fastest way to mend;
+  what was missing was being told when it was done. `unit.mending` keeps it out
+  of the idle cycle and `wakeTheMended` puts it back the morning it is whole.
+- **The raider sighting was investigated and is not broken.** A test says the
+  camera does turn for a first sighting, and that a raider which leaves view is
+  forgotten and announced again when it returns. Two things can still leave the
+  screen still: the raider was already on screen, which is deliberate, or
+  something of yours died in the same batch and outranked it, which is also
+  deliberate. The real complaint is the next item.
+
+### Queued, with what each is
+
+1. ~~Critical news should interrupt.~~ **Done, below.**
+2. ~~A visible Portal countdown.~~ **Done, below.**
+3. ~~The magic advisor should ask for the Portal, and advisors should have an
+   opinion on diplomacy.~~ **Done, below.**
+4. ~~The two diplomacy advisors, talking to each other.~~ **Done, below.**
+5. ~~Auto-placate and auto-study per city.~~ **Done, below.**
+6. ~~A finished palace and a finished tree should mean something.~~ **Done, below.**
+
+### The news that stops the turn, and the clock that says how long
+
+Two of the six, built together because they are the same complaint: *"the log is
+extremely easy to ignore"*.
+
+**A short list is the whole design.** A dialog that opens every turn is the log
+again with an extra click, so exactly three things interrupt:
+
+- an **ending opened, or a work towards one finished**, by either side -- the
+  clock everybody is now playing against, which is why `pieceFinished` and the
+  opening now carry an `ending` cue;
+- a **town of yours lost**;
+- **raiders at the gate** -- not sighted somewhere, but standing next to one of
+  your towns, which is the moment a garrison is worth more than whatever that
+  city was building. Read off the board rather than the log, because nothing
+  logs *"they are still there"*, and remembered per town so one band earns one
+  warning.
+
+All three ring `alarm`, a new sound id borrowing `city-lost.mp3` until a horn is
+recorded for it (asked for in ART_PROMPTS).
+
+**The countdown is a chip in the top bar**, shown to both sides, because the
+opening is told to everybody -- it is the one secret the game deliberately does
+not keep -- and the side that did not build it needs the number more. It burns:
+a two-second pulse on two box-shadows, and a faster, redder one when the clock
+belongs to somebody else. No art; it is CSS.
+
+One bug found on the way: `follyNewsSeen` was never reset when a game was
+swapped in, so a new game carried the old game's index and quietly dropped its
+first notices. All three news counters reset in `adopt` now.
+
+### The mage asks, and the diplomat has a view
+
+Both lines existed in some form and neither was ever heard, for two different
+reasons -- which is worth writing down, because "add a line" was the wrong fix
+in both cases.
+
+**The Portal line was last on purpose.** The road to an ending can be true for
+fifty turns, and section 110 put that concern at the bottom of the mage's list
+so he would not say the same thing all game. The trouble is that the *interesting*
+part of it -- "we could build it **now**" -- is brief, and it was being buried
+under whichever riot happened to be running. So it is split: `researchable` stays
+at the bottom where it belongs, and `buildable` or `building` is a separate
+concern near the top. The mage asks once it is a decision rather than a daydream.
+
+**The diplomacy lines were all about a treaty that already existed** -- lapsing,
+broken, distrusted -- so an advisor had opinions about keeping a peace and none
+at all about making one. The Talks button sat there for a whole game with nobody
+mentioning it. Both diplomats now have a view at war: **talk** when the score
+says we are being beaten, **do not** when nothing is burning and nobody is at the
+gate, which is the worst possible moment to sue for peace.
+
+Deliberately *not* keyed on an ending counting down, though that is the sharpest
+reason of all to open talks. Four advisors a side own the endings and the
+council is better for the curation -- six voices on one clock is the panel
+section 46 exists to avoid. The mages tell you about the clock; the diplomat
+tells you about the score. One test changed to say so, rather than being worked
+around: it asserted they *say nothing of peace at war*, which was the bug.
+
+### Somebody else in the room
+
+The talks screen had your envoy making the case and your war advisor objecting,
+which is a council meeting rather than a negotiation: the other side was a line
+of narration and, eventually, a yes or a no.
+
+**Their envoy now answers**, below a dashed rule that is the table, in their own
+colours, portrait flipped so the two of them face each other, and captioned with
+whose envoy he is. What he says comes off `wantPeace` -- **the same number their
+AI decides with** -- so he is not bluffing: a Herald who says the realm is
+listening is a realm that will take the offer, and one who says the committee
+has made plans is a wasted turn.
+
+The exchange runs **yours, theirs, then your war advisor**, and the order is the
+joke: the objection lands after the other side has spoken, which is how it goes
+at every table anybody has ever sat at.
+
+### A city that minds itself, and two laps of honour
+
+**Auto study** joins Ask me / Auto same unit / Auto coin as a fourth standing
+order: a game whose endings are advances wanted the other answer to "nothing to
+build" on the same shelf as banking the shields.
+
+**Auto calm is a separate switch rather than a fifth order**, and that is the
+design rather than an accident: the standing orders are about *what to build
+next*, and this is about *while it riots*. A city can perfectly well be on Auto
+study and still want to placate itself when the shouting starts. It remembers
+what it put down (`calmFrom`) and picks it up again when the city is quiet,
+which is the half that made doing it by hand tedious -- four actions to take the
+only sensible decision available. Human cities only: the AI has its own answer
+and changing it would change every balance number in the project.
+
+**A finished palace** pays one content citizen everywhere, and **a finished
+tree** pays another plus a tenth on every attack. Both are deliberately small.
+They land at the point in a game where the player is usually winning already, so
+they are laps of honour rather than levers -- enough to feel, too small to
+decide anything, which is the argument section 67 used for the palace itself.
+
+And a lesson about test fixtures. The end-of-tree bonus changed which games run
+long, and `LATE_SEED` -- one hard-coded seed the late fixtures are taken from --
+broke for the second time in two branches. The comment above it had already
+grown into a history of every balance change that shortened games. So it now
+**goes and looks**: a fixed list of candidate seeds, played in order, first one
+that reaches every turn the scenarios want. Deterministic, self-healing, and it
+prints the seed it settled on so a position can still be reproduced by hand.
 

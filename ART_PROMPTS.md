@@ -467,6 +467,26 @@ Prefix with:
 
 ## Sound
 
+### One sound still wanted: `alarm` (section 124)
+
+The news that stops the turn -- an ending opened, a town lost, raiders at a
+gate -- now opens a dialog and plays `alarm`. **It is currently borrowing
+`city-lost.mp3`**, which is the right weight and the wrong noise: it says
+*something of yours has burned* when half of what it announces is somebody
+else's clock starting.
+
+What it wants is **a horn**: two notes, low then higher, blown once, the sort of
+thing a watchman sounds from a wall. Two seconds at most, no reverb tail long
+enough to run into the next turn's sounds, and nothing musical enough to fight
+the soundtrack -- it plays over whatever is already going.
+
+Drop it as `art_src/sfx/alarm.mp3` and it replaces the stand-in with no code
+change; the name is already mapped.
+
+**No new pictures were needed for any of this.** The Portal countdown is a chip
+in the top bar with a burning edge drawn in CSS -- two box-shadows on a two-and-
+a-bit second pulse, faster and redder when the clock belongs to the other side.
+
 Sound effects keep their original filenames, so the credit and licence trail stays
 readable. Drop them in `art_src/sfx/` and map them to game events in
 `src/audio/audio.ts` — there is a table at the top of that file pairing each creature

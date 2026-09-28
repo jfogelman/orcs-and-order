@@ -885,6 +885,42 @@ const KINGDOM: AdvisorDef[] = [
     blurb: 'Elf. Patient to the point of insult.',
     concerns: [
       {
+        // Section 124: whether to go and talk in the first place.
+        //
+        // Every peace line here was about a treaty that already existed, so an
+        // advisor had opinions about *keeping* a peace and none at all about
+        // making one -- and the Talks button sat there all game with nobody
+        // ever mentioning it. Reported from play.
+        //
+        // The opinion is read off the board rather than off a preference:
+        // being plainly behind is a reason to talk, and a quiet house with a
+        // war going our way is a reason not to.
+        //
+        // Deliberately *not* keyed on an ending counting down, though that is
+        // the sharpest reason of all to sue for peace. Four advisors a side own
+        // the endings and the council is better for the curation: six voices on
+        // one clock is the panel section 46 was built to avoid. The mages will
+        // tell you about the clock; this one tells you about the score.
+        about: 'peace',
+        when: (s) => (s.peaceLeft ?? 0) === 0 && !!s.dominance?.theirs,
+        say: () =>
+          `We are behind, and behind is when a treaty is worth most: it buys turns, and turns are ` +
+          `the only thing that beats somebody who is winning. I can have terms on the table within ` +
+          `the hour. I have had them drafted since the spring.`,
+      },
+      {
+        about: 'peace',
+        when: (s) =>
+          (s.peaceLeft ?? 0) === 0 &&
+          !s.dominance?.theirs &&
+          (s.ending ?? null) === null &&
+          s.rioting === 0 &&
+          s.enemiesSeen === 0,
+        say: () =>
+          `Nothing is burning and nobody is at the gate, which is the worst possible moment to ` +
+          `sue for peace. One negotiates from a quiet house, not into one.`,
+      },
+      {
         // Section 116: four centuries of waiting, and finally a treaty to mind.
         about: 'peace',
         when: (s) => (s.peaceLeft ?? 0) > 0 && (s.peaceLeft ?? 0) <= 3,
@@ -948,6 +984,19 @@ const KINGDOM: AdvisorDef[] = [
           return `${left} until somebody presses the button. I have asked to be the somebody. A committee ` +
             `is considering it.`;
         },
+      },
+      {
+        // Section 124, and see the Death Mage's copy of this: the road line at
+        // the bottom of the list is for the long haul, and "we could build it
+        // now" is news that was being buried under the week's riot.
+        when: (s) => s.endingRoad === 'buildable' || s.endingRoad === 'building',
+        about: 'magic',
+        say: (s) =>
+          s.endingRoad === 'buildable'
+            ? `The Object can be built. Today. I have read what we know of it twice and I still ` +
+              `could not tell you what it does, which is precisely why I should like to find out.`
+            : `The Object is under construction. I have moved my desk. I am told this was not ` +
+              `necessary and I am told it by people standing considerably further away than I am.`,
       },
       {
         when: (s) => s.researching === null,
@@ -1168,6 +1217,27 @@ const HORDE: AdvisorDef[] = [
     blurb: 'Draped in bones. Disturbingly calm about it.',
     concerns: [
       {
+        // Section 124: whether to talk at all, which nobody was ever asked. See
+        // the Herald's copy of this.
+        about: 'peace',
+        when: (s) => (s.peaceLeft ?? 0) === 0 && !!s.dominance?.theirs,
+        say: () =>
+          `We is losing, boss. Losing is when talking is cheap. Talk to dem now, break it later -- ` +
+          `dat is two turns of quiet and one very good morning.`,
+      },
+      {
+        about: 'peace',
+        when: (s) =>
+          (s.peaceLeft ?? 0) === 0 &&
+          !s.dominance?.theirs &&
+          (s.ending ?? null) === null &&
+          s.army > 0 &&
+          s.enemiesSeen === 0,
+        say: () =>
+          `Do not talk to dem, boss. Dey only want to talk when dey is tired, and a tired elf is ` +
+          `da whole point of an elf.`,
+      },
+      {
         // Section 116: at last, something that is actually his to mind.
         about: 'peace',
         when: (s) => (s.peaceLeft ?? 0) > 0 && (s.peaceLeft ?? 0) <= 3,
@@ -1228,6 +1298,26 @@ const HORDE: AdvisorDef[] = [
           return `${left} until the Portal finishes breathing in. Hold the city. Whatever comes through ` +
             `will remember who held the door.`;
         },
+      },
+      {
+        // Section 124: and *asking* for it, once it is close enough to be a
+        // decision rather than a daydream.
+        //
+        // The road line at the bottom of this list is deliberately last -- it
+        // can be true for fifty turns and a councillor who says the same thing
+        // for fifty turns stops being heard. But "we could build it now" is not
+        // that line: it is news, it is briefly true, and it was being buried
+        // under whichever riot happened to be running. Reported from play, by
+        // somebody who won on the Portal and never once heard a mage ask for it.
+        when: (s) => s.endingRoad === 'buildable' || s.endingRoad === 'building',
+        about: 'magic',
+        say: (s) =>
+          s.endingRoad === 'buildable'
+            ? `We can open the Portal. Now, I mean -- the stones are known, the pit is known, and ` +
+              `what is on the other side has been polite enough to wait. Say the word and I shall ` +
+              `stop asking.`
+            : `The Portal is being built as we speak. I would like it noted that I asked first, and ` +
+              `that I shall be standing at the front.`,
       },
       {
         when: (s) => s.researching === null,

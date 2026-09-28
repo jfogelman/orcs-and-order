@@ -1,3 +1,5 @@
+import { OMNISCIENCE, knowsEverything } from './research';
+import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
 import { distance, fatCrossIndices, idx } from '../engine/grid';
 import { isCoastal, launchTile } from './ships';
 import { BUILDINGS, buildingsForFaction } from '../model/buildings';
@@ -342,6 +344,11 @@ export function contentLimit(state: GameState, city: City): number {
   // this one gives each of them a tile to stand on.
   limit += postCalm(state, city);
   if (owner.techs.some((t) => t === 'happiness')) limit += 1;
+  // Section 124: a palace finished to its last tier, and a tree learned to its
+  // last leaf. Both are lap-of-honour bonuses -- see their own notes for why
+  // they are as small as they are.
+  if (palaceComplete(owner)) limit += PALACE_COMPLETE_CONTENT;
+  if (knowsEverything(owner)) limit += OMNISCIENCE.content;
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
   // What the empire spends on keeping this particular city calm.
   const rates = tradeRates(owner);
