@@ -3,7 +3,11 @@ import type { City, GameState } from '../src/model/types';
 import { beginPlayerTurn, idleUnits, prideDue } from '../src/sim/turn';
 import { chooseFocus } from '../src/ui/watch';
 import { SIGHTING, reportSightings } from '../src/sim/barbarians';
-import { inSupply } from '../src/sim/city';
+import { contentLimit, inSupply } from '../src/sim/city';
+import { PALACE_COMPLETE_CONTENT, PALACE_MODULES, PALACE_TIERS, palaceComplete, takePride } from '../src/model/palace';
+import { OMNISCIENCE, knowsEverything } from '../src/sim/research';
+import { techsForFaction } from '../src/model/techs';
+import { attackStrength } from '../src/sim/combat';
 import { assignWorkers } from '../src/sim/city';
 import { barbarianOf, createGame, spawnUnit } from '../src/sim/gamestate';
 import { unitType } from '../src/model/units';
@@ -166,5 +170,109 @@ describe('a raider coming into view', () => {
     reportSightings(state, 0);
 
     expect(state.log.filter((e) => e.subject === SIGHTING)).toHaveLength(0);
+  });
+});
+
+describe('a city minding itself', () => {
+  /** A town of ours, big enough to be unhappy about it. */
+  function town(state: GameState): City {
+    const city = state.cities[0];
+    city.size = 9;
+    assignWorkers(state, city);
+    return city;
+  }
+
+  it('turns to calm while it riots, and goes back to work after', () => {
+    const state = board();
+    const city = town(state);
+    city.autoCalm = true;
+    city.producing = { kind: 'building', id: 'granary' };
+    city.disorder = true;
+
+    beginPlayerTurn(state, 0);
+    expect(city.producing.kind).toBe('calm');
+
+    // The shouting stops, and it picks up exactly what it put down.
+    city.disorder = false;
+    beginPlayerTurn(state, 0);
+    expect(city.producing).toEqual({ kind: 'building', id: 'granary' });
+  });
+
+  it('does none of that unless it was asked to', () => {
+    const state = board();
+    const city = town(state);
+    city.producing = { kind: 'building', id: 'granary' };
+    city.disorder = true;
+
+    beginPlayerTurn(state, 0);
+
+    expect(city.producing).toEqual({ kind: 'building', id: 'granary' });
+  });
+
+  it('studies rather than banking coin, when told to', () => {
+    const state = board();
+    const city = town(state);
+    city.autoBuild = 'beakers';
+    city.producing = { kind: 'coin' };
+
+    beginPlayerTurn(state, 0);
+
+    expect(city.producing.kind).toBe('beakers');
+  });
+});
+
+describe('the lap of honour', () => {
+  it('pays a content citizen for a palace finished to its last tier', () => {
+    const state = board();
+    const city = state.cities[0];
+    const player = state.players[0];
+    const before = contentLimit(state, city);
+
+    for (const module of PALACE_MODULES) {
+      for (let tier = 0; tier < PALACE_TIERS; tier++) takePride(player, module.id);
+    }
+
+    expect(palaceComplete(player)).toBe(true);
+    expect(contentLimit(state, city)).toBe(before + PALACE_COMPLETE_CONTENT);
+  });
+
+  it('pays another, and a harder swing, for knowing everything', () => {
+    const state = board();
+    const city = state.cities[0];
+    const player = state.players[0];
+    const calmBefore = contentLimit(state, city);
+    const orc = spawnUnit(state, 0, 'orc', 8, 10, false);
+    const foe = spawnUnit(state, 1, 'footman', 9, 10, false);
+
+    const all = techsForFaction(player.faction).map((t) => t.id);
+    // One short of everything, and short of something that changes nothing on
+    // its own: learning the *whole* tree also learns Happiness, which is worth
+    // a content citizen by itself, so comparing against an empty tree would be
+    // measuring two bonuses and calling it one.
+    const harmless = all.find((id) => id !== 'happiness')!;
+    player.techs = all.filter((id) => id !== harmless);
+    expect(knowsEverything(player)).toBe(false);
+    const oneShort = contentLimit(state, city);
+    // The same trick for the swing: a full tree also carries the berserk flag,
+    // which multiplies attacks by a quarter all by itself.
+    const swingOneShort = attackStrength(state, orc, foe).total;
+
+    player.techs = all;
+
+    expect(knowsEverything(player)).toBe(true);
+    expect(contentLimit(state, city)).toBe(oneShort + OMNISCIENCE.content);
+    expect(attackStrength(state, orc, foe).total).toBeCloseTo(
+      swingOneShort * (1 + OMNISCIENCE.attack),
+      5,
+    );
+    void calmBefore;
+  });
+
+  it('pays nobody who has not finished', () => {
+    const state = board();
+    const player = state.players[0];
+    takePride(player, PALACE_MODULES[0].id);
+    expect(palaceComplete(player)).toBe(false);
+    expect(knowsEverything(player)).toBe(false);
   });
 });

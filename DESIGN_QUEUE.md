@@ -9900,11 +9900,8 @@ are design and are queued below with what they will cost.
 3. ~~The magic advisor should ask for the Portal, and advisors should have an
    opinion on diplomacy.~~ **Done, below.**
 4. ~~The two diplomacy advisors, talking to each other.~~ **Done, below.**
-5. **Auto-placate and auto-study** per city: a city set to calm itself or study
-   when it has nothing better to do.
-6. **A finished palace should mean something** -- a permanent contentment
-   bonus -- and **knowing every advance** should too. Both are end-of-tree
-   rewards for a game that is already won, so they want a light hand.
+5. ~~Auto-placate and auto-study per city.~~ **Done, below.**
+6. ~~A finished palace and a finished tree should mean something.~~ **Done, below.**
 
 ### The news that stops the turn, and the clock that says how long
 
@@ -9981,4 +9978,33 @@ has made plans is a wasted turn.
 The exchange runs **yours, theirs, then your war advisor**, and the order is the
 joke: the objection lands after the other side has spoken, which is how it goes
 at every table anybody has ever sat at.
+
+### A city that minds itself, and two laps of honour
+
+**Auto study** joins Ask me / Auto same unit / Auto coin as a fourth standing
+order: a game whose endings are advances wanted the other answer to "nothing to
+build" on the same shelf as banking the shields.
+
+**Auto calm is a separate switch rather than a fifth order**, and that is the
+design rather than an accident: the standing orders are about *what to build
+next*, and this is about *while it riots*. A city can perfectly well be on Auto
+study and still want to placate itself when the shouting starts. It remembers
+what it put down (`calmFrom`) and picks it up again when the city is quiet,
+which is the half that made doing it by hand tedious -- four actions to take the
+only sensible decision available. Human cities only: the AI has its own answer
+and changing it would change every balance number in the project.
+
+**A finished palace** pays one content citizen everywhere, and **a finished
+tree** pays another plus a tenth on every attack. Both are deliberately small.
+They land at the point in a game where the player is usually winning already, so
+they are laps of honour rather than levers -- enough to feel, too small to
+decide anything, which is the argument section 67 used for the palace itself.
+
+And a lesson about test fixtures. The end-of-tree bonus changed which games run
+long, and `LATE_SEED` -- one hard-coded seed the late fixtures are taken from --
+broke for the second time in two branches. The comment above it had already
+grown into a history of every balance change that shortened games. So it now
+**goes and looks**: a fixed list of candidate seeds, played in order, first one
+that reaches every turn the scenarios want. Deterministic, self-healing, and it
+prints the seed it settled on so a position can still be reproduced by hand.
 

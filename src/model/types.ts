@@ -320,7 +320,7 @@ export interface Unit {
  * Coin was quietly given something to build on the following turn whether that
  * was wanted or not.
  */
-export type AutoBuild = 'ask' | 'repeat' | 'coin';
+export type AutoBuild = 'ask' | 'repeat' | 'coin' | 'beakers';
 
 /**
  * A condition a unit is under for a few turns.
@@ -402,6 +402,22 @@ export interface City {
    * `ask`, which is what a player who has never touched the setting expects.
    */
   autoBuild?: AutoBuild;
+  /**
+   * Placate by itself while the city is rioting, and go back to work after.
+   * Section 124, asked for from play.
+   *
+   * A riot is the one thing a city cannot trade its way out of by carrying on:
+   * production is already zero, so the shields spent on calm cost nothing that
+   * was being earned. Doing it by hand meant noticing the riot, opening the
+   * city, switching to Calm, and remembering to switch back -- four actions to
+   * take the only sensible decision available.
+   */
+  autoCalm?: boolean;
+  /**
+   * What it was building before it stopped to placate, so it can go back to it.
+   * Absent unless `autoCalm` is currently doing something.
+   */
+  calmFrom?: ProductionItem;
   /**
    * The last unit this city built, so `repeat` knows what to go back to.
    *
