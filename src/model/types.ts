@@ -87,6 +87,15 @@ export interface Player {
    */
   prideTaken?: number;
   /**
+   * The turn the last piece of the capital was taken.
+   *
+   * One a turn. A good turn can push the score past two milestones at once --
+   * a city founded, a folly finished, an advance in -- and the council then
+   * offered a second and a third piece in the same breath, which read as a
+   * bug and rather spoiled the ceremony. Reported from play (2026-09-28).
+   */
+  prideTurn?: number;
+  /**
    * Trade routes this player had last turn, as `linkKey` strings.
    *
    * Kept so the turn can say what opened and what closed rather than only
@@ -257,6 +266,17 @@ export interface Unit {
    */
   exploring?: boolean;
   /**
+   * Fortified, and staying fortified until the wounds close. Asked for from
+   * play (2026-09-28).
+   *
+   * Digging in is already how a hurt unit heals fastest, and the tedious part
+   * was remembering to come back for it: a unit set to heal was either woken
+   * by hand every turn to see how it was doing, or forgotten in a corner for
+   * forty turns. This wakes it the moment it is whole -- and only then, so it
+   * stays out of the idle cycle in the meantime.
+   */
+  mending?: boolean;
+  /**
    * Land units riding in this ship, off the map until they step ashore. Only
    * ever set on a carrier. Absent in every older save.
    */
@@ -300,7 +320,7 @@ export interface Unit {
  * Coin was quietly given something to build on the following turn whether that
  * was wanted or not.
  */
-export type AutoBuild = 'ask' | 'repeat' | 'coin';
+export type AutoBuild = 'ask' | 'repeat' | 'coin' | 'beakers';
 
 /**
  * A condition a unit is under for a few turns.
@@ -382,6 +402,22 @@ export interface City {
    * `ask`, which is what a player who has never touched the setting expects.
    */
   autoBuild?: AutoBuild;
+  /**
+   * Placate by itself while the city is rioting, and go back to work after.
+   * Section 124, asked for from play.
+   *
+   * A riot is the one thing a city cannot trade its way out of by carrying on:
+   * production is already zero, so the shields spent on calm cost nothing that
+   * was being earned. Doing it by hand meant noticing the riot, opening the
+   * city, switching to Calm, and remembering to switch back -- four actions to
+   * take the only sensible decision available.
+   */
+  autoCalm?: boolean;
+  /**
+   * What it was building before it stopped to placate, so it can go back to it.
+   * Absent unless `autoCalm` is currently doing something.
+   */
+  calmFrom?: ProductionItem;
   /**
    * The last unit this city built, so `repeat` knows what to go back to.
    *

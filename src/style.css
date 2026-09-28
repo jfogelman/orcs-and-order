@@ -2054,3 +2054,74 @@ kbd {
     animation: none;
   }
 }
+
+/* ------------------------------------ the ending clock, section 124 */
+
+/*
+ * The countdown on an open Portal or Object.
+ *
+ * It burns. Not decoration: this chip is the only thing on the screen that says
+ * how long the game has left, and it competes for attention with a map full of
+ * movement -- so it moves too, slowly, in the one colour nothing else on the
+ * bar uses. Drawn with two shadows rather than a border so the glow sits
+ * *outside* the chip and does not shove the rest of the bar along as it pulses.
+ */
+.stat.ending {
+  color: #ffd9a8;
+  border-color: #8a3b18;
+  background: linear-gradient(180deg, #43200f, #2a1409);
+  animation: ending-burn 2.2s ease-in-out infinite;
+}
+
+/* Somebody else's clock is the same clock and worse news, so it burns hotter. */
+.stat.ending.theirs {
+  color: #ffc9c9;
+  border-color: #a33a2a;
+  animation-duration: 1.4s;
+}
+
+@keyframes ending-burn {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(255, 138, 48, 0.35), inset 0 0 6px rgba(255, 120, 40, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(255, 166, 74, 0.75), inset 0 0 10px rgba(255, 140, 60, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat.ending {
+    animation: none;
+    box-shadow: 0 0 10px rgba(255, 150, 60, 0.5);
+  }
+}
+
+/* ------------------------------ the other side of the table, section 124 */
+
+/*
+ * Their envoy, answering yours.
+ *
+ * Set apart rather than listed with your own two: a negotiation with everybody
+ * on one side of the page is a council meeting, and the whole point of this is
+ * that somebody else is in the room. The rule above it is the table.
+ */
+.talks-across {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(240, 198, 74, 0.28);
+}
+
+.advisor.talks-them {
+  border-color: rgba(120, 170, 220, 0.45);
+  background: linear-gradient(180deg, #1b2431, #161d27);
+}
+
+/* Facing yours, which is the cheapest way to say "across from you". */
+.advisor.talks-them .advisor-face {
+  transform: scaleX(-1);
+}
+
+.advisor.talks-them .advisor-name {
+  color: #cfe3ff;
+}
+

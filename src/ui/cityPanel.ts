@@ -529,6 +529,9 @@ export function openCityPanel(
           ${autoBtn('ask', 'Ask me', 'Stop and wait to be told what to build next')}
           ${autoBtn('repeat', 'Auto same unit', 'Go back to making the unit it was making')}
           ${autoBtn('coin', 'Auto coin', 'Bank the shields as gold and stop asking')}
+          ${autoBtn('beakers', 'Auto study', 'Put the shields into study and stop asking')}
+          <button class="small${city.autoCalm ? ' armed' : ''}" data-calm="1"
+                  title="Placate by itself while this city riots, then go back to work">Auto calm</button>
         </div>
         <div class="panel-title">Units</div>
         <div class="build-list">
@@ -636,6 +639,26 @@ export function openCityPanel(
           onChange();
           openCityPanel(state, city, onChange);
         });
+      });
+      // Section 124: placating itself is a separate switch rather than a fourth
+      // standing order, because it is about *while it riots* rather than about
+      // what to do next -- a city can perfectly well be on Auto study and still
+      // want to calm itself when the shouting starts.
+      root.querySelector<HTMLButtonElement>('[data-calm]')?.addEventListener('click', () => {
+        if (city.autoCalm) {
+          delete city.autoCalm;
+          // Stop placating now rather than next turn, and put back what it was
+          // building: leaving a city on Calm after the switch was turned off is
+          // the setting doing something nobody asked for.
+          if (city.producing.kind === 'calm' && city.calmFrom) {
+            city.producing = city.calmFrom;
+            delete city.calmFrom;
+          }
+        } else {
+          city.autoCalm = true;
+        }
+        onChange();
+        openCityPanel(state, city, onChange);
       });
       root.querySelectorAll<HTMLButtonElement>('.build-option').forEach((btn) => {
         btn.addEventListener('click', () => {

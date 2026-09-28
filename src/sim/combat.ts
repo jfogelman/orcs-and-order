@@ -11,6 +11,7 @@ import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city
 import { hasFlag } from './rules';
 import { COWED, SPELL_TURNS, applyStatus, hasStatus } from './status';
 import { empireBonus, heldFollies, isMounted } from './follyEffects';
+import { OMNISCIENCE, knowsEverything } from './research';
 
 /**
  * Civ2-flavoured combat: two strengths, repeated coin flips, one survivor.
@@ -366,6 +367,8 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   total *= siegeMult;
   total *= sallyMult;
   if (berserk) total *= 1.25;
+  // Section 124: there is nothing left to learn, and it shows in the swing.
+  if (knowsEverything(owner)) total *= 1 + OMNISCIENCE.attack;
 
   return {
     total,

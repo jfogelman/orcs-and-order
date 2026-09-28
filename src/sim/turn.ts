@@ -103,6 +103,26 @@ function healUnits(state: GameState, playerId: number): void {
   }
 }
 
+/**
+ * Anybody who dug in to heal and has finished healing gets up.
+ *
+ * After `healUnits`, so a unit that was made whole this morning is up the same
+ * morning rather than a turn later, and before the idle cycle is asked for:
+ * the whole point is that it offers itself back to you.
+ */
+function wakeTheMended(state: GameState, playerId: number): void {
+  for (const unit of state.units) {
+    if (unit.owner !== playerId || !unit.mending) continue;
+    if (unit.hp < unitType(unit.type).hp) continue;
+    delete unit.mending;
+    unit.order = 'none';
+    log(state, `${unitType(unit.type).name} is patched up and ready.`, 'good', playerId, undefined, [
+      unit.x,
+      unit.y,
+    ]);
+  }
+}
+
 function refreshUnits(state: GameState, player: Player): void {
   // Section 111: the Long March, once per turn rather than once per unit.
   const march = empireBonus(state, player.id, (b) => b.homeMoves);
@@ -189,6 +209,22 @@ function runEconomy(state: GameState, player: Player): void {
   let upkeep = 0;
 
   for (const city of playerCities(state, player.id)) {
+    // Section 124: a city told to calm itself does so while it riots, and goes
+    // back to what it was doing when the riot ends. Read off the disorder flag
+    // set by last turn's `processCity`, which is exactly what a player looking
+    // at the panel would be reacting to.
+    if (city.autoCalm && state.players[city.owner].controller === 'human') {
+      if (city.disorder && city.producing.kind !== 'calm') {
+        city.calmFrom = city.producing;
+        city.producing = { kind: 'calm' };
+        log(state, `${city.name} turns to calming itself.`, 'info', city.owner);
+      } else if (!city.disorder && city.producing.kind === 'calm' && city.calmFrom) {
+        city.producing = city.calmFrom;
+        delete city.calmFrom;
+        log(state, `${city.name} is quiet again, and back to work.`, 'good', city.owner);
+      }
+    }
+
     if (city.producing.kind === 'coin' && city.size > 0) {
       // A city left on Coin picks something up as soon as it can -- unless its
       // owner has said otherwise.
@@ -205,6 +241,11 @@ function runEconomy(state: GameState, player: Player): void {
       } else if (auto === 'repeat') {
         const suggestion = nextProduction(state, city);
         if (suggestion.kind !== 'coin') city.producing = suggestion;
+      } else if (auto === 'beakers') {
+        // Section 124: the other thing a city with nothing to build can do
+        // with itself. Coin was the only standing answer, and a game whose
+        // endings are advances wants the other one on the same shelf.
+        city.producing = { kind: 'beakers' };
       }
     }
     const events = processCity(state, city);
@@ -338,6 +379,8 @@ export const PRIDE = { step: 35 };
 export function prideDue(state: GameState, playerId: number): boolean {
   const player = state.players[playerId];
   if (!player || player.barbarian) return false;
+  // One a turn, whatever the score did. See `Player.prideTurn`.
+  if (player.prideTurn === state.turn) return false;
   if (prideOffer(player).length === 0) return false;
   if (!civicPride(state, playerId)) return false;
   return Math.floor(playerScore(state, playerId) / PRIDE.step) > (player.prideTaken ?? 0);
@@ -684,6 +727,7 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // Passengers get their legs back too, so they can step ashore this turn.
   refreshCargo(state, playerId);
   healUnits(state, playerId);
+  wakeTheMended(state, playerId);
   runEconomy(state, player);
   resumeGotoOrders(state, playerId);
   // After the digging above has advanced, so a worker that finished a stretch

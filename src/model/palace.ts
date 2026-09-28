@@ -454,6 +454,27 @@ export function palaceOf(player: Player): PalaceTiers {
 }
 
 /**
+ * What a finished palace is worth, section 124.
+ *
+ * Asked for from play: *"if we build a full palace, it should give a perm joy
+ * bonus"*, and he is right that it needed one. Fifteen pieces is an excellent
+ * game's worth of milestones -- `PRIDE.step` is thirty-five score apiece -- and
+ * the reward for all fifteen was a complete picture and nothing else.
+ *
+ * **One content citizen everywhere**, which is deliberately modest. It arrives
+ * at the point in a game where the player is usually winning already, so it is
+ * a lap of honour rather than a lever: enough to feel, too small to decide
+ * anything. The same argument section 67 used for the palace itself.
+ */
+export const PALACE_COMPLETE_CONTENT = 1;
+
+/** Whether every module is at its top tier. */
+export function palaceComplete(player: Player): boolean {
+  const have = palaceOf(player);
+  return PALACE_MODULES.every((m) => (have[m.id] ?? 0) >= PALACE_TIERS);
+}
+
+/**
  * What the council can offer: every module that is not already at the top.
  *
  * Five choices at the start and fewer later, which is the shape Civ2's throne

@@ -20,6 +20,7 @@ export const SHORTCUTS: Control[] = [
   { group: 'Units', keys: 'Space', does: 'Skip this one for now' },
   { group: 'Units', keys: 'N', does: 'Next one with something left to do' },
   { group: 'Units', keys: 'F', does: 'Fortify, or wake something fortified' },
+  { group: 'Units', keys: 'H', does: 'Fortify until healed' },
   { group: 'Units', keys: 'S', does: 'Sentry: sleep until something happens' },
   { group: 'Units', keys: 'B', does: 'Found a city' },
   { group: 'Units', keys: 'R', does: 'Lay a road: a worker, after Bridge Building (Ranged for anyone else)' },
