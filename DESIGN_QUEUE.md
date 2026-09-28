@@ -9897,9 +9897,8 @@ are design and are queued below with what they will cost.
 
 1. ~~Critical news should interrupt.~~ **Done, below.**
 2. ~~A visible Portal countdown.~~ **Done, below.**
-3. **The magic advisor should ask for the Portal** once it is within reach, and
-   advisors should have an opinion on whether to talk to the other side. Both
-   are lines in `model/advisors.ts` plus the `Situation` fields to trigger them.
+3. ~~The magic advisor should ask for the Portal, and advisors should have an
+   opinion on diplomacy.~~ **Done, below.**
 4. **The two diplomacy advisors, talking to each other** on the talks screen.
    Section 46's talking animation already does the mouths; this is the staging.
 5. **Auto-placate and auto-study** per city: a city set to calm itself or study
@@ -9938,3 +9937,32 @@ belongs to somebody else. No art; it is CSS.
 One bug found on the way: `follyNewsSeen` was never reset when a game was
 swapped in, so a new game carried the old game's index and quietly dropped its
 first notices. All three news counters reset in `adopt` now.
+
+### The mage asks, and the diplomat has a view
+
+Both lines existed in some form and neither was ever heard, for two different
+reasons -- which is worth writing down, because "add a line" was the wrong fix
+in both cases.
+
+**The Portal line was last on purpose.** The road to an ending can be true for
+fifty turns, and section 110 put that concern at the bottom of the mage's list
+so he would not say the same thing all game. The trouble is that the *interesting*
+part of it -- "we could build it **now**" -- is brief, and it was being buried
+under whichever riot happened to be running. So it is split: `researchable` stays
+at the bottom where it belongs, and `buildable` or `building` is a separate
+concern near the top. The mage asks once it is a decision rather than a daydream.
+
+**The diplomacy lines were all about a treaty that already existed** -- lapsing,
+broken, distrusted -- so an advisor had opinions about keeping a peace and none
+at all about making one. The Talks button sat there for a whole game with nobody
+mentioning it. Both diplomats now have a view at war: **talk** when the score
+says we are being beaten, **do not** when nothing is burning and nobody is at the
+gate, which is the worst possible moment to sue for peace.
+
+Deliberately *not* keyed on an ending counting down, though that is the sharpest
+reason of all to open talks. Four advisors a side own the endings and the
+council is better for the curation -- six voices on one clock is the panel
+section 46 exists to avoid. The mages tell you about the clock; the diplomat
+tells you about the score. One test changed to say so, rather than being worked
+around: it asserted they *say nothing of peace at war*, which was the bug.
+

@@ -125,11 +125,9 @@ export const SFX_FILES: Record<SfxId, string> = {
   folly: 'geoffreyburch-handy-introduction-022-glbml-21786.mp3',
   // The advance chime: the news is that somebody now knows something.
   'folly-race': 'discovery.mp3',
-  // Section 124: standing in for a horn until one is recorded. Naming a file
-  // that does not exist would go silently quiet, which is the failure this
-  // whole piece of work is about -- so it borrows the loudest thing there is
-  // and the note in ART_PROMPTS asks for its own.
-  alarm: 'city-lost.mp3',
+  // Section 124: the horn a watchman blows off a wall. The one sound in the
+  // game whose job is to make somebody look up from what they were doing.
+  alarm: 'freesound_community-dramatic-horn-44005.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */
