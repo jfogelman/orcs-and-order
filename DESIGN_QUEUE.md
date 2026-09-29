@@ -10173,3 +10173,45 @@ grown into a history of every balance change that shortened games. So it now
 that reaches every turn the scenarios want. Deterministic, self-healing, and it
 prints the seed it settled on so a position can still be reproduced by hand.
 
+### How it was actually found, and what it cost
+
+Twelve passes. The first eleven varied what was *in* a ruin and what *stood
+over* it, and every one of them came back with the same fourteen-game lean:
+settler prize, soldier prize, guard as price tag, AI ignoring ruins entirely.
+Four arms, four hours of compute, one answer repeated.
+
+**The probe found it in five minutes.** `npm run ruinprobe` counts who wakes
+ruins and who dies beside them, and it said: the Horde loses **eight to ten
+units a game to guardians against the Kingdom's one**. That is not a balance
+question, it is a mechanism, and it turned out to be three mechanisms wearing
+the same coat -- all of them *fights nobody chose*, which is the principle this
+whole feature was built on:
+
+| leak | what it did | the rule now |
+|---|---|---|
+| guardians strike | charged whoever stumbled into a doorway, and the Horde marches | they never swing first |
+| guardians never die | thirteen unkillable statues blocking roads; fighting across the whole game halved and games ran twenty turns longer | a ruin nobody bothers lies back down, prize intact |
+| the errand never asked | the odds gate only covered *opened* ruins, so every soldier within ten tiles of a sleeping one walked in and woke it | nobody starts a fight they would not win, asked of what *would* stand up |
+
+Guardians are also no longer targets or threats for the AI. A thing that cannot
+leave its doorway and will not swing first is furniture, and an army marching at
+furniture is an army that is somewhere else.
+
+### Measured, 216 games an arm
+
+| arm | Horde-Kingdom | conquests | cities H/K | population H/K |
+|---|---|---|---|---|
+| empty map | **118-98** | 79 | 5.74/5.59 | 46.8/43.5 |
+| ruins | **128-88** | 45 | 6.04/5.72 | 54.5/46.4 |
+
+The Kingdom lean is gone. What is left is four points the *other* way, both sets
+agreeing: ruins make a war less decisive -- conquests nearly halve -- and the
+Horde does better on the paths that are left. That is a real effect and a small
+one, in the band this project has shipped features in before.
+
+**And a warning sharper than section 121's.** At 108 games an arm this same
+comparison read 53-55, a five-game *Kingdom* lean. At 216 it reads 128-88, a
+ten-game *Horde* lean. The two runs disagree about the **sign**. A hundred and
+eight games an arm could not tell which side a feature favoured, which is worth
+remembering the next time a number at that sample size looks conclusive.
+
