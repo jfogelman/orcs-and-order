@@ -1,6 +1,7 @@
 import { EVEN_RATES } from './research';
 import { Rng } from '../engine/rng';
 import { addRaiders } from './barbarians';
+import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
@@ -225,7 +226,12 @@ function freeTilesNear(
   return out;
 }
 
-function makePlayer(
+/**
+ * A player record. Exported since section 123, because the wilds may now have
+ * to be created part-way through a game -- the first time somebody disturbs a
+ * ruin -- rather than only when the map is made.
+ */
+export function makePlayer(
   id: number,
   faction: FactionId,
   controller: Player['controller'],
@@ -275,6 +281,9 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     height: settings.height,
     terrain: world.terrain,
     specials: world.specials,
+    // Section 123: what was standing here first, settled with the world rather
+    // than with the game, so a seed's ruins are part of its map.
+    ruins: placeRuins(seed, settings.width, settings.height, world.terrain, world.starts),
     players: [
       makePlayer(0, playerFaction, 'human', tileCount),
       makePlayer(1, otherFaction(playerFaction), 'ai', tileCount),

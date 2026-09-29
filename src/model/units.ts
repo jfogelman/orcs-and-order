@@ -89,6 +89,15 @@ export interface CreatureDef {
    */
   wades?: boolean;
   /**
+   * Hurts whoever hits it, in hand-to-hand. The Animated Guardian, section 123.
+   *
+   * A flat number of health off the attacker after the blow lands, whichever
+   * way the fight went. Ranged attacks are exempt: the point of it is that
+   * hitting a thing made of stone is bad for you, and an arrow does not touch
+   * it.
+   */
+  reflects?: number;
+  /**
    * Walls are no help against it. The Bilge Wraith, out of the raider bible.
    *
    * A defender otherwise multiplies its strength by whatever its city has
@@ -396,6 +405,83 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Still has the hat, the coat, and the crew. Takes a dim view of ' +
       'floating things, and of anybody who has not drowned yet.',
+  },
+  /*
+   * Section 123: the Tomb Wardens, the bible's third barbarian faction and the
+   * one that does not roam. They stand in a ruin until somebody walks into it,
+   * and then they are a problem that stays exactly where it was.
+   *
+   * All three defend far better than they attack, which is the whole design: a
+   * ruin is a fight you chose to start, and the choosing is the decision. None
+   * of them will follow you home -- see `RUINS.leash`.
+   */
+  {
+    id: 'sentinel',
+    name: 'Bone Sentinel',
+    plural: 'Bone Sentinels',
+    faction: 'human',
+    wild: true,
+    role: 'melee',
+    attack: 2,
+    defense: 4,
+    hp: 10,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 0.95,
+    silhouette: 'armored',
+    body: '#b9b19a',
+    trim: '#7fa8c9',
+    blurb:
+      'Stood in the doorway long enough to be mistaken for the doorway. ' +
+      'Objects, slowly, to being walked past.',
+  },
+  {
+    id: 'guardian',
+    name: 'Animated Guardian',
+    plural: 'Animated Guardians',
+    faction: 'human',
+    wild: true,
+    reflects: 2,
+    role: 'melee',
+    attack: 4,
+    defense: 4,
+    hp: 12,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 1.15,
+    silhouette: 'brute',
+    body: '#8f8a7d',
+    trim: '#79b4d6',
+    blurb:
+      'Carved standing up and never once sat down. Hitting it is a decision ' +
+      'your hands will remember.',
+  },
+  {
+    id: 'keeper',
+    name: 'Vault Keeper',
+    plural: 'Vault Keepers',
+    faction: 'human',
+    wild: true,
+    reflects: 2,
+    role: 'melee',
+    attack: 5,
+    defense: 6,
+    hp: 14,
+    move: 1,
+    cost: 0,
+    sight: 2,
+    counts: [1],
+    artScale: 1.3,
+    silhouette: 'armored',
+    body: '#9a9079',
+    trim: '#d9c37a',
+    blurb:
+      'Comes up the stairs three turns after the noise starts, which is how ' +
+      'long it takes to be certain you are still there.',
   },
   {
     id: 'goblin',
@@ -954,6 +1040,8 @@ export interface UnitTypeDef {
   wades: boolean;
   /** A city's walls do nothing against it. See CreatureDef.ignoresWalls. */
   ignoresWalls: boolean;
+  /** Health taken off whoever strikes it in hand-to-hand. See CreatureDef.reflects. */
+  reflects: number;
   /** Land units it can carry; 0 for everything that is not a carrier. */
   carries: number;
   firstStrikes: number;
@@ -1039,6 +1127,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     sails: c.sails === true,
     wades: c.wades === true,
     ignoresWalls: c.ignoresWalls === true,
+    reflects: c.reflects ?? 0,
     carries: c.carries ?? 0,
     firstStrikes: c.firstStrikes ?? 0,
     expendable: c.expendable === true,

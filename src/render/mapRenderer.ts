@@ -133,6 +133,8 @@ export class MapRenderer {
   private postArt = new Map<string, HTMLImageElement>();
   /** Section 112's irrigation and mine overlays, once drawn. */
   private improvementArt = new Map<string, HTMLImageElement>();
+  /** Section 123: a ruin per ground, and the overlay for a disturbed one. */
+  private ruinArt = new Map<string, HTMLImageElement>();
   /** Badges a settlement wears, by state. Empty until the art loads. */
   private cityOverlays = new Map<string, HTMLImageElement>();
   readonly sprites: SpriteCache;
@@ -166,6 +168,11 @@ export class MapRenderer {
     }
     for (const name of ['irrigation', 'mine']) {
       this.sprites.installImprovementArt(name, (img) => this.improvementArt.set(name, img));
+    }
+    // Ruins are drawn every frame -- they wake and they empty -- so like the
+    // city overlays they need no layer invalidation.
+    for (const name of [...TERRAIN_IDS, 'awake']) {
+      this.sprites.installRuinArt(name, (img) => this.ruinArt.set(name, img));
     }
     // Cities are drawn every frame rather than pre-rendered, so these need no
     // invalidation -- they start appearing as soon as they have loaded.
@@ -285,6 +292,62 @@ export class MapRenderer {
       }
     }
     return best;
+  }
+
+  /**
+   * Something old, still standing.
+   *
+   * Drawn from explored ground rather than visible, like a city: you remember
+   * where a ruin was once you have seen it. A ruin that has been emptied is
+   * drawn faintly -- it is still a landmark and still worth recognising, and a
+   * player who cannot tell a cleared ruin from a live one will walk into the
+   * same fight twice.
+   */
+  private drawRuins(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+  ): void {
+    for (const ruin of state.ruins ?? []) {
+      const i = idx(ruin.x, ruin.y, state.width);
+      if (!viewer.explored[i]) continue;
+      const s = cam.tileToScreen(ruin.x, ruin.y);
+      const art = this.ruinArt.get(state.terrain[i]);
+      const emptied = ruin.takenOn !== undefined;
+      ctx.save();
+      if (emptied) ctx.globalAlpha = 0.45;
+      if (art) {
+        ctx.drawImage(art, s.x, s.y, size, size);
+      } else {
+        // Until the art lands: a broken doorway, which is the one shape that
+        // reads as a ruin at sixteen pixels.
+        const u = size / 8;
+        ctx.fillStyle = '#6d6659';
+        ctx.fillRect(s.x + u * 2, s.y + u * 3, u, u * 4);
+        ctx.fillRect(s.x + u * 5, s.y + u * 3, u, u * 4);
+        ctx.fillRect(s.x + u * 2, s.y + u * 2, u * 3, u);
+        ctx.fillStyle = '#4a4438';
+        ctx.fillRect(s.x + u * 3, s.y + u * 5, u * 2, u * 2);
+      }
+      // Awake and unfinished: the overlay says so, and it is the only thing on
+      // the map that means "this fight is still running".
+      if (!emptied && ruin.wokeOn !== undefined && viewer.visible[i]) {
+        const awake = this.ruinArt.get('awake');
+        if (awake) {
+          const frames = Math.max(1, Math.round(awake.naturalWidth / awake.naturalHeight));
+          const frame = Math.floor(performance.now() / 140) % frames;
+          const fw = awake.naturalWidth / frames;
+          ctx.drawImage(awake, frame * fw, 0, fw, awake.naturalHeight, s.x, s.y, size, size);
+        } else {
+          ctx.strokeStyle = 'rgba(122, 188, 255, 0.85)';
+          ctx.lineWidth = Math.max(1, size / 24);
+          ctx.strokeRect(s.x + size * 0.12, s.y + size * 0.12, size * 0.76, size * 0.76);
+        }
+      }
+      ctx.restore();
+    }
   }
 
   private drawPosts(
@@ -505,6 +568,11 @@ export class MapRenderer {
     // Over the road, because a post beside a crossroads should read as standing
     // on it rather than under it.
     if (state.posts) this.drawPosts(ctx, state, viewer, cam, size);
+
+    // --- ruins -----------------------------------------------------------
+    // Over the ground and under everything that walks on it: a ruin has been
+    // standing there since before any of this and is part of the tile.
+    if (state.ruins) this.drawRuins(ctx, state, viewer, cam, size);
 
     // --- borders ---------------------------------------------------------
     // Over the ground and under everything that stands on it: a border is a

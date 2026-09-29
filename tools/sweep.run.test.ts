@@ -12,6 +12,7 @@ import type { Arm } from './sweep';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
+import { RUINS } from '../src/sim/ruins';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -89,6 +90,16 @@ const control = () => {
   // Section 122: the Sunken Legion, and how often a due wave comes by sea.
   LEGION.enabled = true;
   LEGION.share = 0.2;
+  // Section 123: ruins are a map feature rather than a raider one, so they are
+  // on in the quiet game too -- which is the game this baseline measures.
+  RUINS.enabled = true;
+  RUINS.perLand = 100;
+  RUINS.wardenDefence = 1;
+  RUINS.aiOdds = 0.25;
+  RUINS.aiSeeks = true;
+  RUINS.wardensStrike = false;
+  RUINS.wardensHold = true;
+  RUINS.soldiersOnly = true;
   // Section 120: what a band walks at. On in the shipped game; off is the old
   // rule, which is the arm this was measured against.
   PREY.enabled = true;
@@ -114,35 +125,28 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 122, second pass. The first measured the Legion as built against no
-  // Legion at all and found eight games moving to the Horde -- not because the
-  // sea faction is strong, but because a wave that goes to the coast is a wave
-  // that did not go inland, and the Kingdom is the more coastal side on these
-  // maps. Horde sackings fell 1.45 to 1.20 while the Kingdom's rose 1.10 to
-  // 1.30, which is the whole story in one column.
+  // Section 123, twelfth pass, and the probe has been doing the work for the
+  // last three. What it found, in order: guardians that strike charge the side
+  // that stumbles; guardians that never die block the roads; and an AI that
+  // walks at a sleeping ruin without asking what lives there loses a dozen
+  // units a game to what stands up.
   //
-  // So this asks the only question left: how much sea is balance-neutral.
+  // All three are shut now -- a guard that never swings first, a ruin that lies
+  // back down when nobody is bothering it, and an errand nobody starts unless
+  // they would win the fight at the end of it. The probe says the sides now
+  // wake 4.1 against 3.2 and lose 8.7 against 6.7, where it was 5.7/1.6 and
+  // 11.8/6.3. This asks what that is worth in games.
   {
-    label: 'wilds only',
+    label: 'empty map',
     apply: () => {
       control();
-      NEW_GAME.barbarians = true;
-      LEGION.enabled = false;
+      RUINS.enabled = false;
     },
   },
   {
-    label: 'sea at 0.4',
+    label: 'ruins',
     apply: () => {
       control();
-      NEW_GAME.barbarians = true;
-    },
-  },
-  {
-    label: 'sea at 0.2',
-    apply: () => {
-      control();
-      NEW_GAME.barbarians = true;
-      LEGION.share = 0.2;
     },
   },
 ];

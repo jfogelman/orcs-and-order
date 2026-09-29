@@ -10,6 +10,7 @@ import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
 import { hasFlag } from './rules';
 import { COWED, SPELL_TURNS, applyStatus, hasStatus } from './status';
+import { RUINS, isWarden } from './ruins';
 import { empireBonus, heldFollies, isMounted } from './follyEffects';
 import { OMNISCIENCE, knowsEverything } from './research';
 
@@ -426,6 +427,9 @@ export function defenseStrength(
 
   // Section 111: the Long Vigil, for anything that rides.
   let total = type.defense + (isMounted(defender) ? empireBonus(state, defender.owner, (b) => b.mountedDefense) : 0);
+  // Section 123: and what a thing that guards a ruin is worth holding it, which
+  // is a number measurement has opinions about -- see `RUINS.wardenDefence`.
+  if (RUINS.wardenDefence !== 1 && isWarden(defender)) total *= RUINS.wardenDefence;
   // The same losses, on the other foot: fewer of them left to hold the line.
   total *= headcount(defender);
   total *= rankBonus(defender);
@@ -678,6 +682,25 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     void winner;
     return { attackerWon, promoted };
   });
+
+  // Section 123: hitting a thing made of stone is bad for you. Taken after the
+  // fight rather than per round, so it is a flat, readable cost of having
+  // swung at all -- and only in hand-to-hand, because an arrow does not touch
+  // it. It applies whichever way the fight went: winning against a guardian
+  // still means having punched a wall repeatedly.
+  const stone = unitType(defender.type).reflects;
+  if (stone > 0 && attacker.hp > 0 && unitType(attacker.type).range <= 1) {
+    applyDamage(attacker, stone, 'physical');
+    log(
+      state,
+      `${unitType(defender.type).name} does not give, and ${unitType(attacker.type).name} feels it.`,
+      'combat',
+      attacker.owner,
+      undefined,
+      [defender.x, defender.y],
+      attacker.id,
+    );
+  }
 
   attacker.hp = Math.max(0, attacker.hp);
   defender.hp = Math.max(0, defender.hp);

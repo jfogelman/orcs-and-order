@@ -3,7 +3,7 @@ import { unitType } from '../src/model/units';
 import { runAiTurn } from '../src/ai/ai';
 import { idx } from '../src/engine/grid';
 import { TERRAIN } from '../src/model/terrain';
-import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
+import { contenders, createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { beginPlayerTurn, endPlayerTurn } from '../src/sim/turn';
 import { deserialize, packBits, serialize, unpackBits } from '../src/persist/save';
 import { generateWorld } from '../src/sim/worldgen';
@@ -114,7 +114,11 @@ describe('a full game', () => {
 
   it('grows both empires past their starting position', () => {
     const state = playOut(20250813, 200);
-    for (const p of state.players) {
+    // The empires, not everybody on the board. Since section 123 a quiet game
+    // can still acquire a wilds slot part-way through -- the first time
+    // somebody disturbs a ruin -- and a thing that stands in a doorway is not
+    // expected to found cities or study anything.
+    for (const p of contenders(state)) {
       if (!p.alive) continue;
       expect(playerCities(state, p.id).length).toBeGreaterThan(0);
       expect(p.techs.length).toBeGreaterThan(1);

@@ -91,6 +91,14 @@ WILDS = {
     "drowned": "drowned sailor",
     "wraith": "bilge wraith",
     "captain": "drowned captain",
+    # Section 123: the Tomb Wardens, who stand in ruins. Drawn in the same drop
+    # as everybody else and missed here when the ruins shipped, so they spent
+    # their first twelve sweeps as placeholder silhouettes -- which nothing
+    # reported, because a missing wild sheet is held quietly rather than
+    # complained about.
+    "sentinel": "bone sentinel",
+    "guardian": "animated guardian",
+    "keeper": "vault keeper",
 }
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
@@ -683,6 +691,61 @@ def process_cutouts(
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
         print(f"  {folder}/{name}.png  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            failed.append(name)
+        done += 1
+    return done, missing, failed
+
+
+# A ruin is drawn over one tile, the way a city is, so it wants the tile's own
+# size at 2x rather than a unit's.
+RUIN_SIZE = 64
+
+
+def process_ruins(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Section 123's ruins: one per land terrain, plus the `awake` overlay.
+
+    Two shapes in one folder, and they are told apart by name rather than by a
+    table. The six ruins are single objects and are squared like any other
+    cutout; `awake` is an animation strip and is sliced like an effect, because
+    what it does is flicker over whichever ruin is underneath it.
+
+    Frame count comes off the *keyed* image rather than the file, for the reason
+    section 122's `surf` drop taught: a generator that leaves a band of magenta
+    above and below a four-frame strip makes it look like a two-frame one.
+    """
+    src = SRC / "ruins"
+    out = OUT / "ruins"
+    if not src.is_dir():
+        return 0, [], []
+    out.mkdir(parents=True, exist_ok=True)
+    done = 0
+    missing: list[str] = []
+    failed: list[str] = []
+
+    wanted = [t for t in TERRAINS if t not in ("water", "deep")] + ["awake"]
+    for name in wanted:
+        path = find_source(src, name)
+        if path is None:
+            missing.append(name)
+            continue
+        target = out / f"{name}.png"
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        keyed, cut_out = remove_background(Image.open(path))
+        if name == "awake":
+            box = keyed.getbbox()
+            if box:
+                keyed = keyed.crop(box)
+            frames = max(1, round(keyed.width / max(1, keyed.height)))
+            sheet = slice_strip(keyed, frames, RUIN_SIZE)
+            sheet.save(target, optimize=True)
+            print(f"  ruins/{name}.png ({frames} frames)")
+        else:
+            trim_and_square(keyed, RUIN_SIZE).save(target, optimize=True)
+            flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+            print(f"  ruins/{name}.png  {target.stat().st_size // 1024}KB{flag}")
         if not cut_out:
             failed.append(name)
         done += 1
@@ -1709,17 +1772,26 @@ def wild_sheets(suffix: str, *folders: str) -> list[tuple[Path, str]]:
     it: the attack strips came in beside the sprites, the weakened sheets came
     in with everybody else's. Both are correct, neither is worth a rule, and
     looking in both costs nothing.
+
+    **The newest copy wins**, which matters because the same sheet can exist in
+    two folders: a re-roll dropped beside the sprites would otherwise lose to
+    the original filed with everybody else's, and the artist would be told
+    nothing at all -- the run would simply skip it as up to date. Asked of the
+    file's own timestamp rather than of the folder order, so neither folder has
+    to be "the real one".
     """
     found: list[tuple[Path, str]] = []
     for unit_id, creature in WILDS.items():
-        for folder in folders:
-            src = SRC / folder
-            if not src.is_dir():
-                continue
-            path = find_source(src, f"{creature} {suffix}")
-            if path is not None:
-                found.append((path, unit_id))
-                break
+        candidates = [
+            path
+            for folder in folders
+            if (SRC / folder).is_dir()
+            for path in [find_source(SRC / folder, f"{creature} {suffix}")]
+            if path is not None
+        ]
+        if not candidates:
+            continue
+        found.append((max(candidates, key=lambda p: p.stat().st_mtime), unit_id))
     return found
 
 
@@ -2611,6 +2683,8 @@ def main() -> int:
     folk, folk_problems = process_citizens(force)
     print("Cities coming apart:")
     ruins, ruin_problems = process_city_effects(force)
+    print("Ruins:")
+    old_ruins, old_missing, old_failed = process_ruins(force)
     print("Promotion marks:")
     marks, mark_problems = process_promotions(force)
     print("Status overlays:")
@@ -2636,7 +2710,7 @@ def main() -> int:
         f"{terrain} terrain sets, {effects} effect strips, {anims} attack animations, "
         f"{states} state sheets, {folk} citizen sheets, {marks} promotion marks, "
         f"{status} status overlays, {wins} victory screens, "
-        f"{ruins} ruin animations, "
+        f"{ruins} ruin animations, {old_ruins} ruins, "
         f"{audio} audio files "
         f"({audio_before // 1024}KB -> {audio_after // 1024}KB)."
     )

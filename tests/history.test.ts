@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runAiTurn } from '../src/ai/ai';
-import { createGame } from '../src/sim/gamestate';
+import { contenders, createGame } from '../src/sim/gamestate';
 import { beginPlayerTurn, endPlayerTurn, playerScore } from '../src/sim/turn';
 import { replayFrames, ROW } from '../src/sim/history';
 import { deserialize, serialize } from '../src/persist/save';
@@ -34,7 +34,11 @@ describe('the replay record (section 15)', () => {
     const state = playTo(21);
     const last = state.history!.at(-1)!;
     // Nothing has happened since turn 20 closed, bar the new turn's start.
-    for (const p of state.players) {
+    //
+    // The empires, not everybody on the board: since section 123 a wilds slot
+    // can appear part-way through a quiet game, the first time somebody
+    // disturbs a ruin, and the record is of the two sides playing.
+    for (const p of contenders(state)) {
       const row = last.players[p.id];
       expect(row[ROW.advances]).toBeLessThanOrEqual(p.techs.length);
       expect(row[ROW.cities]).toBeGreaterThan(0);

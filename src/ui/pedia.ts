@@ -13,6 +13,7 @@ import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
 import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
 import { LEGION } from '../sim/wilds';
+import { RUINS } from '../sim/ruins';
 import { COWED } from '../sim/status';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
@@ -559,6 +560,25 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           anything however badly it ends, and <strong>one of them cornered</strong>, with
           somebody next to it and nowhere to back off to. A lone raider with room to walk
           away will walk away: soldiers are not what it came for.
+        </p>
+        <p class="flavor">
+          <strong>And some of it never went anywhere.</strong> Scattered over the map are
+          <strong>ruins</strong> &mdash; something that was standing here long before either
+          of you, with something still in it. Walking into one wakes what is inside, and
+          that costs the rest of that unit's turn: a ruin is a fight you have decided to
+          start, not a thing you collect on the way past.
+        </p>
+        <p class="flavor">
+          <strong>Hold it once it is quiet and it is yours.</strong> The prize comes to
+          whoever is standing in the ruin at the start of a turn with nothing of theirs
+          left alive around it &mdash; gold, an advance off your own tree, somebody who
+          walks out with you, or a lesson for the unit that cracked it. What guards them
+          are the <strong>Tomb Wardens</strong>, who defend far better than they attack,
+          and who <em>never leave the doorway</em>: walk away and a ruin stops mattering
+          until you come back. Leave one awake for ${RUINS.keeperAfter} turns and a
+          <strong>Vault Keeper</strong> comes up the stairs, so half-finishing one is the
+          worst way to do it. And hitting an Animated Guardian hurts &mdash; it is made of
+          stone, and it does not give.
         </p>
         <p class="flavor">
           You are told twice, and the two mean different things. When a wave lands

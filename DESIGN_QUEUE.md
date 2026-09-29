@@ -9862,6 +9862,171 @@ on itself every frame.
 
 One: the **Tomb Wardens**, guardians waking from ruins, which still needs ruins.
 
+## 123. Ruins, and the things standing in them
+
+The last of the raider bible's four specials needed something the game did not
+have: *"Tomb Wardens -- guardians waking from ruins, which needs ruins."* So
+this is the ruins, and the wardens come with them.
+
+### Jeremy's decisions (2026-09-25)
+
+1. **Always guarded.** You wake it, you fight it, and then it is yours. Not a
+   Civ2 hut with a chance of teeth, and not loot-now-chased-later.
+2. **Placed when the map is made**, well clear of both starts -- part of the
+   world rather than something that happens during a game.
+3. **Present with raiders off**, because a ruin is a feature of the map and not
+   of the wilds.
+4. **All four prizes**: gold, an advance, somebody who walks out with you, and a
+   promotion for whoever cracked it.
+
+### The bargain, and the three rules that protect it
+
+A ruin is a fight you have decided to start. Everything else follows:
+
+- **Walking in wakes it and costs the rest of that unit's turn.** Strolling in
+  and out again would make the guardians a formality.
+- **The prize goes to whoever holds it** at the top of a turn with nothing of
+  the ruin's left standing within `leash` of it. Holding is what earns it.
+- **Guardians never leave the doorway.** A warden stays within two tiles of its
+  ruin for ever. Walk away and a ruin stops mattering until you come back --
+  which is what makes leaving one for later a real option rather than a
+  punishment. A guardian that chased would turn every ruin into a roaming band
+  the player never chose to fight.
+
+And one rule that pushes the other way, so that committing beats dithering: a
+ruin left awake for `keeperAfter` (3) turns gets a **Vault Keeper**, which is
+the worst thing in the wilds. Half-finishing a ruin is the one way to make it
+harder than it was.
+
+### The wardens
+
+| rung | unit | here | bible |
+|---|---|---|---|
+| grunt | Bone Sentinel | 2/4, 10 health | 2/4 |
+| elite | Animated Guardian | 4/4, 12 health, hurts whoever hits it | 4/4, reflects 1 |
+| leader | Vault Keeper | 5/6, 14 health | 5/6 |
+
+All three defend far better than they attack, which is the point: the cost
+falls on the side that started it, and being attacked *by* one is survivable.
+The Animated Guardian's `reflects` is the first rule in the game that hurts a
+unit for winning -- taken after the fight, in hand-to-hand only, because an
+arrow does not touch it.
+
+### Two things this dragged out of the engine
+
+**A wilds slot that arrives mid-game.** Ruins exist in quiet games, so something
+has to own what stands up in them -- and a great deal of this project is
+written knowing that a quiet game has exactly two players. Creating the slot at
+map generation broke seven tests and would have broken more than that. So the
+wilds are **conjured the first time anybody disturbs a ruin**, and a game where
+nobody ever does keeps its two players to the end.
+
+**The half-turn budget, again.** `halfTurnsFor` counts seats at turn one, which
+is why every probe suddenly reported games ending around turn 220 with no
+winner: a third seat appeared part-way through and the budget did not know. It
+was the exact trap its own comment warns about, written when raiders first
+added a seat. It now budgets for the seat whether or not it has been taken.
+
+That also moved the fixture seed. Seed 50 used to run to the deadline and now
+ends at turn 194 by conquest. Over five seeds ruins leave the average game
+length alone -- 231 turns against 232 -- so this is ruins changing *which* game
+a seed is, not shortening games. `LATE_SEED` is 19, which still goes the
+distance.
+
+### Art
+
+The three guardians were drawn in the original raider drop and needed only the
+name map. What was new is the ruins themselves, and they are **six pictures**,
+one per land terrain, because a drowned temple in the swamp is not the same
+object as a wind-scoured one in the desert -- plus one shared `awake` overlay,
+which is the bible's own suggestion (*"show the ruin itself growing more
+ominous as it wakes"*) and cheaper than six more pictures. Prompted in
+ART_PROMPTS.md. Until they land the map draws a broken doorway, which is the
+one shape that reads as a ruin at sixteen pixels.
+
+### Measured
+
+Five passes, 108 games an arm, on the quiet baseline -- raiders off, as every
+balance number in this project is -- because a ruin is a feature of the map.
+
+| pass | arm | Horde-Kingdom | what it said |
+|---|---|---|---|
+| 1 | as built | **40-68** | against 55-53 with no ruins: fifteen games gone |
+| 2 | softer wardens | 48-60 | recovers half |
+| 2 | pickier AI | 41-67 | nothing at all |
+| 3 | guardians hold | 47-61 | +7, and the better rule anyway |
+| 4 | settler prize fixed | 48-60 | my bug, and three passes spent finding it |
+| 5 | a soldier's business | **50-58** | tuned level at 27-27; held-out 23-31 |
+
+**Pass 2 is the one worth keeping.** Softening the guardians recovered half the
+gap and making the AI pickier did *nothing* -- and the fights column explained
+why, by sitting at 27.5 a game in every ruins arm whatever was moved. The AI's
+choices could not matter because the AI was never choosing: **the guardians
+were lunging at whatever walked past**. That is how the design principle got
+written down -- *the cost falls on whoever chose the fight* -- and everything
+after it follows.
+
+**Pass 4 was a bug, and it looked exactly like a balance problem.** The prize
+that hands you somebody read `orc ? 'goblin' : 'peasant'`, which looks even and
+is not: a Peasant is the Kingdom's **settler**. One side was being given a free
+city and the other a free skirmisher, seven tenths of a game each. Every arm in
+passes 1 to 3 showed the Kingdom gaining about a city and eight population
+whatever else was changed, which in hindsight was the bug signing its name --
+constancy across arms is the shape of something none of the arms touched.
+
+**Pass 5 came from the probe rather than from more guessing.**
+`tools/ruinprobe.run.test.ts` counts who opens ruins and what they find, and it
+said the Horde opens *more* of them -- 3.8 a game against 3.2 -- and takes more
+of every prize, while finishing with **fewer cities than it has on a map with
+no ruins at all** (6.00 down to 5.22, held-out). Settlers were walking over
+doorways, waking what slept there, and dying in them; a dead Peon is a town
+that never happened, which costs more than anything in the ruin is worth.
+
+So **a ruin is a soldier's business**: a worker neither wakes one nor is touched
+by what stands in it. Both halves of one rule, and both follow from the
+principle above -- a Peon crossing a tile has chosen nothing. It also turned up
+a plain bug in the movement hook, which spent the unit's whole turn even when
+nothing had woken.
+
+### Where it lands
+
+Five games short of the control, with the tuned set dead level (27-27 in both
+arms) and only the held-out set leaning. By section 121's rule that is **not
+established**: both sets have to move the same way before a shift this size is
+worth believing, and one of them did not move at all.
+
+The levers, if a later measurement disagrees: `RUINS.perLand` (a hundred tiles
+of land per ruin) halves the whole feature in one number, `wardenDefence`
+softens what stands in them, and `enabled` takes the map back to what it was.
+
+### Confirmed at double the sample, and it is real
+
+The five-game gap above was called *not established* on the strength of one
+seed set staying level. Re-run at **216 games an arm** it is neither five games
+nor noise:
+
+| arm | Horde-Kingdom | cities H/K | population H/K | conquests |
+|---|---|---|---|---|
+| empty map | **117-99** | 5.80/5.50 | 47.0/42.5 | 80 |
+| ruins | **97-119** | 5.55/6.64 | 49.1/53.1 | 58 |
+
+Twenty games, both sets moving the same way (58-50 to 50-58, and 59-49 to
+47-61), with cities, population and conquests moving with them. **Ruins as they
+stand lean Kingdom**, and the earlier "tuned set is level" was the sample being
+too small to say so -- which is section 121's rule earning its keep in the
+direction nobody enjoys.
+
+**The hypothesis to test first, next time.** The Kingdom gains 1.1 cities and
+ten people a game; the Horde gains neither. `PERSONALITIES.orc.targetCities` is
+5 and the Kingdom's is 6, and an AI at its target stops founding -- so the free
+worker in a ruin becomes a *town* for the Kingdom and a *road crew* for the
+Horde. That is the settler-prize bug wearing a second coat: the prize is
+symmetric, and what the two sides can do with it is not. Cheapest arms to try:
+the prize as a soldier for both sides, and `RUINS.perLand` doubled.
+
+**Not merged.** The branch is `feat/ruins`, the work is sound and the rules are
+the right ones; the number is not, and shipping a twenty-game lean because the
+feature was interesting would be the thing this file exists to prevent.
 ## 124. Notes off a played-out game
 
 Jeremy played a full game (2026-09-28), used diplomacy, and won on the Demonic
@@ -10007,4 +10172,63 @@ grown into a history of every balance change that shortened games. So it now
 **goes and looks**: a fixed list of candidate seeds, played in order, first one
 that reaches every turn the scenarios want. Deterministic, self-healing, and it
 prints the seed it settled on so a position can still be reproduced by hand.
+
+### How it was actually found, and what it cost
+
+Twelve passes. The first eleven varied what was *in* a ruin and what *stood
+over* it, and every one of them came back with the same fourteen-game lean:
+settler prize, soldier prize, guard as price tag, AI ignoring ruins entirely.
+Four arms, four hours of compute, one answer repeated.
+
+**The probe found it in five minutes.** `npm run ruinprobe` counts who wakes
+ruins and who dies beside them, and it said: the Horde loses **eight to ten
+units a game to guardians against the Kingdom's one**. That is not a balance
+question, it is a mechanism, and it turned out to be three mechanisms wearing
+the same coat -- all of them *fights nobody chose*, which is the principle this
+whole feature was built on:
+
+| leak | what it did | the rule now |
+|---|---|---|
+| guardians strike | charged whoever stumbled into a doorway, and the Horde marches | they never swing first |
+| guardians never die | thirteen unkillable statues blocking roads; fighting across the whole game halved and games ran twenty turns longer | a ruin nobody bothers lies back down, prize intact |
+| the errand never asked | the odds gate only covered *opened* ruins, so every soldier within ten tiles of a sleeping one walked in and woke it | nobody starts a fight they would not win, asked of what *would* stand up |
+
+Guardians are also no longer targets or threats for the AI. A thing that cannot
+leave its doorway and will not swing first is furniture, and an army marching at
+furniture is an army that is somewhere else.
+
+### Measured, 216 games an arm
+
+| arm | Horde-Kingdom | conquests | cities H/K | population H/K |
+|---|---|---|---|---|
+| empty map | **118-98** | 79 | 5.74/5.59 | 46.8/43.5 |
+| ruins | **128-88** | 45 | 6.04/5.72 | 54.5/46.4 |
+
+The Kingdom lean is gone. What is left is four points the *other* way, both sets
+agreeing: ruins make a war less decisive -- conquests nearly halve -- and the
+Horde does better on the paths that are left. That is a real effect and a small
+one, in the band this project has shipped features in before.
+
+**And a warning sharper than section 121's.** At 108 games an arm this same
+comparison read 53-55, a five-game *Kingdom* lean. At 216 it reads 128-88, a
+ten-game *Horde* lean. The two runs disagree about the **sign**. A hundred and
+eight games an arm could not tell which side a feature favoured, which is worth
+remembering the next time a number at that sample size looks conclusive.
+
+### A correction about the art
+
+Section 123 said the three guardians "were already drawn and needed only the
+name map". Drawn, yes. **Wired, no** -- `WILDS` never got the three lines, so
+every Bone Sentinel, Animated Guardian and Vault Keeper in all twelve sweeps was
+a placeholder silhouette. Nothing reported it, because a wild sheet with no unit
+asking for it is *held quietly* rather than complained about: the very rule that
+keeps eleven undrawn creatures out of the warning list also hid three drawn ones.
+Cosmetic only -- the sim never asks what a unit looks like -- but the claim was
+wrong when it was made.
+
+Fixed with the drop of weakened sheets (2026-09-29), and one pipeline change
+with it: where the same sheet exists in two folders, **the newest copy wins**. A
+re-roll dropped beside the sprites used to lose silently to the original filed
+with everybody else's, and the run would report the sheet as up to date rather
+than take the new one.
 

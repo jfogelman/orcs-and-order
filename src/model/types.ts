@@ -336,6 +336,43 @@ export interface Status {
   turns: number;
 }
 
+/** What is left in a ruin for whoever clears it. Section 123. */
+export type RuinPrize = 'gold' | 'advance' | 'unit' | 'promotion';
+
+/**
+ * Something old, still standing, with something in it.
+ *
+ * Deliberately a short list rather than a per-tile layer: there are a few dozen
+ * on a map at most, every one of them has state of its own, and the code that
+ * asks about them always asks "is there one near here" rather than "what is on
+ * this tile".
+ */
+export interface Ruin {
+  x: number;
+  y: number;
+  /**
+   * The turn somebody first walked into it, or absent while it still sleeps.
+   * What wakes up is decided from this, including how long the Vault Keeper
+   * has been on its way.
+   */
+  wokeOn?: number;
+  /** Who woke it, so the news and the reward go to the right side. */
+  wokenBy?: number;
+  /** The turn it was emptied, after which it is scenery. */
+  takenOn?: number;
+  /** Which side emptied it. */
+  takenBy?: number;
+  /**
+   * What is in it, rolled when the map is made rather than when it is opened.
+   *
+   * Rolled at generation because a reward decided on opening would depend on
+   * how many rolls had happened first -- so two players opening the same ruin
+   * in the same seed could find different things in it, and a replay would not
+   * replay. This way it is a fact about the world.
+   */
+  prize: RuinPrize;
+}
+
 /**
  * What a blow is made of.
  *
@@ -611,6 +648,14 @@ export interface GameState {
    * change is drawn. Absent until the first clearing.
    */
   terrainEdits?: number;
+  /**
+   * Section 123: what was standing here before anybody arrived.
+   *
+   * Placed when the map is made and never after, so a seed's ruins are part of
+   * its world rather than something that happens to a game. Absent in every
+   * save from before them, which loads as a world nobody built in first.
+   */
+  ruins?: Ruin[];
   players: Player[];
   units: Unit[];
   cities: City[];

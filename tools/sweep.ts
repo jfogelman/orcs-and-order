@@ -11,6 +11,7 @@ import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
+import { RUINS } from '../src/sim/ruins';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
@@ -90,6 +91,7 @@ export const LEVERS: Record<string, object> = {
   RAIDER_TIERS,
   INTIMIDATE,
   LEGION,
+  RUINS,
   PREY,
   PEACE,
   DIPLOMACY_AI,
@@ -216,7 +218,14 @@ const TURN_SLACK = 50;
  * Counted from the players actually in the game now.
  */
 export function halfTurnsFor(state: GameState): number {
-  return (state.settings.maxTurns + TURN_SLACK) * state.players.length;
+  // Section 123 is the same trap a second time. A quiet game now acquires a
+  // wilds slot *part-way through* -- the first time anybody disturbs a ruin --
+  // so a budget counted off the players present at turn one ran out around
+  // turn 220 and every one of those games came back with no winner. Budget for
+  // the seat whether or not it has been taken yet.
+  const mayWake = RUINS.enabled && !state.players.some((p) => p.barbarian);
+  const seats = state.players.length + (mayWake ? 1 : 0);
+  return (state.settings.maxTurns + TURN_SLACK) * seats;
 }
 
 /**
