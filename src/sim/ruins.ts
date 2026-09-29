@@ -50,10 +50,45 @@ export const RUINS = {
   apart: 6,
   /** How far a woken guardian will go from its ruin. Beyond that it goes back. */
   leash: 2,
-  /** Guardians standing up when somebody first walks in. */
-  wakes: 2,
+  /**
+   * What stands over each prize: how many, and whether they are already the
+   * better sort before the world has aged into it. See `guardFor` -- the guard
+   * is the price tag, and reading it is meant to be a skill.
+   */
+  guard: {
+    gold: { count: 1, elite: false },
+    promotion: { count: 1, elite: false },
+    unit: { count: 2, elite: false },
+    advance: { count: 2, elite: true },
+  } as Record<RuinPrize, { count: number; elite: boolean }>,
   /** Turns of being awake before the Vault Keeper arrives. */
   keeperAfter: 3,
+  /**
+   * Turns with nobody near before what stood up lies back down. Section 123.
+   *
+   * Measured, and the last piece of the puzzle. Guardians that never swing
+   * first stopped charging the marching side for its stumbles -- and then
+   * charged it again in a different coin, because nothing kills furniture, so
+   * every ruin anybody ever blundered into left one or two permanent statues
+   * standing in the way. One unit to a tile holds for them too. Fights across a
+   * game fell from twenty-odd to eleven, captures more than halved and games
+   * ran twenty turns longer: a war being slowed down by obstacles, paid for by
+   * whoever was doing the marching.
+   *
+   * So a ruin nobody is bothering goes quiet again, prize intact, and the
+   * doorway is a doorway rather than a bollard. Coming back wakes it afresh.
+   */
+  sleepAfter: 6,
+  /** How near somebody has to be to keep a ruin awake. */
+  sleepWithin: 3,
+  /**
+   * What an unopened ruin adds to the cost of pathing across it.
+   *
+   * Six, which is several turns of walking on open ground -- enough that a
+   * route goes round rather than through, and not so much that a unit sent to
+   * crack one refuses to arrive. See the note in `movement.ts`.
+   */
+  detour: 6,
   /**
    * Average advances known before the ruin wakes something better than bones.
    *
@@ -104,6 +139,16 @@ export const RUINS = {
    */
   soldiersOnly: true,
   /**
+   * Whether a guardian ever attacks at all, or only ever defends.
+   *
+   * **Off, and measured off.** See `standWatch`: a guardian that strikes is a
+   * fight nobody chose for whoever happens to walk over a doorway, and the two
+   * sides do not walk over doorways equally. Kept as a lever because "the
+   * statues fight back" is a reasonable game and this is the number that says
+   * which game it is.
+   */
+  wardensStrike: false,
+  /**
    * Whether a guardian will only ever swing at somebody standing *in* its ruin.
    *
    * Measured, and it is the whole of section 123's balance problem. Guardians
@@ -119,13 +164,30 @@ export const RUINS = {
    */
   wardensHold: true,
   /**
+   * Whether the AI will walk out of its way to crack a ruin at all.
+   *
+   * A lever because it is the last suspect standing. The lean survived the
+   * prize being a settler, then a soldier; it survived the guard being two
+   * golems and then one skeleton over a bag of coins. What every one of those
+   * arms shared is that a soldier will walk up to `RUIN_RANGE` tiles to reach
+   * one -- and the two sides have very different soldiers to spare. The
+   * Kingdom's are often standing at home; the Horde's are walking at a city.
+   * A diversion is cheap for one and expensive for the other, and captures
+   * falling from 5.8 a game to 5.1 is what a diversion looks like.
+   *
+   * Off is a player-only feature, which section 37 warns is how a mechanic
+   * quietly stops happening -- so this is a measurement, not a candidate for
+   * shipping.
+   */
+  aiSeeks: true,
+  /**
    * The odds the AI wants before it will swing at something standing in a ruin.
    *
    * A ruin is an *optional* fight, and the Horde's `caution` is 0.25 -- it will
    * attack at one-in-four odds, which is right for a war and ruinous against a
    * statue. This is the bar for fights nobody has to pick.
    */
-  aiOdds: 0.25,
+  aiOdds: 0.4,
 };
 
 /** The three of them, worst last. */
@@ -199,13 +261,38 @@ export function placeRuins(
   return out;
 }
 
-/** What stands up when a ruin is first disturbed. */
-function wardenFor(state: GameState): UnitTypeId {
+/**
+ * What stands up when a ruin is disturbed, and how much of it. Section 123.
+ *
+ * **The guard is the price tag.** Jeremy's rule (2026-09-29): harder guardians
+ * for better prizes, softer ones for worse. A ruin with a bit of gold in it has
+ * one bored skeleton in the doorway; a ruin holding an advance has two things
+ * made of stone and a Keeper on the way.
+ *
+ * Two reasons it is the right rule, beyond being fair:
+ *
+ * - **It makes a ruin readable.** You cannot see what is inside, but you can
+ *   see what stood up, and from the fifth ruin onward a player knows that two
+ *   golems means something worth the fight. That is a decision where there was
+ *   a coin flip.
+ * - **It is the answer to the balance problem** rather than a tuning knob on
+ *   it. Guardians tax whoever attacks them, and the Horde attacks everything;
+ *   flat guards meant the same tax whatever the ruin was worth, so the side
+ *   that cracked more ruins paid more for the same average prize. Now the tax
+ *   is proportional to the prize, which is what "fair" means here.
+ *
+ * The world's own progress still counts on top: a sentinel becomes a golem once
+ * the empires average `guardianFrom` advances, so a late ruin is harder than an
+ * early one holding the same thing.
+ */
+function guardFor(state: GameState, prize: RuinPrize): { kind: UnitTypeId; count: number } {
   const empires = contenders(state);
   const advances = empires.length
     ? empires.reduce((n, p) => n + p.techs.length, 0) / empires.length
     : 0;
-  return advances >= RUINS.guardianFrom ? WARDENS.guardian : WARDENS.sentinel;
+  const worth = RUINS.guard[prize];
+  const elite = worth.elite || advances >= RUINS.guardianFrom;
+  return { kind: elite ? WARDENS.guardian : WARDENS.sentinel, count: worth.count };
 }
 
 /**
@@ -271,6 +358,22 @@ function oldGarrison(state: GameState, faction: FactionId): UnitTypeId | null {
   return roster[rung].id;
 }
 
+/**
+ * What a ruin cracked *now* would probably stand up, whatever is inside it.
+ *
+ * Exported for the AI, and it is not cheating: the tier is read off how far
+ * along the world is, which is the sort of thing everybody knows. What stays
+ * hidden is the prize, and therefore whether this particular doorway holds one
+ * of these or two.
+ */
+export function expectedGuard(state: GameState): UnitTypeId {
+  const empires = contenders(state);
+  const advances = empires.length
+    ? empires.reduce((n, p) => n + p.techs.length, 0) / empires.length
+    : 0;
+  return advances >= RUINS.guardianFrom ? WARDENS.guardian : WARDENS.sentinel;
+}
+
 /** Free ground beside a tile, for something to stand up on. */
 function roomAround(state: GameState, x: number, y: number): Array<[number, number]> {
   const out: Array<[number, number]> = [];
@@ -309,10 +412,10 @@ export function disturb(state: GameState, ruin: Ruin, by: Unit): void {
   // two players until something in it actually stands up.
   const wild = ensureWilds(state);
   const room = roomAround(state, ruin.x, ruin.y);
-  const standing = wild ? Math.min(RUINS.wakes, room.length) : 0;
-  const kind = wardenFor(state);
+  const guard = guardFor(state, ruin.prize);
+  const standing = wild ? Math.min(guard.count, room.length) : 0;
   for (let n = 0; n < standing; n++) {
-    spawnUnit(state, wild!.id, kind, room[n][0], room[n][1], false);
+    spawnUnit(state, wild!.id, guard.kind, room[n][0], room[n][1], false);
   }
 
   log(
@@ -342,6 +445,11 @@ export function tickRuins(state: GameState): void {
   if (!wild) return;
   for (const ruin of standingRuins(state)) {
     if (ruin.wokeOn === undefined) continue;
+    // Only the ruins worth a Keeper get one. Section 123's guard-as-price-tag:
+    // a Vault Keeper turning up to defend a bag of coins is the same flat tax
+    // on the attacker that the proportional guard exists to undo, and it is a
+    // worse joke besides.
+    if (!RUINS.guard[ruin.prize].elite) continue;
     if (state.turn - ruin.wokeOn !== RUINS.keeperAfter) continue;
     const held = state.units.some(
       (u) => isWarden(u) && distance(u.x, u.y, ruin.x, ruin.y) <= RUINS.leash,
@@ -360,6 +468,50 @@ export function tickRuins(state: GameState): void {
         undefined,
         [ruin.x, ruin.y],
       );
+    }
+  }
+}
+
+/**
+ * Ruins nobody has been near for a while lie back down.
+ *
+ * Called once a turn, with the Keeper. Everything the ruin was is kept -- the
+ * prize, and the fact that it can be woken again -- and only what stood up goes
+ * away, which is the difference between a ruin and a bollard.
+ */
+export function sleepRuins(state: GameState): void {
+  if (!RUINS.enabled) return;
+  for (const ruin of standingRuins(state)) {
+    if (ruin.wokeOn === undefined) continue;
+    if (state.turn - ruin.wokeOn < RUINS.sleepAfter) continue;
+    const bothered = state.units.some(
+      (u) =>
+        !isWarden(u) &&
+        !state.players[u.owner]?.barbarian &&
+        distance(u.x, u.y, ruin.x, ruin.y) <= RUINS.sleepWithin,
+    );
+    if (bothered) continue;
+    const standing = state.units.filter(
+      (u) => isWarden(u) && distance(u.x, u.y, ruin.x, ruin.y) <= RUINS.leash,
+    );
+    for (const warden of standing) {
+      const at = state.units.indexOf(warden);
+      if (at >= 0) state.units.splice(at, 1);
+    }
+    delete ruin.wokeOn;
+    delete ruin.wokenBy;
+    if (standing.length > 0) {
+      for (const p of contenders(state)) {
+        if (p.visible[idx(ruin.x, ruin.y, state.width)] !== 1) continue;
+        log(
+          state,
+          'Whatever was standing in the ruin has sat back down. It does not appear to be in a hurry.',
+          'info',
+          p.id,
+          undefined,
+          [ruin.x, ruin.y],
+        );
+      }
     }
   }
 }
@@ -476,10 +628,26 @@ export function standWatch(state: GameState, warden: Unit, step: (x: number, y: 
   const reach = state.units.filter(
     (u) => u.owner !== warden.owner && distance(u.x, u.y, warden.x, warden.y) <= 1,
   );
+  // **They never swing first.** Section 123's principle is that the cost falls
+  // on whoever chose the fight, and measurement says this was the last place it
+  // was being broken: the Horde lost eight to ten units a game to guardians
+  // against the Kingdom's one. Not because it attacked them -- the lean is
+  // there with the AI ignoring ruins entirely -- but because it *marches*, so
+  // it stumbles onto ruins two and a half times as often, and a unit that
+  // stumbles in is standing in the doorway with something hitting it every turn
+  // until it dies. Nobody chose that.
+  //
+  // So a guardian is a wall and nothing else. It holds the prize, it hurts
+  // whoever swings at it (the Animated Guardian's own trick), and it lets
+  // somebody who wandered in wander out again. Clearing a ruin now costs
+  // exactly what attacking a defended tile costs, which is the price the design
+  // meant to charge all along.
   const armed = RUINS.soldiersOnly ? reach.filter((u) => unitType(u.type).attack > 0) : reach;
-  const beside = RUINS.wardensHold
-    ? armed.find((u) => !!home && u.x === home.x && u.y === home.y)
-    : armed[0];
+  const beside = RUINS.wardensStrike
+    ? RUINS.wardensHold
+      ? armed.find((u) => !!home && u.x === home.x && u.y === home.y)
+      : armed[0]
+    : undefined;
   if (beside) {
     step(beside.x, beside.y);
     return true;

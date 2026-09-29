@@ -7,6 +7,7 @@ import {
   guarded,
   isWarden,
   ruinAt,
+  sleepRuins,
   standingRuins,
   tickRuins,
 } from '../src/sim/ruins';
@@ -101,7 +102,8 @@ describe('walking into one', () => {
 
     expect(ruin.wokeOn).toBe(state.turn);
     expect(orc.moves).toBe(0);
-    expect(state.units.filter(isWarden).length).toBe(RUINS.wakes);
+    // The guard is the price tag: a bag of gold gets one bored skeleton.
+    expect(state.units.filter(isWarden).length).toBe(RUINS.guard.gold.count);
   });
 
   it('conjures a wilds slot in a game that had none', () => {
@@ -297,8 +299,10 @@ describe('what stands in them', () => {
     );
   });
 
-  it('gets a Vault Keeper if it is left awake', () => {
-    const { state, ruin } = world();
+  it('gets a Vault Keeper if it is left awake, when it is worth one', () => {
+    // An advance, which is the prize a Keeper turns out for. A ruin holding
+    // coins does not get one, which is the next test.
+    const { state, ruin } = world('advance');
     const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
     tryStep(state, orc, ruin.x, ruin.y);
 
@@ -308,8 +312,37 @@ describe('what stands in them', () => {
     expect(state.units.some((u) => u.type === WARDENS.keeper)).toBe(true);
   });
 
+  it('leaves a bag of gold to its one skeleton, Keeper or no Keeper', () => {
+    const { state, ruin } = world('gold');
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, orc, ruin.x, ruin.y);
+    expect(state.units.filter(isWarden)).toHaveLength(1);
+
+    state.turn += RUINS.keeperAfter;
+    tickRuins(state);
+
+    expect(state.units.some((u) => u.type === WARDENS.keeper)).toBe(false);
+  });
+
+  it('stands something better over something better', () => {
+    const cheap = world('gold');
+    const dear = world('advance');
+    for (const { state, ruin } of [cheap, dear]) {
+      const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+      tryStep(state, orc, ruin.x, ruin.y);
+    }
+    const overGold = cheap.state.units.filter(isWarden);
+    const overAdvance = dear.state.units.filter(isWarden);
+
+    expect(overAdvance.length).toBeGreaterThan(overGold.length);
+    // And what stands there is made of sterner stuff, before the world has
+    // aged into golems at all.
+    expect(overAdvance.every((u) => u.type === WARDENS.guardian)).toBe(true);
+    expect(overGold.every((u) => u.type === WARDENS.sentinel)).toBe(true);
+  });
+
   it('gets no Keeper once its guardians are down', () => {
-    const { state, ruin } = world();
+    const { state, ruin } = world('advance');
     const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
     tryStep(state, orc, ruin.x, ruin.y);
     state.units = state.units.filter((u) => !isWarden(u));
@@ -332,6 +365,52 @@ describe('what stands in them', () => {
     // walk away from a stone golem unmarked.
     expect(orc.hp).toBeLessThan(before);
     expect(unitType(WARDENS.guardian).reflects).toBeGreaterThan(0);
+  });
+});
+
+describe('lying back down', () => {
+  it('sends the guard away once nobody has been near for a while', () => {
+    const { state, ruin } = world();
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, orc, ruin.x, ruin.y);
+    expect(state.units.filter(isWarden).length).toBeGreaterThan(0);
+
+    // Our soldier leaves, and nobody comes back.
+    orc.x = ruin.x - 9;
+    state.turn += RUINS.sleepAfter;
+    sleepRuins(state);
+
+    expect(state.units.filter(isWarden)).toHaveLength(0);
+    expect(ruin.wokeOn).toBeUndefined();
+    // The prize is still in there, and it can be woken again.
+    expect(ruin.takenOn).toBeUndefined();
+  });
+
+  it('stays awake while somebody is still about', () => {
+    const { state, ruin } = world();
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, orc, ruin.x, ruin.y);
+
+    state.turn += RUINS.sleepAfter;
+    sleepRuins(state);
+
+    expect(state.units.filter(isWarden).length).toBeGreaterThan(0);
+    expect(ruin.wokeOn).toBeDefined();
+  });
+
+  it('can be woken a second time', () => {
+    const { state, ruin } = world();
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, orc, ruin.x, ruin.y);
+    orc.x = ruin.x - 9;
+    state.turn += RUINS.sleepAfter;
+    sleepRuins(state);
+
+    const again = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, again, ruin.x, ruin.y);
+
+    expect(ruin.wokeOn).toBe(state.turn);
+    expect(state.units.filter(isWarden).length).toBeGreaterThan(0);
   });
 });
 

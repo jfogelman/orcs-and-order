@@ -47,7 +47,7 @@ import {
 } from '../sim/city';
 import { rankBonus } from '../sim/combat';
 import { COWED, hasStatus } from '../sim/status';
-import { RUINS, isWarden, standingRuins } from '../sim/ruins';
+import { RUINS, expectedGuard, isWarden, standingRuins } from '../sim/ruins';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, withRng } from '../sim/gamestate';
 import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
@@ -399,6 +399,16 @@ function nearestEnemyTarget(
     consider(c.x, c.y, endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1, hardness);
   }
   for (const u of state.units) {
+    // Section 123: a thing standing in a ruin is furniture, not an enemy army.
+    //
+    // It never leaves its doorway and, since guardians stopped swinging first,
+    // it never comes for anybody -- so an army that marches at it is an army
+    // that has been distracted by a statue. Measured: with passive guardians
+    // left in this list, fights across the whole game fell from twenty-odd a
+    // game to eleven and captures more than halved, because both sides spent
+    // the war walking at ruins and standing next to them. `seekRuin` is the
+    // one route to a ruin, and it is a deliberate errand with its own rules.
+    if (isWarden(u)) continue;
     if (u.owner !== playerId && hostile(state, playerId, u.owner) && player.visible[idx(u.x, u.y, state.width)]) {
       consider(u.x, u.y, 1.6, 0);
     }
@@ -823,6 +833,10 @@ function threatNear(state: GameState, playerId: number, x: number, y: number, ra
   for (const u of state.units) {
     if (u.owner === playerId) continue;
     if (unitType(u.type).attack <= 0) continue;
+    // Section 123: and a guardian is not a threat to anything. It cannot leave
+    // its doorway and it does not swing first, so a town that garrisons itself
+    // against one is a town garrisoning itself against masonry.
+    if (isWarden(u)) continue;
     // A side at peace with us is standing about, not threatening anybody.
     if (!hostile(state, playerId, u.owner)) continue;
     if (!seen[u.y * w + u.x]) continue;
@@ -882,6 +896,37 @@ function seekRuin(state: GameState, unit: Unit): boolean {
   if (!here) return false;
   const away = distance(unit.x, unit.y, here.x, here.y);
   if (away > RUIN_RANGE) return false;
+
+  // **Never start what you cannot finish.** Measured, and it was the whole of
+  // section 123's balance problem in its final form: a soldier would walk to a
+  // ruin it had no chance against, stand in the doorway for the rest of the
+  // game, keep the ruin awake so its guard never lay back down, and feed itself
+  // to that guard a hit at a time. At turn 150 the Horde had six units parked
+  // at ruins, thirteen guardians standing about the map, and had lost
+  // seventeen units to them against the Kingdom's six -- and captures across
+  // the war had halved, because both armies were somewhere else.
+  //
+  // So the errand is only for a unit that would win the fight at the end of it.
+  // Anything else leaves, and goes back to the war it was walking to.
+  const guard = state.units
+    .filter((u) => isWarden(u) && distance(u.x, u.y, here.x, here.y) <= RUINS.leash)
+    .sort((a, b) => attackOdds(state, unit, a) - attackOdds(state, unit, b))[0];
+  if (guard) {
+    if (attackOdds(state, unit, guard) < RUINS.aiOdds) return false;
+  } else {
+    // Nothing standing there *yet*, which is the case that was doing the
+    // damage: the gate above only ever asked about ruins somebody had already
+    // opened, so every soldier within ten tiles of a sleeping one still walked
+    // in and woke it. The Horde woke five a game to the Kingdom's one and a
+    // half and lost a dozen units to what stood up.
+    //
+    // So ask the same question of what *would* stand up. The tier is public --
+    // it is read off how far along the world is -- and what stays hidden is
+    // the prize, and therefore how many of them there are.
+    const likely = unitType(expectedGuard(state));
+    if (unitType(unit.type).attack + (unit.drilled ?? 0) < likely.defense) return false;
+  }
+
   // Already in the doorway: hold it, and the prize comes in the morning.
   if (away === 0) {
     unit.order = 'fortified';
@@ -1659,7 +1704,7 @@ function actSoldier(
   // this: a mechanic the AI has no route to is a mechanic that does not happen,
   // and a player who is the only one cracking ruins is playing a different game
   // from the one being measured.
-  if (RUINS.enabled && seekRuin(state, unit)) return;
+  if (RUINS.enabled && RUINS.aiSeeks && seekRuin(state, unit)) return;
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);

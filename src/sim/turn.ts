@@ -28,7 +28,7 @@ import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
-import { claimRuins, tickRuins } from './ruins';
+import { claimRuins, sleepRuins, tickRuins } from './ruins';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
@@ -719,6 +719,8 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
     // Section 123: whatever has been woken and not finished gets its Keeper on
     // the wilds' own turn, which is when everything else of theirs happens.
     tickRuins(state);
+    // Section 123: and the ones nobody has troubled for a while lie down again.
+    sleepRuins(state);
     runRaiders(state, playerId);
     return;
   }

@@ -96,6 +96,8 @@ const control = () => {
   RUINS.perLand = 100;
   RUINS.wardenDefence = 1;
   RUINS.aiOdds = 0.25;
+  RUINS.aiSeeks = true;
+  RUINS.wardensStrike = false;
   RUINS.wardensHold = true;
   RUINS.soldiersOnly = true;
   // Section 120: what a band walks at. On in the shipped game; off is the old
@@ -123,16 +125,17 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 123, fifth pass, and the probe rather than the guessing found this
-  // one. With the prize bug fixed the Horde still lost ground -- and it was
-  // opening *more* ruins than the Kingdom and taking more of every prize while
-  // finishing with fewer cities than it had on a map with no ruins at all
-  // (6.00 down to 5.22, held-out). Settlers were walking over doorways, waking
-  // what slept there, and dying in them, and a dead Peon is a town that never
-  // happened.
+  // Section 123, twelfth pass, and the probe has been doing the work for the
+  // last three. What it found, in order: guardians that strike charge the side
+  // that stumbles; guardians that never die block the roads; and an AI that
+  // walks at a sleeping ruin without asking what lives there loses a dozen
+  // units a game to what stands up.
   //
-  // So a ruin is a soldier's business: a worker neither wakes one nor is
-  // touched by what stands in it. This is that arm.
+  // All three are shut now -- a guard that never swings first, a ruin that lies
+  // back down when nobody is bothering it, and an errand nobody starts unless
+  // they would win the fight at the end of it. The probe says the sides now
+  // wake 4.1 against 3.2 and lose 8.7 against 6.7, where it was 5.7/1.6 and
+  // 11.8/6.3. This asks what that is worth in games.
   {
     label: 'empty map',
     apply: () => {

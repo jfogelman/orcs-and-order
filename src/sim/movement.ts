@@ -33,7 +33,7 @@ import {
   stepCost,
 } from './roads';
 import { claimBounty, lastWords } from './wilds';
-import { disturb, isWarden, ruinAt } from './ruins';
+import { RUINS, disturb, isWarden, ruinAt } from './ruins';
 import { hostile } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
@@ -107,7 +107,18 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
     const base = type.flies || type.sails ? 1 : stepCost(state, owner, fromX, fromY, x, y);
-    return occupantOwner !== undefined ? base + FRIENDLY_BLOCK_PENALTY : base;
+    // Section 123: a doorway with something asleep behind it is ground you walk
+    // *around*, not over.
+    //
+    // Measured, and it was the last of the ruins' three taxes on the marching
+    // side: the Horde woke five ruins a game to the Kingdom's one and a half,
+    // not out of greed but because it covers more ground, and every accidental
+    // waking is a fight it half loses. A penalty rather than a wall, so a
+    // soldier sent to crack one on purpose still gets there -- `seekRuin` names
+    // the ruin as its destination and pays the toll once.
+    const detour = ruinDetour(state, i);
+    const cost = base + detour;
+    return occupantOwner !== undefined ? cost + FRIENDLY_BLOCK_PENALTY : cost;
   };
 }
 
@@ -127,6 +138,21 @@ export function canStandOn(type: UnitTypeDef, terrain: TerrainId): boolean {
   if (type.sails) return def.water;
   if (!def.water) return true;
   return type.wades && !def.deepWater;
+}
+
+/**
+ * What it costs to path across a ruin nobody has emptied yet.
+ *
+ * Read off the ruin list rather than a tile layer, which is the same trade
+ * `ruinAt` makes: there are a few dozen on a map and the question is asked
+ * inside the pathfinder, so it is a short scan against a long one.
+ */
+function ruinDetour(state: GameState, i: number): number {
+  if (!RUINS.enabled || !state.ruins) return 0;
+  const x = i % state.width;
+  const y = Math.floor(i / state.width);
+  const ruin = state.ruins.find((r) => r.x === x && r.y === y);
+  return ruin && ruin.takenOn === undefined ? RUINS.detour : 0;
 }
 
 /** Whether whatever is standing here is one of the Legion, wading. */
