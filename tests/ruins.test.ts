@@ -13,7 +13,7 @@ import {
 import { runRaiders } from '../src/sim/barbarians';
 import { tryStep } from '../src/sim/movement';
 import { resolveCombat } from '../src/sim/combat';
-import { unitType } from '../src/model/units';
+import { UNIT_TYPES, unitType } from '../src/model/units';
 import { barbarianOf, createGame, spawnUnit } from '../src/sim/gamestate';
 import { beginPlayerTurn } from '../src/sim/turn';
 import { idx } from '../src/engine/grid';
@@ -199,11 +199,56 @@ describe('taking what is in it', () => {
     expect(ruin.takenOn).toBe(state.turn);
   });
 
-  it('leaves somebody standing there who walks out with you', () => {
+  it('leaves a soldier standing there who walks out with you', () => {
     const { state } = cleared('unit');
     const before = state.units.filter((u) => u.owner === 0).length;
     claimRuins(state, 0);
-    expect(state.units.filter((u) => u.owner === 0).length).toBe(before + 1);
+    const now = state.units.filter((u) => u.owner === 0);
+    expect(now.length).toBe(before + 1);
+
+    // Section 124: a *soldier*, one of them, and never a worker. The prize was
+    // each side's settler once, which is even on paper and not in play -- an AI
+    // stops founding at its target, so a free settler was a town for the
+    // Kingdom and a road crew for the Horde, and cost twenty games in a sweep.
+    const gift = unitType(now[now.length - 1].type);
+    expect(gift.attack).toBeGreaterThan(0);
+    expect(gift.settler).toBe(false);
+    expect(gift.count).toBe(1);
+  });
+
+  it('hands out a better soldier the older the world is', () => {
+    const early = cleared('unit');
+    claimRuins(early.state, 0);
+    const first = early.state.units.filter((u) => u.owner === 0).at(-1)!;
+
+    const late = cleared('unit');
+    // The whole world further along, which is what the rung is read off.
+    for (const p of late.state.players) p.techs = new Array(24).fill('x');
+    claimRuins(late.state, 0);
+    const second = late.state.units.filter((u) => u.owner === 0).at(-1)!;
+
+    expect(unitType(second.type).cost).toBeGreaterThan(unitType(first.type).cost);
+  });
+
+  it('never goes past the middle of the roster, however old the world is', () => {
+    const state = cleared('unit').state;
+    for (const p of state.players) p.techs = new Array(200).fill('x');
+    claimRuins(state, 0);
+    const gift = unitType(state.units.filter((u) => u.owner === 0).at(-1)!.type);
+
+    const roster = Object.values(UNIT_TYPES)
+      .filter(
+        (u) =>
+          u.faction === state.players[0].faction &&
+          u.count === 1 &&
+          u.cost > 0 &&
+          u.attack > 0 &&
+          !u.settler &&
+          !u.sails,
+      )
+      .sort((a, b) => a.cost - b.cost);
+    const dearest = roster[roster.length - 1];
+    expect(gift.cost).toBeLessThan(dearest.cost);
   });
 
   it('teaches whoever opened it something', () => {

@@ -2,8 +2,8 @@ import { DIRS8, distance, idx, inBounds } from '../engine/grid';
 import { Rng } from '../engine/rng';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN } from '../model/terrain';
-import { unitType } from '../model/units';
-import type { GameState, Ruin, RuinPrize, Unit, UnitTypeId } from '../model/types';
+import { UNIT_TYPES, unitType } from '../model/units';
+import type { FactionId, GameState, Ruin, RuinPrize, Unit, UnitTypeId } from '../model/types';
 import { contenders, log, spawnUnit } from './gamestate';
 import { ensureWilds } from './barbarians';
 import { researchableTechs } from './research';
@@ -66,6 +66,12 @@ export const RUINS = {
   prizes: { gold: 5, promotion: 3, unit: 2, advance: 1 } as Record<RuinPrize, number>,
   /** Coins in a ruin worth the walk. */
   gold: 90,
+  /**
+   * Advances the world must average before the soldier in a ruin is a rung
+   * better. Six, so a standard game walks a side up two or three rungs before
+   * the mid-tier cap catches it -- see `oldGarrison`.
+   */
+  soldierPerAdvances: 6,
   /**
    * What a warden's defence is multiplied by, and why this is a lever.
    *
@@ -200,6 +206,69 @@ function wardenFor(state: GameState): UnitTypeId {
     ? empires.reduce((n, p) => n + p.techs.length, 0) / empires.length
     : 0;
   return advances >= RUINS.guardianFrom ? WARDENS.guardian : WARDENS.sentinel;
+}
+
+/**
+ * Whoever was garrisoning the ruin when it stopped being a place, section 124.
+ *
+ * **A low-tier soldier, and how low depends on the age of the world.** The
+ * prize was each side's *worker* before this, which was even on paper and not
+ * in play: an AI stops founding at its target -- five for the Horde, six for
+ * the Kingdom -- so a free settler was a town for one side and a road crew for
+ * the other. That was the second time the same shape caught this feature out,
+ * and it cost twenty games in a 216-a-side sweep. A soldier has no such
+ * second life: it is worth what it is worth to anybody.
+ *
+ * Three rules, all of them Jeremy's (2026-09-28):
+ *
+ * - **Scaled off the whole world**, not off the finder's own research: the
+ *   average advances the empires know between them, the same measure that
+ *   paces the wilds. A ruin cracked on turn ten holds a Goblin or a Footman; a
+ *   ruin cracked on turn a hundred and forty holds something that has been
+ *   waiting a while.
+ * - **Capped at mid-tier.** The good half of a roster is what an empire builds
+ *   for itself; a ruin is not a shortcut to a dragon.
+ * - **Never a group.** One of them, always: the counting ladder is a thing you
+ *   pay for, and handing over Ten Orcs for walking into a doorway would undo
+ *   the whole joke of it.
+ *
+ * `cost > 0` is what separates an empire's roster from the wilds' -- every
+ * raider and warden in the game is costed zero, because nobody builds them.
+ *
+ * Two filters beyond that, both there so the rungs read as *soldiers*:
+ *
+ * - **Melee and missile only.** Sorting the whole roster by price put a Goblin
+ *   Sapper at the Horde's middle rung and a Ballista at the Kingdom's, and a
+ *   siege engine left behind in a doorway for six hundred years is a different
+ *   joke from the one this is telling. Casters are out for the same reason.
+ * - **Nothing cheaper than the faction's own first soldier**, which is what
+ *   makes the bottom rung a Goblin and a Footman rather than a Goblin and an
+ *   *Outrider* -- the Kingdom's scout undercuts its infantry by five shields
+ *   and would otherwise have been the thing every early ruin handed over.
+ */
+function oldGarrison(state: GameState, faction: FactionId): UnitTypeId | null {
+  const floor = UNIT_TYPES[FACTIONS[faction].starterUnit as UnitTypeId]?.cost ?? 0;
+  const roster = Object.values(UNIT_TYPES)
+    .filter(
+      (u) =>
+        u.faction === faction &&
+        u.count === 1 &&
+        u.cost >= floor &&
+        u.attack > 0 &&
+        (u.role === 'melee' || u.role === 'ranged') &&
+        !u.settler &&
+        !u.sails,
+    )
+    .sort((a, b) => a.cost - b.cost || a.id.localeCompare(b.id));
+  if (roster.length === 0) return null;
+
+  const empires = contenders(state);
+  const advances = empires.length
+    ? empires.reduce((n, p) => n + p.techs.length, 0) / empires.length
+    : 0;
+  const midTier = Math.floor((roster.length - 1) / 2);
+  const rung = Math.min(midTier, Math.floor(advances / RUINS.soldierPerAdvances));
+  return roster[rung].id;
 }
 
 /** Free ground beside a tile, for something to stand up on. */
@@ -350,25 +419,20 @@ function give(state: GameState, ruin: Ruin, holder: Unit): void {
     }
     case 'unit': {
       const room = roomAround(state, ruin.x, ruin.y);
-      // Somebody who was still living in there, of their own kind: a Peon for
-      // the Horde and a Peasant for the Kingdom.
-      //
-      // **Each side's worker, and the symmetry is the whole point.** This first
-      // read `orc ? 'goblin' : 'peasant'`, which looks even and is not: a
-      // Peasant is the Kingdom's *settler* and a Goblin is a soldier, so one
-      // side was being handed a free city and the other a free skirmisher. It
-      // took three sweeps to find, because it does not look like a balance
-      // lever -- it showed up as the Kingdom quietly gaining a city and eight
-      // population in every arm that had ruins in it, whatever else was moved.
-      const kind = FACTIONS[player.faction].settlerUnit as UnitTypeId;
       if (room.length === 0) {
         player.gold += RUINS.gold;
         tell(`${RUINS.gold} gold, there being nowhere for anybody to stand.`, 'coin');
         return;
       }
+      const kind = oldGarrison(state, player.faction);
+      if (!kind) {
+        player.gold += RUINS.gold;
+        tell(`${RUINS.gold} gold, and nobody left in here to carry it.`, 'coin');
+        return;
+      }
       spawnUnit(state, holder.owner, kind, room[0][0], room[0][1], false);
       tell(
-        `Somebody was still living in the ruin, and has decided we are better than nothing.`,
+        `${unitType(kind).name} was still in the ruin, and has decided we are better than nothing.`,
       );
       return;
     }
