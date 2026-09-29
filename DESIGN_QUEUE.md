@@ -10215,3 +10215,20 @@ ten-game *Horde* lean. The two runs disagree about the **sign**. A hundred and
 eight games an arm could not tell which side a feature favoured, which is worth
 remembering the next time a number at that sample size looks conclusive.
 
+### A correction about the art
+
+Section 123 said the three guardians "were already drawn and needed only the
+name map". Drawn, yes. **Wired, no** -- `WILDS` never got the three lines, so
+every Bone Sentinel, Animated Guardian and Vault Keeper in all twelve sweeps was
+a placeholder silhouette. Nothing reported it, because a wild sheet with no unit
+asking for it is *held quietly* rather than complained about: the very rule that
+keeps eleven undrawn creatures out of the warning list also hid three drawn ones.
+Cosmetic only -- the sim never asks what a unit looks like -- but the claim was
+wrong when it was made.
+
+Fixed with the drop of weakened sheets (2026-09-29), and one pipeline change
+with it: where the same sheet exists in two folders, **the newest copy wins**. A
+re-roll dropped beside the sprites used to lose silently to the original filed
+with everybody else's, and the run would report the sheet as up to date rather
+than take the new one.
+

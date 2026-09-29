@@ -91,6 +91,14 @@ WILDS = {
     "drowned": "drowned sailor",
     "wraith": "bilge wraith",
     "captain": "drowned captain",
+    # Section 123: the Tomb Wardens, who stand in ruins. Drawn in the same drop
+    # as everybody else and missed here when the ruins shipped, so they spent
+    # their first twelve sweeps as placeholder silhouettes -- which nothing
+    # reported, because a missing wild sheet is held quietly rather than
+    # complained about.
+    "sentinel": "bone sentinel",
+    "guardian": "animated guardian",
+    "keeper": "vault keeper",
 }
 
 TERRAINS = ["grass", "forest", "hills", "mountains", "swamp", "desert", "water", "deep"]
@@ -1764,17 +1772,26 @@ def wild_sheets(suffix: str, *folders: str) -> list[tuple[Path, str]]:
     it: the attack strips came in beside the sprites, the weakened sheets came
     in with everybody else's. Both are correct, neither is worth a rule, and
     looking in both costs nothing.
+
+    **The newest copy wins**, which matters because the same sheet can exist in
+    two folders: a re-roll dropped beside the sprites would otherwise lose to
+    the original filed with everybody else's, and the artist would be told
+    nothing at all -- the run would simply skip it as up to date. Asked of the
+    file's own timestamp rather than of the folder order, so neither folder has
+    to be "the real one".
     """
     found: list[tuple[Path, str]] = []
     for unit_id, creature in WILDS.items():
-        for folder in folders:
-            src = SRC / folder
-            if not src.is_dir():
-                continue
-            path = find_source(src, f"{creature} {suffix}")
-            if path is not None:
-                found.append((path, unit_id))
-                break
+        candidates = [
+            path
+            for folder in folders
+            if (SRC / folder).is_dir()
+            for path in [find_source(SRC / folder, f"{creature} {suffix}")]
+            if path is not None
+        ]
+        if not candidates:
+            continue
+        found.append((max(candidates, key=lambda p: p.stat().st_mtime), unit_id))
     return found
 
 
