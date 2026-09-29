@@ -118,13 +118,22 @@ function garrison(state: GameState, city: City): Unit {
  * because the list and the order are fixed, and self-healing, because the next
  * change to the endings costs nobody an afternoon. The seed it settled on is
  * printed, so a game worth reproducing can still be reproduced by hand.
+ *
+ * **Keep the working seed at the front, and mind the clock.** Each candidate is
+ * a whole game played out, so a search is priced in *games*: this timed out on
+ * CI at two of them inside a two-minute limit, having been comfortable locally.
+ * When the printed line says the search took several tries, move that seed to
+ * the front -- the list is an ordering, not a set. The timeout below allows for
+ * a bad day on a shared runner rather than for the happy path.
  */
-const LATE_SEEDS = [19, 32, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
+const LATE_SEEDS = [32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
 
 function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   const want = [200, 269, 299];
   let best = { seed: LATE_SEEDS[0], snaps: new Map<number, GameState>() };
+  const tried: number[] = [];
   for (const seed of LATE_SEEDS) {
+    tried.push(seed);
     const found = new Map<number, GameState>();
     // Three seats' worth of half-turns: a game can acquire a wilds slot
     // part-way through, and a budget counted for two stops in the two hundreds.
@@ -144,6 +153,10 @@ function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
     if (found.size > best.snaps.size) best = { seed, snaps: found };
     if (found.size === want.length) break;
   }
+  // Printed because the search is the point of failure when this breaks: a
+  // run that tried nine seeds is a run telling you the endings got faster
+  // again, and a run that tried one is the list still being in a good order.
+  console.log(`late fixtures: seed ${best.seed} after ${tried.length} tried (${tried.join(', ')})`);
   return best;
 }
 
@@ -433,7 +446,10 @@ describe('saved games for reproducing interface bugs', () => {
       scenario.check(deserialize(serialize(state!)));
       write(scenario.name, state!);
     }
-  }, 120_000);
+    // Whole games, on a runner that may be sharing a core: ten minutes is for
+    // the case where the first few candidates have stopped reaching the late
+    // turns and nobody has reordered the list yet.
+  }, 600_000);
 
   it('lists what each one is for', () => {
     const lines = [
