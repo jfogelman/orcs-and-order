@@ -1,9 +1,4 @@
-seed  founded  taken  abandoned  vanished  endHives  garrison@loss  hiveSize  empireSize
-11    5        1      0          3         1         0.0            5.4       9.8
-22    6        0      0          0         6         -              4.4       9.1
-33    1        0      0          0         1         -              1.0       7.1
-44    1        0      0          1         0         0.0            1.0       7.1
-55    8        1      0          2         5         0.0            3.5       9.5
-66    12       4      0          4         5         0.0            3.6       10.0
-77    8        2      0          3         3         0.0            5.4       8.6
-88    7        1      0          0         6         0.0            2.5       8.5
+side      cities  size   food made  food surplus  siteScore of the ground
+Horde     46      9.6    23.2       4.07          181
+Kingdom   56      10.1   24.4       4.11          179
+Hive      23      5.7    13.9       2.39          168

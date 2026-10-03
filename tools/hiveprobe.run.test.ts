@@ -1,81 +1,52 @@
 import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
+import { createGame, playerCities } from '../src/sim/gamestate';
 import { endPlayerTurn } from '../src/sim/turn';
-import { runAiTurn } from '../src/ai/ai';
+import { runAiTurn, siteScore } from '../src/ai/ai';
+import { cityYield, foodSurplus } from '../src/sim/city';
 import { hivekinOf } from '../src/sim/hivekin';
 
 /**
- * Section 125: where the Hives go.
+ * Section 125: why a Hive is three citizens where an empire city is nine.
  *
- * The previous probe killed the obvious theory -- they emerge on good ground
- * with eighty to a hundred settleable tiles around them, and they build plenty
- * of Grubs. They found Hives and then do not have them any more. This asks
- * which of the three ways that happens, because they want three different
- * fixes: taken by somebody, given up for want of a Queen, or starved out.
+ * The garrison theory died too -- they hold their cities *better* than either
+ * empire. What is left is that their cities do not grow, and the obvious
+ * suspect is the ground they were put on: `emergenceSpot` scores a site by how
+ * much land is near it and how far it is from everybody, and **not by what the
+ * land yields**. Lots of land and nothing to eat is exactly what that would
+ * pick.
  */
-describe('where the hives go', () => {
-  it('attributes every Hive lost', () => {
+describe('what the hive is standing on', () => {
+  it('compares the ground each side works', () => {
     const seeds = [11, 22, 33, 44, 55, 66, 77, 88];
-    const out: string[] = [
-      'seed  founded  taken  abandoned  vanished  endHives  garrison@loss  hiveSize  empireSize',
-    ];
+    const rows: Record<string, { size: number[]; food: number[]; yield_: number[]; site: number[] }> = {
+      Horde: { size: [], food: [], yield_: [], site: [] },
+      Kingdom: { size: [], food: [], yield_: [], site: [] },
+      Hive: { size: [], food: [], yield_: [], site: [] },
+    };
     for (const seed of seeds) {
       const state = createGame({ seed, width: 64, height: 48, barbarians: true });
-      const lostGarrisons: number[] = [];
-      const sizeSum: number[] = [];
-      const rivalSize: number[] = [];
-      let founded = 0;
-      let taken = 0;
-      let abandoned = 0;
-      let vanished = 0;
-      const seen = new Set<number>();
-      let held = new Map<number, number>();
-      const killers = new Map<number, number>();
       for (let i = 0; i < 300 * 4 && state.turn <= 240; i++) {
         runAiTurn(state, state.activePlayer);
         endPlayerTurn(state);
-        const hk = hivekinOf(state);
-        if (!hk) continue;
-        const mine = playerUnits(state, hk.id);
-        const now = new Map(
-          playerCities(state, hk.id).map(
-            (c) => [c.id, mine.filter((u) => u.x === c.x && u.y === c.y).length] as const,
-          ),
-        );
-        for (const c of playerCities(state, hk.id)) sizeSum.push(c.size);
-        for (const p of [0, 1]) for (const c of playerCities(state, p)) rivalSize.push(c.size);
-        for (const id of now.keys()) if (!seen.has(id)) { seen.add(id); founded++; }
-        for (const [id, garrison] of held) {
-          if (now.has(id)) continue;
-          lostGarrisons.push(garrison);
-          const still = state.cities.find((c) => c.id === id);
-          if (!still) {
-            // Gone from the board entirely: razed, or the seat given up for
-            // want of a Queen. Matched on the line the abandonment writes,
-            // and only on this turn's entries -- an older one would make every
-            // later loss look like the same event.
-            const givenUp = state.log.some(
-              (e) => e.turn >= state.turn - 1 && /is given up/.test(e.text),
-            );
-            if (givenUp) abandoned++;
-            else vanished++;
-          } else {
-            taken++;
-            killers.set(still.owner, (killers.get(still.owner) ?? 0) + 1);
-          }
-        }
-        held = now;
       }
       const hk = hivekinOf(state);
-      const endHives = hk ? playerCities(state, hk.id).length : 0;
-      const by = [...killers.entries()].map(([o, n]) => `p${o}:${n}`).join(' ') || '-';
-      const avg = (a: number[]) => (a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : '-');
-      void by;
+      for (const [label, id] of [['Horde', 0], ['Kingdom', 1], ['Hive', hk?.id]] as const) {
+        if (id === undefined) continue;
+        for (const c of playerCities(state, id)) {
+          rows[label].size.push(c.size);
+          rows[label].food.push(foodSurplus(state, c));
+          rows[label].yield_.push(cityYield(state, c).food);
+          rows[label].site.push(siteScore(state, c.x, c.y));
+        }
+      }
+    }
+    const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+    const out = ['side      cities  size   food made  food surplus  siteScore of the ground'];
+    for (const [label, r] of Object.entries(rows)) {
       out.push(
-        `${String(seed).padEnd(5)} ${String(founded).padEnd(8)} ${String(taken).padEnd(6)} ` +
-          `${String(abandoned).padEnd(10)} ${String(vanished).padEnd(9)} ${String(endHives).padEnd(9)} ` +
-          `${avg(lostGarrisons).padEnd(14)} ${avg(sizeSum).padEnd(9)} ${avg(rivalSize)}`,
+        `${label.padEnd(9)} ${String(r.size.length).padEnd(7)} ${avg(r.size).toFixed(1).padEnd(6)} ` +
+          `${avg(r.yield_).toFixed(1).padEnd(10)} ${avg(r.food).toFixed(2).padEnd(13)} ${avg(r.site).toFixed(0)}`,
       );
     }
     writeFileSync('hiveprobe.txt', out.join('\n'), 'utf8');
