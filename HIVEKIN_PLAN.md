@@ -294,7 +294,18 @@ cost of its whole turn; `'sacrifice'` — it eats that neighbour instead, a grou
 feeding it one shot per creature), and city resupply. Tests asserting the
 Catapult's card says it eats its neighbours and the Ballista's does not.
 
-### Slice A — the third seat exists
+### Slice A — the third seat exists — **DONE, measurement running**
+
+Landed 2026-10-02 across three commits on `feat/hivekin-seat`. Everything in the
+list below is built, 996 tests pass, and the two-sides-against-three sweep is the
+only thing outstanding. Section 125 in `DESIGN_QUEUE.md` has the full account,
+including the three bugs the probe found and the four fixtures that assumed two
+seats. The one finding worth carrying forward on its own: **the first draw of a
+fresh game is very nearly seed-independent**, because `state.rngState` starts as
+`seed ^ 0x1d872b41` and one xorshift round does not mix the top bits that
+`float()` reads. Left alone deliberately -- fixing it would change every seed's
+worldgen -- but anything that wants one early roll should hash the seed instead.
+
 
 Everything needed for a Hivekin game to run and be counted, and nothing with a
 new mechanic in it. That is the whole point of the split: if the numbers move,
