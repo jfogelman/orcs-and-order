@@ -1,3 +1,4 @@
+import { seenBy } from '../sim/burrow';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
 import { aiDiplomacy } from './diplomacy';
@@ -409,7 +410,7 @@ function nearestEnemyTarget(
     // the war walking at ruins and standing next to them. `seekRuin` is the
     // one route to a ruin, and it is a deliberate errand with its own rules.
     if (isWarden(u)) continue;
-    if (u.owner !== playerId && hostile(state, playerId, u.owner) && player.visible[idx(u.x, u.y, state.width)]) {
+    if (u.owner !== playerId && hostile(state, playerId, u.owner) && seenBy(state, u, playerId)) {
       consider(u.x, u.y, 1.6, 0);
     }
   }

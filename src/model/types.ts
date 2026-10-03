@@ -79,6 +79,10 @@ export interface Player {
    * the capitulation grace: how long you may hold no city is counted from when
    * you started, which is the same number for everybody and a different turn.
    */
+  /** City the Queen sits in. Section 125, Hivekin only. */
+  queenSeat?: number;
+  /** Turn the seat is given up if no Queen has been grown by then. */
+  succession?: number;
   joinedAt?: number;
   safeUntil?: number;
   /** Map / UI colour, as a CSS hex string. */
@@ -191,7 +195,18 @@ export interface Player {
 
 // ---------------------------------------------------------------------- units
 
-export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road' | 'post' | 'improve';
+export type UnitOrder =
+  | 'none'
+  | 'fortified'
+  | 'sentry'
+  | 'skip'
+  | 'road'
+  | 'post'
+  | 'improve'
+  // Section 125: underground, and not there as far as anybody else can tell.
+  // An order rather than a status because it is a stance held until something
+  // ends it, not a condition that wears off after a few turns.
+  | 'sunk';
 
 export interface Unit {
   id: number;
@@ -229,6 +244,19 @@ export interface Unit {
    * creatures that throw the thing they fight with.
    */
   disarmed: boolean;
+  /**
+   * Sunk, and the ground shows it. Section 125.
+   *
+   * An enemy who can see the tile knows *something* went down here, and nothing
+   * else -- not what, and not whether it is still there. `burrower-veteran`
+   * stops the mark being written, which is the whole of that advance.
+   */
+  sinkMark?: boolean;
+  /**
+   * Came up beside somebody this turn, and the Hive has learned to be already
+   * waiting. Worth a harder first swing, and true for exactly one turn.
+   */
+  ambushing?: boolean;
   /**
    * Turns until a thrower has walked over and picked its axe back up.
    *
@@ -436,6 +464,15 @@ export type DamageKind = 'physical' | 'magic';
  * Portal held open long enough, and the Kingdom's Mysterious Object with its
  * button pressed.
  */
+/**
+ * What a spare Princess became. Section 125.
+ *
+ * Chosen when she converts rather than when she was built, which is the point
+ * of the caste: insurance you can decide the use of after you know whether you
+ * needed it. `pending` is a conversion the player has not answered yet.
+ */
+export type BroodBonus = 'shields' | 'calm' | 'beakers' | 'gold' | 'pending';
+
 export type VictoryKind =
   | 'conquest'
   | 'dominance'
@@ -454,6 +491,14 @@ export type ProductionItem =
   | { kind: 'calm' };
 
 export interface City {
+  /**
+   * What the spare Princesses in this Hive turned into. Section 125.
+   *
+   * One entry per converted Princess, so a city that kept three of them is
+   * worth three of whatever was chosen. `pending` is one the player still owes
+   * an answer about.
+   */
+  brood?: BroodBonus[];
   id: number;
   owner: number;
   name: string;

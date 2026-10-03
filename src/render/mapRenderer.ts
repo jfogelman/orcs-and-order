@@ -1,3 +1,4 @@
+import { seenBy } from '../sim/burrow';
 import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
 import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
@@ -741,8 +742,9 @@ export class MapRenderer {
 
     // --- units -----------------------------------------------------------
     for (const u of state.units) {
-      const i = idx(u.x, u.y, state.width);
-      if (!viewer.visible[i]) continue;
+      // Section 125: lit ground is not enough any more. A sunk Burrower is on a
+      // tile you can see and is not a thing you can see.
+      if (!seenBy(state, u, viewerId)) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
       // A unit resting inside its own city is drawn as a mark on the city
       // rather than on top of it -- what the player is thinking about at that

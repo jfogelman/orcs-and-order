@@ -1,4 +1,4 @@
-import { placeQueen } from './hivekin';
+import { broodBonus, placeQueen, queenless } from './hivekin';
 import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
@@ -270,6 +270,14 @@ export function cityYield(state: GameState, city: City): Yield {
   // it keeps producing through a pillaging -- raiders tear up improvements on
   // the ground, and the ground is not where this is.
   total.shields += cityFollyBonus(city, (b) => b.cityShields);
+  // Section 125: the spare Princesses, whatever the player decided they were
+  // for. One apiece, so redundancy across several Hives is worth what it cost.
+  total.shields += broodBonus(city, 'shields');
+  total.trade += broodBonus(city, 'gold') + broodBonus(city, 'beakers');
+  // And the seat with no Queen in it, which makes nothing at all. Last, so it
+  // is unambiguous that it zeroes everything above rather than competing with
+  // it: production in her Hive is a thing she is doing.
+  if (queenless(state, city)) total.shields = 0;
   if (city.disorder) {
     // A rioting city downs tools -- except on the one thing everybody in it
     // agrees about, which is whatever will calm the place down.
@@ -339,7 +347,7 @@ export function contentLimit(state: GameState, city: City): number {
   // requirement. This used to add `contentBonus` straight off the building
   // list, so a posting would have calmed a city with nobody standing in it --
   // the gate existed and this was not asking it.
-  let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
+  let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus) + broodBonus(city, 'calm');
   // Section 113: the level's patience, on the player's side only.
   limit += handicapContent(owner);
   // Section 116: a people ashamed of the peace their rulers just broke.

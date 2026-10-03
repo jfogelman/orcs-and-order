@@ -1,7 +1,8 @@
 import { FACTIONS } from '../model/factions';
-import type { City, GameState, Player, Unit } from '../model/types';
+import type { BroodBonus, City, GameState, Player, Unit } from '../model/types';
 import { TERRAIN } from '../model/terrain';
 import { contenders, log, makePlayer, playerCities, spawnUnit } from './gamestate';
+import { ensureWilds } from './barbarians';
 import { idx, inBounds } from '../engine/grid';
 
 /**
@@ -247,6 +248,9 @@ export function placeQueen(state: GameState, city: City): void {
   if (playerCities(state, owner.id).length !== 1) return;
   if (state.units.some((u) => u.owner === owner.id && u.type === 'queen')) return;
   spawnUnit(state, owner.id, 'queen', city.x, city.y);
+  // Remembered on the player rather than derived from "the oldest city", so a
+  // seat that is lost and a capital that moves are two different events.
+  owner.queenSeat = city.id;
   log(
     state,
     `She is in ${city.name}. She has not moved, and will not, and this is not a complaint.`,
@@ -260,4 +264,217 @@ export function placeQueen(state: GameState, city: City): void {
 /** Whether this unit is a Queen: immobile, and the Hive's whole production. */
 export function isQueen(unit: Unit): boolean {
   return unit.type === 'queen';
+}
+
+/**
+ * Section 125 slice B: the Queen, and what happens when she is not there.
+ *
+ * She is the one unit in the game that cannot move and the one unit a city
+ * depends on. Losing her does not end the Hive outright -- that would make a
+ * single lucky raid decisive in a way nothing else in this game is -- but her
+ * seat stops producing until there is a Queen in it again, and if nobody grows
+ * one the place is given up.
+ *
+ * **A Princess is the plan, and the plan is the point.** The bible's whole
+ * argument for the caste is that redundancy ought to be a real strategy rather
+ * than a tax: spare Princesses are not wasted, they become something the city
+ * keeps. So the rule has to reward having built more than one, which is why the
+ * extras convert rather than simply standing there.
+ */
+export const QUEEN = {
+  /** Whether any of this is on. Off is slice A, where she is scenery. */
+  enabled: true,
+  /**
+   * Turns the seat may sit queenless before the Hive gives it up.
+   *
+   * The bible's placeholder, and still a placeholder: nothing has measured what
+   * five turns is worth. It is long enough to walk a Princess in from the next
+   * city and short enough that ignoring it is a decision.
+   */
+  countdown: 5,
+};
+
+/** The city the Queen sits in, if this side still holds it. */
+export function queenSeat(state: GameState, owner: Player): City | null {
+  if (owner.queenSeat === undefined) return null;
+  return state.cities.find((c) => c.id === owner.queenSeat && c.owner === owner.id) ?? null;
+}
+
+/** Whether there is a Queen in this city right now. */
+export function queenIn(state: GameState, city: City): Unit | null {
+  return (
+    state.units.find((u) => u.type === 'queen' && u.owner === city.owner && u.x === city.x && u.y === city.y) ??
+    null
+  );
+}
+
+/**
+ * Whether this city makes nothing because she is not in it.
+ *
+ * Read by `cityYield`, which is the one place shields are counted, so a
+ * queenless seat is unproductive everywhere at once -- the panel, the build
+ * estimate and the AI's plans all agree without any of them being told.
+ */
+export function queenless(state: GameState, city: City): boolean {
+  if (!QUEEN.enabled) return false;
+  const owner = state.players[city.owner];
+  if (!owner || owner.faction !== 'hivekin') return false;
+  if (owner.queenSeat !== city.id) return false;
+  return queenIn(state, city) === null;
+}
+
+/** The dormant Princesses waiting in this city. */
+function princessesIn(state: GameState, city: City): Unit[] {
+  return state.units.filter(
+    (u) => u.type === 'princess' && u.owner === city.owner && u.x === city.x && u.y === city.y,
+  );
+}
+
+/**
+ * The succession, run at the top of the Hive's own turn.
+ *
+ * Order matters here: a Princess standing in the seat is grown **before** the
+ * countdown is checked, so walking one in on the last turn works rather than
+ * being a turn too late. That is the version a player would expect and the
+ * other one would feel like a cheat.
+ */
+export function tickSuccession(state: GameState, playerId: number): void {
+  if (!QUEEN.enabled) return;
+  const owner = state.players[playerId];
+  if (!owner || owner.faction !== 'hivekin') return;
+  const seat = queenSeat(state, owner);
+
+  // The seat is gone -- taken, or razed. The Queen goes with it, and so does
+  // the countdown: there is nothing left to hold a succession in.
+  if (!seat) {
+    delete owner.succession;
+    return;
+  }
+  if (queenIn(state, seat)) {
+    delete owner.succession;
+    return;
+  }
+
+  const waiting = princessesIn(state, seat);
+  if (waiting.length > 0) {
+    growQueen(state, seat, waiting);
+    delete owner.succession;
+    return;
+  }
+
+  if (owner.succession === undefined) {
+    owner.succession = state.turn + QUEEN.countdown;
+    log(
+      state,
+      `She is not there. ${seat.name} will continue for ${QUEEN.countdown} turns. ` +
+        'A Princess grown in it before then becomes the Queen.',
+      'bad',
+      owner.id,
+      undefined,
+      [seat.x, seat.y],
+    );
+    return;
+  }
+  if (state.turn >= owner.succession) abandonSeat(state, seat);
+}
+
+/**
+ * One Princess becomes the Queen. The rest become something the Hive keeps.
+ *
+ * The choice of what they become is the player's and is made **now**, not when
+ * the Princess was built -- which is the whole of Jeremy's note on it. An AI is
+ * asked the same question and answers it by looking at the city.
+ */
+function growQueen(state: GameState, seat: City, waiting: Unit[]): void {
+  const [heir, ...spare] = waiting;
+  state.units.splice(state.units.indexOf(heir), 1);
+  spawnUnit(state, seat.owner, 'queen', seat.x, seat.y);
+  log(
+    state,
+    `A Princess is grown into the Queen in ${seat.name}. The Hive continues. ` +
+      'Nobody has remarked on it.',
+    'good',
+    seat.owner,
+    undefined,
+    [seat.x, seat.y],
+  );
+  for (const extra of spare) {
+    state.units.splice(state.units.indexOf(extra), 1);
+    const kind = state.players[seat.owner].controller === 'human' ? null : bestBonusFor(state, seat);
+    seat.brood = [...(seat.brood ?? []), kind ?? 'pending'];
+  }
+  if (spare.length > 0) {
+    log(
+      state,
+      `${spare.length === 1 ? 'A Princess' : `${spare.length} Princesses`} in ${seat.name} ` +
+        `${spare.length === 1 ? 'was' : 'were'} no longer needed, and ${spare.length === 1 ? 'has' : 'have'} ` +
+        'become part of the Hive instead.',
+      'good',
+      seat.owner,
+      undefined,
+      [seat.x, seat.y],
+    );
+  }
+}
+
+/** What an AI would pick, by looking at what the city is short of. */
+function bestBonusFor(state: GameState, city: City): BroodBonus {
+  if (city.disorder) return 'calm';
+  if (state.players[city.owner].gold < 0) return 'gold';
+  return 'shields';
+}
+
+/**
+ * Nobody grew one. The Hive lets the place go.
+ *
+ * Its units go feral rather than dying, which is the bible's own answer and
+ * reuses the band that already exists rather than inventing a third kind of
+ * owner. The city is abandoned outright -- not handed to anybody, because
+ * nobody took it.
+ */
+function abandonSeat(state: GameState, seat: City): void {
+  const owner = state.players[seat.owner];
+  const wild = ensureWilds(state);
+  const strays = state.units.filter((u) => u.owner === owner.id);
+  for (const u of strays) {
+    if (wild) {
+      u.owner = wild.id;
+      u.order = 'none';
+    } else {
+      state.units.splice(state.units.indexOf(u), 1);
+    }
+  }
+  state.cities.splice(state.cities.indexOf(seat), 1);
+  delete owner.succession;
+  delete owner.queenSeat;
+  log(
+    state,
+    `No Queen was grown. ${seat.name} is given up, and what was in it stops taking instructions.`,
+    'bad',
+    owner.id,
+    undefined,
+    [seat.x, seat.y],
+  );
+  for (const p of contenders(state)) {
+    if (p.id === owner.id) continue;
+    log(state, `${seat.name} has been abandoned. Whatever lived there is still out there.`, 'info', p.id);
+  }
+}
+
+/** Turns left before the seat is given up, or null when nothing is counting. */
+export function successionLeft(state: GameState, owner: Player): number | null {
+  if (!QUEEN.enabled || owner.succession === undefined) return null;
+  return Math.max(0, owner.succession - state.turn);
+}
+
+/** Settle a conversion the player was asked about. */
+export function chooseBrood(city: City, index: number, kind: BroodBonus): void {
+  const brood = city.brood;
+  if (!brood || brood[index] !== 'pending') return;
+  brood[index] = kind;
+}
+
+/** What the converted Princesses are worth to this city. */
+export function broodBonus(city: City, kind: BroodBonus): number {
+  return (city.brood ?? []).filter((b) => b === kind).length;
 }

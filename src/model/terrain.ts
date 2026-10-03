@@ -40,7 +40,25 @@ export const SPECIALS = {
    * the tiles out of the roll entirely, not merely make them inert.
    */
   ruleTiles: true,
+
+  /**
+   * Whether section 125's three Hivekin resources are in the roll.
+   *
+   * Its own switch, and it earns one. These are *ordinary specials* by Jeremy's
+   * decision -- the flavour is the Hive's and the machinery is everybody's --
+   * which means they land on a shared map and **dilute the ones already there**.
+   * Section 93 names that dilution as the balance-relevant change rather than
+   * the yields themselves, and measured it that way.
+   *
+   * So they are separable. Slice B adds three mechanics at once, and a map
+   * change folded in with them would be a measurement nobody could read: the
+   * thing section 123 did twelve times before giving up and counting something.
+   */
+  hiveTiles: true,
 };
+
+/** Section 125's three, named so the roll can leave them out as a set. */
+export const HIVE_SPECIALS = new Set(['Broodmoss', 'Chitin Vein', 'Marrow Salt']);
 
 export interface TerrainSpecial {
   name: string;
@@ -155,6 +173,17 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     specials: [
       { name: 'Suspiciously Good Grass', food: 3, shields: 1, trade: 1 },
       { name: 'A Very Rude Boulder', food: 2, shields: 1, trade: 0, defense: 2 },
+      // Section 125. An ordinary special with ordinary yields, which is
+      // Jeremy's call: the bible gave these three bespoke rules -- cheaper
+      // Fodder, defence baked into a caste at the moment it was grown -- and
+      // every one of them would have been a new system for one faction on a
+      // shared map. The flavour survives; the machinery does not need to.
+      // Priced against the two it sits beside rather than invented freely.
+      // Dilution is the balance-relevant change (section 93), and it only bites
+      // when the newcomer has a different *profile* from what it displaces: a
+      // shields-heavy grass special pulled the AI's build order about and cost
+      // it a kind of unit a game. Food-leaning, like the grass it grows on.
+      { name: 'Broodmoss', food: 3, shields: 1, trade: 0 },
     ],
   },
   forest: {
@@ -190,7 +219,10 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     blend: 6,
     base: '#7a7346',
     detail: '#8f8754',
-    specials: [{ name: 'Shiny Rocks', food: 1, shields: 4, trade: 0 }],
+    specials: [
+      { name: 'Shiny Rocks', food: 1, shields: 4, trade: 0 },
+      { name: 'Chitin Vein', food: 1, shields: 3, trade: 1 },
+    ],
   },
   mountains: {
     id: 'mountains',
@@ -206,7 +238,11 @@ export const TERRAIN: Record<TerrainId, TerrainDef> = {
     blend: 7,
     base: '#6b625c',
     detail: '#9a9089',
-    specials: [{ name: 'A Very Deep Hole', food: 0, shields: 2, trade: 6 }],
+    specials: [
+      { name: 'A Very Deep Hole', food: 0, shields: 2, trade: 6 },
+      // The one the Queen appears to want personally. Nobody has explained why.
+      { name: 'Marrow Salt', food: 0, shields: 2, trade: 5 },
+    ],
   },
   swamp: {
     id: 'swamp',
@@ -275,6 +311,10 @@ export function rollableSpecials(terrain: TerrainId): number[] {
   const out: number[] = [];
   for (let n = 0; n < list.length; n++) {
     if (!SPECIALS.ruleTiles && list[n].defense !== undefined) continue;
+    // Taken out of the roll entirely rather than merely made inert, which is
+    // the distinction section 93 drew and the only one that measures anything:
+    // leaving the tile in the roll still dilutes whatever it sits beside.
+    if (!SPECIALS.hiveTiles && HIVE_SPECIALS.has(list[n].name)) continue;
     out.push(n + 1);
   }
   return out;

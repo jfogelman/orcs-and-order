@@ -1,3 +1,4 @@
+import { disturbedBy, isSunk, seenBy, surface } from './burrow';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
@@ -78,9 +79,15 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
   // board. An enemy standing unseen in the fog used to block the route, so a
   // move order across unexplored ground silently failed and the unit just
   // stood there -- and the failure itself leaked the enemy's position.
+  //
+  // Section 125 reaches the same conclusion from the other end. A sunk
+  // Burrower is on a lit tile and is still not something this player knows
+  // about, so routing around it would leak its position by exactly the
+  // mechanism this comment was written about -- `seenBy` is that same question
+  // asked once rather than four times.
   const occupants = new Map<number, number>();
   for (const u of state.units) {
-    if (u.owner === unit.owner || owner.visible[idx(u.x, u.y, state.width)]) {
+    if (u.owner === unit.owner || seenBy(state, u, unit.owner)) {
       occupants.set(idx(u.x, u.y, state.width), u.owner);
     }
   }
@@ -161,12 +168,32 @@ function occupantWades(state: GameState, x: number, y: number): boolean {
   return !!there && unitType(there.type).wades;
 }
 
+/**
+ * Whoever is in the way of this mover.
+ *
+ * **Not "what the mover can see".** Routing is planned on what a player knows
+ * and resolved on what is true -- an enemy standing unseen in the fog is still
+ * standing there, and walking into one is how you find out. Deciding this on
+ * visibility let an army walk into a defended city and capture it without a
+ * fight, because the defender happened to be on an unlit tile.
+ *
+ * The one thing that is genuinely not in the way is a **sunk Burrower**, and
+ * that is a fact about the Burrower rather than about who is looking: it is
+ * under the ground, nobody is standing on anybody, and walking over it finds it
+ * out (`disturbedBy`) instead of stopping anyone.
+ */
+function blockerFor(state: GameState, mover: Unit, x: number, y: number): Unit | undefined {
+  const there = unitAt(state, x, y);
+  if (!there) return undefined;
+  if (there.owner !== mover.owner && isSunk(there)) return undefined;
+  return there;
+}
+
 /** Ids of enemy units this player can currently see. */
 export function visibleEnemies(state: GameState, playerId: number): Set<number> {
   const seen = new Set<number>();
-  const viewer = state.players[playerId];
   for (const u of state.units) {
-    if (u.owner !== playerId && viewer.visible[idx(u.x, u.y, state.width)]) seen.add(u.id);
+    if (u.owner !== playerId && seenBy(state, u, playerId)) seen.add(u.id);
   }
   return seen;
 }
@@ -186,7 +213,8 @@ export function reachableTiles(state: GameState, unit: Unit): Map<number, number
   for (const i of [...raw.keys()]) {
     const x = i % state.width;
     const y = Math.floor(i / state.width);
-    if (unitAt(state, x, y)) raw.delete(i);
+    const there = unitAt(state, x, y);
+    if (there && !(there.owner !== unit.owner && isSunk(there))) raw.delete(i);
   }
   return raw;
 }
@@ -496,11 +524,16 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     return { kind: 'blocked', reason: 'Out of movement for this turn.', retryable: true };
   }
 
+  // Section 125: walking is coming up. A Burrower given an ordinary move
+  // surfaces where it is and then walks, which is why this is before the step
+  // rather than after it -- it is above ground for the whole of the move.
+  if (isSunk(unit)) surface(state, unit, true);
+
   const type = unitType(unit.type);
   const owner = state.players[unit.owner];
   const i = idx(x, y, state.width);
   const terrain = state.terrain[i];
-  const occupant = unitAt(state, x, y);
+  const occupant = blockerFor(state, unit, x, y);
   const city = cityAt(state, x, y);
 
   // --- demolition ------------------------------------------------------
@@ -802,6 +835,10 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   unit.x = x;
   unit.y = y;
   unit.moves = snapMoves(unit.moves - cost);
+  // Section 125: and if something was under this tile, it has just been stood
+  // on. After the move rather than before, because what makes it happen is
+  // arriving -- walking past the tile is not treading on anybody.
+  disturbedBy(state, unit);
   // Walking off abandons a road half dug, as it abandons a fortification: the
   // work was on the tile it just left.
   if (unit.order === 'fortified' || unit.order === 'road') {

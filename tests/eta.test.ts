@@ -15,6 +15,18 @@ import { beakersPerTurn, turnsToLearn } from '../src/sim/turn';
 function studying(): GameState {
   const state = createGame({ seed: 20260907, width: 40, height: 30 });
   const settler = state.units.find((u) => u.owner === 0 && u.type === 'peon')!;
+  // Guarantee the capital something to trade. Only water and desert yield any
+  // trade from bare ground, so a landlocked grassland capital legitimately earns
+  // nothing at all -- this fixture used to rely on happening to work a tile
+  // carrying a trade special, which section 125 displaced by adding three more
+  // specials to the roll. The arithmetic below is what is being tested; where
+  // the trade came from never was.
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      state.terrain[(settler.y + dy) * state.width + settler.x + dx] = 'water';
+    }
+  }
   foundCity(state, settler);
   // A new empire is studying nothing; the question only has an answer once
   // somebody has picked something.

@@ -70,6 +70,7 @@ import { workBanked } from '../sim/endings';
 const POSTURE: Record<UnitOrder, string> = {
   none: 'ready',
   skip: 'passed',
+  sunk: 'underground',
   sentry: 'sentry',
   fortified: 'fortified',
   road: 'laying a road',

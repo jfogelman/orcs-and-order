@@ -127,6 +127,15 @@ SPECIALS = [
     "desert_2",   # The Only Cover For Miles
 ]
 
+# Section 125: the Hivekin's three, which are named for what they are rather
+# than for the slot they occupy. Ordinary specials with ordinary yields -- the
+# flavour is theirs, the machinery is everybody's.
+HIVEKIN_SPECIALS = {
+    "grass_3": "broodmoss",
+    "hills_2": "chitin-vein",
+    "mountains_2": "marrow-salt",
+}
+
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
@@ -2826,6 +2835,12 @@ def main() -> int:
     specials, missing_specials, failed_specials = process_cutouts(
         "specials", SPECIALS, force, size=SPECIAL_SIZE, quiet_missing=True
     )
+    hk_specials, missing_hk, failed_hk = process_aliased(
+        "specials", HIVEKIN_SPECIALS, force, SPECIAL_SIZE
+    )
+    specials += hk_specials
+    missing_specials.extend(missing_hk)
+    failed_specials.extend(failed_hk)
     icons += specials
     missing_icons.extend(missing_specials)
     failed_icons.extend(failed_specials)

@@ -12,7 +12,8 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
@@ -94,6 +95,8 @@ export const LEVERS: Record<string, object> = {
   LEGION,
   RUINS,
   HIVEKIN,
+  BURROW,
+  QUEEN,
   PREY,
   PEACE,
   DIPLOMACY_AI,

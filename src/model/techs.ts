@@ -49,7 +49,13 @@ export type TechFlag =
   /** Workers may irrigate, mine and clear the land. Section 112. */
   | 'terraform'
   /** Workers may irrigate away from water. Section 112. */
-  | 'channels';
+  | 'channels'
+  /** Section 125: sinking no longer leaves the dirt disturbed. */
+  | 'quiet-sinking'
+  /** Section 125: a Burrower crosses three tiles underground rather than two. */
+  | 'deep-burrowing'
+  /** Section 125: coming up beside somebody is worth a harder first swing. */
+  | 'ambush-burrowing';
 
 export interface TechDef {
   id: TechId;
@@ -713,7 +719,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['caste-burrower'],
     units: [],
     buildings: [],
-    flags: [],
+    flags: ['quiet-sinking'],
     flavor: 'Where it was is no longer known. This was arranged on purpose.',
   },
   {
@@ -735,7 +741,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['burrower-veteran'],
     units: [],
     buildings: ['undercity'],
-    flags: [],
+    flags: ['deep-burrowing'],
     flavor: 'Two tiles became three. The ground did not object.',
   },
   {
@@ -746,7 +752,7 @@ export const TECHS: TechDef[] = [
     prereqs: ['burrower-veteran'],
     units: [],
     buildings: [],
-    flags: [],
+    flags: ['ambush-burrowing'],
     flavor: 'It was there first. It simply waited to be noticed.',
   },
   {

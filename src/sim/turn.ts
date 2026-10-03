@@ -29,7 +29,8 @@ import { contenders, log, playerCities, playerUnits, recomputeVisibility } from 
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
 import { claimRuins, sleepRuins, tickRuins } from './ruins';
-import { maybeEmerge } from './hivekin';
+import { maybeEmerge, tickSuccession } from './hivekin';
+import { clearAmbush } from './burrow';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
@@ -760,6 +761,14 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   }
 
   tickUnitStatuses(state, playerId);
+  // Section 125: "already waiting" is true for exactly one turn. Cleared at the
+  // start of its own turn rather than after it swings, because a Burrower that
+  // comes up and does not attack has still given away where it is.
+  clearAmbush(state, playerId);
+  // Section 125: and the Hive finds out whether it still has a Queen. Before
+  // the economy runs, so a seat that lost her this turn makes nothing this
+  // turn rather than one turn late.
+  tickSuccession(state, playerId);
   // Section 121: and then anybody who woke up next to an Ogre Clan Brute is
   // marked afresh. After the tick, so the mark is the one this turn uses.
   intimidateNeighbours(state, playerId);
