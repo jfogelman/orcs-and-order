@@ -56,7 +56,34 @@ so it stays on its owner-colour disc. That means proportions are a one-number tw
 rather than a re-roll, and it applies to real art, procedural placeholders and composed
 group sprites alike.
 
-## House style
+## House styles
+
+**One block per kind of asset.** These are the single source of truth: every
+section further down this file names the block it uses rather than restating it,
+so a change made here reaches every prompt that depends on it.
+
+What they share is the **magenta background** and the pixel-art register — see
+"Ask for magenta, never a transparency checkerboard" at the end of this section,
+which applies to all of them except the victory screens. What differs is the
+**framing**, and that is not cosmetic: a sprite wants margin so the owner-disc
+shows, a map stamp must have no ground under it at all, and a structure meant to
+be seen in place wants a fixed camera so twelve of them line up.
+
+| Block | Canvas | Used by |
+|---|---|---|
+| Units | 32×32 sprite | every creature in `art_src/units/`, `barbarians/`, faction folders |
+| Unit attack animations | 4-frame strip | `art_src/unit effects/<unit> attack` |
+| Travelling effects | 4-frame strip | `art_src/effects/` — arrows, axes, bursts, `spit` |
+| Flat interface icons | 48×48 | advance icons, city-screen building icons |
+| Structures seen in place | 48×48 or 64×64 isometric | palace modules, follies, Hivekin buildings |
+| Advisor portraits | 128, head and shoulders | `art_src/advisors/` |
+| Citizens | four moods at 64 | `art_src/citizens/` |
+| Promotion marks | one tiny object | `art_src/promotions/` |
+| Map stamps | one motif, no ground | specials, city overlays, posts, worked land |
+| Terrain | seamless tiling sheet | `art_src/terrain/` |
+| Victory screens | full 16:9 scene, **no keying** | `art_src/victory/` |
+
+### Units — 32×32 sprite
 
 Paste this in front of every unit prompt so the set looks like one game:
 
@@ -65,6 +92,198 @@ Paste this in front of every unit prompt so the set looks like one game:
 > thick dark outline, limited palette, flat shading with one light source from the
 > upper left, mid-1990s fantasy real-time-strategy style, no text, no logos, no border,
 > no letterboxing, no ground shadow, no background scenery.
+
+Two things matter more than detail: **the silhouette** must be readable at 32
+pixels, and **the character must not fill the frame** — leave a couple of pixels
+of margin so the coloured owner-disc the game draws underneath stays visible.
+Sources are generated large (1024×1024 is the convention) and the pipeline scales
+them down.
+
+### Unit attack animations — 4-frame strip
+
+> pixel art animation, a horizontal strip of exactly 4 frames left to right
+> showing the attack starting, in progress and completing, each frame square and
+> the same size, plain solid magenta background (#FF00FF) behind every frame,
+> mid-1990s fantasy strategy game style, bright saturated colours, thick
+> readable shapes, no characters, no text, no frame borders or dividing lines,
+> no background scenery.
+>
+> Leverage the attached `<unit name>.jpg` image as animating their attack of
+> their weapon, with still showing their full figure size — only one weapon held
+> the whole time.
+
+**Horizontal, four frames, left to right** is the part the pipeline depends on —
+`slice_strip` divides the keyed strip's own width, so a vertical strip is not a
+strip as far as the tool is concerned. The established source size is 2064×512.
+Read the notes under "House style for unit attack animations" further down before
+changing a word of this; they are the reasons each clause is there.
+
+### Travelling effects — 4-frame strip
+
+The same strip format, but these are **not** attached to a figure: a burst, or a
+projectile that travels from one tile to another and turns to face the way it is
+going. Saved as `art_src/effects/<id>.<ext>`.
+
+> pixel art visual effect animation, a horizontal strip of exactly 4 frames left to
+> right showing the effect starting, growing, peaking and fading, each frame square and
+> the same size, plain solid magenta background (#FF00FF) behind every frame, mid-1990s
+> fantasy strategy game style, bright saturated colours, thick readable shapes, no
+> characters, no text, no frame borders or dividing lines, no background scenery.
+
+Magenta suits these even better than it suits sprites: effects are full of glows,
+smoke and soft edges, and the pipeline keys on *hue* rather than colour distance,
+so a half-transparent flame edge is cut correctly instead of leaving a pink rim.
+
+**A projectile reads by its silhouette in flight**, so draw it pointing one
+consistent way — the renderer rotates it toward the target, and a projectile
+drawn head-on cannot be rotated into anything.
+
+### Flat interface icons — 48×48
+
+One block covers both advance icons (`art_src/tech/<id>`) and city-screen building
+icons (`art_src/buildings/<id>`). They are read on a card beside text, flat and
+face-on, with no sense of standing anywhere.
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat shading
+> lit from the upper left, mid-1990s fantasy strategy game interface icon, no text,
+> no letters, no numbers, no border, no background scenery.
+
+**No text or numerals**, emphatically — generators love to write words into icons
+and they turn to mush at 48px. A missing icon is simply left out of the card, so
+these are a long tail to chip away at rather than a batch to sit through.
+
+### Structures seen in place — isometric
+
+The other building style, and the distinction is worth keeping straight: a
+**flat icon** is a picture of a thing on a card, and this is a thing **standing
+somewhere**, composited beside or onto others. Used by the Civic Pride palace
+modules, the follies, and the Hivekin's buildings. Because several of these are
+layered into one picture, the camera must not move between them.
+
+> 48x48 pixel art building icon on a plain solid magenta background (#FF00FF), a single
+> structure centred and filling the frame, isometric view at a fixed 30-degree angle,
+> camera facing the same direction in every asset, consistent horizon line, thick dark
+> outline, limited palette, flat shading with one light source from the upper left,
+> mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no
+> characters, no background scenery, no ground shadow.
+
+64×64 for the palace modules, which composite against a chassis — see
+`art_src/palace/capital_building_bible (2).md` for the attachment-point rules and
+its one documented exception: **grounds pieces read better in top-down plan
+view** than at the isometric angle, since they lie flat in front of a building
+rather than rising beside it.
+
+### Advisor portraits — 128, head and shoulders
+
+Sat beside a paragraph of their own text, so these are the one asset where a face
+has to carry an expression rather than a silhouette. Output is 128 square; the
+twelve existing sources were generated at 1024×1024 or 1408×768 and scaled, so
+any large square-ish canvas is fine.
+
+> pixel art portrait of a single character's head and shoulders, centred and filling
+> the frame, on a plain solid magenta background (#FF00FF), thick dark outline, limited
+> palette, flat shading lit from the upper left, mid-1990s fantasy strategy game
+> interface portrait, no text, no lettering, no border, no background scenery.
+
+Each advisor also wants a **talking cycle**, saved in
+`art_src/advisors/Talking Cycles/<name> talking.<ext>`: a four-frame close-up of
+the same face, set back into its own still. Either orientation works —
+2064×512 or 512×2064 — because the pipeline reads both, which is the one place it
+is more forgiving than the attack strips are.
+
+The two corner bubbles that mark whether an advisor has anything to say are their
+own small thing; see "Advisor prompts" further down.
+
+### Citizens — four moods at 64
+
+Who actually lives in your cities, shown in the city panel. Four moods per
+sort — **content, unhappy, celebrating, rioting** — and the pipeline takes them
+either **four across in a strip or in a 2×2 square**, which is usually the easier
+thing to generate. Output is one 256×64 strip.
+
+Source files are named for the sort rather than the id:
+`art_src/citizens/<race> citizens.<ext>`, or `female <race> citizens.<ext>` for a
+sort that has a second sheet.
+
+> pixel art portrait of a single character's head and shoulders, four variations of the
+> same character shown in a 2x2 grid, each one centred in its own square cell, on a
+> plain solid magenta background (#FF00FF), thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game style, no text, no
+> lettering, no border, no background scenery, no dividing lines between the cells.
+
+Then say what the four are: *content and unbothered; unhappy and sullen;
+celebrating with arms raised; furious and shouting*. **Keep it the same
+character four times** — these sit in a row in the panel, and four different
+faces read as four people rather than one person's week.
+
+### Promotion marks — one tiny object
+
+Small badges stamped in the corner of a promoted unit's tile. Drawn as **objects
+rather than lettering**: numbers and chevrons stop being legible at tile size,
+and a shape holds up where a glyph does not.
+
+> A single <object>, pixel art, thick black outline, flat magenta background, no shadow,
+> centred, 90s fantasy strategy game icon
+
+Composited at about a **sixth of a tile**, so silhouette is everything and
+interior detail is nearly wasted. Two rules that come from use: keep the object
+well inside the frame, because anything touching the edge loses its outline and
+turns to mush; and **avoid the owner's own colour**, since the badge sits on top
+of a unit of roughly that hue — a green tusk on a green orc disappears.
+
+### Map stamps — one motif, no ground
+
+Terrain specials, city overlays, garrison posts and worked-land marks all share
+one rule, and it is the rule that is easiest to get wrong: **they are composited
+on top of something already drawn**, so anything resembling ground, terrain or a
+building will fight with what is underneath.
+
+> A single <motif>, pixel art, thick black outline, flat magenta background, no ground,
+> no scene, centred, 90s fantasy strategy game icon
+
+- **Terrain specials** are stamped at half a tile in a corner, so they end up
+  smaller than anything else in the game. One object, nothing else.
+- **City overlays** sit on top of a settlement that is already there: no
+  buildings in the motif.
+- **Garrison posts** are the exception on framing — 64×64, seen *in the same
+  top-down map view as a tile of terrain* rather than face-on, because a post is
+  a structure standing on the map. Still no ground: a patch of grass baked into
+  the sprite will sit on a desert.
+- **An overlay that describes something must stay hollow through the middle**,
+  because its subject is drawn underneath it. An overlay that hides its own
+  subject is worse than none.
+
+### Terrain — seamless tiling sheet
+
+Not a single tile. The sheet holds roughly 8×8 repeats of a motif across 1024px,
+and `npm run art` cuts it into four quadrants and downscales them into the four
+variants the renderer picks between by position, so the map does not look
+rubber-stamped.
+
+> Seamless tiling pixel art terrain texture, top-down map view, many repeats of the
+> motif across the image, mid-1990s fantasy strategy game style, limited palette, no
+> text, no border, no single focal point.
+
+**No single focal point** is the load-bearing clause: one interesting rock in the
+middle of a grass sheet becomes the same rock eight times across the map.
+
+### Victory screens — full scene, no keying
+
+The one family that **breaks every rule above, on purpose**. A full illustration
+with its own background, shown once, filling the top of the victory modal. **No
+magenta, no keying, no transparency** — draw the whole picture, edge to edge.
+**No text anywhere in the image**, because the caption is written in the game.
+Wide 16:9, 1024×576 ideal.
+
+> Mid-1990s fantasy strategy game illustration, pixel art, wide 16:9 composition, no
+> text, no lettering.
+
+The standing joke across all of them is that **nobody in the scene is excited,
+including whoever should be most affected by it** — the Portal's demon is bored
+and the Object's pub-quiz crowd is unbothered. Write the one detail that carries
+that, and say so underneath the prompt, because it is the thing most likely to
+be cut.
 
 ### Ask for magenta, never a transparency checkerboard
 
@@ -101,10 +320,6 @@ Also worth asking for explicitly: **no letterboxing**. Two of the city images ca
 1408x768 with black bars, and a black bar is the worst possible thing to start a
 background fill from — it seeds on black, finds the dark stone of an orc keep, and eats
 the whole building.
-
-Two things matter more than detail: **the silhouette** must be readable at 32 pixels,
-and **the character must not fill the frame** — leave a couple of pixels of margin so
-the coloured owner-disc the game draws underneath stays visible.
 
 ⚠️ Everything here describes **original** fantasy characters. Do not prompt for
 Warcraft, Blizzard, or any named character, unit, or logo from an existing game, and
@@ -209,15 +424,7 @@ Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`
 fine without one. So treat this as a long tail to chip away at, not a batch to sit
 through.
 
-Use a **plain magenta background** as everywhere else, then this preamble:
-
-> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
-> centred object filling the frame, thick dark outline, limited palette, flat shading
-> lit from the upper left, mid-1990s fantasy strategy game interface icon, no text,
-> no letters, no numbers, no border, no background scenery.
-
-**No text or numerals**, emphatically — generators love to write words into icons and
-they turn to mush at 48px.
+House style: **Flat interface icons — 48×48**.
 
 ### The counting ladder — already done, do not draw these
 
@@ -311,10 +518,10 @@ the counting ladder, stamped from three heads by `COMPOSED_ICONS`.
 ## Building icons — 10 of 20 done
 
 Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
-Same rules as advance icons: **plain magenta background, no text**, and a missing icon
-is simply left out.
-
-Same preamble as the advance icons, then:
+House style: **Flat interface icons — 48×48**, the same block the advances use. A
+missing icon is simply left out. (The follies and the palace modules are *not* this
+style — they use **Structures seen in place**, because they are drawn standing
+somewhere rather than sitting on a card.)
 
 | id | Faction | Icon subject |
 |---|---|---|
@@ -347,9 +554,11 @@ Two of them, one a side, at `art_src/posts/<faction>.png` — `orc.png` and
 `human.png`. Until they exist the game draws a placeholder hut with three canvas
 shapes, which is legible and obviously temporary.
 
-**Size and framing.** 64×64, the structure filling the frame with a little air
-around it, **no ground under it** — it is drawn onto whatever tile it stands on,
-so a patch of grass baked into the sprite will sit on a desert.
+**Size and framing.** House style: **Map stamps — one motif, no ground**, taking its
+documented exception on framing — 64×64 in the top-down map view rather than face-on,
+the structure filling the frame with a little air around it, and **no ground under
+it**, because it is drawn onto whatever tile it stands on and a patch of grass baked
+into the sprite will sit on a desert.
 
 > Pixel art of a small wooden guard post, 64x64, plain solid magenta background
 > (#FF00FF), seen from directly above at a slight angle in the same top-down map
@@ -388,11 +597,8 @@ The format below is what the pipeline reads, so a re-roll drops straight in.
 background (#FF00FF)**. So a 4-frame effect is one image 4x as wide as it is tall — for
 example 512x128 or 256x64. Save as `art_src/effects/<id>.png`.
 
-Magenta suits these even better than it suits sprites: effects are full of glows, smoke
-and soft edges, and the pipeline keys on *hue* rather than colour distance, so a
-half-transparent flame edge is cut correctly instead of leaving a pink rim.
-
-Preamble for all of them:
+House style: **Travelling effects — 4-frame strip**. Preamble, repeated here because
+this section is where people come looking for it:
 
 > pixel art visual effect animation, a horizontal strip of exactly 4 frames left to
 > right showing the effect starting, growing, peaking and fading, each frame square and
@@ -444,9 +650,8 @@ Terrain art is a **tiling sheet**, not a single tile — the ones supplied hold 
 sheet into four quadrants and downscales them into the four tile variants the renderer
 picks between by position, so the map doesn't look rubber-stamped.
 
-Drop them at `art_src/terrain/<id>.<ext>`.
-
-Prefix with:
+Drop them at `art_src/terrain/<id>.<ext>`. House style: **Terrain — seamless tiling
+sheet**, repeated here because this is where people come looking for it:
 
 > Seamless tiling pixel art terrain texture, top-down map view, many repeats of the
 > motif across the image, mid-1990s fantasy strategy game style, limited palette, no
@@ -536,10 +741,8 @@ reads as veteran at a glance without opening anything. Three ranks a side, drawn
 as **objects rather than lettering** — numbers and chevrons stop being legible at
 tile size, and a shape holds up where a glyph does not.
 
-Save as `art_src/promotions/<id>.<ext>`. Each wants a **single centred object on a
-flat magenta background**, no scene, no ground shadow, in the same chunky pixel
-style as the units — read at roughly 16 pixels across, so silhouette is everything
-and interior detail is nearly wasted.
+Save as `art_src/promotions/<id>.<ext>`. House style: **Promotion marks — one tiny
+object**.
 
 The two sides earn the same numbers and wear them differently. The Horde's marks
 are things that *happened* to it; the Kingdom's are things somebody *issued*.
@@ -575,9 +778,9 @@ are the states that currently cannot be seen at all from the map, several of
 which the player has to react to.
 
 Save as `art_src/cities/city <state> overlay.<ext>`, matching the three that
-exist. Same recipe as those: **one motif on flat magenta**, no scene, no ground,
-no city underneath — it is composited on top of a settlement that is already
-there, so anything resembling buildings will fight with it.
+exist. House style: **Map stamps — one motif, no ground**, and for these the "no
+ground" rule extends to buildings: the motif is composited on top of a settlement
+that is already drawn, so anything resembling buildings will fight with it.
 
 | state | why it matters | prompt |
 |---|---|---|
@@ -619,9 +822,9 @@ filename** -- they were drawn before a terrain could offer more than one, and th
 sprite cache tries `<t>_1.png` and falls back to `<t>.png`, so renaming them would be
 churn for nothing.
 
-They are stamped onto a **32px terrain tile**, so they end up smaller than anything
-else in the game: **one object, no scene, no ground**, on flat magenta. Silhouette is
-the whole job.
+House style: **Map stamps — one motif, no ground**. They are stamped onto a **32px
+terrain tile**, so they end up smaller than anything else in the game, and silhouette
+is the whole job.
 
 | file | what it is called | prompt |
 |---|---|---|
@@ -1280,10 +1483,12 @@ is none to draw -- it is `counts: [1]`, one machine at a time.
 
 ---
 
-## House style for unit attack animations
+## Unit attack animations, and the notes behind the block
 
-The prompt below is the one these have actually been generated with, and it
-works. Keep it, and read the notes under it before changing a word.
+The canonical block is **Unit attack animations — 4-frame strip**, under "House
+styles" at the top. It is repeated below because this is where the reasoning lives:
+the prompt is the one these have actually been generated with, and it works. Read
+the notes under it before changing a word.
 
 > pixel art animation, a horizontal strip of exactly 4 frames left to right
 > showing the attack starting, in progress and completing, each frame square and
@@ -1736,3 +1941,277 @@ The three guardians -- **Bone Sentinel**, **Animated Guardian** and **Vault
 Keeper** -- are already drawn, in `art_src/barbarians/` with their attack strips
 and weakened sheets in `art_src/unit states/`, and need nothing.
 
+
+## The Hivekin (section 125) — 109 of 112 done
+
+The third faction's own drop lives in `art_src/factions/hivekin/`, and its bible
+(`hivekin.md`, in that folder) carries the prompts for the castes, the advance
+icons, the city tiers, the terrain resources, the advisors, the burrower ability
+states and all three victory screens. Everything written below this file's own
+earlier sections has since been drawn as well.
+
+**Audited 2026-10-02**, every file run through the real `remove_background` and
+`slice_strip` rather than eyeballed. One family failed and wants a re-roll; three
+more are worth re-rolling for reasons that are not the pipeline's problem. Those
+are the next section. Everything else is good.
+
+| Family | Count | Status |
+|---|---|---|
+| Advance icons | 15 | done, including `caste-riptide` and `caste-bloat` |
+| Advisor portraits + talking cycles | 6 + 6 | done |
+| Castes, at base / attack / weakened | 42 | done |
+| Buildings | 7 | done, including `princess-bonus` |
+| Hive size tiers | 3 | done |
+| Terrain resources | 3 | done |
+| Burrower ability states | 2 | done |
+| Victory screens | 3 | done |
+| Citizens | 4 | done — proper 2×2 grids, four poses, same character throughout |
+| Promotion marks | 3 | done |
+| Garrison post | 1 | done |
+| `spit` travelling effect | 1 | done |
+| **Civic Pride palace** | **16** | **13 good, 3 failed — see below** |
+
+Everything is at the established dimensions for its kind (1024² base, 2064×512
+attack strip, 1456×720 weakened, square sources for the 2×2 citizen grids), so
+the pipeline takes them as dropped once it learns to read the
+`factions/hivekin/` layout.
+
+Three notes on the drop that need no action: `hive-tier1 damanged.jpg` is
+misspelled; the three `damaged` Hive strips are **surplus**, because damage is a
+single shared overlay in the engine (`overlay_damaged.png`) rather than
+per-faction art, so they simply will not be read; and `spit.jpg`'s fourth panel
+sits on a slightly darker magenta than the first three, which is harmless because
+the pipeline keys on **hue** rather than colour distance and that frame cuts out
+exactly like the others. One correction to the bible: it gives the advisor
+portraits as 48×48, which is the *icon* canvas — portraits are 128, and the six
+drawn came in at 1408×768, so they are right in fact if not in the doc.
+
+### Re-rolls — 3 blocking, 3 worth doing
+
+**The Regalia pieces fail outright.** `Pheromone Stalk`, `Paired Stalks` and
+`Crowned Stalks` are rejected by `remove_background`, which returns "not ok" and
+keeps the original. The art itself is fine — the stalks are correctly brown and
+amber with no magenta in them — but each one occupies roughly **3% of its
+1024×1024 frame**, so the fill consumes about 97% and trips `MAX_REMOVED = 0.93`,
+which exists to catch a fill that has escaped into the subject. The pipeline
+cannot tell "tiny subject" from "runaway fill", and it is right not to try.
+
+Raising the ceiling would be the wrong fix. `trim_and_square` crops to the
+subject's bounding box and scales it up, so a stalk drawn at 3% of frame carries
+only about 150×200 real pixels into a piece that sits beside others built from
+500–830. It would be visibly softer than everything around it in the same
+composite.
+
+**The fix is framing, and the cause is one phrase in my prompt.** "Small isolated
+object" was meant as *an object rather than a building*; the generator read it as
+*draw it small*. Every existing palace piece fills between **75.6% and 98.9%** of
+its frame before trimming (the `frame` value in `src/model/palaceArt.ts`), and
+the Kingdom's and Horde's banners — the exact same module — sit at 90.8–97.6%.
+Full re-roll prompts are below.
+
+**The Wing pieces will composite wrong.** `Brood Annex`, `Brood Hall` and
+`Royal Gallery` are drawn as complete barrel-vaulted buildings, closed and
+outlined on every side. A wing has to have a **flat unfinished face where it
+meets the chassis**, with its surface running off that edge rather than capping
+off — compare `art_src/palace/Cathedral wing (half wall).jpg`, whose right-hand
+face is a blank grey wall with no detail and no roof overhang. The Hivekin wings
+have no such face, so each will read as a separate hut standing next to the
+mound rather than as part of it. This is the exact failure the palace bible
+records and fixed once already for the Kingdom.
+
+The clause was in the prompt and did not take, so the re-roll below leads with it.
+
+**Two tier pairs are not distinguishable.** Measured as the share of pixels
+differing by more than 40 levels: the tower tiers separate cleanly (12–16%), but
+
+- `Chitin Valve` vs `Sealed Valve` — **2.7%**. All three gates are within 4.4% of
+  each other, so the whole module reads as one piece at three prices.
+- `Packed Earth` vs `Scoured Apron` — **4.0%**. Both came back with the same
+  chitin kerb around all four sides; tier 1 was meant to be bare ground with no
+  kerb at all.
+- `Brood Hall` vs `Royal Gallery` — **3.2%**, which the missing arch alone does
+  not carry.
+
+A tier the player pays more for has to look like more, so the re-rolls below make
+each step structural rather than decorative.
+
+### The eleven re-rolls, ready to paste
+
+Each one below is **complete and standalone** — the style block is already
+inlined, so there is nothing to assemble. Save each over the file it replaces in
+`art_src/factions/hivekin/palace/`, keeping the same name.
+
+Three things these prompts are fixing, so a fourth round does not undo them:
+
+1. **Fill the frame.** A module is scaled down *in the composite* — the regalia
+   sits at 19% of the finished picture and the gate at 23% — but its own source
+   image must be filled edge to edge, because `trim_and_square` crops to the
+   subject and scales up. Small-in-frame means soft-in-game.
+2. **The join face is on the right.** The engine hangs a wing off the chassis's
+   left-hand corner (`side: [0, 85]` in `palace.ts`), so the wing's **right**
+   side is what presses against the mound and must be blank.
+3. **A tier has to differ structurally**, not decoratively. The gate tiers came
+   back within 2.7% of each other and the first two grounds within 4.0%, because
+   the difference asked for was a surface treatment. These ask for a different
+   shape instead.
+
+#### Regalia — all three, framing (blocking)
+
+**`Pheromone Stalk`** (tier 1)
+
+> A single slender sensory stalk with a faintly glowing amber tip, drawn large and filling the frame edge to edge, a tall isolated object with no building and no ground beneath it, 64x64 pixel art icon on a plain solid magenta background (#FF00FF), centred and filling the frame, isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Paired Stalks`** (tier 2)
+
+> A pair of matching slender sensory stalks with faintly glowing amber tips standing side by side, drawn large and filling the frame edge to edge, tall isolated objects with no building and no ground beneath them, 64x64 pixel art icon on a plain solid magenta background (#FF00FF), centred and filling the frame, isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Crowned Stalks`** (tier 3)
+
+> A crown of seven slender sensory stalks fanned outward with bright amber glowing tips, drawn large and filling the frame edge to edge, an isolated object with no building and no ground beneath it, 64x64 pixel art icon on a plain solid magenta background (#FF00FF), centred and filling the frame, isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+#### Wing — all three, flat join face and a readable tier step
+
+The cut-away clause leads, because buried at the end it did not take.
+
+**`Brood Annex`** (tier 1)
+
+> The right-hand side of this building is cut away as a completely flat, blank, featureless vertical wall with no outline, no detail, no openings and no roof overhang, as though the structure continues on past the right edge of the frame. The building is a small low ribbed chitin annex, a single vault, with one row of shallow round brood cells along its base and no entrance. Drawn large and filling the frame edge to edge. 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Brood Hall`** (tier 2)
+
+> The right-hand side of this building is cut away as a completely flat, blank, featureless vertical wall with no outline, no detail, no openings and no roof overhang, as though the structure continues on past the right edge of the frame. The building is a taller ribbed chitin hall of two stacked vaults, one set back above the other, with two rows of round brood cell mouths along its base and a single low dark opening at ground level. Drawn large and filling the frame edge to edge. 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Royal Gallery`** (tier 3)
+
+> The right-hand side of this building is cut away as a completely flat, blank, featureless vertical wall with no outline, no detail, no openings and no roof overhang, as though the structure continues on past the right edge of the frame. The building is a tall ornate chitin gallery with a grand raised arched entrance cut into its near end, warm amber bioluminescence pouring out of the arch, and a row of heavy ribbed chitin buttresses running along its length. Drawn large and filling the frame edge to edge. 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+#### Gate — all three, so the tiers separate
+
+The step is **open, then partly closed, then sealed shut**. All three sat within
+4.4% of each other when the difference was only how the plates were patterned.
+
+**`Open Tunnel`** (tier 1)
+
+> A plain wide open tunnel mouth cut into a low bank of packed earth and chitin, completely open with nothing covering it and solid darkness inside, short wall stubs extending to either side, designed to attach to the front of a larger building, drawn large and filling the frame edge to edge, 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Chitin Valve`** (tier 2)
+
+> A tunnel mouth half closed by a ring of thick overlapping chitin plates folded inward like the iris of a camera, leaving a clear dark gap still open at the centre, short wall stubs extending to either side, designed to attach to the front of a larger building, drawn large and filling the frame edge to edge, 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Sealed Valve`** (tier 3)
+
+> A tunnel mouth completely sealed shut by a thick plug of interlocking chitin plates meeting flush with no opening of any kind, faint amber light glowing along the seams between the plates, short wall stubs extending to either side, designed to attach to the front of a larger building, drawn large and filling the frame edge to edge, 64x64 pixel art building icon on a plain solid magenta background (#FF00FF), isometric view at a fixed 30-degree angle, camera facing the same direction in every asset, consistent horizon line, thick dark outline, limited palette, flat shading with one light source from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+#### Grounds — two of the three
+
+`Tended Brood-Beds` is good and needs nothing — it already differs from the other
+two by 24–27%. These two came back nearly identical because both were given the
+kerb; tier 1 should have no edge at all. **Note the different style tail**: the
+grounds take the palace bible's documented top-down exception, so these two do
+*not* carry the isometric clause.
+
+**`Packed Earth`** (tier 1)
+
+> A patch of bare packed brown earth scored with a few narrow worn trackways crossing it, with no border, no kerb, no edging and no wall of any kind around it, its outer edges ragged and irregular where the bare earth simply stops, seen in top-down plan view, designed to sit in front of a larger building, 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single subject centred and filling the frame, thick dark outline, limited palette, flat shading lit from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+**`Scoured Apron`** (tier 2)
+
+> A swept apron of smooth packed earth enclosed by a low raised kerb of pale chitin running right around its four edges, several worn trackways converging across it toward one side, seen in top-down plan view, designed to sit in front of a larger building, 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single subject centred and filling the frame, thick dark outline, limited palette, flat shading lit from the upper left, mid-1990s fantasy strategy game city-view style, no text, no logos, no border, no characters, no background scenery, no ground shadow.
+
+#### After the re-roll
+
+Drop them back over the same filenames and the check is two commands:
+
+```bash
+python - <<'PY'
+import sys, glob, os; sys.path.insert(0,'tools')
+import prepare_art as pa
+from PIL import Image
+for p in sorted(glob.glob('art_src/factions/hivekin/palace/*.jpg')):
+    im = Image.open(p)
+    out, ok = pa.remove_background(im)
+    a = out.getchannel('A')
+    fill = sum(1 for v in a.resize((256,256)).getdata() if v>8)/(256*256)
+    print(f"{os.path.basename(p):26s} {'ok' if ok else 'FAIL':>5s}  fills {fill*100:5.1f}% of frame")
+PY
+```
+
+Every piece should say `ok`, and **fill between 24% and 57%** of its frame — the
+range the thirteen good pieces already sit in. Anything under about 10% will fail
+the same way the stalks did.
+
+### Parked
+
+`exorcise`, the shared four-frame purifying strip, is prompted in `hivekin.md`
+and stays parked with the Warden-caste. Every faction gets one exorcism-capable
+unit and the thing they are all for — the Unbound — does not exist yet, so the
+Warden ships as an ordinary defensive caste and this effect waits for the
+faction that gives it a target.
+
+### What the prompts were, for reference
+
+The blocks that produced the drop are kept below so a re-roll starts from what
+was actually asked for rather than from memory. House styles are named rather
+than restated — see "House styles" at the top of this file.
+
+**Palace** — **Structures seen in place**, at 64×64, with the palace bible's
+top-down exception for Grounds. Tier names:
+
+| Module | Tier 1 | Tier 2 | Tier 3 |
+|---|---|---|---|
+| Grounds | Packed Earth | Scoured Apron | Tended Brood-Beds |
+| Tower | Low Vent | Watch Spire | High Spire |
+| Gate | Open Tunnel | Chitin Valve | Sealed Valve |
+| Wing | Brood Annex | Brood Hall | Royal Gallery |
+| Regalia | Pheromone Stalk | Paired Stalks | Crowned Stalks |
+
+Base chassis: *A plain low mound of hardened chitin and packed earth with a flat
+unribbed surface and one dark tunnel opening, deliberately undecorated to serve
+as a base structure, [style block]*
+
+Tower: *a short chitin vent stack with a ragged open top* · *a ribbed chitin
+spire with narrow slit openings and a rounded cap* · *a tall layered chitin spire
+with a faint amber bioluminescent glow at its slit openings* — each with *short
+wall stubs extending to either side, designed to attach to the corner of a larger
+building*.
+
+Gate: *a plain dark tunnel mouth cut into a low earthen bank, no door of any
+kind* · *a tunnel mouth ringed with overlapping chitin plates that fold inward
+like a valve* · *a thick sealed chitin valve of interlocking plates closed over a
+tunnel mouth, faint amber glow at the seams* — each *designed to attach to the
+front of a larger building*.
+
+Wing: *a small ribbed chitin annex with a row of shallow brood cells on its face*
+· *a larger ribbed chitin hall with stacked brood cells and two low openings* ·
+*an ornate chitin gallery with a raised arched entrance and deep amber
+bioluminescence in its interior*.
+
+Grounds, in top-down plan view: *a patch of bare packed earth scored with narrow
+worn trackways* · *a swept apron of packed earth edged with low chitin kerbing,
+several converging worn trackways* · *a tended bed of pale warm moss divided into
+neat cells by low chitin ridges*.
+
+**Citizens** — **Citizens — four moods at 64**. Four sorts, `hk-worker` (always
+here), `hk-fodder` (`caste-fodder`), `hk-soldier` (`caste-soldier`) and
+`hk-tender` (`happiness`), weighted 4 / 4 / 2 / 1 unless Jeremy says otherwise.
+None wants a female sheet: the Hivekin have exactly one of those and she does not
+appear in a crowd. Source files are named for the sort rather than the id —
+`art_src/citizens/<sort> citizens.<ext>`, matching how `goblin citizens` is named.
+
+**Promotion marks** — **Promotion marks — one tiny object**, at
+`art_src/promotions/hivekin-<rank>.<ext>`. The Horde's marks are things that
+happened to it and the Kingdom's are things somebody issued; the Hivekin's simply
+**grew**, which is the joke — nobody awarded it and nobody noticed. Avoid amber,
+since the badge sits on top of an amber unit.
+
+**Garrison post** — **Map stamps**, taking the garrison-post exception: 64×64 in
+the top-down map view, no ground under it. Neither tidy nor hurried, because
+nobody built it — it was grown, and then a soldier was put in it.
+
+**`spit`** — **Travelling effects — 4-frame strip**, at
+`art_src/effects/spit.<ext>`: *a thick glob of sickly yellow-green venom in
+flight, trailing a few scattered droplets behind it, drawn travelling left to
+right*. Drawn left to right consistently, because the renderer rotates the sprite
+toward its target and a projectile drawn head-on cannot be rotated into anything.
+The **Bloat-caste** needs no effect of its own — it is artillery, and reusing
+`bolt` is right for it.
