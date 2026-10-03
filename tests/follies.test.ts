@@ -65,15 +65,28 @@ afterEach(() => {
 });
 
 describe('the roster', () => {
-  it('has twelve: four shared, four a side, each on exactly one advance', () => {
+  it('has fifteen: four shared, four a side, three for the Hive, each on exactly one advance', () => {
     const all = follies();
-    expect(all).toHaveLength(12);
+    expect(all).toHaveLength(15);
     expect(all.filter((b) => b.folly === 'world' && b.faction === 'both')).toHaveLength(4);
     expect(all.filter((b) => b.folly === 'faction' && b.faction === 'orc')).toHaveLength(4);
     expect(all.filter((b) => b.folly === 'faction' && b.faction === 'human')).toHaveLength(4);
+    // Section 125: three rather than four, which is an asymmetry Jeremy chose
+    // and the Hivekin have not noticed. It is a balance lever, not an oversight
+    // -- see HIVEKIN_PLAN.md -- so the number is asserted rather than assumed.
+    expect(all.filter((b) => b.folly === 'faction' && b.faction === 'hivekin')).toHaveLength(3);
     for (const b of all) {
       expect(TECHS.filter((t) => t.buildings.includes(b.id)), b.id).toHaveLength(1);
     }
+  });
+
+  it('gives the Hive one civ-wide folly and two that only help the Hive they stand in', () => {
+    const mine = follies().filter((b) => b.faction === 'hivekin');
+    // The split the bible asked for, read off the fields the engine actually
+    // uses: `empireBonus` reads the first, `cityFollyBonus` the other two.
+    expect(mine.filter((b) => b.casteAttack !== undefined)).toHaveLength(1);
+    expect(mine.filter((b) => b.unitDiscount !== undefined || b.cityShields !== undefined))
+      .toHaveLength(2);
   });
 
   it('needs one new advance, off both kinds of magic', () => {

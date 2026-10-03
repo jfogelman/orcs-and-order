@@ -88,26 +88,32 @@ const REASONS: Record<AdvisorRole, Record<FactionId, (name: string) => string>> 
   military: {
     orc: (n) => `${n}. Hits things. I have not read the rest of it.`,
     human: (n) => `${n}. It sharpens the point of the spear, and the spear is the argument.`,
+    hivekin: (n) => `${n}. Losses and replacements are the same category of fact. This improves the second column.`,
   },
   diplomacy: {
     orc: (n) => `${n}. They will come. Better we are difficult when they do.`,
     human: (n) => `${n}. Strength is what makes a conversation possible.`,
+    hivekin: (n) => `${n}. She will not be talking either way. It is still worth having.`,
   },
   domestic: {
     orc: (n) => `${n}. People stop shouting. That is my whole job, boss.`,
     human: (n) => `${n}. Contented subjects. It is unglamorous and it is the foundation.`,
+    hivekin: (n) => `${n}. The Hive will be less unhappy. It was going to resolve or it was not.`,
   },
   trade: {
     orc: (n) => `${n}. Both heads counted. It pays for itself, which is more than most of you do.`,
     human: (n) => `${n}. It pays for itself, and then it pays for the rest of you.`,
+    hivekin: (n) => `${n}. What is available becomes more available. Its purpose remains undisclosed.`,
   },
   faith: {
     orc: (n) => `${n}. The spirits want it. I have not asked them, but I know.`,
     human: (n) => `${n}. It will be popular, and popular is not nothing.`,
+    hivekin: (n) => `${n}. Should she die, this will have been prudent. It is not a concerning thought.`,
   },
   arcane: {
     orc: (n) => `${n}. I want to know what happens. That is a reason.`,
     human: (n) => `${n}. Knowledge compounds. Everything else is a consequence of it.`,
+    hivekin: (n) => `${n}. It was always going to be next. This is simply when next arrives.`,
   },
 };
 
@@ -115,6 +121,7 @@ const REASONS: Record<AdvisorRole, Record<FactionId, (name: string) => string>> 
 const SHRUGS: Record<FactionId, (name: string) => string> = {
   orc: (n) => `${n}, then. Nothing here is mine. Get it over with.`,
   human: (n) => `${n}, I suppose. Nothing on offer concerns my department.`,
+  hivekin: (n) => `${n}. It is not for this caste. It will be grown regardless.`,
 };
 
 /**

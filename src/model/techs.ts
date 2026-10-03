@@ -72,7 +72,9 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 25,
     prereqs: [],
-    units: ['raft', 'barge'],
+    // One ship a side. The filter that decides what a city may build asks the
+    // unit's own faction, so a shared advance can hand all three their boat.
+    units: ['raft', 'barge', 'tidecaste'],
     buildings: [],
     flags: ['mapmaking'],
     flavor: 'The world turns out to have a shape. Everyone is a little put out about it.',
@@ -625,6 +627,193 @@ export const TECHS: TechDef[] = [
     flavor:
       'A committee has been formed to establish what it does. So far it has agreed on the ' +
       'wording of the sign.',
+  },
+
+  // =========================================================== section 125
+  // The Hivekin. Not a counting ladder and not a committee ladder: every
+  // advance here is a shape the Hive has become capable of growing, and the
+  // tree is simply the order they arrive in.
+  {
+    id: 'first-hivekin',
+    name: 'There Was A Hive',
+    faction: 'hivekin',
+    cost: 0,
+    prereqs: [],
+    // The Queen is not here. She is placed in the first Hive when it is
+    // founded, which is what "starting unit" means for a side that cannot
+    // build one -- see `sim/hivekin.ts`.
+    units: ['grub', 'worker'],
+    buildings: [],
+    flags: [],
+    flavor: 'There was a hive. This took considerably less deliberation than usual.',
+  },
+  {
+    id: 'caste-fodder',
+    name: 'A Shape For This',
+    faction: 'hivekin',
+    cost: 20,
+    prereqs: ['first-hivekin'],
+    units: ['fodder'],
+    buildings: [],
+    flags: [],
+    flavor: 'A shape existed for this. It has been made.',
+  },
+  {
+    id: 'caste-soldier',
+    name: 'A Sturdier Shape',
+    faction: 'hivekin',
+    cost: 45,
+    prereqs: ['caste-fodder'],
+    units: ['soldier'],
+    buildings: [],
+    flags: [],
+    flavor: 'The last shape held. A better one was owed regardless.',
+  },
+  {
+    id: 'caste-spitter',
+    name: 'A Shape That Reaches',
+    faction: 'hivekin',
+    cost: 50,
+    prereqs: ['caste-fodder'],
+    units: ['spitter'],
+    buildings: [],
+    flags: [],
+    flavor: 'Distance was the only thing missing. It no longer is.',
+  },
+  {
+    id: 'caste-burrower',
+    name: 'The Ground Was Already Hollow',
+    faction: 'hivekin',
+    cost: 65,
+    prereqs: ['caste-fodder'],
+    units: ['burrower'],
+    buildings: [],
+    flags: [],
+    flavor: 'The ground was already hollow. This was noticed.',
+  },
+  {
+    id: 'caste-riptide',
+    name: 'A Shape That Opens Other Shapes',
+    faction: 'hivekin',
+    cost: 70,
+    prereqs: ['caste-soldier'],
+    units: ['riptidecaste'],
+    buildings: [],
+    flags: [],
+    flavor: 'The sea was previously unclaimed. This has been corrected.',
+  },
+  {
+    // Section 125 slice B wires the three burrower upgrades to an ability that
+    // does not exist yet. They are in the tree now so the road to the ending
+    // and the cost of walking it are the ones a sweep will measure.
+    id: 'burrower-veteran',
+    name: 'The Last Tile Forgotten',
+    faction: 'hivekin',
+    cost: 90,
+    prereqs: ['caste-burrower'],
+    units: [],
+    buildings: [],
+    flags: [],
+    flavor: 'Where it was is no longer known. This was arranged on purpose.',
+  },
+  {
+    id: 'caste-bloat',
+    name: 'A Shape That Empties Once',
+    faction: 'hivekin',
+    cost: 95,
+    prereqs: ['caste-spitter'],
+    units: ['bloatcaste'],
+    buildings: [],
+    flags: [],
+    flavor: 'Distance solved the reaching problem. Walls remained. This solves that too.',
+  },
+  {
+    id: 'burrower-deep',
+    name: 'Further Down',
+    faction: 'hivekin',
+    cost: 120,
+    prereqs: ['burrower-veteran'],
+    units: [],
+    buildings: ['undercity'],
+    flags: [],
+    flavor: 'Two tiles became three. The ground did not object.',
+  },
+  {
+    id: 'burrower-ambush',
+    name: 'Already Waiting',
+    faction: 'hivekin',
+    cost: 120,
+    prereqs: ['burrower-veteran'],
+    units: [],
+    buildings: [],
+    flags: [],
+    flavor: 'It was there first. It simply waited to be noticed.',
+  },
+  {
+    id: 'caste-elite',
+    name: 'The Best Shape So Far',
+    faction: 'hivekin',
+    cost: 85,
+    prereqs: ['caste-soldier'],
+    units: ['elite'],
+    buildings: [],
+    flags: [],
+    flavor: 'Better shapes remain possible. This one will do for now.',
+  },
+  {
+    id: 'caste-broodlord',
+    name: 'A Shape With Four Arms',
+    faction: 'hivekin',
+    cost: 130,
+    prereqs: ['caste-elite'],
+    units: ['broodlord'],
+    buildings: ['broodwarmth'],
+    flags: [],
+    flavor: 'Two arms were doing the work of four. This has been corrected.',
+  },
+  {
+    id: 'caste-warden',
+    name: 'A Shape That Dissolves Things',
+    faction: 'hivekin',
+    cost: 140,
+    prereqs: ['caste-elite', 'hammers-of-glory'],
+    units: ['warden'],
+    buildings: [],
+    flags: [],
+    flavor: 'Something was needed against what does not have a shape to begin with.',
+  },
+  {
+    id: 'caste-princess',
+    name: 'A Shape That Waits',
+    faction: 'hivekin',
+    cost: 110,
+    prereqs: ['caste-elite', 'happiness'],
+    units: ['princess'],
+    buildings: ['oldQueensShell'],
+    flags: [],
+    flavor:
+      'She was always going to be needed eventually. Eventually has not ' +
+      'arrived. She waits regardless.',
+  },
+  {
+    // The road here costs 860 beakers, against the Horde's 430 and the
+    // Kingdom's 965, while the works below are priced as the Horde's rather
+    // than the Kingdom's. That mixture is nobody's measured setting -- see
+    // HIVEKIN_PLAN.md -- and is the first dial to turn if this lands too often
+    // or never.
+    id: 'all-is-the-hive',
+    name: 'All Is The Hive',
+    faction: 'hivekin',
+    cost: 200,
+    prereqs: ['caste-princess', 'insanity'],
+    units: [],
+    buildings: ['moltingChamber', 'secondFeeding', 'secondQueenShell'],
+    flags: ['ending'],
+    flavor:
+      'Two queens should not have been possible. Two queens were possible. All ' +
+      'is the Hive and the Hive are all, and if they were capable of joy, they ' +
+      'would be reasonably pleased about this. Not excessively. It is, after ' +
+      'all, only the one world.',
   },
 ];
 

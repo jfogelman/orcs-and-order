@@ -129,6 +129,26 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
       yard: [64, 98],
     },
   },
+  // Section 125. Marked the same way the other two were -- by hand, off a pixel
+  // grid of `public/palace/hivekin-base.png`, which is 128 by 88. A mound has
+  // no corners, so the two points that mean "corner" elsewhere are read as the
+  // nearest and the left-most places it meets the ground.
+  hivekin: {
+    width: 0.58,
+    points: {
+      // The tunnel mouth, at its base: the opening runs from about x 28 to 48.
+      door: [38, 80],
+      // Right of the door, where the mound meets the ground -- the gate's line,
+      // which is where the other two chassis put their tower.
+      tower: [84, 84],
+      // The left-hand edge at the ground line. The wing hangs off this.
+      side: [10, 74],
+      // On the dome's front rim, between the door and the crown.
+      roof: [50, 26],
+      // The near point, centred, with the grounds laid out in front of it.
+      yard: [64, 85],
+    },
+  },
 };
 
 export interface PalacePlacement {
@@ -183,6 +203,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     tiers: {
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
+      hivekin: ['Packed Earth', 'Scoured Apron', 'Tended Brood-Beds'],
     },
     // Centred a little behind the near corner, so the hall's foundation is
     // drawn over the yard's back edge: ground the hall stands in, not a rug.
@@ -203,6 +224,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     tiers: {
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
+      hivekin: ['Brood Annex', 'Brood Hall', 'Royal Gallery'],
     },
     // Behind the chassis, its nearest corner on the hall's left-hand corner: the
     // hall is drawn over the blank wall it joins by.
@@ -221,6 +243,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     tiers: {
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
+      hivekin: ['Low Vent', 'Watch Spire', 'High Spire'],
     },
     // Sizes are shares of the box at tier two: twice the chassis's drawn height
     // -- 0.58 x 117/128 of the box for the Warcamp, 0.58 x 99/128 for the Grand
@@ -238,6 +261,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     tiers: {
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
+      hivekin: ['Open Tunnel', 'Chitin Valve', 'Sealed Valve'],
     },
     at: { point: 'door', anchor: 'mid', size: 0.23 },
     blurb: 'The part visitors are meant to look at while they wait.',
@@ -248,6 +272,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     tiers: {
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
+      hivekin: ['Pheromone Stalk', 'Paired Stalks', 'Crowned Stalks'],
     },
     at: { point: 'roof', anchor: 'foot', size: 0.19 },
     // The Horde's are drawn facing the other way, towards the gate below them.

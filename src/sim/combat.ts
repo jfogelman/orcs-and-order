@@ -11,7 +11,7 @@ import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city
 import { hasFlag } from './rules';
 import { COWED, SPELL_TURNS, applyStatus, hasStatus } from './status';
 import { RUINS, isWarden } from './ruins';
-import { empireBonus, heldFollies, isMounted } from './follyEffects';
+import { empireBonus, heldFollies, isMounted, isShellCaste } from './follyEffects';
 import { OMNISCIENCE, knowsEverything } from './research';
 
 /**
@@ -346,6 +346,12 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
 
   // Section 111: built beside the Loudest Rock, and it swings a little harder for good.
   let total = type.attack + (attacker.drilled ?? 0);
+  // Section 125: and the Old Queen's Shell, which is empire-wide and only ever
+  // about two castes. Added to the base alongside `drilled` so it scales with
+  // the headcount below, exactly as a point of drill does.
+  if (isShellCaste(attacker)) {
+    total += empireBonus(state, attacker.owner, (b) => b.casteAttack);
+  }
   // Section 121: and a point off it for anything an Ogre Clan Brute bellowed at
   // last turn. Taken here, off the base, so it scales with the stack the way
   // every other attack number does -- and floored, so the cheapest units are

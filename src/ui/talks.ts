@@ -11,6 +11,7 @@ import {
   signPeace,
   type PeaceTerms,
 } from '../sim/diplomacy';
+import { talks } from '../model/factions';
 import { portraitPath } from './advisors';
 import { takeTurns } from './talking';
 import { confirmAction, escapeHtml, openModal } from './dom';
@@ -28,7 +29,21 @@ const base = import.meta.env.BASE_URL;
 const scene = (id: string) => `${base.endsWith('/') ? base : `${base}/`}diplomacy/${id}.jpg`;
 
 /** Who speaks for peace, and who against, on each side. */
-const VOICES: Record<FactionId, { peace: { id: string; name: string }; war: { id: string; name: string } }> = {
+type Voice = { id: string; name: string };
+
+/**
+ * Who speaks for peace, and who against, on each side that has a table.
+ *
+ * **Partial on purpose.** Section 125's Hivekin are fought, not talked to --
+ * the Queen does not negotiate and the advisor who speaks for her does not
+ * soften it -- so they have no seat here at all. A total record would mean
+ * writing two advisors' worth of lines that nothing can ever reach, and the
+ * missing key is what makes `talks()` in `model/factions.ts` load-bearing
+ * rather than decorative.
+ */
+const VOICES: Partial<
+  Record<FactionId, { peace: Voice; war: Voice }>
+> = {
   orc: {
     peace: { id: 'troll-headhunter', name: 'Troll Headhunter' },
     war: { id: 'blademaster', name: 'Blademaster' },
@@ -148,8 +163,21 @@ function counsel(state: GameState, me: Player, them: Player, terms: PeaceTerms):
 }
 
 /** The one other empire the talks are with. */
+/**
+ * The side across the table, if there is one.
+ *
+ * **Both** of them have to be a side that talks. Before section 125 this took
+ * the first other living non-barbarian, which was the only possible answer when
+ * there were two; with three on the map it would have sat the Hivekin down at a
+ * table they do not attend, and -- because the peace in `sim/diplomacy.ts` is a
+ * single global agreement rather than one per pair -- signed one on their behalf.
+ */
 function rivalOf(state: GameState, viewerId: number): Player | undefined {
-  return state.players.find((p) => p.id !== viewerId && !p.barbarian && p.alive);
+  const me = state.players[viewerId];
+  if (!me || !talks(me.faction)) return undefined;
+  return state.players.find(
+    (p) => p.id !== viewerId && !p.barbarian && p.alive && talks(p.faction),
+  );
 }
 
 /** The offers on the table, as buttons: [label, gold]. Positive gold we pay. */
@@ -168,12 +196,16 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
   const me = state.players[viewerId];
   const them = rivalOf(state, viewerId);
   if (!me || !them) return;
+  // Resolved once, here, so the screen cannot be opened for a side that has
+  // nobody to speak at it. `rivalOf` has already established both sides talk.
+  const voices = VOICES[me.faction];
+  const theirVoices = VOICES[them.faction];
+  if (!voices || !theirVoices) return;
 
   const render = (said = ''): string => {
     const peace = atPeace(state, me.id, them.id);
     const weWant = wantPeace(state, me, them);
     const theyWant = wantPeace(state, them, me);
-    const voices = VOICES[me.faction];
     const status = peace
       ? `<strong>At peace</strong> with ${escapeHtml(them.name)} &mdash; ${peaceLeft(state)} turns left.`
       : `<strong>At war</strong> with ${escapeHtml(them.name)}.`;
@@ -212,7 +244,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         ${voice(voices.war, forWar(me.faction, peace, weWant))}
       </div>
       <div class="advisors talks-voices talks-across">
-        ${voice(VOICES[them.faction].peace, theirWord(them.faction, peace, theyWant), true)}
+        ${voice(theirVoices.peace, theirWord(them.faction, peace, theyWant), true)}
       </div>
       <div class="button-row talks-offers">
         ${offers(me, peace)
@@ -234,7 +266,6 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
       // Section 46: the case for, then the case against, each face moving while
       // its owner speaks.
       const argue = () => {
-        const voices = VOICES[me.faction];
         const faces = [...holder.querySelectorAll<HTMLImageElement>('.talks-voice .advisor-face')];
         const said = [...holder.querySelectorAll<HTMLElement>('.talks-voice .advisor-line')].map(
           (l) => l.textContent ?? '',
@@ -245,7 +276,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         // is how it goes at every table anybody has ever sat at.
         void takeTurns([
           { img: faces[0] ?? null, id: voices.peace.id, line: said[0] ?? '' },
-          { img: faces[2] ?? null, id: VOICES[them.faction].peace.id, line: said[2] ?? '' },
+          { img: faces[2] ?? null, id: theirVoices.peace.id, line: said[2] ?? '' },
           { img: faces[1] ?? null, id: voices.war.id, line: said[1] ?? '' },
         ]);
       };
@@ -301,6 +332,10 @@ export function openPeaceOffer(state: GameState, viewerId: number, onChange: () 
   const them = state.players[pending.from];
   const me = state.players[viewerId];
   if (!them?.alive || !me?.alive) return false;
+  // An offer can only ever have come from a side with a table, but reading it
+  // off the data rather than trusting that is what keeps the `Partial` honest.
+  const myVoice = VOICES[me.faction]?.peace;
+  if (!myVoice) return false;
   const renewing = atPeace(state, me.id, them.id);
   const terms: PeaceTerms = { ...pending };
   const price =
@@ -321,9 +356,9 @@ export function openPeaceOffer(state: GameState, viewerId: number, onChange: () 
       <div class="panel-body"><p style="font-size:15px">${escapeHtml(ask)}</p></div>
       <div class="advisors talks-voices">
         <div class="advisor talks-voice">
-          <img class="advisor-face" src="${portraitPath(VOICES[me.faction].peace.id)}" alt="" />
+          <img class="advisor-face" src="${portraitPath(myVoice.id)}" alt="" />
           <div class="advisor-who"><span class="advisor-name">${escapeHtml(
-            VOICES[me.faction].peace.name,
+            myVoice.name,
           )}</span></div>
           <div class="advisor-line">${escapeHtml(counsel(state, me, them, terms))}</div>
         </div>
@@ -343,7 +378,7 @@ export function openPeaceOffer(state: GameState, viewerId: number, onChange: () 
       void takeTurns([
         {
           img: root.querySelector<HTMLImageElement>('.talks-voice .advisor-face'),
-          id: VOICES[me.faction].peace.id,
+          id: myVoice.id,
           line: root.querySelector<HTMLElement>('.talks-voice .advisor-line')?.textContent ?? '',
         },
       ]);

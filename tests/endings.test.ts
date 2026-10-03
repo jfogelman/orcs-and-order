@@ -51,8 +51,21 @@ function game(): GameState {
 }
 
 const cityOf = (state: GameState, id: number) => state.cities.find((c) => c.id === id)!;
+/**
+ * The two endings this board can raise.
+ *
+ * Narrower than `EndingKind` since section 125, and deliberately: the fixture
+ * below seats two players, and the Hivekin's Second Queen's Shell needs a third
+ * side that is not on it. That ending has its own tests in `hivekin.test.ts`,
+ * and naming the two here keeps this file honest about what it covers.
+ */
+type TwoSided = 'portal' | 'object';
+
 const ADVANCE = { portal: 'somebody-knocked', object: 'do-not-touch' } as const;
-const SIDE = { portal: { owner: 0, capital: 1, other: 2 }, object: { owner: 1, capital: 3, other: 4 } };
+const SIDE: Record<TwoSided, { owner: number; capital: number; other: number }> = {
+  portal: { owner: 0, capital: 1, other: 2 },
+  object: { owner: 1, capital: 3, other: 4 },
+};
 
 /** One whole calendar turn, both sides. */
 function nextTurn(state: GameState): void {
@@ -68,7 +81,7 @@ function finish(state: GameState, city: City, id: string): void {
 }
 
 /** Every work towards an ending: one lesser work in each city, and the last in the capital. */
-function raise(state: GameState, kind: EndingKind): City {
+function raise(state: GameState, kind: TwoSided): City {
   const side = SIDE[kind];
   state.players[side.owner].techs.push(ADVANCE[kind]);
   const [first, second, last] = endingWorks(kind);

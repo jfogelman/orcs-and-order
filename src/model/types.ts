@@ -8,7 +8,16 @@
 
 // ---------------------------------------------------------------- identifiers
 
-export type FactionId = 'orc' | 'human';
+/**
+ * The sides. Three of them since section 125.
+ *
+ * Widening this is the cheapest part of adding a faction and the compiler finds
+ * most of the rest: every `Record<FactionId, ...>` in the game goes red at once.
+ * What it does *not* find are the places that said "the other one" in prose --
+ * `otherFaction`, a single global peace, and the handful of `=== 'orc'` branches
+ * that meant "orc, else human". Those are listed in `HIVEKIN_PLAN.md`.
+ */
+export type FactionId = 'orc' | 'human' | 'hivekin';
 export type TerrainId =
   | 'deep'
   | 'water'
@@ -410,7 +419,15 @@ export type DamageKind = 'physical' | 'magic';
  * Portal held open long enough, and the Kingdom's Mysterious Object with its
  * button pressed.
  */
-export type VictoryKind = 'conquest' | 'dominance' | 'points' | 'draw' | 'portal' | 'object';
+export type VictoryKind =
+  | 'conquest'
+  | 'dominance'
+  | 'points'
+  | 'draw'
+  | 'portal'
+  | 'object'
+  // Section 125: the Hivekin's Second Queen's Shell.
+  | 'hive';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }

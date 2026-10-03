@@ -38,7 +38,7 @@ export const ALT_VICTORY = {
   objectTurns: 15,
 };
 
-export type EndingKind = 'portal' | 'object';
+export type EndingKind = 'portal' | 'object' | 'hive';
 
 /** Whether a building is one of the works towards an ending. */
 export function isEndingPiece(b: BuildingDef | undefined): boolean {

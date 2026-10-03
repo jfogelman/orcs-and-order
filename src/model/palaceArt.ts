@@ -21,6 +21,22 @@ export interface PalacePieceArt {
 }
 
 export const PALACE_ART: Record<string, PalacePieceArt> = {
+  'hivekin-banners-1': { w: 115, h: 128, foot: 0.122, base: 0.977, frame: 0.766 },
+  'hivekin-banners-2': { w: 97, h: 128, foot: 0.428, base: 0.984, frame: 0.818 },
+  'hivekin-banners-3': { w: 128, h: 92, foot: 0.496, base: 0.913, frame: 0.957 },
+  'hivekin-base': { w: 128, h: 88, foot: 0.504, base: 0.955, frame: 0.797 },
+  'hivekin-gate-1': { w: 128, h: 93, foot: 0.570, base: 0.946, frame: 0.947 },
+  'hivekin-gate-2': { w: 128, h: 93, foot: 0.570, base: 0.946, frame: 0.947 },
+  'hivekin-gate-3': { w: 128, h: 93, foot: 0.570, base: 0.946, frame: 0.947 },
+  'hivekin-grounds-1': { w: 123, h: 128, foot: 0.504, base: 0.945, frame: 0.746 },
+  'hivekin-grounds-2': { w: 128, h: 116, foot: 0.472, base: 1.000, frame: 0.656 },
+  'hivekin-grounds-3': { w: 128, h: 128, foot: 0.532, base: 1.000, frame: 0.762 },
+  'hivekin-tower-1': { w: 128, h: 123, foot: 0.508, base: 0.927, plinth: [0.000, 0.780], frame: 0.717 },
+  'hivekin-tower-2': { w: 126, h: 128, foot: 0.504, base: 0.938, plinth: [0.000, 0.797], frame: 0.728 },
+  'hivekin-tower-3': { w: 88, h: 128, foot: 0.504, base: 0.969, plinth: [0.000, 0.852], frame: 0.728 },
+  'hivekin-wing-1': { w: 128, h: 112, foot: 0.508, base: 0.884, tip: [0.512, 1.000], frame: 0.877 },
+  'hivekin-wing-2': { w: 128, h: 109, foot: 0.527, base: 0.872, tip: [0.516, 1.000], frame: 0.947 },
+  'hivekin-wing-3': { w: 128, h: 120, foot: 0.469, base: 0.908, tip: [0.516, 1.000], frame: 0.945 },
   'human-banners-1': { w: 93, h: 128, foot: 0.424, base: 0.930, frame: 0.938 },
   'human-banners-2': { w: 113, h: 128, foot: 0.488, base: 0.898, frame: 0.938 },
   'human-banners-3': { w: 113, h: 128, foot: 0.488, base: 0.898, frame: 0.938 },

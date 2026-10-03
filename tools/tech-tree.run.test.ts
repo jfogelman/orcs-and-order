@@ -16,8 +16,12 @@ import { TECH_ESCALATION } from '../src/sim/research';
  *   npx vitest run --config vitest.sweep.config.ts tools/tech-tree.run.test.ts
  */
 
-const SIDE_NAME: Record<FactionId, string> = { orc: 'Horde', human: 'Kingdom' };
-const ENDING: Record<FactionId, string> = { orc: 'somebody-knocked', human: 'do-not-touch' };
+const SIDE_NAME: Record<FactionId, string> = { orc: 'Horde', human: 'Kingdom', hivekin: 'Hive' };
+const ENDING: Record<FactionId, string> = {
+  orc: 'somebody-knocked',
+  human: 'do-not-touch',
+  hivekin: 'all-is-the-hive',
+};
 
 const nameOf = (id: string) => TECHS_BY_ID[id]?.name ?? id;
 const nodeId = (id: string) => id.replace(/[^a-zA-Z0-9]/g, '_');

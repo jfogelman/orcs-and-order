@@ -2634,6 +2634,7 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   draw: 'A draw — the turn limit arrived and the columns matched',
   portal: 'The Demonic Portal — held open long enough for something to come through',
   object: 'The Mysterious Object — somebody pressed the button',
+  hive: "The Second Queen's Shell — there are two of her now, and nobody has reacted",
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;

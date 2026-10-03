@@ -69,6 +69,20 @@ export function citySightUnblocked(city: City): boolean {
  */
 export const MOUNTED = new Set(['outrider', 'knight', 'paladin']);
 
+/**
+ * The two castes the Old Queen's Shell sharpens. Section 125.
+ *
+ * Named here for the same reason `MOUNTED` is: the rule is about *those two*,
+ * and the list belongs beside the only thing that reads it rather than in a
+ * comment somewhere describing a rule you then have to go and find.
+ */
+export const SHELL_CASTES = new Set(['princess', 'broodlord']);
+
+/** Whether this unit is one the Old Queen's Shell has an opinion about. */
+export function isShellCaste(unit: Unit): boolean {
+  return SHELL_CASTES.has(unitType(unit.type).base);
+}
+
 export function isMounted(unit: Unit): boolean {
   return MOUNTED.has(unitType(unit.type).base);
 }

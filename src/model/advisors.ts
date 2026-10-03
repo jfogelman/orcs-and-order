@@ -135,7 +135,7 @@ export interface Situation {
    *
    * Optional so a situation written before the endings existed still holds.
    */
-  ending?: { turnsLeft: number; theirs: boolean; kind: 'portal' | 'object' } | null;
+  ending?: { turnsLeft: number; theirs: boolean; kind: 'portal' | 'object' | 'hive' } | null;
   /**
    * How far this empire is along the road to its own ending, before it is built:
    * the advance can be researched, the build can be started, or the capital is
@@ -152,7 +152,7 @@ export interface Situation {
    * The other side has begun work towards its ending, and which ending. Null once
    * anything is counting down, when `ending` says so more urgently. Section 110.
    */
-  rivalEnding?: 'portal' | 'object' | null;
+  rivalEnding?: 'portal' | 'object' | 'hive' | null;
   /**
    * The deadline, once it is close enough to be worth planning around.
    *
@@ -1536,7 +1536,378 @@ const HORDE: AdvisorDef[] = [
   },
 ];
 
-export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE];
+/**
+ * Section 125: the Hive's six, in the same roles as everybody else's.
+ *
+ * One register throughout, and it is the hardest of the three to write badly:
+ * **nothing is remarkable and everything was always going to happen.** They do
+ * not boast, complain, hedge or encourage. A loss and a replacement are the
+ * same category of fact and are reported in the same tone, which is none.
+ *
+ * The one rule worth stating outright, because it is the one that breaks: an
+ * exclamation, a rhetorical question or a word like "disaster" puts them in
+ * somebody else's mouth. If a line could be said by the Blademaster or the
+ * Knight-Marshal with the nouns swapped, it is wrong.
+ */
+const HIVE: AdvisorDef[] = [
+  {
+    id: 'bladeguard',
+    name: 'The Bladeguard',
+    role: 'military',
+    faction: 'hivekin',
+    blurb: 'Elite-caste, twin bone-shard blades crossed at rest. Discusses war the way an accountant discusses invoices.',
+    concerns: [
+      {
+        // Somebody else's ending, running. The soldiers' line on both other
+        // sides, and theirs: a fact, and the shortest route to changing it.
+        when: (s) => (s.ending ?? null) !== null && s.ending!.theirs,
+        about: 'the-clock',
+        say: () =>
+          'Another hive is finishing something. The shortest answer is to be standing in that ' +
+          'city when it does. It is not a complicated answer.',
+      },
+      {
+        when: (s) => (s.rivalEnding ?? null) !== null,
+        say: () =>
+          'Work has begun elsewhere on something that ends this. It will take them some time. ' +
+          'That time is the whole of what we have been given.',
+      },
+      {
+        when: (s) => s.dominance !== null,
+        say: (s) =>
+          s.dominance!.theirs
+            ? `They hold most of the world. ${sentence(count(s.dominance!.turnsLeft, 'turn'))} ` +
+              'remain. Taking some of it back is the only available response.'
+            : `We hold most of the world. ${sentence(count(s.dominance!.turnsLeft, 'turn'))} more ` +
+              'and it is settled. Nothing needs to be done differently.',
+      },
+      {
+        when: (s) => s.undefended > 0,
+        about: 'war',
+        say: (s) =>
+          `${sentence(count(s.undefended, 'Hive'))} with nothing standing in ${
+            s.undefended === 1 ? 'it' : 'them'
+          }. ` + 'A Hive with nothing in it is a Hive somebody else is going to have.',
+      },
+      {
+        when: (s) => s.enemiesSeen > 0,
+        say: (s) =>
+          `${sentence(count(s.enemiesSeen, 'shape'))} of theirs in sight. They were going to be ` +
+          'somewhere. They are here.',
+      },
+      {
+        when: (s) => s.army === 0,
+        say: () =>
+          'Nothing of ours is armed. This is not yet a problem. It becomes one at a time not of ' +
+          'our choosing.',
+      },
+      {
+        when: (s) => s.army > 0 && s.rankAndFile === s.army && s.army > 4,
+        say: (s) =>
+          `${sentence(count(s.army, 'shape'))}, all of the cheap kind. They will do what the ` +
+          'cheap kind does, which is die first and in order.',
+      },
+      {
+        when: (s) => s.wallsAvailable && s.walled === 0 && s.cities > 2,
+        say: () =>
+          'No Hive of ours is walled. Shells are understood. These ones have simply not been ' +
+          'grown yet.',
+      },
+    ],
+    retorts: {
+      war: 'The undefended Hives have been noted a second time. The number has not changed.',
+    },
+    idle: [
+      'Three Soldier-caste were lost. Four were grown to replace them. This is considered adequate.',
+      'Nothing is attacking us at present. This has happened before and did not last.',
+      'The blades are maintained. There has been no occasion to use them. Both facts are reported.',
+    ],
+  },
+  {
+    id: 'tender',
+    name: 'The Tender',
+    role: 'domestic',
+    faction: 'hivekin',
+    blurb: 'Worker-caste, woven sac still on its back. Reports happiness with total indifference to whether the news is good.',
+    concerns: [
+      {
+        when: (s) => s.rioting > 0,
+        about: 'unrest',
+        say: (s) =>
+          `${sentence(count(s.rioting, 'Hive'))} ${s.rioting === 1 ? 'is' : 'are'} unhappy and ` +
+          'has stopped. This has been noted. It will likely resolve, or it will not.',
+      },
+      {
+        when: (s) => s.starving > 0,
+        about: 'hunger',
+        say: (s) =>
+          `${sentence(count(s.starving, 'Hive'))} ${s.starving === 1 ? 'is' : 'are'} losing ` +
+          'shapes to hunger. Fewer shapes need less food, so this does correct itself.',
+      },
+      {
+        when: (s) => s.restless > 1,
+        say: (s) =>
+          `${sentence(count(s.restless, 'Hive'))} close to stopping. The usual remedies are ` +
+          'available and have not been applied.',
+      },
+      {
+        when: (s) => s.calmAvailable && s.calmBuildings === 0 && s.cities > 1,
+        say: () =>
+          'Nothing has been built anywhere to keep the Hive content. It was never going to build ' +
+          'itself.',
+      },
+      {
+        when: (s) => s.calmNeedsAdvance !== null,
+        say: (s) => `${s.calmNeedsAdvance} would help with the unhappiness. It is not yet known.`,
+      },
+      {
+        when: (s) => s.cities === 1 && s.turn > 25,
+        say: (s) =>
+          `One Hive, on turn ${s.turn}. One Hive grows at the speed of one Hive. This is ` +
+          'arithmetic rather than criticism.',
+      },
+      {
+        when: (s) => (s.idleWorkers ?? 0) > 0,
+        say: (s) =>
+          `${sentence(count(s.idleWorkers ?? 0, 'Worker'))} standing still. The ground is not ` +
+          'going to improve on its own, though it would eventually.',
+      },
+    ],
+    retorts: {
+      unrest: 'The unhappiness continues. I have nothing to add to the earlier report.',
+    },
+    idle: [
+      'The Hive is content. This has been noted. It is not expected to be permanent.',
+      'Nothing requires attention. I have checked twice, in case something did.',
+      'Everything is where it grew. That is usually where it should be.',
+    ],
+  },
+  {
+    id: 'voice',
+    name: 'The Voice',
+    role: 'diplomacy',
+    faction: 'hivekin',
+    blurb: 'Relays whatever the Queen has decided, without softening any of it.',
+    concerns: [
+      {
+        // Their whole portfolio, and the joke in it: a diplomat with no table.
+        // Said early and plainly so a player does not spend the game looking
+        // for a Talks button that is never going to appear.
+        when: (s) => s.enemiesSeen > 0 || s.turn > 20,
+        say: () =>
+          'They have asked to speak with us. She says: "No." She has not elaborated. She does ' +
+          'not intend to.',
+      },
+      {
+        when: (s) => s.dominance?.theirs === true,
+        say: (s) =>
+          `They hold most of the world and ${count(s.dominance!.turnsLeft, 'turn')} remain. I am ` +
+          'told there is nothing to discuss. I have conveyed this accurately.',
+      },
+      {
+        when: (s) => s.cities > 4,
+        say: (s) =>
+          `${sentence(count(s.cities, 'Hive'))}. Other powers have begun to describe this as a ` +
+          'position. She has not read their descriptions.',
+      },
+      {
+        when: (s) => s.army === 0 && s.enemiesSeen > 0,
+        say: () =>
+          'They are in sight and we are unarmed. Were we the sort to ask for terms, this would ' +
+          'be when. We are not, so it is merely when.',
+      },
+      {
+        when: (s) => s.turn > 60,
+        say: () =>
+          'Messages continue to arrive. They are received, recorded, and not answered. The ' +
+          'record is thorough.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'She says: "No." She has not elaborated. She does not intend to.',
+      'A message came. It was about an arrangement. There are no arrangements.',
+      'I speak for her. She has not spoken. I continue to speak for her.',
+    ],
+  },
+  {
+    id: 'cultivator',
+    name: 'The Cultivator',
+    role: 'arcane',
+    faction: 'hivekin',
+    blurb: 'Examines a larval pod. Treats every discovery as inevitable rather than exciting.',
+    concerns: [
+      {
+        // Our own ending, counting down. The arcane seat carries it on all
+        // three sides, which is what `tests/advisors.test.ts` asserts.
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) =>
+          `${sentence(count(s.ending!.turnsLeft, 'turn'))} until there are two of her. Hold the ` +
+          'Hive. The rest has already been arranged.',
+      },
+      {
+        when: (s) => (s.endingRoad ?? null) !== null,
+        say: (s) => {
+          switch (s.endingRoad) {
+            case 'researchable':
+              return 'All Is The Hive can be studied now. Two queens should not be possible. The ' +
+                'schedule disagrees.';
+            case 'buildable':
+              return 'The Molting Chamber and the Second Feeding can be built. Then the Shell, in ' +
+                'a Hive holding one of them. This was always the order.';
+            default:
+              return 'The Shell is being grown. Nothing further is required of anyone, which is ' +
+                'the part most often misunderstood.';
+          }
+        },
+      },
+      {
+        when: (s) => s.researching === null,
+        say: () =>
+          'Nothing is being studied. The next shape is therefore not coming. These two facts are ' +
+          'the same fact.',
+      },
+      {
+        when: (s) => s.beakersPerTurn === 0 && s.turn > 12,
+        say: () =>
+          'No study at all this turn. The schedule has not stopped. We have simply stopped being ' +
+          'on it.',
+      },
+      {
+        when: (s) => s.rates.beakers < 3 && s.turn > 30,
+        say: () =>
+          'Very little goes to study. The next shape is further away than it was. It remains ' +
+          'exactly as far away as the arithmetic says.',
+      },
+      {
+        when: (s) => s.beakersPerTurn > 0 && s.researching !== null && s.turn > 20,
+        say: (s) =>
+          `${s.researching} continues. It was always going to take this long. This is simply ` +
+          'when this long ends.',
+      },
+    ],
+    retorts: {
+      'the-clock': 'The count has not changed since you asked. It would not.',
+    },
+    idle: [
+      'The next shape is thirty turns away. It was always going to be thirty turns away. This is simply when thirty turns ends.',
+      'A pod was opened to see what was inside. What was inside was what was expected.',
+      'Nothing has been discovered. Several things have been confirmed.',
+    ],
+  },
+  {
+    id: 'heir',
+    name: 'The Heir',
+    role: 'faith',
+    faction: 'hivekin',
+    blurb: 'Princess-caste, wings folded. Her entire portfolio is the Queen’s eventual death, and she finds it unremarkable.',
+    concerns: [
+      {
+        when: (s) => (s.ending ?? null) !== null && !s.ending!.theirs,
+        about: 'the-clock',
+        say: (s) =>
+          `${sentence(count(s.ending!.turnsLeft, 'turn'))} until the second Shell is finished. ` +
+          'Then there are two of her. I have no view on whether that is strange.',
+      },
+      {
+        when: (s) => s.cities > 2 && s.turn > 40,
+        say: (s) =>
+          `${sentence(count(s.cities, 'Hive'))} and one Queen. Should she die, a Princess will be ` +
+          'grown in her place. There should be Princesses.',
+      },
+      {
+        when: (s) => s.undefended > 0,
+        say: (s) =>
+          `${sentence(count(s.undefended, 'Hive'))} undefended. She is in one of them, or she is ` +
+          'not. Either way the arrangement should not depend on which.',
+      },
+      {
+        when: (s) => s.rioting > 0,
+        say: () =>
+          'The Hive is unhappy. She has not been informed. She would not find it interesting.',
+      },
+      {
+        when: (s) => s.gold < 0,
+        say: () => 'We are spending what we do not have. Succession is cheaper than collapse.',
+      },
+      {
+        when: (s) => s.turn > 80,
+        say: () =>
+          'She is older than she was. That is the entire report. It is the same report every ' +
+          'time and it is always accurate.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'Should she die, a Princess will be grown in her place. Three are currently waiting. This is not a concerning number. It is a prudent one.',
+      'I have been ready for some time. There has been no occasion. I remain ready.',
+      'Nothing has happened to her. I report this daily, because the day it is untrue I will report that instead.',
+    ],
+  },
+  {
+    id: 'harvester',
+    name: 'The Harvester',
+    role: 'trade',
+    faction: 'hivekin',
+    blurb: 'Handles a fragment of chitin vein. Resources are what is available, never a windfall or a shortfall.',
+    concerns: [
+      {
+        when: (s) => s.gold < 0,
+        about: 'the-treasury',
+        say: (s) =>
+          `The treasury is at ${s.gold}. Below nothing, things are sold. They are sold whether or ` +
+          'not anybody decides to sell them.',
+      },
+      {
+        when: (s) => s.goldPerTurn < 0,
+        say: (s) =>
+          `We lose ${Math.abs(s.goldPerTurn)} a turn. The direction is the fact. The number is ` +
+          'only how fast.',
+      },
+      {
+        when: (s) => s.coinBuildings === 0 && s.cities > 2,
+        say: () =>
+          'Nothing anywhere is built to gather coin. What is not gathered is not available. This ' +
+          'has always been the arrangement.',
+      },
+      {
+        when: (s) => s.unjoinedCities > 0 && s.roadsKnown,
+        say: (s) =>
+          `${sentence(count(s.unjoinedCities, 'Hive'))} not joined to the first one. Nothing ` +
+          'travels along ground that has not been made to travel on.',
+      },
+      {
+        when: (s) => s.routeGold > 0,
+        say: (s) =>
+          `The joined Hives provide ${s.routeGold} a turn. Its purpose remains undisclosed. Its ` +
+          'effect does not.',
+      },
+      {
+        when: (s) => s.supplyPosts === 0 && s.cities > 3,
+        say: () =>
+          'No depots anywhere. Shapes far from home fight worse. They are not told why, and it ' +
+          'would not help them.',
+      },
+      {
+        when: (s) => s.rates.coin > 8,
+        say: () =>
+          'Nearly everything goes to the treasury. Coin accumulates. Shapes do not. Both were ' +
+          'choices.',
+      },
+    ],
+    retorts: {
+      'the-treasury': 'The treasury is where it was. I have checked, as asked.',
+    },
+    idle: [
+      'Marrow Salt continues to be provided. Its purpose remains undisclosed. Its effect does not.',
+      'The season was adequate. Every season has been adequate. One of them will not be.',
+      'Output was counted. It was the number it was going to be.',
+    ],
+  },
+];
+
+export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE, ...HIVE];
 
 export function advisorsFor(faction: FactionId): AdvisorDef[] {
   return ADVISORS.filter((a) => a.faction === faction);

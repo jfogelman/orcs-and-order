@@ -263,6 +263,11 @@ export function cityYield(state: GameState, city: City): Yield {
     total.shields += y.shields;
     total.trade += y.trade;
   }
+  // Section 125: the Undercity, which is below all of that. Added after the
+  // tiles rather than to one of them, which is the whole of Jeremy's rule that
+  // it keeps producing through a pillaging -- raiders tear up improvements on
+  // the ground, and the ground is not where this is.
+  total.shields += cityFollyBonus(city, (b) => b.cityShields);
   if (city.disorder) {
     // A rioting city downs tools -- except on the one thing everybody in it
     // agrees about, which is whatever will calm the place down.
@@ -612,6 +617,12 @@ export function productionCostIn(state: GameState, city: City, item: ProductionI
 
 function baseCostIn(state: GameState, city: City, item: ProductionItem): number {
   const base = productionCost(item);
+  // Section 125: the Broodwarmth, a warm place to grow things in. Units only,
+  // and only in the Hive it stands in -- a building costs what it costs.
+  if (item.kind === 'unit') {
+    const off = cityFollyBonus(city, (b) => b.unitDiscount);
+    return off > 0 ? Math.max(1, Math.round(base * (1 - off))) : base;
+  }
   if (item.kind !== 'building' || !BUILDINGS[item.id]?.suppliesArmy) return base;
   const seat = capitalOf(state, city.owner);
   if (!seat) return base;
