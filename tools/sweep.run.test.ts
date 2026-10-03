@@ -13,7 +13,8 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { QUEEN } from '../src/sim/hivekin';
+import { BURROW } from '../src/sim/burrow';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -126,25 +127,27 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 125 slice A. The question is not "do the Hivekin win" -- it is
-  // **whether the Horde against the Kingdom still reads the same with a third
-  // side on the map**, which is the stated balance target for the whole
-  // section. So the control is the game exactly as it was and the arm is the
-  // same game with a seat that emerges around turn a hundred.
+  // Section 125 slice B, measured against slice A rather than against the
+  // two-sided game. Slice A already answered what a third seat costs; this
+  // asks what the three things that make them *them* are worth on top of it,
+  // and keeping the control at "the Hivekin exist but are inert" is the only
+  // way a shift here is attributable to this slice.
   //
-  // The arrival turn is hashed off the map seed rather than drawn from the
-  // shared stream, which is what makes this a clean pair: switching the Hivekin
-  // off does not shift a single roll, so the control arm is the game from
-  // before this section rather than a differently-shuffled one.
+  // The three go in together on purpose. They are one design -- a faction that
+  // hides, crosses ground nobody else can, and keeps a succession plan -- and
+  // measuring them apart would need three more arms and answer a question
+  // nobody asked. If this moves, the probe comes out before the sweep does.
   {
-    label: 'two sides',
+    label: 'seat only',
     apply: () => {
       control();
-      HIVEKIN.enabled = false;
+      BURROW.enabled = false;
+      QUEEN.enabled = false;
+      SPECIALS.hiveTiles = false;
     },
   },
   {
-    label: 'three sides',
+    label: 'what they are',
     apply: () => {
       control();
     },

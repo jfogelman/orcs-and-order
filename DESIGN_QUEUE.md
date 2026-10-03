@@ -10402,3 +10402,109 @@ the budget is per seat now and generous. The dominance test counted two
 half-turns to a day. The expansion tally was an array of length two. And three
 `every(p => p.alive)` checks became "both of the original empires", since a side
 that emerges at turn ninety is a contender rather than a guarantee.
+
+### Slice B: what makes them them
+
+Sink, Burrow, the Queen's succession, and the three resources. Measured against
+slice A rather than against the two-sided game, so a shift here is attributable
+to this slice and not to the seat existing.
+
+### Nothing in this game had ever been hidden
+
+This is the part that needed a concept rather than a rule. Fog of war is a fact
+about **tiles** -- `player.visible` is a bitmap, and "a unit on a lit tile is a
+unit you can see" was true everywhere in the game until now. The Sunken Legion
+wades, the Ogre Clan Brute shouts, the Tomb Wardens stand still: not one of them
+is invisible, and the question "can this player see that unit" had simply never
+been asked.
+
+`seenBy` asks it, and is deliberately the only place the answer lives. Four
+readers go through it -- the renderer, the AI's target search, `visibleEnemies`,
+and the pathfinder's occupant map. A rule about who can see what that is
+implemented four times is four different rules within a month.
+
+The pathfinder was the interesting one, because its own comment had already made
+the argument from the other direction:
+
+> Route by what this player actually knows, not by the true state of the board.
+> An enemy standing unseen in the fog used to block the route, so a move order
+> across unexplored ground silently failed and the unit just stood there -- and
+> **the failure itself leaked the enemy's position**.
+
+A sunk Burrower is that same leak with the fog taken away.
+
+### And the correction that came with it
+
+The first version routed *and resolved* moves on what the mover could see. That
+let an army walk into a defended city and capture it without a fight, because
+the defender happened to be standing on an unlit tile -- caught by
+`militia.test.ts`, which exists for exactly that.
+
+The distinction is worth writing down: **routing is planned on what a player
+knows and resolved on what is true.** Walking into somebody is how you find out
+they were there. The one thing genuinely not in the way is a sunk Burrower, and
+that is a fact about the Burrower rather than about who is looking -- it is
+under the ground, nobody is standing on anybody, and treading on it finds it out
+instead of stopping anyone.
+
+Being found out pushes it to free ground and costs it the turn. With nowhere to
+be pushed it stays down there, which is the price of hiding under a road
+somebody was about to use.
+
+### The Queen
+
+The one unit that cannot move and the one unit a city depends on. Her seat makes
+nothing at all while she is not in it -- production there is a thing she is
+doing, not a thing the city is doing -- and losing her starts a five-turn clock
+rather than ending anything. A single lucky raid deciding a faction outright is
+not a thing this game does anywhere else.
+
+Order matters in the tick: a Princess standing in the seat is grown **before**
+the countdown is checked, so walking one in on the last turn works. The other
+way round would be a turn too late and would feel like a cheat.
+
+Spare Princesses convert to something the Hive keeps, and **the choice is made
+at conversion, not at build time**. That is the whole argument for the caste:
+insurance you pick the use of after you know whether you needed it. Nobody grows
+one and the seat is given up, its units feral in the band that already exists --
+the bible's own answer, and it invents no third kind of owner.
+
+### Three tiles, and the thing they taught
+
+The resources ship as **ordinary specials**, per Jeremy: the flavour is the
+Hive's and the machinery is everybody's. That turned out to be the interesting
+part of the slice.
+
+Adding them broke three tests -- a one-city empire with no beakers, an AI
+fielding fewer kinds of unit, a fixture whose towns stopped being fed. Taking
+them back out fixed all three, which is section 93's dilution warning landing
+exactly as it was written: *adding to an unmeasured baseline is how a sweep
+becomes unreadable.*
+
+But the cause was not the extra specials. It was their **profile**. Broodmoss
+went in at food 3 / shields 2 on grass, where the two specials it diluted are
+food-leaning; a shields-heavy grass special pulls the AI's build order about,
+and over six seeds it cost a kind of unit a game. Priced against what they
+displace -- Broodmoss food-leaning like the grass it grows on, Chitin Vein
+within a point of Shiny Rocks, Marrow Salt within a point of the Deep Hole --
+and all three tests pass with the specials still in.
+
+They also have their own switch (`SPECIALS.hiveTiles`), which takes them out of
+the **roll** rather than merely making them inert. Section 93 drew that
+distinction and it is the only one that measures anything: a tile left in the
+roll still dilutes whatever it sits beside. A map change folded in with three
+new mechanics is a measurement nobody can read, and that is the mistake section
+123 made twelve times before giving up and counting something.
+
+### What is still a placeholder
+
+- **Five turns** for the succession. The bible's number, and nothing has
+  measured what it is worth.
+- **The two Burrower branches are not exclusive.** The bible calls Deep and
+  Ambush "two mutually exclusive specializations" and then writes them as two
+  advances off the same prerequisite, which is not a thing the tech tree can
+  express -- both are researchable. Shipped as written in the tree; the
+  exclusivity is an open question for Jeremy.
+- **The brood choice has no dialog yet.** The rule is complete and the AI
+  answers it; a human owner gets `pending` and `chooseBrood` is waiting for a
+  prompt to call it.
