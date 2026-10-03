@@ -64,6 +64,23 @@ export interface Player {
    * research. Absent means Normal, which is every save before section 113.
    */
   handicap?: { content: number; cost: number };
+  /**
+   * Turn until which nothing may attack this side. Section 125.
+   *
+   * Only ever set on the Hivekin, and only for the few turns after they emerge:
+   * they arrive as a Grub and two Fodder-caste on open ground, and a wandering
+   * band that happened to be nearby would otherwise end a whole faction on the
+   * turn it appeared. Absent on every side that started on the map.
+   */
+  /**
+   * The turn this side joined the game. Absent means turn one.
+   *
+   * Only section 125's Hivekin ever set it, and the one rule that reads it is
+   * the capitulation grace: how long you may hold no city is counted from when
+   * you started, which is the same number for everybody and a different turn.
+   */
+  joinedAt?: number;
+  safeUntil?: number;
   /** Map / UI colour, as a CSS hex string. */
   color: string;
   gold: number;
@@ -720,6 +737,14 @@ export interface GameState {
    * for two of the three routes.
    */
   victory?: VictoryKind;
+  /**
+   * The turn section 125's Hivekin come up, drawn once from their window.
+   *
+   * Stored rather than recomputed: it comes out of the shared random stream, so
+   * asking a second time would draw a second number and shift every roll after
+   * it -- which is the bug section 110's ending clock had.
+   */
+  hivekinAt?: number;
   /**
    * The game was won and the player asked to carry on anyway.
    *

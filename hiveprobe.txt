@@ -1,0 +1,9 @@
+window 90-120, clearOf 10, escort 2
+
+seed  drawn  arrived  firstHive  cities@200  units@200  alive  queen
+11    93     93       94         2           3          true   1
+22    93     93       94         5           2          true   1
+33    110    110      111        1           1          true   1
+44    93     93       97         1           1          true   1
+55    120    120      121        4           0          true   0
+66    113    113      114        3           2          true   1

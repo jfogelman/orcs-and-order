@@ -16,7 +16,7 @@ import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { distance, idx } from './engine/grid';
-import { FACTIONS } from './model/factions';
+import { FACTIONS, talks as canTalk } from './model/factions';
 import { TERRAIN, specialAt } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
@@ -1405,12 +1405,18 @@ class App {
     // A draw has no side, so it has one picture with both of them in it.
     if (!winner) return `${root}victory/draw.jpg`;
     // The two built endings have one scene each, whoever is looking at it.
-    if (this.state.victory === 'portal' || this.state.victory === 'object') {
-      return `${root}victory/${this.state.victory}.jpg`;
+    if (
+      this.state.victory === 'portal' ||
+      this.state.victory === 'object' ||
+      this.state.victory === 'hive'
+    ) {
+      // The Hive's own screen is filed under the advance that grants it rather
+      // than under the victory kind, as the other two are under theirs.
+      const art = this.state.victory === 'hive' ? 'all-is-the-hive' : this.state.victory;
+      return `${root}victory/${art}.jpg`;
     }
     const kind = this.state.victory === 'points' ? 'points' : 'conquest';
-    const side = winner.faction === 'orc' ? 'orc' : 'human';
-    return `${root}victory/${kind}-${side}.jpg`;
+    return `${root}victory/${kind}-${winner.faction}.jpg`;
   }
 
   /** One line about how it ended, rather than merely that it did. */
@@ -2132,8 +2138,14 @@ class App {
     el('stat-gold').textContent = `${p.gold}g`;
     // Section 116: the talks, and how long the peace has left while there is one.
     const talks = el<HTMLButtonElement>('btn-talks');
-    const rival = this.state.players.find((o) => o.id !== p.id && !o.barbarian && o.alive);
-    talks.hidden = !PEACE.enabled || !rival;
+    // Section 125: somebody who will actually sit down. The Hivekin hold a
+    // player slot and are a contender in every other respect, but they do not
+    // come to a table, so offering the button against them would open a screen
+    // that has nobody to put in it.
+    const rival = this.state.players.find(
+      (o) => o.id !== p.id && !o.barbarian && o.alive && canTalk(o.faction),
+    );
+    talks.hidden = !PEACE.enabled || !rival || !canTalk(p.faction);
     talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state)}` : 'Talks';
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;

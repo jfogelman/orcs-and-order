@@ -1,3 +1,5 @@
+import { placeQueen } from './hivekin';
+import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
 import { distance, fatCrossIndices, idx } from '../engine/grid';
@@ -1305,7 +1307,15 @@ export function foundCity(state: GameState, unit: Unit): City | null {
     food: 0,
     shields: 0,
     buildings: [],
-    producing: { kind: 'unit', id: state.players[unit.owner].faction === 'orc' ? 'goblin' : 'footman' },
+    // Whatever this side's first fighting unit is. Read off the faction rather
+    // than branched on, because the branch said "orc, else footman" and a third
+    // side would have founded Hives that opened by trying to build a Footman --
+    // which is section 123's settler-prize bug exactly, and that one cost twenty
+    // games and three sweeps to find because it looks like nothing at all.
+    producing: {
+      kind: 'unit',
+      id: FACTIONS[state.players[unit.owner].faction].starterUnit,
+    },
     workedTiles: [],
     disorder: false,
     foundedTurn: state.turn,
@@ -1319,6 +1329,8 @@ export function foundCity(state: GameState, unit: Unit): City | null {
   if (i >= 0) state.units.splice(i, 1);
 
   log(state, `${city.name} is founded.`, 'good', city.owner, 'city-founded');
+  // Section 125: the first Hive is built around her, so she arrives with it.
+  placeQueen(state, city);
   recomputeVisibility(state, city.owner);
   return city;
 }

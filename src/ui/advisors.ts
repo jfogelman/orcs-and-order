@@ -28,7 +28,7 @@ import { ashamed, betrayals, peaceLeft } from '../sim/diplomacy';
 import { idx } from '../engine/grid';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
-import {
+import { endingFor,
   ALT_VICTORY,
   endingBuilt,
   endingIn,
@@ -221,7 +221,7 @@ export function situationOf(state: GameState, playerId: number): Situation {
   if (ALT_VICTORY.enabled && ending === null) {
     for (const p of state.players) {
       if (p.id === playerId || p.barbarian || !p.alive || p.endingBegunAt === undefined) continue;
-      rivalEnding = p.faction === 'orc' ? 'portal' : 'object';
+      rivalEnding = endingFor(p.faction);
     }
   }
 

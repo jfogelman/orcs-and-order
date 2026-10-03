@@ -135,9 +135,15 @@ function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   for (const seed of LATE_SEEDS) {
     tried.push(seed);
     const found = new Map<number, GameState>();
-    // Three seats' worth of half-turns: a game can acquire a wilds slot
-    // part-way through, and a budget counted for two stops in the two hundreds.
-    playGame(seed, 930, (state) => {
+    // Four seats' worth of half-turns, and this is the third time this exact
+    // trap has been walked into. A budget counted for two seats stopped in the
+    // two hundreds when games acquired a wilds slot (section 123); counted for
+    // three it stops just short of turn 299 now that section 125's Hivekin take
+    // a seat of their own around turn ninety. Counted per seat and generously,
+    // because the cost of overestimating is some wasted loop iterations and the
+    // cost of underestimating is a test that fails a month later for a reason
+    // nobody remembers.
+    playGame(seed, (300 + 10) * 4, (state) => {
       for (const turn of want) {
         if (state.turn >= turn && !found.has(turn)) {
           const snap = structuredClone(state);
@@ -388,7 +394,13 @@ const LATE: { name: string; about: string; at: number; check: (s: GameState) => 
     at: 200,
     check: (state) => {
       expect(state.turn).toBeGreaterThanOrEqual(200);
-      expect(state.players.every((p) => p.alive)).toBe(true);
+      // The two that started, specifically. Since section 125 a game may also
+      // hold a Hive that came up around turn ninety, and that side is allowed
+      // to have been killed by two hundred -- it is a contender, not a
+      // guarantee. What this fixture is for is a late board with both of the
+      // original empires still on it.
+      expect(state.players[0].alive, 'the Horde').toBe(true);
+      expect(state.players[1].alive, 'the Kingdom').toBe(true);
       expect(playerCities(state, 0).length).toBeGreaterThan(0);
       expect(playerCities(state, 1).length).toBeGreaterThan(0);
     },
@@ -404,7 +416,8 @@ const LATE: { name: string; about: string; at: number; check: (s: GameState) => 
       // The seat has to be the player's, or End Turn plays the game for them.
       expect(state.players[0].controller).toBe('human');
       expect(state.settings.maxTurns - state.turn).toBe(31);
-      expect(state.players.every((p) => p.alive)).toBe(true);
+      expect(state.players[0].alive, 'the Horde').toBe(true);
+      expect(state.players[1].alive, 'the Kingdom').toBe(true);
     },
   },
   {
@@ -415,7 +428,8 @@ const LATE: { name: string; about: string; at: number; check: (s: GameState) => 
     at: 299,
     check: (state) => {
       expect(state.turn).toBe(299);
-      expect(state.players.every((p) => p.alive)).toBe(true);
+      expect(state.players[0].alive, 'the Horde').toBe(true);
+      expect(state.players[1].alive, 'the Kingdom').toBe(true);
       // Both still standing is the whole point: a conquest ending is a
       // different screen and is reachable from almost any save.
       expect(playerCities(state, 0).length).toBeGreaterThan(0);
