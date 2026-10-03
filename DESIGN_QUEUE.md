@@ -10232,3 +10232,56 @@ re-roll dropped beside the sprites used to lose silently to the original filed
 with everybody else's, and the run would report the sheet as up to date rather
 than take the new one.
 
+
+## 125. The Hivekin, slice 0: what the artillery never said
+
+The third faction is being built in slices (`HIVEKIN_PLAN.md` carries the design,
+the twenty decisions behind it and the order of work). This is slice zero, which
+is not about the Hivekin at all -- it is a documentation bug they would otherwise
+have inherited, fixed first so it is not tangled up in a new faction.
+
+Reported by Jeremy (2026-10-01): *the Orcpedia for current siege doesn't include
+how they run out/replenish.*
+
+### What was actually missing
+
+Not just the magazine. `abilityNotes` printed the city multiplier, the two-tile
+strike, the thrown axe, healing, breath, detonation, execution, regeneration and
+crowding -- and never once the word *ammunition*. But the rule that reads as a
+bug is the other one, in `targetsFor`:
+
+- A **labour** loader is fed only by a neighbour with `firstStrikes > 0`. For the
+  Kingdom that is the Archer and nothing else, so a Ballista parked behind a line
+  of footmen cannot be reloaded by any of them.
+- A **sacrifice** loader is fed only by an `expendable` neighbour -- a Goblin or
+  an Orc -- and eats them, a group loading one missile for each creature in it.
+
+Neither predicate was reachable from anywhere in the game. What a player got
+instead was `Out of missiles. Reload it, or take it back to a city.`, which names
+an action that silently does nothing with the wrong neighbour standing by.
+
+### Both ends of the rule, not one
+
+The first pass wrote it on the artillery, which is half an answer: the player
+deciding *what to escort a ballista with* is reading the escort, and the Archer's
+card was completely empty. So `feedsWhat` does the reverse lookup off the same two
+predicates, and the loader's own card says so -- including telling a Goblin, in as
+many words, that it is ammunition. It sits directly above that creature's existing
+blurb, *"Fast, cheap, and entirely expendable -- a fact the goblins are aware
+of."*, which is where the joke was waiting all along.
+
+Faction-scoped, which falls out correctly rather than needing a special case: the
+Axethrower has `firstStrikes` and could feed a labour loader, but the Horde has
+not got one, so its card stays quiet.
+
+### Read off the data, as the rest of the card is
+
+Every number and every name comes from the tables -- `def.ammo`, `def.reloadsBy`,
+and the two predicates -- so a retune carries onto the card by itself. A test
+asserts that anything the pedia offers as a loader satisfies one of the two
+predicates, so if `sim/abilities.ts` moves and the pedia does not, the suite says
+so. 15 tests; the suite is 969.
+
+One of those tests failed honestly on the way in. It asserted that nothing
+without a magazine mentions missiles, which the **Orc** now does -- because it is
+one. The assertion was wrong, not the note.
