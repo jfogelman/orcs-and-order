@@ -1,3 +1,4 @@
+import type { FactionId } from '../model/types';
 import { TECHS_BY_ID } from '../model/techs';
 import { unitType } from '../model/units';
 import type { City, GameState, TradeRates, Unit } from '../model/types';
@@ -46,6 +47,13 @@ import { workBanked } from '../sim/endings';
  * report's numbers are only worth having if they are the real ones, and there
  * are now two sources of gold rather than one.
  */
+/** What each side calls the thing it reads instead of thinking. */
+const REPORT_TITLE: Record<FactionId, string> = {
+  orc: 'Horde Report',
+  human: 'Kingdom Survey',
+  hivekin: 'The State Of The Hive',
+};
+
 export function empireIncome(state: GameState, playerId: number) {
   const player = state.players[playerId];
   let gold = 0;
@@ -213,7 +221,7 @@ export function openHordeReport(
 
   // The Horde gets a Report; the Kingdom gets something drier for the same
   // screen, because the joke costs nothing but the word.
-  const title = player.faction === 'orc' ? 'Horde Report' : 'Kingdom Survey';
+  const title = REPORT_TITLE[player.faction];
 
   openModal({
     title,

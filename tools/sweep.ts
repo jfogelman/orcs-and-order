@@ -12,6 +12,7 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
+import { HIVEKIN } from '../src/sim/hivekin';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
@@ -92,6 +93,7 @@ export const LEVERS: Record<string, object> = {
   INTIMIDATE,
   LEGION,
   RUINS,
+  HIVEKIN,
   PREY,
   PEACE,
   DIPLOMACY_AI,
@@ -548,6 +550,16 @@ export interface Summary {
   games: number;
   orcWins: number;
   humanWins: number;
+  /**
+   * Games won by section 125's third side, and the turn they arrived on.
+   *
+   * A column of its own rather than folded into anybody else's, because the
+   * question this section has to answer is not "did the Hivekin win" -- it is
+   * **whether the Horde against the Kingdom still reads the same with a third
+   * side on the map**, which is the stated balance target. That needs their
+   * wins taken out of the other two columns rather than hidden in them.
+   */
+  hiveWins: number;
   draws: number;
   /**
    * Games the loop gave up on before anybody won or the limit came. Should
@@ -580,6 +592,9 @@ export function summarise(results: ArmResult[]): Summary[] {
     games: r.outcomes.length,
     orcWins: r.outcomes.filter((o) => o.winner === 0).length,
     humanWins: r.outcomes.filter((o) => o.winner === 1).length,
+    // By seat, not by index: the Hivekin take whatever slot is free when they
+    // emerge, which is 2 in a quiet game and 3 in one with raiders in it.
+    hiveWins: r.outcomes.filter((o) => o.winner !== null && o.winner > 1).length,
     draws: r.outcomes.filter((o) => o.victory === 'draw').length,
     unfinished: r.outcomes.filter((o) => o.victory === null).length,
     turns: mean(r.outcomes.map((o) => o.turns)),
@@ -614,7 +629,7 @@ export function report(results: ArmResult[]): string {
   const rows = summarise(results);
   const pad = (s: string | number, n: number) => String(s).padStart(n);
   const head =
-    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
+    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}${pad('hive', 6)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
     `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob', 16)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
   const body = rows.map(
@@ -624,6 +639,7 @@ export function report(results: ArmResult[]): string {
       pad(r.games, 6) +
       pad(r.orcWins, 5) +
       pad(r.humanWins, 5) +
+      pad(r.hiveWins, 6) +
       pad(r.draws, 5) +
       pad(r.unfinished, 6) +
       pad(r.turns.toFixed(0), 7) +

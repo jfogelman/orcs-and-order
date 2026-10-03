@@ -45,7 +45,11 @@ export type EffectId =
   // A garrison charging out past the Broken Catapult.
   | 'sally'
   // Section 122: the sea breaking white as the Sunken Legion stands up in it.
-  | 'surf';
+  | 'surf'
+  // Section 125: what a Spitter-caste throws. Every ranged unit in the game has
+  // a projectile that travels and turns to face the way it is going, and
+  // without one of its own the Hivekin's would have fired nothing visible.
+  | 'spit';
 
 export interface EffectOptions {
   /**

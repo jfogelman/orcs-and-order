@@ -22,14 +22,23 @@ describe('expansion accounting', () => {
       beginPlayerTurn(state, 0);
 
       const owners = new Map<number, number>();
-      const tally = [0, 1].map(() => ({ founded: 0, captured: 0, lost: 0 }));
+      // Keyed by owner rather than sized to two. Section 125's third side takes
+      // a seat part-way through the game, and `tally[2]` was undefined the
+      // moment it founded anything. What the test reports is still the two
+      // empires; what it counts has to be whoever is actually on the map.
+      const tally = new Map<number, { founded: number; captured: number; lost: number }>();
+      const seat = (id: number) => {
+        let row = tally.get(id);
+        if (!row) tally.set(id, (row = { founded: 0, captured: 0, lost: 0 }));
+        return row;
+      };
       const sweep = () => {
         for (const c of state.cities) {
           const was = owners.get(c.id);
-          if (was === undefined) tally[c.owner].founded++;
+          if (was === undefined) seat(c.owner).founded++;
           else if (was !== c.owner) {
-            tally[c.owner].captured++;
-            tally[was].lost++;
+            seat(c.owner).captured++;
+            seat(was).lost++;
           }
           owners.set(c.id, c.owner);
         }
@@ -42,9 +51,9 @@ describe('expansion accounting', () => {
       }
 
       for (const p of [0, 1]) {
-        totals[p].founded += tally[p].founded;
-        totals[p].captured += tally[p].captured;
-        totals[p].lost += tally[p].lost;
+        totals[p].founded += seat(p).founded;
+        totals[p].captured += seat(p).captured;
+        totals[p].lost += seat(p).lost;
         totals[p].final += playerCities(state, p).length;
       }
       rows.push(
@@ -52,8 +61,8 @@ describe('expansion accounting', () => {
           [0, 1]
             .map(
               (p) =>
-                `${p === 0 ? 'orc' : 'hum'} f${String(tally[p].founded).padStart(2)} ` +
-                `c${String(tally[p].captured).padStart(2)} l${String(tally[p].lost).padStart(2)} ` +
+                `${p === 0 ? 'orc' : 'hum'} f${String(seat(p).founded).padStart(2)} ` +
+                `c${String(seat(p).captured).padStart(2)} l${String(seat(p).lost).padStart(2)} ` +
                 `=${String(playerCities(state, p).length).padStart(2)}`,
             )
             .join('  |  '),

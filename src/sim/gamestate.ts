@@ -5,7 +5,7 @@ import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
-import { FACTIONS, rivalFactions, talks } from '../model/factions';
+import { FACTIONS, rivalFactions } from '../model/factions';
 import { unitType } from '../model/units';
 import type {
   City,
@@ -265,7 +265,8 @@ export function makePlayer(
  * faction that arrives mid-game is never somebody's opening rival.
  */
 function startingRival(playerFaction: FactionId): FactionId {
-  return rivalFactions(playerFaction).find(talks) ?? rivalFactions(playerFaction)[0];
+  const rivals = rivalFactions(playerFaction);
+  return rivals.find((f) => FACTIONS[f].startsOnMap) ?? rivals[0];
 }
 
 export function createGame(opts: NewGameOptions = {}): GameState {

@@ -57,6 +57,13 @@ import { escapeHtml, openModal } from './dom';
  * people, and two places that each know where the art lives is one place too
  * many the day it moves.
  */
+/** What each side calls the six people it does not listen to. */
+const COUNCIL_TITLE: Record<FactionId, string> = {
+  orc: 'Those Who Advise',
+  human: 'The Council',
+  hivekin: 'Those Who Report',
+};
+
 export function portraitPath(id: string): string {
   const base = import.meta.env.BASE_URL;
   return `${base.endsWith('/') ? base : `${base}/`}advisors/${id}.png`;
@@ -416,7 +423,7 @@ export function openAdvisors(
   };
 
   openModal({
-    title: player.faction === 'orc' ? 'Those Who Advise' : 'The Council',
+    title: COUNCIL_TITLE[player.faction],
     width: 'min(760px, 96vw)',
     body: `
       <div class="panel-body advisor-note muted">

@@ -1,6 +1,6 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
-import { FACTIONS } from '../model/factions';
+import { FACTIONS, rivalFactions } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
 import type { TerrainDef, TerrainSpecial } from '../model/terrain';
 import { SPECIALS } from '../model/terrain';
@@ -378,7 +378,13 @@ function creatureSection(faction: FactionId): string {
  */
 export function openPedia(state: GameState, player: Player, focus?: string): void {
   const faction = player.faction;
-  const other: FactionId = faction === 'orc' ? 'human' : 'orc';
+  // Everybody else, in order, rather than "the other one". The roster used to
+  // be two tabs because there were two sides; a third would simply not have
+  // been in the book at all, which is the one place a player goes to find out
+  // what the thing that just appeared can do.
+  const others: FactionId[] = rivalFactions(faction);
+  /** The pane a creature of this faction lives in. */
+  const paneFor = (f: FactionId) => (f === faction ? 'yours' : `them-${f}`);
 
   const techList = TECHS.filter((t) => t.faction === 'both' || t.faction === faction)
     .map(
@@ -460,7 +466,12 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
     body: `
       <div class="pedia-tabs">
         <button class="pedia-tab active" data-tab="yours">${escapeHtml(FACTIONS[faction].name)}</button>
-        <button class="pedia-tab" data-tab="theirs">${escapeHtml(FACTIONS[other].name)}</button>
+        ${others
+          .map(
+            (f) =>
+              `<button class="pedia-tab" data-tab="${paneFor(f)}">${escapeHtml(FACTIONS[f].name)}</button>`,
+          )
+          .join('')}
         <button class="pedia-tab" data-tab="techs">Advances</button>
         <button class="pedia-tab" data-tab="buildings">Structures</button>
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
@@ -474,10 +485,15 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         <p class="flavor">${escapeHtml(FACTIONS[faction].blurb)}</p>
         <div class="pedia-grid">${creatureSection(faction)}</div>
       </div>
-      <div class="pedia-pane" data-pane="theirs" hidden>
-        <p class="flavor">${escapeHtml(FACTIONS[other].blurb)}</p>
-        <div class="pedia-grid">${creatureSection(other)}</div>
-      </div>
+      ${others
+        .map(
+          (f) => `
+      <div class="pedia-pane" data-pane="${paneFor(f)}" hidden>
+        <p class="flavor">${escapeHtml(FACTIONS[f].blurb)}</p>
+        <div class="pedia-grid">${creatureSection(f)}</div>
+      </div>`,
+        )
+        .join('')}
       <div class="pedia-pane" data-pane="techs" hidden>
         <p class="flavor">Costs shown are the base price, before the surcharge for
         everything already known.</p>
@@ -912,10 +928,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
       if (focus && UNIT_TYPES[focus]) {
         const creature = CREATURES_BY_ID[unitType(focus).base];
-        jumpTo(
-          creature.faction === faction ? 'yours' : 'theirs',
-          `#pedia-${CSS.escape(creature.id)}`,
-        );
+        jumpTo(paneFor(creature.faction), `#pedia-${CSS.escape(creature.id)}`);
       } else if (focus && BUILDINGS[focus]) {
         jumpTo('buildings', `#pedia-b-${CSS.escape(focus)}`);
       }

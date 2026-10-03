@@ -2614,6 +2614,10 @@ class App {
 const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
   archer: { effect: 'arrow', sound: 'arrow' },
   ballista: { effect: 'bolt', sound: 'siege' },
+  spitter: { effect: 'spit', sound: 'arrow' },
+  // Artillery, and it arrives like artillery: the Bloat-caste reuses the bolt
+  // on purpose rather than wanting a strip of its own.
+  bloatcaste: { effect: 'bolt', sound: 'siege' },
   goblincatapult: { effect: 'goblin-toss', sound: 'siege' },
   mage: { effect: 'magic', sound: 'magic' },
   // The axethrower used to be here. It is not artillery any more -- it closes

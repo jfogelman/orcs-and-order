@@ -10285,3 +10285,120 @@ so. 15 tests; the suite is 969.
 One of those tests failed honestly on the way in. It asserted that nothing
 without a magazine mentions missiles, which the **Orc** now does -- because it is
 one. The assertion was wrong, not the note.
+
+### Slice A: a third side exists
+
+The seat, and nothing with a new mechanic in it. Sink, Burrow, the Queen's
+succession and the terrain resources are all slice B, deliberately: if the
+numbers move, they moved for a reason that is in this list.
+
+**What the compiler found.** Widening `FactionId` produced thirty-three errors
+across seven files -- `FACTIONS`, `PALACE_CHASSIS`, the palace modules' tiers,
+perk names, two tables in `suggestions.ts`, `VOICES` in the talks screen, and
+two in `tools/`. All of them wanted content rather than thought. `contenders()`
+was already a list, and dominance, elimination, points-at-deadline, scoring and
+the AI's target selection all iterated it correctly, which is why a third
+contender was ever affordable.
+
+**What it could not find** was every place that said "the other side" in prose.
+`otherFaction` was a coin flip and could only ever have been; it is
+`rivalFactions` now. The rest are below, and two of them were real bugs.
+
+### The three bugs only a third side could have found
+
+**Every seed emerged on turn 117.** `state.rngState` begins as `seed ^
+0x1d872b41`, so two small seeds differ only in the low byte. One xorshift round
+later `float()` reads the top bits, which have not been mixed yet, so **the
+first draw of a fresh game is very nearly seed-independent**. Anything taking a
+single early roll from the shared stream gets the same answer whatever the seed.
+The arrival turn is hashed off the seed instead -- better anyway, since taking
+nothing from the stream means an arm with the Hivekin switched off is the game
+from before this section rather than a differently-shuffled one, in the manner
+of section 59.
+
+The underlying weakness is left alone on purpose. Warming the generator would
+change every seed's worldgen and invalidate the fixtures and every historical
+sweep number in this file, which is not a thing to do inside another section.
+
+**They were eliminated the turn after arriving, every seed.** The capitulation
+grace was a calendar turn -- hold no city past turn 15 and you are finished --
+which was the same thing as "fifteen turns to get started" only while everybody
+started on turn one. Counted from `joinedAt` now, which is the rule that was
+always meant.
+
+**A new Hive would have opened by building a Footman.** `foundCity` set its
+default production with `faction === 'orc' ? 'goblin' : 'footman'`. That is
+section 123's settler-prize bug exactly -- the one that cost twenty games and
+three sweeps to find, because a side quietly building the wrong thing looks like
+nothing at all. Read off `FACTIONS[...].starterUnit` now, with a test that a new
+Hive opens on something it can actually grow.
+
+All three were found by one instrumented probe (`tools/hiveprobe.run.test.ts`,
+six seeds, forty seconds) rather than by a sweep. Section 123's lesson applied
+before the fact rather than after: **when something is not working, go and count
+something.**
+
+### Peace was a single global flag
+
+`atPeace` asked only whether both sides were contenders and whether a peace was
+running. That was a fair simplification with exactly two empires and a bug the
+moment there were three: a Horde-Kingdom treaty would have quietly made the
+Hivekin peaceful toward both, and `hostile` would have agreed that nobody could
+attack them. `empires()` now requires both sides to be a faction that talks, and
+"fought, not talked to" is what makes that the correct fix rather than merely
+the cheap one. If a later faction does negotiate, that is the line that has to
+become a peace per pair.
+
+### Dominance, with more than one rival
+
+Three quarters of the map was measured when it meant "three times as much as the
+only other side". With two rivals it would mean three times as much as both
+together, which is not a backstop -- it is an ending that never fires, and a
+game that cannot end on dominance decides on points, which section 23 exists to
+avoid. The share is held against the rest of the field instead: 0.75 at two
+seats, 0.60 at three, 0.50 at four, and **exactly 0.75 at two**, so every
+measured number in that file still describes the game it was measured on.
+
+### What the Hivekin are
+
+Fourteen castes, every one with `counts: [1]`. The absence is the point: the
+Horde's identity is a counting ladder and the Kingdom's is a committee that
+approves one, and the Hivekin field numbers by growing Fodder cheaply. Two
+weaknesses are deliberate -- no scout of any kind, which is why the Fodder is M1
+where the Goblin is M2, and no caster or flier at all, which is the premise the
+Warden-caste exists to preserve.
+
+Three follies rather than four, an asymmetry Jeremy chose and they have not
+noticed. Two of the effects wanted fields that did not exist: `cityShields`,
+read after the worked tiles rather than as one of them, which is the whole of
+the rule that the Undercity keeps producing through a pillaging; and
+`unitDiscount`, units only and that city only. The third, `casteAttack`, is
+restricted to two named creatures the way the Long Vigil's `mountedDefense`
+already was.
+
+Their ending is section 110's three-building shape at the Horde's pricing, down
+a road costing 860 beakers against the Horde's 430 and the Kingdom's 965.
+**That mixture is nobody's measured setting** and is the first dial to turn.
+
+They are not offered in the faction picker. `startsOnMap` is a field rather than
+an inference from `talks`, because a later faction could perfectly well emerge
+*and* negotiate: playing as a side that emerges would need an opening of its
+own, and leaving the measured opening alone was the entire point of emergence.
+
+### Six advisors, in the one register that is hardest to keep
+
+Nothing is remarkable and everything was always going to happen. A test asserts
+no exclamation, no rhetorical question and no word like "disaster" -- if a line
+would sound right in the Blademaster's mouth it is wrong in theirs. The Voice
+keeps the diplomacy seat and uses it to say there will be no talking, which is
+funnier than a table and is also why `VOICES` is `Partial`: a missing key is
+what makes `talks()` load-bearing rather than decorative.
+
+### Four fixtures that assumed two seats
+
+The late-game saves budgeted half-turns for three seats and stopped short of
+turn 299 with four -- the third time that exact trap has been walked into, so
+the budget is per seat now and generous. The dominance test counted two
+half-turns to a day. The expansion tally was an array of length two. And three
+`every(p => p.alive)` checks became "both of the original empires", since a side
+that emerges at turn ninety is a contender rather than a guarantee.

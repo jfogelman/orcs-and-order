@@ -110,6 +110,43 @@ export const CITIZEN_RACES: CitizenRace[] = [
     hasFemale: true,
     blurb: 'Will explain the rumbling if given the slightest encouragement.',
   },
+  // --------------------------------------------------------- section 125
+  //
+  // Four sorts, and the joke is the inverse of the Horde's. The Horde has the
+  // most kinds available because it is less an empire than an ongoing accident
+  // that keeps acquiring participants; the Hive has the fewest, and the
+  // differences between them are barely differences.
+  {
+    id: 'hk-worker',
+    name: 'Worker-caste',
+    faction: 'hivekin',
+    weight: 4,
+    blurb: 'Was grown for this. Is doing this.',
+  },
+  {
+    id: 'hk-fodder',
+    name: 'Fodder-caste',
+    faction: 'hivekin',
+    needs: 'caste-fodder',
+    weight: 4,
+    blurb: 'Grown in quantity, on the understanding that quantity is the point.',
+  },
+  {
+    id: 'hk-soldier',
+    name: 'Soldier-caste',
+    faction: 'hivekin',
+    needs: 'caste-soldier',
+    weight: 2,
+    blurb: 'Between occasions to fight, it stands where it was put.',
+  },
+  {
+    id: 'hk-tender',
+    name: 'Tender-caste',
+    faction: 'hivekin',
+    needs: 'happiness',
+    weight: 1,
+    blurb: 'Looks after the brood. Has not been told why this matters and does it anyway.',
+  },
 ];
 
 export const CITIZEN_BY_ID: Record<string, CitizenRace> = Object.fromEntries(

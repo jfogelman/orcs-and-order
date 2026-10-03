@@ -13,6 +13,21 @@ export interface FactionDef {
   shade: string;
   /** The advance every member of this faction starts the game already knowing. */
   startTech: TechId;
+  /**
+   * Whether this side is on the map at turn one, and so can be chosen to play.
+   *
+   * Section 125's Hivekin are not: they **emerge**, around the middle of the
+   * game, on ground nobody took. That is a rule about the world rather than
+   * about them, which is why it is a field here and not inferred from `talks`
+   * -- a later faction could perfectly well emerge *and* negotiate, or start on
+   * the map and refuse to.
+   *
+   * Playing as a side that emerges is a real question and an open one: it would
+   * need its own opening, and the whole point of emergence was to leave the
+   * measured opening alone. Until that is answered, the picker offers the two
+   * that start.
+   */
+  startsOnMap: boolean;
   /** The unit that founds cities. */
   settlerUnit: string;
   /** The first fighting unit. */
@@ -30,6 +45,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     color: '#8ab53f',
     shade: '#40561c',
     startTech: 'first-orc',
+    startsOnMap: true,
     settlerUnit: 'peon',
     starterUnit: 'goblin',
     blurb:
@@ -70,6 +86,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     color: '#5b9bd8',
     shade: '#1f3f66',
     startTech: 'first-human',
+    startsOnMap: true,
     settlerUnit: 'peasant',
     starterUnit: 'footman',
     blurb:
@@ -114,6 +131,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     color: '#e08a2e',
     shade: '#6d3c10',
     startTech: 'first-hivekin',
+    startsOnMap: false,
     settlerUnit: 'grub',
     starterUnit: 'fodder',
     blurb:
@@ -149,6 +167,9 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
 };
 
 export const FACTION_IDS: FactionId[] = ['orc', 'human', 'hivekin'];
+
+/** The sides a new game may be started as, and that begin on the map. */
+export const STARTING_FACTIONS: FactionId[] = FACTION_IDS.filter((f) => FACTIONS[f].startsOnMap);
 
 /**
  * Everybody who is not this one.

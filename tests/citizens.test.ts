@@ -48,11 +48,11 @@ describe('which sorts of people will live with you', () => {
     for (const race of CITIZEN_RACES) {
       if (!race.needs) continue;
       const state2 = game();
-      state2.players[0].techs.push(race.needs);
-      state2.players[1].techs.push(race.needs);
-      const reachable = state2.players.some((p) =>
-        availableRaces(p).some((r) => r.id === race.id),
-      );
+      // Given to a player of that sort's own faction. The board seats two, so
+      // before section 125 handing the advance to both covered every sort there
+      // was; a Hivekin sort can only ever turn up in a Hivekin city.
+      const who = { ...state2.players[0], faction: race.faction, techs: [race.needs] };
+      const reachable = availableRaces(who).some((r) => r.id === race.id);
       expect(reachable, `${race.id} needs '${race.needs}', which unlocks nothing`).toBe(true);
     }
   });

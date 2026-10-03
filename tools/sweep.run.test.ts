@@ -13,6 +13,7 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
+import { HIVEKIN } from '../src/sim/hivekin';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -125,26 +126,25 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 123, twelfth pass, and the probe has been doing the work for the
-  // last three. What it found, in order: guardians that strike charge the side
-  // that stumbles; guardians that never die block the roads; and an AI that
-  // walks at a sleeping ruin without asking what lives there loses a dozen
-  // units a game to what stands up.
+  // Section 125 slice A. The question is not "do the Hivekin win" -- it is
+  // **whether the Horde against the Kingdom still reads the same with a third
+  // side on the map**, which is the stated balance target for the whole
+  // section. So the control is the game exactly as it was and the arm is the
+  // same game with a seat that emerges around turn a hundred.
   //
-  // All three are shut now -- a guard that never swings first, a ruin that lies
-  // back down when nobody is bothering it, and an errand nobody starts unless
-  // they would win the fight at the end of it. The probe says the sides now
-  // wake 4.1 against 3.2 and lose 8.7 against 6.7, where it was 5.7/1.6 and
-  // 11.8/6.3. This asks what that is worth in games.
+  // The arrival turn is hashed off the map seed rather than drawn from the
+  // shared stream, which is what makes this a clean pair: switching the Hivekin
+  // off does not shift a single roll, so the control arm is the game from
+  // before this section rather than a differently-shuffled one.
   {
-    label: 'empty map',
+    label: 'two sides',
     apply: () => {
       control();
-      RUINS.enabled = false;
+      HIVEKIN.enabled = false;
     },
   },
   {
-    label: 'ruins',
+    label: 'three sides',
     apply: () => {
       control();
     },
