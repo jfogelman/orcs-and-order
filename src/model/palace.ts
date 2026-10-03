@@ -134,7 +134,11 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
   // no corners, so the two points that mean "corner" elsewhere are read as the
   // nearest and the left-most places it meets the ground.
   hivekin: {
-    width: 0.58,
+    // Wider than the other two, because the art is wider than theirs: the
+    // Warcamp and the Grand Hall are 128 by 117 and 128 by 99, and a Hive is
+    // 128 by 88. Matching their *width* share left a mound that everything
+    // hung off it stood taller than. Matched on height instead.
+    width: 0.76,
     points: {
       // The tunnel mouth, at its base: the opening runs from about x 28 to 48.
       door: [38, 80],
@@ -233,7 +237,10 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     // it, so the Kingdom's wings grow faster with their tier than anything else:
     // the shrine annex is a shed and the cathedral the tallest thing there.
     // Wholly behind the hall, like every wing.
-    per: { human: { size: 0.44, tierScale: [0.8, 1, 1.36] } },
+    per: {
+      human: { size: 0.44, tierScale: [0.8, 1, 1.36] },
+      hivekin: { size: 0.46, nudge: [10, 4] },
+    },
     behind: true,
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
   },
@@ -252,7 +259,14 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     // Iron-Plated Tower at two thirds of the top tier's, since its art is a solid
     // block to the top of its crown and read three times the hall's height.
     at: { point: 'tower', anchor: 'plinth', size: 0.914 },
-    per: { orc: { tierScale: [0.84, 0.84, 0.773] }, human: { size: 0.774 } },
+    // A spire grown out of a mound is not a watchtower on a corner: at the
+    // Kingdom's share it stood half again as tall as the Hive and touched
+    // nothing. Two thirds, and pulled in over the chassis rather than off it.
+    per: {
+      orc: { tierScale: [0.84, 0.84, 0.773] },
+      human: { size: 0.774 },
+      hivekin: { size: 0.6, nudge: [-26, 6] },
+    },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
   {
@@ -264,6 +278,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       hivekin: ['Open Tunnel', 'Chitin Valve', 'Sealed Valve'],
     },
     at: { point: 'door', anchor: 'mid', size: 0.23 },
+    per: { hivekin: { size: 0.3, nudge: [0, 2] } },
     blurb: 'The part visitors are meant to look at while they wait.',
   },
   {
@@ -276,7 +291,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     },
     at: { point: 'roof', anchor: 'foot', size: 0.19 },
     // The Horde's are drawn facing the other way, towards the gate below them.
-    per: { orc: { flip: true } },
+    per: { orc: { flip: true }, hivekin: { size: 0.15 } },
     blurb: 'Cloth on a pole. Enormously important cloth, on an enormously important pole.',
   },
 ];

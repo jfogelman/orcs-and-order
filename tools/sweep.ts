@@ -226,7 +226,13 @@ export function halfTurnsFor(state: GameState): number {
   // turn 220 and every one of those games came back with no winner. Budget for
   // the seat whether or not it has been taken yet.
   const mayWake = RUINS.enabled && !state.players.some((p) => p.barbarian);
-  const seats = state.players.length + (mayWake ? 1 : 0);
+  // Section 125 is the same trap a third time, and this one was caught by the
+  // measurement rather than before it: six of 108 three-sided games stopped at
+  // turn 294 to 299 with nobody having won, because the Hivekin take a seat of
+  // their own around turn a hundred and the budget was counted without them.
+  // An unfinished game is not a draw -- it is a game missing from every column.
+  const mayEmerge = HIVEKIN.enabled && !state.players.some((p) => p.faction === 'hivekin');
+  const seats = state.players.length + (mayWake ? 1 : 0) + (mayEmerge ? 1 : 0);
   return (state.settings.maxTurns + TURN_SLACK) * seats;
 }
 

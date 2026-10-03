@@ -718,7 +718,19 @@ def find_source(folder: Path, name: str) -> Path | None:
     applied between folders rather than only within one.
     """
     best: Path | None = None
+    # A name carrying its own parenthetical asks for that exact file. Two
+    # orientations of the Hivekin's chassis were dropped together, sixteen
+    # seconds apart, and "the newest wins" quietly picked one -- re-saving the
+    # other would have mirrored the whole capital with nothing in the repo
+    # recording that a choice had ever been made. Naming it is that record.
+    exact = "(" in name
     for path in iter_sources(folder):
+        if exact:
+            if path.stem.lower() != name.lower():
+                continue
+            if best is None or path.stat().st_mtime > best.stat().st_mtime:
+                best = path
+            continue
         base, variant = normalise_stem(path.stem)
         if variant or base != name.lower():
             continue
@@ -2467,7 +2479,11 @@ PALACE: dict[str, str] = {
     "orc-banners-3": "massive blackened war-banners",
     # Section 125. Named for the tier rather than for the module, in the
     # Hivekin's own register: a shape is called what it is.
-    "hivekin-base": "base chassis",
+    # The flipped one, deliberately: it puts the tunnel mouth left of centre,
+    # where the Horde's door (x 37) and the Kingdom's (x 38) both are, so the
+    # chassis points below follow the convention the other two established
+    # rather than needing a mirrored set of their own.
+    "hivekin-base": "base chassis (flipped horizontal)",
     "hivekin-tower-1": "low vent",
     "hivekin-tower-2": "watch spire",
     "hivekin-tower-3": "high spire",
