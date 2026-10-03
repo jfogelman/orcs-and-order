@@ -1,5 +1,9 @@
-window     seeds  alive  hives  units  share of the world  vs empires
-90-120     8      7      3.9    23.7    21%                6.6 each
-60-90      8      7      3.0    21.6    18%                6.2 each
-35-65      8      7      3.4    19.6    20%                6.4 each
-15-40      8      7      4.4    35.6    25%                6.1 each
+seed  founded  taken  abandoned  vanished  endHives  garrison@loss  hiveSize  empireSize
+11    5        1      0          3         1         0.0            5.4       9.8
+22    6        0      0          0         6         -              4.4       9.1
+33    1        0      0          0         1         -              1.0       7.1
+44    1        0      0          1         0         0.0            1.0       7.1
+55    8        1      0          2         5         0.0            3.5       9.5
+66    12       4      0          4         5         0.0            3.6       10.0
+77    8        2      0          3         3         0.0            5.4       8.6
+88    7        1      0          0         6         0.0            2.5       8.5
