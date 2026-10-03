@@ -15,6 +15,8 @@ import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbari
 import { LEGION } from '../sim/wilds';
 import { RUINS } from '../sim/ruins';
 import { COWED } from '../sim/status';
+import { QUEEN } from '../sim/hivekin';
+import { BURROW } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
@@ -376,6 +378,38 @@ function creatureSection(faction: FactionId): string {
  * `focus` takes either a unit type or a building id and works out which it is,
  * so callers can pass whatever they happen to be showing without caring.
  */
+/**
+ * The Hive's three rules that are not on any card. Section 125.
+ *
+ * Written here rather than left to the units, because none of them is a fact
+ * about one creature: the Queen is a rule about a *city*, going to ground is a
+ * rule about what enemies can see, and the Princesses are a rule about what
+ * happens after something goes wrong. A player who meets the Hivekin and loses
+ * a city to something that came up out of the floor deserves to be able to
+ * look it up.
+ */
+const HIVE_RULES = `
+  <p><strong>She does not move.</strong> The Queen sits in the first Hive and never
+  leaves it. That Hive <em>makes nothing at all</em> while she is not in it &mdash;
+  production there is a thing she is doing, not a thing it is doing.</p>
+  <p><strong>Losing her is not the end, but it is a clock.</strong> The Hive has
+  ${QUEEN.countdown} turns to grow a replacement. A <em>Princess-caste</em> standing
+  in that Hive becomes the new Queen &mdash; walked in on the last turn still counts.
+  If nobody does, the place is given up and everything the Hive owned stops taking
+  instructions and starts wandering about on its own.</p>
+  <p><strong>Spare Princesses are not wasted.</strong> Any others waiting when a new
+  Queen is grown become part of that Hive instead, as shields, calm, study or coin
+  &mdash; and <em>which</em> is decided then, not when they were built.</p>
+  <p><strong>A Burrower-caste goes under the ground.</strong> <em>Sink</em> (G) hides
+  it where it stands: nobody else can see it, and it does not block anyone, but the
+  disturbed dirt shows where something went down. <em>Burrow</em> (Shift+G) crosses up
+  to ${BURROW.range} tiles <strong>through</strong> whatever is in the way &mdash; a
+  wall, a river, an army &mdash; and comes up on free ground on the other side. Both
+  cost the whole turn.</p>
+  <p>Walk onto a tile with one hiding under it and you find it out: it is pushed clear
+  and loses its turn. With nowhere to be pushed, it stays down there.</p>
+`;
+
 export function openPedia(state: GameState, player: Player, focus?: string): void {
   const faction = player.faction;
   // Everybody else, in order, rather than "the other one". The roster used to
@@ -483,6 +517,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
       <div class="pedia-pane" data-pane="yours">
         <p class="flavor">${escapeHtml(FACTIONS[faction].blurb)}</p>
+        ${faction === 'hivekin' ? HIVE_RULES : ''}
         <div class="pedia-grid">${creatureSection(faction)}</div>
       </div>
       ${others
@@ -490,6 +525,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           (f) => `
       <div class="pedia-pane" data-pane="${paneFor(f)}" hidden>
         <p class="flavor">${escapeHtml(FACTIONS[f].blurb)}</p>
+        ${f === 'hivekin' ? HIVE_RULES : ''}
         <div class="pedia-grid">${creatureSection(f)}</div>
       </div>`,
         )

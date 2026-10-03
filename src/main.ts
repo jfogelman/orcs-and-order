@@ -13,6 +13,16 @@ import {
   startRoad,
 } from './sim/roads';
 import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
+import {
+  burrow,
+  burrowBlocked,
+  burrowTargets,
+  burrows,
+  isSunk,
+  sink,
+  sinkBlocked,
+  surface,
+} from './sim/burrow';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { distance, idx } from './engine/grid';
@@ -766,6 +776,8 @@ class App {
 
   /** Whether the next click on the map is where the selected worker's road goes. */
   private roadArmed = false;
+  /** Section 125: picking where a Burrower comes up. */
+  private burrowArmed = false;
   /** How much of the log has already been raised as folly news. Section 111. */
   private follyNewsSeen = 0;
   /** How far into the log the critical-news check has read. Section 124. */
@@ -936,6 +948,77 @@ class App {
     delete unit.roadTo;
     delete unit.irrigateTo;
     this.selectNextIdle();
+  }
+
+  /**
+   * Go to ground where you stand. Section 125.
+   *
+   * Toggles, because coming back up is the other half of the same button and a
+   * player who has sunk something wants the same key to undo it.
+   */
+  private orderSink(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (isSunk(unit)) {
+      surface(this.state, unit);
+      this.playLogCues();
+      this.refreshSidebar();
+    this.refreshOverlays();
+      return;
+    }
+    const blocked = sinkBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    sink(this.state, unit);
+    audio.play('move');
+    this.playLogCues();
+    this.refreshSidebar();
+    this.refreshOverlays();
+    this.selectNextIdle();
+  }
+
+  /** Arm the Burrow, so the next click says where it comes up. */
+  private orderBurrow(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (this.burrowArmed) {
+      this.burrowArmed = false;
+      this.refreshSidebar();
+      return;
+    }
+    const blocked = burrowBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    if (burrowTargets(this.state, unit).length === 0) {
+      this.flash('Nowhere to come up within reach.');
+      return;
+    }
+    this.disarm(false);
+    this.burrowArmed = true;
+    this.refreshSidebar();
+    this.refreshOverlays();
+  }
+
+  /** Handle a click while Burrow is armed. Returns whether the click was consumed. */
+  private clickWhileBurrowArmed(x: number, y: number): boolean {
+    if (!this.burrowArmed) return false;
+    this.burrowArmed = false;
+    const unit = this.selected;
+    if (!unit) return true;
+    if (!burrow(this.state, unit, x, y)) {
+      this.flash('It cannot come up there.');
+    } else {
+      audio.play('move');
+      this.playLogCues();
+      this.selectNextIdle();
+    }
+    this.refreshSidebar();
+    this.refreshOverlays();
+    return true;
   }
 
   /** Handle a click while Road To is armed. Returns whether the click was consumed. */
@@ -1603,6 +1686,7 @@ class App {
         // arms Road To and then right-clicks has said exactly what they meant --
         // and used to get a plain march, because only the left button was
         // listening. Reported from a real game at turn 31.
+        if (t && this.clickWhileBurrowArmed(t.x, t.y)) return;
         if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
         if (t && this.clickWhileIrrigateArmed(t.x, t.y)) return;
         if (t && this.clickWhileLandingArmed(t.x, t.y)) return;
@@ -1878,6 +1962,7 @@ class App {
   }
 
   private onLeftClick(x: number, y: number): void {
+    if (this.clickWhileBurrowArmed(x, y)) return;
     if (this.clickWhileRoadArmed(x, y)) return;
     if (this.clickWhileIrrigateArmed(x, y)) return;
     if (this.clickWhileLandingArmed(x, y)) return;
@@ -1966,6 +2051,11 @@ class App {
         e.preventDefault();
         this.orderSkip();
         break;
+      case 'g':
+        // Section 125. Shift for the one that asks where, matching Road To.
+        if (e.shiftKey) this.orderBurrow();
+        else this.orderSink();
+        return;
       case 'f':
         this.orderFortify();
         break;
@@ -2049,6 +2139,10 @@ class App {
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
         // thing, not drop the selection out from under it.
+        if (this.burrowArmed) {
+          this.burrowArmed = false;
+          this.refreshSidebar();
+        }
         if (this.roadArmed || this.irrigateArmed || this.landingArmed !== null) {
           this.roadArmed = false;
           this.irrigateArmed = false;
@@ -2422,6 +2516,15 @@ class App {
                 }</button>`
               : ''
           }
+          ${
+            // Section 125: only the caste that has somewhere to go.
+            burrows(unit)
+              ? `<button class="small" data-act="sink">${
+                  isSunk(unit) ? 'Come up (G)' : 'Sink (G)'
+                }</button>` +
+                `<button class="small${this.burrowArmed ? ' armed' : ''}" data-act="burrow">Burrow&hellip; (Shift+G)</button>`
+              : ''
+          }
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
@@ -2473,6 +2576,12 @@ class App {
               break;
             case 'halt':
               this.orderHalt();
+              break;
+            case 'sink':
+              this.orderSink();
+              break;
+            case 'burrow':
+              this.orderBurrow();
               break;
             case 'resupply':
               this.orderResupply();
