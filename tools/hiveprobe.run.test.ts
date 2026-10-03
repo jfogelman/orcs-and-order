@@ -1,51 +1,62 @@
 import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { createGame } from '../src/sim/gamestate';
-import { playerCities, playerUnits } from '../src/sim/gamestate';
+import { createGame, playerCities, playerUnits } from '../src/sim/gamestate';
 import { endPlayerTurn } from '../src/sim/turn';
 import { runAiTurn } from '../src/ai/ai';
-import { hivekinOf, HIVEKIN, queenSeat, queenIn } from '../src/sim/hivekin';
-import { isSunk } from '../src/sim/burrow';
+import { hivekinOf, HIVEKIN } from '../src/sim/hivekin';
 
-/** Section 125: what actually happens to the third side once it comes up. */
+/**
+ * Section 125: what actually happens to the third side once it comes up.
+ *
+ * Written when a sweep could not say why the Hivekin never win, and kept
+ * because it answered in forty seconds what ninety minutes of sweeping could
+ * not. It counts **mechanism** -- what they built, how far they got -- where a
+ * sweep counts outcomes, and an outcome never explains itself.
+ */
 describe('the hive, observed', () => {
-  it('reports one line per seed', () => {
-    const out: string[] = [
-      `window ${HIVEKIN.from}-${HIVEKIN.until}, clearOf ${HIVEKIN.clearOf}, escort ${HIVEKIN.escort}`,
-      '',
-      'seed  arrived  hives  techs  built                              researching',
+  it('reports what each arrival window is worth', () => {
+    const windows: Array<[number, number]> = [
+      [90, 120],
+      [60, 90],
+      [35, 65],
+      [15, 40],
     ];
-    for (const seed of [11, 22, 33, 44, 55, 66]) {
-      const state = createGame({ seed, width: 64, height: 48, barbarians: true });
-      let arrived = 0;
-      let firstHive = 0;
-      let sunkTurns = 0;
-      let burrowers = 0;
-      let queenlessTurns = 0;
-      for (let i = 0; i < 230 * 4 && state.turn <= 200; i++) {
-        runAiTurn(state, state.activePlayer);
-        endPlayerTurn(state);
-        const hk = hivekinOf(state);
-        if (hk && !arrived) arrived = state.turn;
-        if (hk && !firstHive && playerCities(state, hk.id).length > 0) firstHive = state.turn;
-        if (hk) {
-          const mine = playerUnits(state, hk.id);
-          burrowers = Math.max(burrowers, mine.filter((u) => u.type === 'burrower').length);
-          if (mine.some(isSunk)) sunkTurns++;
-          const seat = queenSeat(state, hk);
-          if (seat && !queenIn(state, seat)) queenlessTurns++;
+    const seeds = [11, 22, 33, 44, 55, 66, 77, 88];
+    const out: string[] = ['window     seeds  alive  hives  units  share of the world  vs empires'];
+
+    const was = { from: HIVEKIN.from, until: HIVEKIN.until };
+    for (const [from, until] of windows) {
+      HIVEKIN.from = from;
+      HIVEKIN.until = until;
+      let alive = 0;
+      let hives = 0;
+      let units = 0;
+      let share = 0;
+      let rivals = 0;
+      for (const seed of seeds) {
+        const state = createGame({ seed, width: 64, height: 48, barbarians: true });
+        for (let i = 0; i < 300 * 4 && state.turn <= 240; i++) {
+          runAiTurn(state, state.activePlayer);
+          endPlayerTurn(state);
         }
+        const hk = hivekinOf(state);
+        if (!hk?.alive) continue;
+        alive++;
+        const mine = playerCities(state, hk.id).length;
+        hives += mine;
+        units += playerUnits(state, hk.id).length;
+        share += state.cities.length > 0 ? mine / state.cities.length : 0;
+        rivals += (playerCities(state, 0).length + playerCities(state, 1).length) / 2;
       }
-      const hk = hivekinOf(state);
-      const cities = hk ? playerCities(state, hk.id).length : 0;
-      const mine = hk ? playerUnits(state, hk.id) : [];
-      const kinds = [...new Set(mine.map((u) => u.type))].sort().join(',') || '(nothing)';
-      const hkTechs = hk ? hk.techs.filter((t) => /caste|burrower|hive/.test(t)).length : 0;
+      const n = Math.max(1, alive);
       out.push(
-        `${String(seed).padEnd(5)} ${String(arrived || '-').padEnd(8)} ${String(cities).padEnd(6)} ` +
-          `${String(hkTechs).padEnd(6)} ${kinds.padEnd(34)} ${hk?.researching ?? '-'}`,
+        `${String(from + '-' + until).padEnd(10)} ${String(seeds.length).padEnd(6)} ` +
+          `${String(alive).padEnd(6)} ${(hives / n).toFixed(1).padEnd(6)} ${(units / n).toFixed(1).padEnd(6)} ` +
+          `${((share / n) * 100).toFixed(0).padStart(3)}%                ${(rivals / n).toFixed(1)} each`,
       );
     }
+    HIVEKIN.from = was.from;
+    HIVEKIN.until = was.until;
     writeFileSync('hiveprobe.txt', out.join('\n'), 'utf8');
-  }, 900_000);
+  }, 1_800_000);
 });

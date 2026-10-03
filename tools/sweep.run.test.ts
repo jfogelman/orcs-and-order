@@ -126,34 +126,30 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 125, and this arm pair exists because a probe moved the question.
+  // Section 125: does arriving earlier make them a contender?
   //
-  // Slice B's own mechanics cannot be measured by a sweep at all: the AI never
-  // sinks and never burrows, because nothing taught it to, and six probed games
-  // found zero Burrowers built, zero turns underground and zero turns without a
-  // Queen. Two arms either side of that returned *identical* numbers, which is
-  // the clearest possible way of being told a sweep is the wrong instrument.
+  // Probed first, over four windows and eight seeds, because the last two
+  // sweeps measured things that were not there. The probe says the window is a
+  // **weak lever**: 90-120, 60-90 and 35-65 all land within noise of each other
+  // at three to four Hives and about a fifth of the world. Only the extreme
+  // moves -- 15-40 reaches 4.4 Hives, 35.6 units and a quarter of the world.
   //
-  // What the probe found instead was worth the whole slice. The Hivekin had no
-  // AI personality, so `PERSONALITIES[faction] ?? PERSONALITIES.orc` handed them
-  // the Horde's research plan -- made entirely of orc advances they cannot have
-  // and shared ones they can. They walked the shared spine, never grew a single
-  // caste, and fielded nothing but Grubs and the Queen. **That is why they won
-  // none of 216 games in slice A**, and the win column could never have said so.
-  //
-  // So this measures the fix, which is the thing that decides whether they are a
-  // contender at all. Both arms hold the tiles on, so the maps pair.
+  // So this is the honest test of the question rather than a hopeful nudge: the
+  // window as designed, against the earliest one that showed any response at
+  // all. If a third of the difference between turn 105 and turn 27 does not buy
+  // a single win, the arrival time is not what is wrong.
   {
-    label: 'no plan',
+    label: 'turn 90-120',
     apply: () => {
       control();
-      HIVEKIN.ownPlans = false;
     },
   },
   {
-    label: 'own plan',
+    label: 'turn 15-40',
     apply: () => {
       control();
+      HIVEKIN.from = 15;
+      HIVEKIN.until = 40;
     },
   },
 ];
