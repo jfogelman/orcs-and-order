@@ -10508,3 +10508,92 @@ new mechanics is a measurement nobody can read, and that is the mistake section
 - **The brood choice has no dialog yet.** The rule is complete and the AI
   answers it; a human owner gets `pending` and `chooseBrood` is waiting for a
   prompt to call it.
+
+### Measured, and the sweep was the wrong instrument
+
+Two arms either side of Sink, Burrow and the succession came back with
+**identical numbers**. That is not a null result, it is an instrument reading
+zero, and it was worth more than the sweep would have been.
+
+A probe (`npm run hiveprobe`, six seeds, forty seconds) said why: **zero
+Burrowers ever built, zero turns underground, zero turns without a Queen.** The
+AI never sinks and never burrows, because nothing taught it to. But it had also
+never built a Burrower, which is a different and much larger problem.
+
+It had built nothing at all. One caste advance -- the free one. A roster of
+Grubs and the Queen. Studying Pyromancy.
+
+### The Hive had no plan of its own
+
+`PERSONALITIES[player.faction] ?? PERSONALITIES.orc`. With no entry of their own
+the Hivekin inherited **the Horde's research plan**, every line of which is
+either an orc advance they cannot research or a shared one they can. So they
+worked straight down the shared spine -- mapmaking, bridges, tree-hugging,
+walls, happiness, insanity -- and never grew a caste in their lives.
+
+**That is why they won none of 216 games in slice A's measurement.** No column
+could have said so: `wins: 0` looks identical whether a faction is badly
+balanced or has no army at all. A win rate is an outcome, and outcomes do not
+explain themselves. Section 123's lesson was written down and then not applied:
+the right move after slice A's zero was a probe, not a theory about emerging
+late.
+
+With a plan of their own -- leading with the castes, because a side whose whole
+identity is which shape it can grow next has nothing until it can grow one --
+the same six games give three to seven caste advances and Fodder, Soldier,
+Spitter, Elite, Burrower and Tide-caste on the board.
+
+### And they still do not win
+
+216 games, `no plan` against `own plan`, maps paired:
+
+                      orc  hum  hive
+  no plan   tuned      34   20     0
+  no plan   held-out   26   28     0
+  own plan  tuned      36   18     0
+  own plan  held-out   26   28     0
+
+**Zero wins out of 108, again.** Checked against the seed rows rather than the
+summary: the winner is 0 or 1 in every one of 216 games. They now build an army
+and still never convert it.
+
+The fix is balance-neutral, which is the other thing worth knowing: Horde
+against Kingdom moves +3.7 points on the tuned seeds and not at all on held-out.
+
+So the roster was never the problem. **The deficit is time.** They arrive around
+turn 90 to 120 with one Grub against two empires that have had ninety turns of
+growth, and reach one to five Hives where the empires reach six or seven. That
+is a ninety-turn head start and no amount of research order closes it. The
+levers are the arrival window, what they arrive with, or accepting that they are
+pressure rather than a contender -- which contradicts the answer on file, so it
+is Jeremy's call and not mine.
+
+### The three tiles are the only thing that moved the balance
+
+Isolated across the two runs, since Sink and the Queen are provably inert and
+the only other difference is `SPECIALS.hiveTiles`:
+
+  tuned     tiles off 26-28  ->  tiles on 34-20   Horde +14.8 points
+  held-out  tiles off 22-32  ->  tiles on 26-28   Horde  +7.4 points
+
+Both seed sets, same direction, and larger than anything else in this section.
+
+**It is not paired and it cannot be.** Taking specials out of the roll changes
+worldgen, so the two arms play different maps by construction -- the harness
+said so, on 54 of 54 seeds, which is how the first attempt at this comparison
+was caught before being believed. A specials change is measured with more games,
+never with paired ones.
+
+Worth doing before the tiles are called settled. The three were priced against
+what they displace precisely so they would not do this, and they may still be
+doing it.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+  They cannot be swept until it does, and teaching it is its own piece of work.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive, which the bible says
+  they should be and the tech tree cannot express.
+- The brood choice has no dialog; the AI answers it and a human owner gets
+  `pending`.

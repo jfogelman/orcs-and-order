@@ -18,6 +18,7 @@
     "composition": "vitest run --config vitest.sweep.config.ts tools/composition.run.test.ts",
     "growth": "vitest run --config vitest.sweep.config.ts tools/growth.run.test.ts",
     "garrison": "vitest run --config vitest.sweep.config.ts tools/garrison.run.test.ts",
+    "hiveprobe": "vitest run --config vitest.sweep.config.ts tools/hiveprobe.run.test.ts",
     "poses": "vitest run --config vitest.sweep.config.ts tools/poses.run.test.ts"
   },
   "devDependencies": {
