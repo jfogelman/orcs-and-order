@@ -13,8 +13,7 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
-import { QUEEN } from '../src/sim/hivekin';
-import { BURROW } from '../src/sim/burrow';
+import { HIVEKIN } from '../src/sim/hivekin';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -127,27 +126,32 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 125 slice B, measured against slice A rather than against the
-  // two-sided game. Slice A already answered what a third seat costs; this
-  // asks what the three things that make them *them* are worth on top of it,
-  // and keeping the control at "the Hivekin exist but are inert" is the only
-  // way a shift here is attributable to this slice.
+  // Section 125, and this arm pair exists because a probe moved the question.
   //
-  // The three go in together on purpose. They are one design -- a faction that
-  // hides, crosses ground nobody else can, and keeps a succession plan -- and
-  // measuring them apart would need three more arms and answer a question
-  // nobody asked. If this moves, the probe comes out before the sweep does.
+  // Slice B's own mechanics cannot be measured by a sweep at all: the AI never
+  // sinks and never burrows, because nothing taught it to, and six probed games
+  // found zero Burrowers built, zero turns underground and zero turns without a
+  // Queen. Two arms either side of that returned *identical* numbers, which is
+  // the clearest possible way of being told a sweep is the wrong instrument.
+  //
+  // What the probe found instead was worth the whole slice. The Hivekin had no
+  // AI personality, so `PERSONALITIES[faction] ?? PERSONALITIES.orc` handed them
+  // the Horde's research plan -- made entirely of orc advances they cannot have
+  // and shared ones they can. They walked the shared spine, never grew a single
+  // caste, and fielded nothing but Grubs and the Queen. **That is why they won
+  // none of 216 games in slice A**, and the win column could never have said so.
+  //
+  // So this measures the fix, which is the thing that decides whether they are a
+  // contender at all. Both arms hold the tiles on, so the maps pair.
   {
-    label: 'seat only',
+    label: 'no plan',
     apply: () => {
       control();
-      BURROW.enabled = false;
-      QUEEN.enabled = false;
-      SPECIALS.hiveTiles = false;
+      HIVEKIN.ownPlans = false;
     },
   },
   {
-    label: 'what they are',
+    label: 'own plan',
     apply: () => {
       control();
     },

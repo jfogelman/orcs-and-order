@@ -1,4 +1,5 @@
 import { seenBy } from '../sim/burrow';
+import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
 import { aiDiplomacy } from './diplomacy';
@@ -281,6 +282,58 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     // Garrison size, by contrast, changed the win split not at all: 1 and 2
     // both gave 7-11 at caution 0.45.
     caution: 0.48,
+    stormingParty: 3,
+  },
+  /**
+   * Section 125. **Not having one of these was a bug, not an omission.**
+   *
+   * `PERSONALITIES[faction] ?? PERSONALITIES.orc` meant the Hivekin inherited
+   * the Horde's priority list, every entry of which is either an orc advance
+   * they cannot research or a shared one they can. So they worked straight down
+   * the shared spine -- mapmaking, bridges, tree-hugging, walls, happiness,
+   * insanity -- and never researched a single caste. A probe over six games
+   * found them holding exactly one caste advance (the free one), fielding
+   * nothing but Grubs and the Queen, and studying Pyromancy.
+   *
+   * That is the whole of why they won none of 216 games in slice A's
+   * measurement: they had no army, and nothing in the numbers said so, because
+   * "wins: 0" looks the same whatever the reason.
+   *
+   * The list leads with the castes, because a side whose entire identity is
+   * which shape it can grow next has nothing at all until it can grow one.
+   */
+  hivekin: {
+    targetCities: 5,
+    garrisonPerCity: 1,
+    techPriority: [
+      // Something to fight with, before anything else whatsoever.
+      'caste-fodder',
+      'caste-soldier',
+      'mapmaking',
+      'bridge-building',
+      'caste-spitter',
+      'tree-hugging',
+      'caste-elite',
+      'not-you-again',
+      'caste-burrower',
+      'joy-making',
+      'wall-building',
+      'hammers-of-glory',
+      'caste-bloat',
+      'burrower-veteran',
+      'caste-broodlord',
+      'happiness',
+      'caste-princess',
+      'burrower-deep',
+      'burrower-ambush',
+      'caste-warden',
+      'insanity',
+      'all-is-the-hive',
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
+    ],
+    caution: 0.5,
     stormingParty: 3,
   },
 };
@@ -2019,7 +2072,11 @@ export function runAiTurn(state: GameState, playerId: number): void {
   // stop being at peace with.
   aiDiplomacy(state, playerId);
   manageRates(state, player);
-  const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
+  // Section 125: the `??` here was the bug. A faction with no entry inherited
+  // the Horde's, which for the Hivekin meant a research plan made entirely of
+  // advances they cannot have.
+  const own = player.faction !== 'hivekin' || HIVEKIN.ownPlans;
+  const personality = (own ? PERSONALITIES[player.faction] : undefined) ?? PERSONALITIES.orc;
 
   chooseResearch(state, player, personality);
   takePromotions(state, player);

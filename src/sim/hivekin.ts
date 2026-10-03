@@ -55,6 +55,17 @@ export const HIVEKIN = {
    * only ever matters for the wilds.
    */
   grace: 3,
+  /**
+   * Whether the Hive's AI follows a plan of its own.
+   *
+   * Off, it falls back to the Horde's priority list the way it did before this
+   * was noticed -- every entry of which is either an orc advance it cannot
+   * research or a shared one it can, so it walks the shared spine and never
+   * grows a caste. That is not a sensible way to play and it is not meant to
+   * be: it is the control, so the cost of the bug can be stated in games rather
+   * than asserted.
+   */
+  ownPlans: true,
 };
 
 /** The Hivekin seat, once it exists. */

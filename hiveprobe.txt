@@ -1,9 +1,9 @@
 window 90-120, clearOf 10, escort 2
 
-seed  drawn  arrived  firstHive  cities@200  units@200  alive  queen
-11    93     93       94         2           3          true   1
-22    93     93       94         5           2          true   1
-33    110    110      111        1           1          true   1
-44    93     93       97         1           1          true   1
-55    120    120      121        4           0          true   0
-66    113    113      114        3           2          true   1
+seed  arrived  hives  techs  built                              researching
+11    93       1      3      queen                              caste-spitter
+22    93       5      6      burrower,elite,fodder,grub,queen,soldier,spitter,tidecaste wall-building
+33    110      1      3      queen,soldier                      bridge-building
+44    93       1      3      queen,soldier                      bridge-building
+55    120      5      7      fodder,grub,queen,soldier,spitter  burrower-veteran
+66    113      5      6      elite,fodder,queen,soldier,spitter wall-building
