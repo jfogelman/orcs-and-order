@@ -6,7 +6,7 @@ import type { TerrainDef, TerrainSpecial } from '../model/terrain';
 import { SPECIALS } from '../model/terrain';
 import { TECHS, TECHS_BY_ID } from '../model/techs';
 import { CREATURES, CREATURES_BY_ID, UNIT_TYPES, unitType } from '../model/units';
-import type { UnitTypeDef } from '../model/units';
+import type { CreatureDef, UnitTypeDef } from '../model/units';
 import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
@@ -97,14 +97,66 @@ function unlockedBy(id: UnitTypeId): string | null {
   return tech ? tech.name : null;
 }
 
+function withArticle(name: string): string {
+  return /^[AEIOU]/i.test(name) ? `an ${name}` : `a ${name}`;
+}
+
+function listOf(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
+}
+
+/**
+ * Who can actually put a missile into this piece of artillery, by name.
+ *
+ * Read off the same two predicates `targetsFor` uses, because the surprising
+ * half of the rule is not that a magazine runs dry -- it is **who is allowed to
+ * fill it**. A ballista is fed by the archery line and nobody else, so a player
+ * who parks one behind a wall of footmen cannot reload it and was never told
+ * why. A catapult is fed by whoever is standing closest and least able to
+ * argue, and does not give them back.
+ */
+function feedersFor(def: UnitTypeDef): string[] {
+  const wants =
+    def.reloadsBy === 'sacrifice'
+      ? (c: CreatureDef) => c.expendable === true
+      : (c: CreatureDef) => (c.firstStrikes ?? 0) > 0;
+  return CREATURES.filter((c) => !c.wild && c.faction === def.faction && wants(c)).map((c) =>
+    withArticle(c.name),
+  );
+}
+
+/**
+ * The artillery this unit could put a missile into, by name.
+ *
+ * The other half of the same gap. Knowing that a ballista is fed only by the
+ * archery line is no use if it is written on the ballista alone -- the player
+ * deciding what to build next is reading the *archer*, whose card said nothing
+ * whatsoever. It is also the funnier half, since what the card has to tell a
+ * goblin is that it is ammunition.
+ */
+function feedsWhat(def: UnitTypeDef): string[] {
+  if (def.ammo > 0 || def.settler || def.sails) return [];
+  return CREATURES.filter((c) => {
+    if (c.wild || c.faction !== def.faction) return false;
+    const gun = UNIT_TYPES[c.id];
+    if (gun === undefined || gun.ammo <= 0) return false;
+    return gun.reloadsBy === 'sacrifice' ? def.expendable : def.firstStrikes > 0;
+  }).map((c) => withArticle(c.name));
+}
+
 /**
  * Everything this unit can do that the four numbers above it do not say.
  *
  * Written out rather than left as icons: a player who cannot find out that a
  * sapper detonates, or that an axethrower is ruined by throwing its axe, will
  * read both as the unit being broken.
+ *
+ * Exported for the tests. The rest of this module draws HTML and wants a
+ * document; this is the part with rules in it, and the rules are what want
+ * holding to account.
  */
-function abilityNotes(def: UnitTypeDef): string[] {
+export function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
   if (def.flies) notes.push('flies over anything, at no extra cost');
@@ -112,6 +164,32 @@ function abilityNotes(def: UnitTypeDef): string[] {
   if (def.range > 1) {
     notes.push(
       `strikes from exactly ${def.range} tiles for a few rounds, and is not struck back — costs the whole turn`,
+    );
+  }
+  // Section 125: artillery carries a magazine, runs dry, and is fussy about who
+  // refills it -- and not one word of that was anywhere in the game. The card
+  // said it strikes from two tiles and stopped, so a ballista standing empty
+  // behind a line of footmen read as a unit that had simply broken.
+  if (def.ammo > 0) {
+    notes.push(
+      `carries ${def.ammo} missiles and starts loaded — with the magazine empty it cannot strike at range at all`,
+    );
+    const feeders = listOf(feedersFor(def));
+    if (def.reloadsBy === 'sacrifice') {
+      notes.push(
+        feeders
+          ? `reloaded in the field by feeding it ${feeders} from the next tile, who is eaten doing it — and a group loads one missile for each of them`
+          : 'cannot be reloaded in the field: nothing on this side is expendable enough',
+      );
+    } else {
+      notes.push(
+        feeders
+          ? `reloaded in the field by ${feeders} standing next to it, which costs that unit its whole turn — and nobody else can do it`
+          : 'cannot be reloaded in the field: nobody on this side makes missiles',
+      );
+    }
+    notes.push(
+      'beside a city of yours, Resupply fills the whole magazine instead, for the rest of the turn',
     );
   }
   if (def.throwsWeapon) {
@@ -144,6 +222,17 @@ function abilityNotes(def: UnitTypeDef): string[] {
   if (def.executeChance > 0) {
     notes.push(
       `${Math.round(def.executeChance * 100)}% chance to finish off a defender already under half health, if it is no larger`,
+    );
+  }
+  const feeds = feedsWhat(def);
+  if (feeds.length > 0) {
+    const eaten = Object.values(UNIT_TYPES).some(
+      (gun) => gun.ammo > 0 && gun.faction === def.faction && gun.reloadsBy === 'sacrifice',
+    );
+    notes.push(
+      eaten
+        ? `can be loaded into ${listOf(feeds)} standing next to it, which is the end of it — and a group of them loads one missile each`
+        : `can hand a missile to ${listOf(feeds)} standing next to it, at the cost of its own whole turn`,
     );
   }
   if (def.regenMultiplier > 1) notes.push(`heals ${def.regenMultiplier}× as fast as anything else`);
