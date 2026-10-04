@@ -45,7 +45,24 @@ export const HIVEKIN = {
   clearOf: 10,
   /** How much open land has to be within reach of the spot to be worth it. */
   room: 8,
-  /** What arrives: one founder, and an escort of the first fighting caste. */
+  /**
+   * What arrives: founders, and an escort of the first fighting caste.
+   *
+   * One Grub was the bible's "a settler and an escort", and it reads like the
+   * other two sides' opening -- except they start on turn one and this does
+   * not. An empire that has had ninety turns is six cities deep by the time
+   * this lands, so the question of how many Hives the Hive starts with is a
+   * different question from how many cities the Horde starts with, and the
+   * answer is measured rather than assumed.
+   *
+   * Two, measured over five packages and ten seeds: one Grub to two is worth
+   * 2.8 Hives to 3.5 and seventeen per cent of the world to twenty-one, and
+   * takes survival from nine games in ten to ten. Three and four add almost
+   * nothing on top of that -- 3.6 and 4.0 Hives -- so two is where the cheap
+   * gain is, and a Hive that arrives already split in two is a better story
+   * than one that arrives with an army.
+   */
+  founders: 2,
   escort: 2,
   /**
    * Turns of grace before anything may attack them.
@@ -246,9 +263,13 @@ export function maybeEmerge(state: GameState): void {
 
   const def = FACTIONS.hivekin;
   spawnUnit(state, hive.id, def.settlerUnit, spot.x, spot.y);
-  for (const [x, y] of besideIt(state, spot.x, spot.y, HIVEKIN.escort)) {
-    spawnUnit(state, hive.id, def.starterUnit, x, y);
-  }
+  // The rest stand around it. Founders first, so a cramped spot that can only
+  // fit three of them gets the ones that matter.
+  const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + HIVEKIN.escort);
+  around.forEach(([x, y], n) => {
+    const type = n < HIVEKIN.founders - 1 ? def.settlerUnit : def.starterUnit;
+    spawnUnit(state, hive.id, type, x, y);
+  });
   hive.safeUntil = state.turn + HIVEKIN.grace;
   hive.joinedAt = state.turn;
 

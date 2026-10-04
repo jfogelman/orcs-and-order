@@ -126,30 +126,25 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 125: does arriving earlier make them a contender?
+  // Section 125: does arriving with a second Grub buy a win?
   //
-  // Probed first, over four windows and eight seeds, because the last two
-  // sweeps measured things that were not there. The probe says the window is a
-  // **weak lever**: 90-120, 60-90 and 35-65 all land within noise of each other
-  // at three to four Hives and about a fifth of the world. Only the extreme
-  // moves -- 15-40 reaches 4.4 Hives, 35.6 units and a quarter of the world.
-  //
-  // So this is the honest test of the question rather than a hopeful nudge: the
-  // window as designed, against the earliest one that showed any response at
-  // all. If a third of the difference between turn 105 and turn 27 does not buy
-  // a single win, the arrival time is not what is wrong.
+  // Everything so far has been probed first and the clock has been ruled out:
+  // seventy-eight turns earlier bought two wins in 108 on one seed set and cost
+  // eleven points of Horde against Kingdom on the same one. Two things since
+  // then have each closed part of the gap for real -- siting the arrival by
+  // what the ground yields rather than by how empty it is, and a second
+  // founder. This asks the only question those were for.
   {
-    label: 'turn 90-120',
+    label: 'one grub',
     apply: () => {
       control();
+      HIVEKIN.founders = 1;
     },
   },
   {
-    label: 'turn 15-40',
+    label: 'two grubs',
     apply: () => {
       control();
-      HIVEKIN.from = 15;
-      HIVEKIN.until = 40;
     },
   },
 ];
