@@ -802,16 +802,37 @@ export const TECHS: TechDef[] = [
       'arrived. She waits regardless.',
   },
   {
-    // The road here costs 860 beakers, against the Horde's 430 and the
-    // Kingdom's 965, while the works below are priced as the Horde's rather
-    // than the Kingdom's. That mixture is nobody's measured setting -- see
-    // HIVEKIN_PLAN.md -- and is the first dial to turn if this lands too often
-    // or never.
+    // **The shortest road to an ending in the game, on purpose.**
+    //
+    // It used to hang off `caste-princess` and `insanity`, which is where the
+    // bible put it and reads perfectly: the second Queen comes after the shape
+    // that waits, and after the world has stopped making sense. It also cost
+    // 860 beakers over eleven advances, and the Hive earns 9.9 beakers a turn
+    // against the Horde's 19.1 and the Kingdom's 32.4. That is 87 turns of pure
+    // research in a life of about 140, against the Horde's 23 and the Kingdom's
+    // 30 -- so in twelve games they reached this advance twice and built, in
+    // total, no works at all.
+    //
+    // Thirty-eight of fifty-four games are decided by somebody finishing an
+    // ending, and they hold 22% of the world against the 50% dominance needs,
+    // so this is the only door they have. Repricing it was measured and does
+    // nothing: their advances per game read 11.8 whatever the road costs,
+    // because repricing buys no research, it only changes what the research is
+    // spent on. 860, 710 and 610 all give zero wins.
+    //
+    // So the road has to fit inside four of their twelve advances. Off
+    // `caste-soldier` it is 165 beakers over four, every one of which they
+    // research anyway, and that is the first thing in section 125 to produce a
+    // win: 4 of 12 with the works at 180/180/240 below, and every win an ending
+    // win. Jeremy chose this over a research mechanic on 2026-10-04.
+    //
+    // What it means in play: their victory advance lands around turn 130 rather
+    // than never, and the race is theirs to lose rather than not to enter.
     id: 'all-is-the-hive',
     name: 'All Is The Hive',
     faction: 'hivekin',
-    cost: 200,
-    prereqs: ['caste-princess', 'insanity'],
+    cost: 100,
+    prereqs: ['caste-soldier'],
     units: [],
     buildings: ['moltingChamber', 'secondFeeding', 'secondQueenShell'],
     flags: ['ending'],

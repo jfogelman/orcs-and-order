@@ -485,13 +485,21 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   //
   // The ending, in section 110's shape: two lesser works buildable once the
   // advance is known, then the final one, only in a Hive already holding one of
-  // them and only once both stand. Priced as the Horde's rather than the
-  // Kingdom's -- see the note on `all-is-the-hive` in techs.ts.
+  // them and only once both stand.
+  //
+  // **Six hundred shields against the other two endings' thousand**, and the
+  // reason is the thing it is paid out of: 3.5 Hives of 5.5 citizens, where an
+  // empire pays out of six cities of eight. Measured both ways round -- while
+  // the road to the advance was long this price was not a lever at all (at 40%
+  // of it they still built 0.2 works, because cheapening the end of a road
+  // nobody walks changes nothing), and once the road was shortened it was worth
+  // double: 2 wins in 12 at a thousand shields, 4 at six hundred. See the note
+  // on `all-is-the-hive` in techs.ts for the road.
   moltingChamber: {
     id: 'moltingChamber',
     name: 'The Molting Chamber',
     faction: 'hivekin',
-    cost: 300,
+    cost: 180,
     upkeep: 0,
     endingPart: 'hive',
     blurb:
@@ -502,7 +510,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     id: 'secondFeeding',
     name: 'The Second Feeding',
     faction: 'hivekin',
-    cost: 300,
+    cost: 180,
     upkeep: 0,
     endingPart: 'hive',
     blurb:
@@ -513,7 +521,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     id: 'secondQueenShell',
     name: "The Second Queen's Shell",
     faction: 'hivekin',
-    cost: 400,
+    cost: 240,
     upkeep: 0,
     victory: 'hive',
     blurb:

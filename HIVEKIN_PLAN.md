@@ -151,29 +151,46 @@ ready to paste, plus two advances the second draft added:
 | `caste-broodlord` | 130 | caste-elite | Broodlord-caste, + The Broodwarmth |
 | `caste-warden` | 140 | caste-elite, hammers-of-glory | Warden-caste |
 | `caste-princess` | 110 | caste-elite, happiness | Princess-caste, + The Old Queen's Shell |
-| `all-is-the-hive` | 200 | caste-princess, insanity | The ending's three works |
+| `all-is-the-hive` | 100 | caste-soldier | The ending's three works |
 
 `tidecaste` is added to the shared `mapmaking` advance's `units` list, which is
 how `raft` and `barge` already work — the per-faction filter happens where units
 are offered.
 
-### The one number that needs measuring, not guessing
+### The one number that needed measuring, and what it said — 2026-10-04
 
-The ending roads, computed from the actual tree:
+The ending roads, computed from the actual tree, with the research rate that
+has to pay for them:
 
-| Side | Beakers to the ending advance | Works priced at |
-|---|---|---|
-| Horde | **430** | 300 / 300 / 400 |
-| Kingdom | **965** | 360 / 360 / 480 |
-| Hivekin as written | **860** | 300 / 300 / 400 |
+| Side | Beakers to the ending advance | Beakers a turn | Turns of pure research | Works priced at |
+|---|---|---|---|---|
+| Horde | 430 over 7 advances | 19.1 | **23** | 300 / 300 / 400 |
+| Kingdom | 965 over 12 advances | 32.4 | **30** | 360 / 360 / 480 |
+| Hivekin as written | 860 over 11 advances | **9.9** | **87** | 300 / 300 / 400 |
+| Hivekin as it now ships | **165 over 4 advances** | 9.9 | **17** | 180 / 180 / 240 |
 
-So the Hivekin get essentially the Kingdom's long road to the Horde's cheap
-works — a combination neither side has ever been measured at. Section 110 priced
-the Kingdom's works a fifth higher *because* its Object was landing nearly three
-times as often as the Portal despite the longer road, since the Kingdom
-researches faster. Which way the Hivekin fall out depends on their research rate
-and nothing else will tell us. This is the first dial to turn if the ending
-lands too often or never.
+The guess above this line was that the Hivekin had the Kingdom's long road at
+the Horde's cheap works and the answer would turn on their research rate. The
+rate was the answer, and it was worse than the question allowed for: **9.9
+beakers a turn against 19.1 and 32.4**, so the road was 87 turns of pure
+research in a life of about 140. In twelve games they reached the advance twice
+and built, in total, no works at all, while thirty-eight of every fifty-four
+games are decided by somebody finishing an ending.
+
+The second thing it said is that **the price was not a lever**. Their advances
+per game read 11.8 whatever the road costs — repricing buys no research, it only
+changes what the research is spent on, so an eleven-advance road is their whole
+game at any price. 860, 710 and 610 all gave zero wins; the works at forty per
+cent gave zero wins.
+
+So the road had to fit inside four of their twelve advances. It hangs off
+`caste-soldier` now, 165 beakers over four advances they research anyway, asked
+for fifth of twenty-five — the most aggressive ending priority of the three
+sides, which is the asymmetry their research rate pays for. 4 wins in 12
+probed, every one an ending win. Jeremy chose this over giving them a research
+mechanic of their own, which stays on the table as the bigger-ceiling option:
+beakers off total Hives or total population rather than per-city trade, which is
+the one lever that moves the 9.9 itself.
 
 ---
 
@@ -185,9 +202,14 @@ buildable in a Hive already holding one of the two, once both stand somewhere.
 
 | id | Cost | Kind |
 |---|---|---|
-| `moltingChamber` | 300 | `endingPart: 'hive'` |
-| `secondFeeding` | 300 | `endingPart: 'hive'` |
-| `secondQueenShell` | 400 | `victory: 'hive'` |
+| `moltingChamber` | 180 | `endingPart: 'hive'` |
+| `secondFeeding` | 180 | `endingPart: 'hive'` |
+| `secondQueenShell` | 240 | `victory: 'hive'` |
+
+Six hundred shields against the other two endings' thousand, because of what it
+is paid out of: 3.5 Hives of 5.5 citizens where an empire pays out of six cities
+of eight. Worth double once the road was short — 2 wins in 12 at a thousand, 4
+at six hundred — and worth nothing at all while it was long.
 
 `VictoryKind` and `endingPart` both gain `'hive'`, and `checkEndings` gains a
 third branch for the "work has begun" announcement that currently reads
@@ -384,7 +406,19 @@ Done, each probed before it was swept:
 - **The bar they will swing at**, `caution` 0.5 to 0.35. The one that was
   actually about fighting: with something standing next to them the best odds on
   offer average 0.44, so a bar of 0.5 declined eleven adjacent fights in twelve
-  and they attacked eight times a game against the empires' hundred. Sweeping.
+  and they attacked eight times a game against the empires' hundred. Swept: the
+  mechanism moved -- captures up and both empires' populations down on both seed
+  sets -- and the win rate did not. Still 0 of 108.
+- **A short road to their ending**, which is the one that finally produced a
+  win. Thirty-eight of fifty-four games are decided by somebody finishing an
+  ending; the Hive had built **no works in any game, ever**, because its road
+  cost 860 beakers over eleven advances at 9.9 beakers a turn. Repricing was
+  measured and does nothing -- their advances per game read 11.8 whatever it
+  costs. `all-is-the-hive` now hangs off `caste-soldier` at 100 (165 over four
+  advances), is asked for fifth of twenty-five, and its works cost 180/180/240
+  against the other endings' 300/300/400. Probed at 4 wins in 12, every one an
+  ending win; Jeremy chose this over a research mechanic on 2026-10-04.
+  Sweeping at 216.
 
 Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
 
@@ -392,8 +426,9 @@ Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
   Hivekin soldier-turn and a third of each empire's goes on walking to one of
   its own undefended cities, and the branch that would make a unit *stay* in one
   has never fired in 77,000 turns because it cannot. Shared code, and the
-  obvious repair is the one already measured as a disaster, so it is its own
-  piece of work and Jeremy's call.
+  obvious repair is the one already measured as a disaster. **Jeremy's answer of
+  2026-10-04: its own measured section after 125 closes**, since it changes all
+  three sides and wants 216 games and both seed sets.
 - **Teaching the AI to sink and burrow**, which is the other half of what makes
   them them and is currently inert.
 

@@ -14,6 +14,9 @@ import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVEKIN } from '../src/sim/hivekin';
+import { TECHS } from '../src/model/techs';
+import type { TechId } from '../src/model/types';
+import { endingWorks } from '../src/sim/endings';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -131,35 +134,63 @@ const control = () => {
   AUTO_TILES.spareFoodAtLimit = true;
 };
 
-const ARMS: Arm[] = [
-  // Section 125: the bar they will swing at.
+const buildArms = (): Arm[] => {
+  // Section 125: the road to the Hive's ending.
   //
-  // The second Grub bought no win -- 0 of 108 -- and a probe then said why
-  // nothing about arriving ever could: with something standing next to them
-  // the best odds on offer average 0.44, and their bar was 0.5. They attacked
-  // eight times a game against the two empires' hundred. At 0.35 the probe
-  // moves every column at once, so this is the measurement of that.
+  // Four measurements said the Hivekin win nothing, and the fourth said why the
+  // first three could not have helped: thirty-eight of fifty-four games are
+  // decided by somebody finishing an ending, and the Hive had built **no works
+  // in any game, ever**. Its road cost 860 beakers over eleven advances at 9.9
+  // beakers a turn -- 87 turns of pure research against the Horde's 23 -- in a
+  // life of about 140.
   //
-  // Note what the second Grub *did* do, which this arm pair carries and does
-  // not ask about: it moved Horde against Kingdom by about nine points on both
-  // seed sets. That is a real shift and it is not being corrected yet, because
-  // correcting the two empires against a third one that cannot fight is baking
-  // in a compensation for a bug.
-  {
-    label: 'bar 0.50',
-    apply: () => {
-      control();
-      PERSONALITIES.hivekin.caution = 0.5;
+  // Repricing it is provably not a lever: their advances per game read 11.8
+  // whatever the road costs, so an eleven-advance road is their whole game at
+  // any price. The road has to be *short*. Off `caste-soldier` it is 165 over
+  // four advances they research anyway, asked for fifth rather than
+  // twenty-second, with the works at 180/180/240 rather than 300/300/400.
+  // Probed at 4 wins in 12 against zero; this is the 216 that decides it.
+  //
+  // The long arm restores every part of that at once, because they are one
+  // change: a cheap work at the end of a road nobody walks measured as nothing.
+  //
+  // **Both arms state all four values, and that is not optional here.** The
+  // tech table and the building table are not in `LEVERS`, so the harness
+  // cannot put them back between arms -- and it cannot see them in its
+  // identity check either, so an arm that relied on the default would have
+  // silently inherited the other arm's road and the check would have passed on
+  // the `techPriority` difference alone. That is section 59 wearing a hat.
+  // They are deliberately not added to `LEVERS`: `TECHS` and `TECHS_BY_ID`
+  // share their objects, and restoring either one by shallow assign would hand
+  // the other a stale set.
+  const hiveEnding = (cost: number, prereqs: TechId[], works: number[], at: number) => {
+    const road = TECHS.find((t) => t.id === 'all-is-the-hive')!;
+    road.cost = cost;
+    road.prereqs = prereqs;
+    endingWorks('hive').forEach((b, i) => (b.cost = works[i]));
+    const list = PERSONALITIES.hivekin.techPriority.filter((t) => t !== 'all-is-the-hive');
+    list.splice(at, 0, 'all-is-the-hive');
+    PERSONALITIES.hivekin.techPriority = list;
+  };
+  return [
+    {
+      label: 'long road',
+      apply: () => {
+        control();
+        hiveEnding(200, ['caste-princess', 'insanity'], [300, 300, 400], 21);
+      },
     },
-  },
-  {
-    label: 'bar 0.35',
-    apply: () => {
-      control();
-      PERSONALITIES.hivekin.caution = 0.35;
+    {
+      label: 'short road',
+      apply: () => {
+        control();
+        hiveEnding(100, ['caste-soldier'], [180, 180, 240], 4);
+      },
     },
-  },
-];
+  ];
+};
+
+const ARMS: Arm[] = buildArms();
 
 
 /**

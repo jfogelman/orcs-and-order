@@ -566,12 +566,21 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         ${
           ALT_VICTORY.enabled
             ? `<p class="flavor">
-          <strong>Three works end the game.</strong> The Horde's <em>Demonic Portal</em> and the
-          Kingdom's <em>Mysterious Object</em> each need two lesser works first; the last one goes
-          up in a city holding one of them, and its builder wins if it still holds that city
-          ${ALT_VICTORY.portalTurns} turns later. One of each per empire, never bought with gold,
-          and everybody is told when work begins and as each is finished. Take the city and
-          whatever stands in it is torn down. The advance is at the far end of your own tree.
+          <strong>Three works end the game.</strong> The Horde's <em>Demonic Portal</em>, the
+          Kingdom's <em>Mysterious Object</em> and the Hive's <em>Second Queen's Shell</em> each
+          need two lesser works first; the last one goes up in a city holding one of them, and its
+          builder wins if it still holds that city ${ALT_VICTORY.portalTurns} turns later. One of
+          each per side, never bought with gold, and everybody is told when work begins and as
+          each is finished. Take the city and whatever stands in it is torn down.
+        </p>
+        <p class="flavor">
+          <strong>The two empires keep theirs at the far end of their own tree. The Hive does
+          not.</strong> <em>All Is The Hive</em> sits four advances in, behind the Soldier-caste,
+          and its three works cost six hundred shields against the empires' thousand. The Hive
+          comes up out of the ground around turn a hundred with two Grubs, against empires six
+          cities deep, and studies at a third their rate &mdash; so where they can afford an
+          ending at the end of everything else, the Hive can only afford one it was always going
+          to walk past. It is the only road it has, and it is a short one.
         </p>`
             : ''
         }

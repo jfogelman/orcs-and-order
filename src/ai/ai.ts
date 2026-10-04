@@ -309,6 +309,14 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // Something to fight with, before anything else whatsoever.
       'caste-fodder',
       'caste-soldier',
+      // Then the way out, fifth of twenty-five, which looks absurd on a
+      // victory advance and is the only position that works. They research
+      // 11.8 advances in a game -- the number does not move whatever this list
+      // says -- so an ending asked for twenty-second is an ending asked for
+      // never, and that is exactly what happened: twice in twelve games, no
+      // works ever built. Asked for here it is 165 beakers behind two advances
+      // they already have, and they finish it in a third of their games.
+      'all-is-the-hive',
       'mapmaking',
       'bridge-building',
       'caste-spitter',
@@ -328,7 +336,6 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'burrower-ambush',
       'caste-warden',
       'insanity',
-      'all-is-the-hive',
       'pyromancy',
       'cryomancy',
       'sky-argument',
