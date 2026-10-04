@@ -586,7 +586,16 @@ export interface Summary {
   techs: [number, number];
   combats: number;
   captures: number;
-  /** Games by how they ended: conquest, dominance, points, draw, unfinished. */
+  /**
+   * Games by how they ended: conquest, dominance, points, and each side's own
+   * ending.
+   *
+   * The `hive` column was missing for the whole of section 125, so the twenty-
+   * seven games the Hivekin won off their own ending appeared only as a
+   * discrepancy: the five printed numbers summed to 38 of 54 and the sixteen
+   * missing games were the ones that mattered most. A report that cannot name
+   * the third side's ending cannot show the third side winning.
+   */
   routes: Record<string, number>;
   /** Mean cities raided per game, orc and human. */
   sacks: [number, number];
@@ -645,7 +654,7 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}${pad('hive', 6)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob', 16)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob/hv', 19)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -664,7 +673,7 @@ export function report(results: ArmResult[]): string {
       pad(r.captures.toFixed(1), 6) +
       pad(
         `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
-          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}`,
+          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}/${r.routes.hive ?? 0}`,
         16,
       ) +
       pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +

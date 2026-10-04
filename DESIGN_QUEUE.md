@@ -10841,3 +10841,67 @@ its own slice.
 - The three tiles still owe their own unpaired, more-games measurement.
 - **The Kingdom is nine points down against the Horde** with the Hive in the
   game, deliberately uncorrected while the Hive is still changing.
+
+### The short road, measured: 0 of 108 to 27 of 108
+
+216 games, maps paired:
+
+  arm         set        orc  hum  hive   cq/dm/pt/po/ob
+  long road   tuned       36   18     0   2/7/7/25/13
+  long road   held-out    28   26     0   6/7/9/13/19
+  short road  tuned       24   14    16   2/5/3/18/10
+  short road  held-out    26   17    11   6/4/9/12/12
+
+**Zero to twenty-five per cent**, on both seed sets, with the ending race
+visibly thinning to make room: portals 25 to 18 and objects 13 to 10 on tuned.
+An equal third would be 36 of 108 and they are at 27, which for a side that
+arrives on turn a hundred against empires six cities deep is about right.
+
+**Every one of those 27 wins is their own ending.** Not inferred -- the five
+printed victory-route numbers sum to 38 of 54 on the short-road tuned row, and
+the sixteen missing games are exactly the Hive's. The report had no `hive`
+column, for the whole of section 125, so the third side's wins could only ever
+have shown up as a hole in the arithmetic. Fixed; it reads `cq/dm/pt/po/ob/hv`
+now.
+
+The causal chain from section 125 is now closed end to end:
+
+  no research plan  -> no castes      -> no army        (fixed, still 0 wins)
+  sited by emptiness -> cities that cannot feed         (fixed, still 0 wins)
+  one founder        -> too little ground               (fixed, still 0 wins)
+  a bar of 0.50      -> declined every fight            (fixed, still 0 wins)
+  an 11-advance road -> never entered the only race     (fixed, 27 wins)
+
+Four of those five were real faults and none of them could have produced a win,
+because none was on the path to one. That is the lesson of the section, and it is
+the same one as [[a-zero-explains-nothing]] at a larger scale: an outcome needs
+the whole chain to the outcome, not the nearest plausible defect.
+
+### What this leaves on the table
+
+**The Kingdom is now clearly down.** Across both sets the two empires split
+50-31 to the Horde, 62/38, where the game before the Hivekin ran nearer even.
+Some of that is the second Grub's nine points, deliberately left uncorrected
+while the Hive was still changing. The Hive has now stopped changing in the way
+that was the excuse -- except for the counting ladder, which is committed and
+unmeasured -- so this is the next thing to measure and the first real candidate
+for a correction to `targetCities` or the Kingdom's own prices.
+
+Worth noting what is *not* disturbed: the Hive takes its wins out of both
+empires and inconsistently between seed sets -- tuned costs the Horde twelve
+games and the Kingdom four, held-out costs the Horde two and the Kingdom nine --
+so the third seat is not systematically eating one side.
+
+### Still true, and still a placeholder
+
+- **The counting ladder is committed and unmeasured.** Five castes stack now,
+  two advances at 120 beakers. Expect it in their attack rate rather than their
+  win rate: three Soldier-caste on a tile is 9/6/12 for sixty shields, and a
+  side that declines fights on odds should be bringing more of itself to them.
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- **The garrison treadmill**, its own measured section after 125 closes, per
+  Jeremy on 2026-10-04.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive.
+- The brood choice has no dialog.
+- The three tiles still owe their own unpaired, more-games measurement.

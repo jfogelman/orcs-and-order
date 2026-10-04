@@ -447,7 +447,10 @@ Done, each probed before it was swept:
   advances), is asked for fifth of twenty-five, and its works cost 180/180/240
   against the other endings' 300/300/400. Probed at 4 wins in 12, every one an
   ending win; Jeremy chose this over a research mechanic on 2026-10-04.
-  Sweeping at 216.
+  **Swept at 216: 0 of 108 to 27 of 108**, 16 of 54 tuned and 11 of 54 held-out,
+  with portals and objects thinning to make room. Every one of the 27 is their
+  own ending. An equal third would be 36 and they are at 27, which for a side
+  arriving on turn a hundred is about right.
 
 Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
 
