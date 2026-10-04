@@ -15,7 +15,7 @@ import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbari
 import { LEGION } from '../sim/wilds';
 import { RUINS } from '../sim/ruins';
 import { COWED } from '../sim/status';
-import { QUEEN } from '../sim/hivekin';
+import { HIVEKIN, QUEEN } from '../sim/hivekin';
 import { BURROW } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
@@ -395,8 +395,32 @@ function creatureSection(faction: FactionId): string {
  * happens after something goes wrong. A player who meets the Hivekin and loses
  * a city to something that came up out of the floor deserves to be able to
  * look it up.
+ *
+ * **It opens by saying who everybody is**, which it did not. The first line
+ * used to be "She does not move", with no antecedent for "she" anywhere above
+ * it except a flavour blurb -- and nothing at all to say that a Hive is their
+ * word for a city, that a caste is their word for a unit, that they are not on
+ * the map when the game begins, or that they will not be talked to. Every rule
+ * below assumes those four things.
+ *
+ * Shown in two places, so it is written in the third person throughout: the
+ * Hivekin player's own pane and, for everybody else, the pane about them.
  */
-const HIVE_RULES = `
+export const HIVE_RULES = `
+  <p>They are not on the map when the game starts. Somewhere around turn
+  ${HIVEKIN.from} to ${HIVEKIN.until} the ground opens on ground nobody had
+  claimed, and a third side is simply there, with no explanation offered and
+  none apparently required. Their cities are <strong>Hives</strong> and their
+  units are <strong>castes</strong> &mdash; one shape per job, grown rather than
+  recruited &mdash; and there is exactly one <strong>Queen</strong>, who is the
+  reason any of it works.</p>
+  <p><strong>Nobody negotiates with them.</strong> There is no peace to be made
+  with the Hive and none to be broken: the two empires can sign with each other,
+  and whatever either of them has agreed, the Hive is still at war with both.
+  It is not hostility so much as a difference of opinion about whether the
+  conversation is happening. For the first ${HIVEKIN.grace} turns after they
+  come up they cannot be attacked at all, which is the only courtesy in the
+  arrangement and runs in their favour.</p>
   <p><strong>She does not move.</strong> The Queen sits in the first Hive and never
   leaves it. That Hive <em>makes nothing at all</em> while she is not in it &mdash;
   production there is a thing she is doing, not a thing it is doing.</p>

@@ -15,8 +15,6 @@ import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVEKIN } from '../src/sim/hivekin';
 import { TECHS } from '../src/model/techs';
-import type { TechId } from '../src/model/types';
-import { endingWorks } from '../src/sim/endings';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE } from '../src/sim/diplomacy';
 import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
@@ -135,56 +133,54 @@ const control = () => {
 };
 
 const buildArms = (): Arm[] => {
-  // Section 125: the road to the Hive's ending.
+  // Section 125: the counting ladder, now that they can win without it.
   //
-  // Four measurements said the Hivekin win nothing, and the fourth said why the
-  // first three could not have helped: thirty-eight of fifty-four games are
-  // decided by somebody finishing an ending, and the Hive had built **no works
-  // in any game, ever**. Its road cost 860 beakers over eleven advances at 9.9
-  // beakers a turn -- 87 turns of pure research against the Horde's 23 -- in a
-  // life of about 140.
+  // The short road took them from 0 of 108 to 27, so this measures the ladder
+  // against a Hive that is already a contender rather than against one that
+  // could not win at all -- which is the only way to read what the ladder
+  // itself is worth.
   //
-  // Repricing it is provably not a lever: their advances per game read 11.8
-  // whatever the road costs, so an eleven-advance road is their whole game at
-  // any price. The road has to be *short*. Off `caste-soldier` it is 165 over
-  // four advances they research anyway, asked for fifth rather than
-  // twenty-second, with the works at 180/180/240 rather than 300/300/400.
-  // Probed at 4 wins in 12 against zero; this is the 216 that decides it.
+  // Five castes stack and two advances at 120 beakers unlock the rungs. Expect
+  // it in the fight columns rather than the win column: three Soldier-caste on
+  // one tile is 9/6/12 for sixty shields, and a side whose bar is 0.35 should
+  // clear it more often when it brings more of itself.
   //
-  // The long arm restores every part of that at once, because they are one
-  // change: a cheap work at the end of a road nobody walks measured as nothing.
-  //
-  // **Both arms state all four values, and that is not optional here.** The
-  // tech table and the building table are not in `LEVERS`, so the harness
-  // cannot put them back between arms -- and it cannot see them in its
-  // identity check either, so an arm that relied on the default would have
-  // silently inherited the other arm's road and the check would have passed on
-  // the `techPriority` difference alone. That is section 59 wearing a hat.
-  // They are deliberately not added to `LEVERS`: `TECHS` and `TECHS_BY_ID`
-  // share their objects, and restoring either one by shallow assign would hand
-  // the other a stale set.
-  const hiveEnding = (cost: number, prereqs: TechId[], works: number[], at: number) => {
-    const road = TECHS.find((t) => t.id === 'all-is-the-hive')!;
-    road.cost = cost;
-    road.prereqs = prereqs;
-    endingWorks('hive').forEach((b, i) => (b.cost = works[i]));
-    const list = PERSONALITIES.hivekin.techPriority.filter((t) => t !== 'all-is-the-hive');
-    list.splice(at, 0, 'all-is-the-hive');
+  // Both arms state the counts, for the reason the road arms did: `UNIT_TYPES`
+  // is generated from `CREATURES` at module load, so an arm cannot simply set
+  // `counts` and expect the variants to exist. The off arm therefore takes the
+  // rungs away where it can be done without rebuilding the table -- by making
+  // the two advances grant nothing, which leaves the variants defined and
+  // unbuildable. That is the honest control: the question is whether the Hive
+  // can *field* groups, not whether the types exist.
+  const ladder = (on: boolean) => {
+    const rungs: Record<string, string[]> = {
+      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2', 'worker_x2'],
+      'assumed-fewer': ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
+    };
+    for (const [id, units] of Object.entries(rungs)) {
+      const t = TECHS.find((x) => x.id === id)!;
+      t.units = on ? units : [];
+    }
+    const list = PERSONALITIES.hivekin.techPriority.filter((t) => !(t in rungs));
+    if (on) {
+      list.splice(4, 0, 'always-this-many');
+      list.splice(9, 0, 'assumed-fewer');
+    }
     PERSONALITIES.hivekin.techPriority = list;
   };
   return [
     {
-      label: 'long road',
+      label: 'no ladder',
       apply: () => {
         control();
-        hiveEnding(200, ['caste-princess', 'insanity'], [300, 300, 400], 21);
+        ladder(false);
       },
     },
     {
-      label: 'short road',
+      label: 'ladder',
       apply: () => {
         control();
-        hiveEnding(100, ['caste-soldier'], [180, 180, 240], 4);
+        ladder(true);
       },
     },
   ];

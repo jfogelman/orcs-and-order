@@ -20,6 +20,9 @@ import { dominanceShare } from '../src/sim/turn';
 import { HIVEKIN, hivekinOf, placeQueen } from '../src/sim/hivekin';
 import { endingFor } from '../src/sim/endings';
 import { effectiveMove } from '../src/sim/rules';
+import { HIVE_RULES } from '../src/ui/pedia';
+import { QUEEN } from '../src/sim/hivekin';
+import { BURROW } from '../src/sim/burrow';
 
 /**
  * Section 125 slice A: the third side exists, and is counted.
@@ -422,5 +425,43 @@ describe('three sides, counted', () => {
       expect(at).toBeGreaterThanOrEqual(HIVEKIN.from);
       expect(at).toBeLessThanOrEqual(HIVEKIN.until);
     }
+  });
+});
+
+describe('what the book says about them', () => {
+  /**
+   * The Hivekin pane used to open on "She does not move", with no antecedent
+   * for "she" anywhere above it but a flavour blurb -- and nothing to say that
+   * a Hive is their word for a city, a caste their word for a unit, that they
+   * are not on the map when the game begins, or that they cannot be talked to.
+   * Every rule in the block assumes those four things.
+   */
+  it('says who everybody is before it says what they do', () => {
+    const intro = HIVE_RULES.slice(0, HIVE_RULES.indexOf('She does not move'));
+    expect(intro).toMatch(/Hives/);
+    expect(intro).toMatch(/castes/);
+    expect(intro).toMatch(/Queen/);
+    // When they turn up, and that they are not there at the start.
+    expect(intro).toMatch(/not on the map when the game starts/i);
+    expect(intro).toMatch(new RegExp(`${HIVEKIN.from}`));
+    expect(intro).toMatch(new RegExp(`${HIVEKIN.until}`));
+    // And the rule an empire player will otherwise learn by trying it.
+    expect(intro).toMatch(/no peace to be made/i);
+  });
+
+  it('never prints a number it failed to look up', () => {
+    // Every figure in the block is interpolated from the levers, so a renamed
+    // one would read "undefined" to the player rather than failing anywhere.
+    expect(HIVE_RULES).not.toMatch(/undefined|NaN|\[object/);
+    for (const n of [HIVEKIN.from, HIVEKIN.until, HIVEKIN.grace, QUEEN.countdown, BURROW.range]) {
+      expect(typeof n, 'a lever the book quotes').toBe('number');
+      expect(HIVE_RULES).toContain(String(n));
+    }
+  });
+
+  it('is written for both readers, so it never says "you are" the Hive', () => {
+    // The same block is shown in the Hivekin player's own pane and in the pane
+    // about them, so it stays in the third person throughout.
+    expect(HIVE_RULES).not.toMatch(/\byour Hive\b|\byou are the\b|\byour Queen\b/i);
   });
 });
