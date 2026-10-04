@@ -1028,7 +1028,7 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 15,
     sight: 1,
-    counts: [1],
+    counts: [1, 2],
     artScale: 0.76,
     silhouette: 'worker',
     body: '#c4b183',
@@ -1054,7 +1054,10 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 10,
     sight: 1,
-    counts: [1],
+    // The Goblin's ladder exactly, because this *is* the Goblin: 1/1/10 at ten
+    // shields, down to the last number. Nothing here needed calibrating, only
+    // unlocking -- see the two advances in `techs.ts` that do it.
+    counts: [1, 2, 3, 5],
     artScale: 0.7,
     silhouette: 'small',
     body: '#b9a878',
@@ -1073,7 +1076,10 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 20,
     sight: 1,
-    counts: [1],
+    // Three rungs of the Orc's seven, because this is the Orc -- 3/2/12 at
+    // twenty -- and the Horde needs six advances to climb the rest. The Hive
+    // researches twelve advances in a whole game and cannot buy a ladder.
+    counts: [1, 2, 3],
     artScale: 0.85,
     silhouette: 'armored',
     body: '#a8976a',
@@ -1094,7 +1100,7 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 40,
     sight: 2,
-    counts: [1],
+    counts: [1, 2],
     artScale: 0.95,
     silhouette: 'armored',
     body: '#9d8a5c',
@@ -1116,7 +1122,7 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 25,
     sight: 2,
-    counts: [1],
+    counts: [1, 2],
     artScale: 0.8,
     silhouette: 'thrower',
     body: '#a9b06a',

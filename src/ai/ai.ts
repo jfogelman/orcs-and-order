@@ -317,9 +317,16 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // works ever built. Asked for here it is 165 beakers behind two advances
       // they already have, and they finish it in a third of their games.
       'all-is-the-hive',
+      // Then quantity, which is two advances and 120 beakers for a rung on
+      // every shape they have. Here rather than later because it is the
+      // cheapest fighting strength in their tree: three Soldier-caste on one
+      // tile is 9/6/12 for sixty shields, and a side that declines fights on
+      // odds is a side that should be bringing more of itself to them.
+      'always-this-many',
       'mapmaking',
       'bridge-building',
       'caste-spitter',
+      'assumed-fewer',
       'tree-hugging',
       'caste-elite',
       'not-you-again',

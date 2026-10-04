@@ -7,7 +7,7 @@ import {
   rivalFactions,
   talks,
 } from '../src/model/factions';
-import { CREATURES, UNIT_TYPES, unitType } from '../src/model/units';
+import { CREATURES, CROWD_THRESHOLD, UNIT_TYPES, unitType, unitTypeId } from '../src/model/units';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS, TECHS_BY_ID } from '../src/model/techs';
 import { ADVISORS } from '../src/model/advisors';
@@ -19,6 +19,7 @@ import { attackStrength } from '../src/sim/combat';
 import { dominanceShare } from '../src/sim/turn';
 import { HIVEKIN, hivekinOf, placeQueen } from '../src/sim/hivekin';
 import { endingFor } from '../src/sim/endings';
+import { effectiveMove } from '../src/sim/rules';
 
 /**
  * Section 125 slice A: the third side exists, and is counted.
@@ -60,14 +61,72 @@ function withHive(state: GameState): number {
 }
 
 describe('the roster', () => {
-  it('has no counting ladder anywhere, which is the whole of what they are', () => {
+  /**
+   * This test used to assert the opposite -- no ladder anywhere, "which is the
+   * whole of what they are" -- straight off the first bible. Jeremy's answer of
+   * 2026-10-04 was that he is not beholden to it and the game's oldest joke
+   * should reach the Hive too, so what is pinned here is the *shape* of their
+   * version of it rather than its absence.
+   */
+  it('stacks the shapes quantity is the point of, and nothing else', () => {
     const castes = CREATURES.filter((c) => c.faction === 'hivekin');
     expect(castes.length).toBe(14);
-    for (const c of castes) {
-      expect(c.counts, `${c.id} must not stack`).toEqual([1]);
+    const ladder = castes.filter((c) => c.counts.length > 1).map((c) => c.id);
+    expect(ladder.sort()).toEqual(['elite', 'fodder', 'soldier', 'spitter', 'worker']);
+
+    // The Fodder-caste *is* the Goblin -- same attack, defence, health and
+    // price -- so it gets the Goblin's ladder exactly, and nothing about the
+    // rungs needed calibrating.
+    const goblin = CREATURES.find((c) => c.id === 'goblin')!;
+    const fodder = CREATURES.find((c) => c.id === 'fodder')!;
+    expect([fodder.attack, fodder.defense, fodder.hp, fodder.cost]).toEqual([
+      goblin.attack,
+      goblin.defense,
+      goblin.hp,
+      goblin.cost,
+    ]);
+    expect(fodder.counts).toEqual(goblin.counts);
+  });
+
+  it('never puts two Queens or two Princesses on one tile', () => {
+    // The seat holds one Queen and the succession grows one replacement. A
+    // group variant of either would mean two of a thing the whole faction is
+    // built around there being one of.
+    for (const id of ['queen', 'princess']) {
+      expect(CREATURES.find((c) => c.id === id)!.counts, id).toEqual([1]);
     }
-    // And the contrast is real rather than asserted: the Horde does stack.
-    expect(CREATURES.some((c) => c.faction === 'orc' && c.counts.length > 1)).toBe(true);
+  });
+
+  it('buys the whole ladder in two advances where the Horde needs six', () => {
+    const rungs = (faction: string) =>
+      TECHS.filter((t) => t.faction === faction && t.units.some((u) => u.includes('_x')));
+    const hive = rungs('hivekin');
+    const horde = rungs('orc');
+    expect(hive).toHaveLength(2);
+    expect(horde.length).toBeGreaterThanOrEqual(6);
+
+    // And theirs is cheap, because they research about twelve advances in a
+    // whole game: a Horde-shaped ladder would be half of it.
+    const cost = (ts: typeof hive) => ts.reduce((n, t) => n + t.cost, 0);
+    expect(cost(hive)).toBeLessThan(cost(horde) / 4);
+
+    // One advance, every shape at once -- the inversion that makes it theirs.
+    expect(new Set(hive.flatMap((t) => t.units.map((u) => u.split('_x')[0]))).size)
+      .toBeGreaterThan(3);
+  });
+
+  it('loses nothing to crowding, because every shape with a ladder moves one', () => {
+    const player = { techs: ['first-hivekin'] } as never;
+    for (const c of CREATURES.filter((x) => x.faction === 'hivekin' && x.counts.length > 1)) {
+      const biggest = unitTypeId(c.id, c.counts[c.counts.length - 1]);
+      expect(unitType(biggest).crowded || c.counts[c.counts.length - 1] < CROWD_THRESHOLD).toBe(
+        true,
+      );
+      // The Horde pays a movement point for a crowd until it learns to walk in
+      // a line. These move one, and the floor is one, so they never do -- which
+      // is why they are given no `coordination` advance to want.
+      expect(effectiveMove(player, biggest), biggest).toBe(c.move);
+    }
   });
 
   it('covers every role the other two sides field, except the two it refuses', () => {

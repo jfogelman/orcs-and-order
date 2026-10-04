@@ -409,6 +409,35 @@ Done, each probed before it was swept:
   and they attacked eight times a game against the empires' hundred. Swept: the
   mechanism moved -- captures up and both empires' populations down on both seed
   sets -- and the win rate did not. Still 0 of 108.
+- **The counting ladder, inverted** — Jeremy's answer of 2026-10-04 that he is
+  not beholden to the first bible, which had the Hivekin refuse the game's
+  oldest joke entirely. Five castes stack: Fodder `[1,2,3,5]`, Soldier
+  `[1,2,3]`, Worker, Spitter and Elite `[1,2]`. The Queen and the Princess never
+  will, because the whole faction is built on there being one of each.
+
+  Nothing needed calibrating. **The Fodder-caste is the Goblin** — 1/1/10 at ten
+  shields, to the last number — so it took the Goblin's ladder as it stands, and
+  **the Soldier-caste is the Orc** at 3/2/12 for twenty, so it took three rungs
+  of the Orc's seven.
+
+  The tech half is where their version lives. The Horde's ladder is six
+  advances and 590 beakers — *Let's Orc Together*, *Idiots Stick Together*, *The
+  Next Level of Stupid*, *Beyond Stupid*, *Not Just Stupid Anymore*, *And
+  Stupidity for All* — one painful realisation about numbers at a time. The Hive
+  gets **two, at 120 beakers, each raising every shape at once**: *There Were
+  Always This Many* and *You Had Assumed Fewer*. That is the better joke, since
+  a hive never had to learn to count and being counted is something that happens
+  *to* it — and it is the only affordable shape, because they research 11.8
+  advances in a whole game and a six-advance ladder would be half of it. The
+  same arithmetic that made their ending road unwalkable.
+
+  No `coordination` advance, and they want none: every caste with a ladder moves
+  one and `effectiveMove` floors at one, so the movement penalty that costs the
+  Horde a point until it learns to walk in a line cannot reach them. Ten of them
+  were always one thought.
+
+  **No art needed.** Group sprites are composed by stamping the base creature N
+  times, so the castes already drawn cover every rung.
 - **A short road to their ending**, which is the one that finally produced a
   win. Thirty-eight of fifty-four games are decided by somebody finishing an
   ending; the Hive had built **no works in any game, ever**, because its road

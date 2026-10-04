@@ -676,6 +676,53 @@ export const TECHS: TechDef[] = [
     flavor: 'The last shape held. A better one was owed regardless.',
   },
   {
+    // ------------------------------------------- the counting ladder, inverted
+    //
+    // The Horde's ladder is the game's oldest joke and it is six advances long:
+    // Let's Orc Together, Idiots Stick Together, The Next Level of Stupid,
+    // Beyond Stupid, Not Just Stupid Anymore, And Stupidity for All. Five
+    // hundred and ninety beakers to get from one orc to ten, one painful
+    // realisation about numbers at a time.
+    //
+    // **The Hive gets two, and each one raises every shape at once**, which is
+    // both the better joke and the only affordable shape. The better joke
+    // because a hive did not have to learn to count -- quantity came with the
+    // shape, and being counted is something that happens to it rather than
+    // something it achieves. The only affordable shape because they research
+    // 11.8 advances in an entire game at 9.9 beakers a turn: a six-advance
+    // ladder would eat their game exactly as the eleven-advance road to their
+    // own ending did, which is the mistake this section already made once.
+    //
+    // No `coordination` flag, and they do not need one. Every caste with a
+    // ladder moves one, and `effectiveMove` floors at one, so the crowding
+    // penalty that costs the Horde a movement point until it learns to walk in
+    // a line cannot touch them. Ten of them were always one thought.
+    id: 'always-this-many',
+    name: 'There Were Always This Many',
+    faction: 'hivekin',
+    cost: 40,
+    prereqs: ['caste-soldier'],
+    units: ['fodder_x2', 'fodder_x3', 'soldier_x2', 'worker_x2'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'The Hive has not grown. The Hive has been counted, which is a different ' +
+      'thing, and it would prefer the counting to stop.',
+  },
+  {
+    id: 'assumed-fewer',
+    name: 'You Had Assumed Fewer',
+    faction: 'hivekin',
+    cost: 80,
+    prereqs: ['always-this-many'],
+    units: ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'No additional shapes were made for this. You were simply looking at ' +
+      'some of them.',
+  },
+  {
     id: 'caste-spitter',
     name: 'A Shape That Reaches',
     faction: 'hivekin',

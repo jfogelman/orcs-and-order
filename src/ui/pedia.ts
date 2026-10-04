@@ -238,7 +238,15 @@ export function abilityNotes(def: UnitTypeDef): string[] {
     );
   }
   if (def.regenMultiplier > 1) notes.push(`heals ${def.regenMultiplier}× as fast as anything else`);
-  if (def.crowded) notes.push('−1 movement until coordinated: too many of them, nobody agreeing');
+  // Only where it can actually bite. `effectiveMove` floors at one, so a group
+  // of something that moves one loses nothing to disagreement -- and promising
+  // a penalty that cannot happen is worse than saying nothing. True of Five
+  // Goblins since the ladder was built, and of every Hivekin group, which is
+  // the whole of their version of the joke: ten of them were always one
+  // thought, and the card should not claim otherwise.
+  if (def.crowded && def.move > 1) {
+    notes.push('−1 movement until coordinated: too many of them, nobody agreeing');
+  }
   return notes;
 }
 
