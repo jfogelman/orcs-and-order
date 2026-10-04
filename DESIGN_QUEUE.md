@@ -10731,3 +10731,113 @@ find it twice.
 - The three tiles still owe their own unpaired, more-games measurement.
 - **The Kingdom is nine points down against the Horde** with the Hive in the
   game, and nothing has been done about it on purpose.
+
+### The fight bar moved the mechanism and not the outcome
+
+216 games, maps paired:
+
+                      orc  hum  hive   caps
+  bar 0.50  tuned      36   18     0    5.2
+  bar 0.50  held-out   33   21     0    6.0
+  bar 0.35  tuned      36   18     0    6.1
+  bar 0.35  held-out   28   26     0    6.2
+
+It worked as a bar: captures up on both seed sets and both empires' populations
+down on both, which is a side that now fights doing damage. Empire balance
+unmoved -- tuned identical, held-out five toward the Kingdom, which is inside
+chance on one set. And the Hive wins **0 of 108 for the fourth time**.
+
+Four fixes, four zeros. That pattern was the finding: everything so far was
+about how they *arrive*, and a side holding a fifth of the world with 44
+defences a game held is not losing the war.
+
+### They were never entered in the race that decides these games
+
+Look at how games end -- `cq/dm/pt/po/ob` = 2 conquest, 7 dominance, 7 points,
+**25 portal, 13 object**. Thirty-eight of fifty-four are decided by somebody
+finishing an ending. Dominance needs a 50% share and they hold 22%; points need
+turn 300 and the average game ends on 246. The ending is the only door they
+have.
+
+  side    beakers/turn  advances  got the advance  works standing  finished
+  orc             19.1      29.3            10/12             1.8       6/12
+  human           32.4      26.8             7/12             1.3       4/12
+  hive             9.9      11.8             2/12             0.0       0/12
+
+**Zero works built, in any game, ever.** Ten of the twelve games were won by an
+empire finishing its ending.
+
+### The price was never the gate. The road was, and it is arithmetic
+
+Roads to each side's own ending, summed over prerequisites:
+
+  orc     430 over  7 advances, at 19.1 beakers/turn  =  23 turns of research
+  human   965 over 12 advances, at 32.4 beakers/turn  =  30 turns
+  hive    860 over 11 advances, at  9.9 beakers/turn  =  87 turns
+
+The Kingdom's road is the most expensive in the game and it still finishes,
+because it earns three times what the Hive does. The Hive is asked for twice the
+Horde's road on half its income, and exists for about 140 turns -- so the road
+alone is most of its life before a single caste or work.
+
+Probed, six arms, twelve games each:
+
+  hive ending                        advance  works  finished  wins  advances  units
+  as shipped (road 860, 22nd of 25)     2/12    0.0      0/12  0/12      11.8   19.3
+  road 710: insanity dropped            2/12    0.0      0/12  0/12      11.8   19.3
+  road 610, and asked for 13th          3/12    0.3      0/12  0/12      11.8   19.2
+  that, and works at 60%                3/12    0.3      0/12  0/12      11.8   19.0
+  road 165: off caste-soldier, 5th      7/12    0.8      2/12  2/12      12.8   14.6
+  that, and works at 60%                7/12    1.3      4/12  4/12      12.0   15.3
+
+Two things to read off it.
+
+**The works' price is not a lever at all** while the road is long -- cheapening
+the end of a road they never walk changes nothing, and the first probe of this
+turned the wrong dial entirely (the final advance's own 200, of an 860 road).
+
+**Repricing the road is not a lever either, within reason.** The telling column
+is `advances`: **11.8 in every arm.** Repricing does not buy them research, it
+only changes what they spend it on, and an eleven-advance road is their whole
+game. 860 to 710 to 610 are the same answer wearing different numbers.
+
+### What does work, and what it costs
+
+The road has to fit inside four or five of their twelve advances. Off
+`caste-soldier` at 100 it is **165 beakers over four advances**, all of which
+they research anyway -- and that is the first thing in this section to produce a
+win: 2 of 12 on the road alone, 4 of 12 with the works at 60% as well. **Every
+win is an ending win**, 2 of 2 and 4 of 4, which is the causal chain closing.
+
+The cost is visible and sensible: units fall from 19.3 to about 15, because
+shields that were castes are now works. Cities and population barely move.
+
+Twelve games on tuned bases only, so 4/12 is a direction and not a number. It
+wants 216 and both sets.
+
+**Not applied.** It moves the ending off `caste-princess` and `insanity`, and
+the bible put it there deliberately; it also makes their victory advance
+available around turn 130 rather than never, which is a different game and
+arguably the right one for a side that comes up late and has to race. That is
+Jeremy's call about what the third faction is, not a balance lever.
+
+The alternative with a bigger ceiling is **throughput**: 9.9 beakers a turn
+against 19.1 and 32.4, traceable all the way to 3.5 Hives of 5.5 citizens
+arriving on turn 105. The fiction is sitting there -- one mind, many bodies --
+and beakers off total Hives or total population rather than per-city trade would
+move the number that every other lever bounces off. It is a new mechanic and
+its own slice.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- **The garrison treadmill**, which is not a Hivekin problem: half of every
+  Hivekin soldier-turn and a third of each empire's goes on walking to one of
+  its own undefended cities, and the branch that would make a unit stay has
+  never fired in 77,000 turns because it cannot.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive.
+- The brood choice has no dialog.
+- The three tiles still owe their own unpaired, more-games measurement.
+- **The Kingdom is nine points down against the Horde** with the Hive in the
+  game, deliberately uncorrected while the Hive is still changing.
