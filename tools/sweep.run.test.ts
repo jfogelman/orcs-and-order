@@ -218,6 +218,12 @@ describe('sweep', () => {
     },
     // Generous, and scaled: an explicit timeout overrides the config entirely,
     // so a fixed one silently caps how many seeds can ever be run.
-    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 15_000),
+    //
+    // Twenty-five seconds a game, up from fifteen. Section 125's fight-bar
+    // sweep took 15.7s a game over 216 games -- 56.6 minutes against a budget
+    // of exactly 54 -- so it printed its whole table and *then* failed on the
+    // timeout. A third seat makes games longer, and a measurement that has to
+    // be read out of a failed test is one somebody will eventually throw away.
+    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
   );
 });

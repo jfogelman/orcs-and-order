@@ -436,8 +436,13 @@ export interface SweepOptions {
  *
  * `runSweep` prints what it actually took against this number, so it can be
  * recalibrated from real output rather than guessed at again.
+ *
+ * Recalibrated to 15 for section 125, off two 216-game runs that came in at
+ * 13.4 and 15.7 seconds a game. Same reason as before, one seat further on:
+ * three sides take more turns each than two, and almost every game now runs to
+ * the limit. At 8 this told Jeremy to expect 29 minutes for a run that took 57.
  */
-export const SECONDS_PER_GAME = 8;
+export const SECONDS_PER_GAME = 15;
 
 export function estimate(games: number): string {
   const mins = (games * SECONDS_PER_GAME) / 60;
