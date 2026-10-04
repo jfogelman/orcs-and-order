@@ -78,6 +78,12 @@ const control = () => {
   NEW_GAME.barbarians = false;
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
+  // Section 125: what the Hive arrives with, named here rather than left to
+  // the harness putting the levers back. The arms below are about the bar they
+  // swing at, and an arm that silently depends on a default it does not state
+  // is the shape of mistake this file's own rule is against.
+  HIVEKIN.founders = 2;
+  HIVEKIN.escort = 2;
   NAVAL.enabled = true;
   NAVAL.overseasExtra = 3;
   NAVAL.crossFor = 1.2;
@@ -126,25 +132,31 @@ const control = () => {
 };
 
 const ARMS: Arm[] = [
-  // Section 125: does arriving with a second Grub buy a win?
+  // Section 125: the bar they will swing at.
   //
-  // Everything so far has been probed first and the clock has been ruled out:
-  // seventy-eight turns earlier bought two wins in 108 on one seed set and cost
-  // eleven points of Horde against Kingdom on the same one. Two things since
-  // then have each closed part of the gap for real -- siting the arrival by
-  // what the ground yields rather than by how empty it is, and a second
-  // founder. This asks the only question those were for.
+  // The second Grub bought no win -- 0 of 108 -- and a probe then said why
+  // nothing about arriving ever could: with something standing next to them
+  // the best odds on offer average 0.44, and their bar was 0.5. They attacked
+  // eight times a game against the two empires' hundred. At 0.35 the probe
+  // moves every column at once, so this is the measurement of that.
+  //
+  // Note what the second Grub *did* do, which this arm pair carries and does
+  // not ask about: it moved Horde against Kingdom by about nine points on both
+  // seed sets. That is a real shift and it is not being corrected yet, because
+  // correcting the two empires against a third one that cannot fight is baking
+  // in a compensation for a bug.
   {
-    label: 'one grub',
+    label: 'bar 0.50',
     apply: () => {
       control();
-      HIVEKIN.founders = 1;
+      PERSONALITIES.hivekin.caution = 0.5;
     },
   },
   {
-    label: 'two grubs',
+    label: 'bar 0.35',
     apply: () => {
       control();
+      PERSONALITIES.hivekin.caution = 0.35;
     },
   },
 ];

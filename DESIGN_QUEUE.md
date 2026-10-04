@@ -10597,3 +10597,137 @@ doing it.
   they should be and the tech tree cannot express.
 - The brood choice has no dialog; the AI answers it and a human owner gets
   `pending`.
+
+### The second Grub bought no win, and said where to look next
+
+216 games, maps paired:
+
+                      orc  hum  hive
+  one grub  tuned      30   22     2
+  one grub  held-out   29   25     0
+  two grubs tuned      36   18     0
+  two grubs held-out   33   21     0
+
+**Zero wins out of 108.** The two on the one-Grub tuned row are two games in a
+hundred and eight and the other three rows are zero; that is noise around zero,
+not a result.
+
+It did do something, and it is worth knowing before anybody tunes the two
+empires again: **Horde against Kingdom moved about nine points, on both seed
+sets, towards the Horde** -- 30-22 to 36-18 tuned, 29-25 to 33-21 held-out, with
+the Kingdom's city count falling in both (6.72 to 6.39, 5.98 to 5.67) and the
+Horde's population rising. Both sets, same direction, a supporting column
+moving: by this project's own rule that is believable. A healthier Hive costs
+the Kingdom more than it costs the Horde, presumably because the Kingdom is the
+builder and the one that targets six cities.
+
+Not corrected. Compensating the two empires against a third one that cannot
+fight is baking a correction for a bug into the balance.
+
+### Three fixes had each bought ground and none had bought a win
+
+Which is itself a signal, and the right reading of it was *stop fixing the
+arrival*. Everything so far -- a research plan of their own, siting the arrival
+by what the ground yields, a second founder -- is about how they start. A side
+that holds a fifth of the world and never converts it is not failing at setup.
+
+So: count the war.
+
+### What the probe found, and what it found about the probe
+
+`npm run hiveprobe` now watches whole games off the sweep's own tuned bases and
+attributes every fight. The first run said the Hive attacks **zero times in
+twelve games** while fielding eight Soldier-caste and four Spitter-caste.
+
+That was my counter, not the game. It read the log by index, and `log()` keeps
+only the last four hundred entries -- so once the window saturates, the length
+and a saved index both sit still while entries scroll past underneath, and the
+reader counts nothing from that point on. The Hive arrives around turn 105,
+long after saturation. **`playGame`'s own comment warns about exactly this** --
+"read off the tail, a seed with thirty-seven fights reports none" -- and I wrote
+it again anyway, two hundred lines from where it is written down. Anchored by
+identity rather than index, the same twelve games say:
+
+  side   attacks  won  defences held  caps  lost  cities  pop  units
+  orc      101.5  48.9      5.8  5.8   3.8   2.8     5.5 52.5   31.6
+  human     95.8  57.8     20.1 20.1   4.1   3.5     7.3 50.2   30.9
+  hive       7.9   6.4     52.5 52.5   0.2   1.8     2.8 17.7   16.3
+
+They do not attack. They hold. **Fifty-two defences a game and eight attacks**,
+against the empires' hundred, and 0.2 cities taken. They are a punching bag
+that happens to be good at being punched.
+
+### The bar was set just above everything they are ever offered
+
+A trace inside `actSoldier` (`AI_TRACE`, off by default, read only by the
+probe) counts which branch each side's units leave through. Theirs:
+
+  something next to it they could swing at   29% of their turns
+  best odds when there was                   0.44
+  their bar                                  0.50
+
+I set `caution: 0.5` when writing their personality -- twice the Horde's, on
+the reasoning that glass units should not be thrown away. The reasoning was
+right and the number was one tick too high: it sits above the average fight
+they are offered, so they decline eleven in twelve.
+
+Probed at three bars, twelve games each:
+
+  bar   attacks  won  caps  lost  cities  pop  units  alive  share
+  0.50      7.9  6.4   0.2   1.8     2.8 17.7   16.3  10/12    18%
+  0.35     13.9  9.8   0.6   1.6     3.5 19.1   19.3  11/12    22%
+  0.25     18.2 11.8   0.3   1.2     3.0 17.8   16.3  10/12    19%
+
+**0.35 is the peak of every column at once.** The Horde's own 0.25 attacks more
+often and ends with less of everything, which is what throwing glass units away
+looks like in a table -- so the instinct behind 0.5 was sound and it only
+needed to come down one notch, not all the way. Set to 0.35; sweeping it now.
+
+### And the thing the trace found that is not about the Hivekin at all
+
+The same table, per soldier-turn, across 77,000 of them:
+
+  branch                       orc   human    hive
+  11 walks to a bare city      30%     33%     48%
+  13 marches on somebody       15%     12%      9%
+  06 swings                     3%      2%      1%
+  10 keeps the gold            11%     10%      0%
+  12 goes to a ruin             1%     14%      5%
+  11 *holds* a bare city        0%      0%      0%
+
+Half of every Hivekin soldier-turn, and a third of each empire's, is spent
+walking to one of its own undefended cities. **And nobody ever arrives in the
+sense of staying.** The fortify branch for standing in a bare city has never
+fired once, for any side, in 77,000 turns -- it cannot. `bare` is defined as a
+city with none of our units on it, so a unit standing on one makes it not bare
+and the condition is unreachable by construction.
+
+What happens instead is a treadmill: a unit walks to the empty city, arrives,
+and next turn is sent to the next empty one -- or, if there is no other, marches
+off to the war -- leaving the first empty again. **A city is only ever held by
+somebody passing through it.** That is also the answer to something section
+125's expansion probe found and could not explain: every one of the twenty-two
+Hives they lost had a garrison of nobody.
+
+I have not fixed it, and would not inside this section. The obvious repair is
+"stay put", and the measured warning against exactly that is already written at
+`guardTheGold` twenty lines above: garrisoning every city flipped 36 of 108
+games to the Kingdom, because the side that wins by attacking had its army
+standing at home. Something narrower might be right -- stay while this is the
+only bare city, stay for a few turns, stay if the city is worth more than the
+front -- and all of it is its own measurement on the whole game rather than a
+line changed in a section about a third faction. **Jeremy's call.** The comment
+at the site now says all of this, so the next person to read it does not have to
+find it twice.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive, which the bible says
+  they should be and the tech tree cannot express.
+- The brood choice has no dialog; the AI answers it and a human owner gets
+  `pending`.
+- The three tiles still owe their own unpaired, more-games measurement.
+- **The Kingdom is nine points down against the Horde** with the Hive in the
+  game, and nothing has been done about it on purpose.

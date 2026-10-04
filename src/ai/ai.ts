@@ -333,7 +333,26 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'cryomancy',
       'sky-argument',
     ],
-    caution: 0.5,
+    /**
+     * How good the odds have to look before a caste will swing.
+     *
+     * **This was the reason they never fought.** Set at 0.5 to begin with --
+     * twice the Horde's, on the reasoning that glass units should not be
+     * thrown away -- and then measured: when something is standing next to a
+     * Hivekin unit, the best odds on offer average **0.44**. So the bar sat
+     * just above everything they were ever offered and they declined eleven
+     * adjacent fights in twelve, attacking eight times a game against the two
+     * empires' hundred.
+     *
+     * Probed over twelve games at three bars, and 0.35 is the peak of every
+     * column at once -- 2.8 Hives to 3.5, eighteen per cent of the world to
+     * twenty-two, survival ten games in twelve to eleven, captures tripled.
+     * Dropping all the way to the Horde's 0.25 attacks more often still (18.2
+     * a game) and ends with *less* of everything, which is what throwing glass
+     * units away looks like in a table. So the original instinct was right and
+     * the number was wrong.
+     */
+    caution: 0.35,
     stormingParty: 3,
   },
 };
@@ -353,7 +372,7 @@ export function siteScore(state: GameState, x: number, y: number): number {
 }
 
 /** Rough odds the attacker wins, used to keep the AI from obvious suicide. */
-function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
+export function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
@@ -1579,20 +1598,48 @@ function escortDuty(state: GameState, unit: Unit): boolean {
   return moveToward(state, unit, best.x, best.y).kind !== 'blocked';
 }
 
+/**
+ * Which branch of `actSoldier` each side's units actually leave through.
+ *
+ * Off by default and read only by `npm run hiveprobe`. It is here rather than
+ * in the probe because the branches are inside this function and nothing
+ * outside it can see which one a turn went out of -- and that turned out to be
+ * the only question worth asking about section 125's Hivekin.
+ *
+ * It has already paid for itself twice. The probe's own fight counter read the
+ * log by index and so counted nothing once the 400-entry window saturated,
+ * which reported **zero attacks** for a side making eight a game; this said
+ * otherwise in one run. And it found where the turns really go: forty-eight per
+ * cent of every Hivekin soldier-turn is spent walking to one of their own
+ * undefended cities, against nine per cent marching on anybody.
+ *
+ * Keyed `branch|faction`, so the two empires are always the control.
+ */
+export const AI_TRACE: { on: boolean; hits: Record<string, number> } = { on: false, hits: {} };
+function trace(state: GameState, unit: Unit, where: string): void {
+  if (!AI_TRACE.on) return;
+  const faction = state.players[unit.owner]?.faction;
+  if (!faction) return;
+  const key = where + '|' + faction;
+  AI_TRACE.hits[key] = (AI_TRACE.hits[key] ?? 0) + 1;
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
   personality: AiPersonality,
   frontier: Array<[number, number]>,
 ): void {
+  trace(state, unit, '00 called');
   // An empty-handed thrower is a quarter of a unit; getting it an axe back is
   // worth more than anything else it could do with the turn.
-  if (restockIfNeeded(state, unit)) return;
+  if (restockIfNeeded(state, unit)) return trace(state, unit, '01 restock');
 
   // Reach first. A unit that can shoot should shoot, and one that cannot shoot
   // from where it stands should go and stand somewhere it can.
-  if (fireIfPossible(state, unit)) return;
+  if (fireIfPossible(state, unit)) return trace(state, unit, '02 fire');
   if (unitType(unit.type).range > 1 && takeAim(state, unit)) {
+    trace(state, unit, '03 aim');
     fireIfPossible(state, unit);
     return;
   }
@@ -1600,7 +1647,7 @@ function actSoldier(
   // Section 114: newly ashore on somebody else's island with the rest of the
   // party still at sea. Hold the beach rather than walking into a town in ones
   // and twos, which is what made invasions land and achieve nothing.
-  if (holdTheBeach(state, unit)) return;
+  if (holdTheBeach(state, unit)) return trace(state, unit, '04 beach');
 
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);
@@ -1622,8 +1669,10 @@ function actSoldier(
     bestTarget !== null &&
     state.units.some((u) => u.x === bestTarget!.x && u.y === bestTarget!.y && isWarden(u));
   const bar = optional ? Math.max(personality.caution, RUINS.aiOdds) : personality.caution;
+  if (bestTarget) trace(state, unit, '05 had a target');
   if (bestTarget && bestTarget.odds >= bar) {
-    tryStep(state, unit, bestTarget.x, bestTarget.y);
+    const r = tryStep(state, unit, bestTarget.x, bestTarget.y);
+    trace(state, unit, '06 swung: ' + r.kind);
     return;
   }
 
@@ -1637,6 +1686,7 @@ function actSoldier(
       distance(unit.x, unit.y, c.x, c.y) === 1,
   );
   if (targetCity) {
+    trace(state, unit, '07 beside a city');
     const besiegers = state.units.filter(
       (u) => u.owner === unit.owner && distance(u.x, u.y, targetCity.x, targetCity.y) === 1,
     ).length;
@@ -1654,7 +1704,7 @@ function actSoldier(
   // ground -- ours is ours, and a road we wrecked at home is a road we dug at
   // home -- and only now, after the attacking branches above, because a turn
   // spent wrecking is a turn not spent fighting.
-  if (AI_TUNING.pillage && onEnemyGround(state, unit) && pillage(state, unit)) return;
+  if (AI_TUNING.pillage && onEnemyGround(state, unit) && pillage(state, unit)) return trace(state, unit, '08 pillage');
 
   // A lone troll standing in a swamp, with a friend to make and the health to
   // spare. Before feeding the guns, because it is the rarer opportunity and it
@@ -1676,7 +1726,7 @@ function actSoldier(
   }
 
   // Somebody has to walk with the settlers.
-  if (escortDuty(state, unit)) return;
+  if (escortDuty(state, unit)) return trace(state, unit, '09 escort');
 
   // Somebody has to mind the gold.
   //
@@ -1700,7 +1750,7 @@ function actSoldier(
     // second one passing through is free to carry on.
     if (here && wantsKeeper(state, here) && garrisonSize(state, here) <= 1) {
       unit.order = 'fortified';
-      return;
+      return trace(state, unit, '10 keeps the gold');
     }
     const wanting = ownCities
       .filter((c) => garrisonSize(state, c) === 0 && wantsKeeper(state, c))
@@ -1711,7 +1761,7 @@ function actSoldier(
     if (wanting && distance(unit.x, unit.y, wanting.x, wanting.y) <= 8) {
       if (routeTo(state, unit, wanting.x, wanting.y)) {
         moveToward(state, unit, wanting.x, wanting.y);
-        return;
+        return trace(state, unit, '10 walks to the gold');
       }
     }
   }
@@ -1736,17 +1786,36 @@ function actSoldier(
   }
 
   // Hold undefended home cities.
+  //
+  // **Nobody ever actually holds one, and this is where the army goes.**
+  // Measured over 77,000 soldier-turns in section 125: thirty per cent of the
+  // Horde's, thirty-three of the Kingdom's and forty-eight of the Hive's leave
+  // through the walk below, and the fortify above has *never once* fired for
+  // any of them -- it cannot. `bare` is a city with none of our units standing
+  // on it, so a unit standing on one makes it not bare, and the condition is
+  // unreachable by construction. What happens instead is a treadmill: a unit
+  // walks to the empty city, arrives, and next turn is sent to the next empty
+  // one (or marches off), leaving the first empty again. A city is only ever
+  // held by somebody passing through it -- which is why section 125's probe
+  // found every lost Hive had a garrison of nobody.
+  //
+  // Not fixed here, deliberately. The obvious repair is "stay put", and the
+  // comment on `guardTheGold` above is the measured warning against exactly
+  // that: garrisoning every city flipped 36 of 108 games to the Kingdom,
+  // because the side that wins by attacking had its army standing at home.
+  // Something narrower might be right, and it is its own measurement rather
+  // than a line changed inside a section about a third faction.
   const bare = ownCities.find(
     (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
   );
   if (bare) {
     if (unit.x === bare.x && unit.y === bare.y) {
       unit.order = 'fortified';
-      return;
+      return trace(state, unit, '11 holds a bare city');
     }
     if (distance(unit.x, unit.y, bare.x, bare.y) <= 8 && routeTo(state, unit, bare.x, bare.y)) {
       moveToward(state, unit, bare.x, bare.y);
-      return;
+      return trace(state, unit, '11 walks to a bare city');
     }
   }
 
@@ -1758,7 +1827,7 @@ function actSoldier(
   // this: a mechanic the AI has no route to is a mechanic that does not happen,
   // and a player who is the only one cracking ruins is playing a different game
   // from the one being measured.
-  if (RUINS.enabled && RUINS.aiSeeks && seekRuin(state, unit)) return;
+  if (RUINS.enabled && RUINS.aiSeeks && seekRuin(state, unit)) return trace(state, unit, '12 ruin');
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);
@@ -1769,11 +1838,13 @@ function actSoldier(
     // pathfinder for a tile it treats as impassable, which is why this never
     // worked; arriving next door is enough, because the attack branch at the
     // top of this function takes it from there next turn.
+    trace(state, unit, '13 knows a target');
     const spot = approachTile(state, unit, target.x, target.y);
     if (spot && (spot.x !== unit.x || spot.y !== unit.y)) {
       moveToward(state, unit, spot.x, spot.y);
-      return;
+      return trace(state, unit, '13 marches');
     }
+    trace(state, unit, '13 no approach tile');
   }
 
   // Nothing known: go and look.

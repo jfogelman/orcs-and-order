@@ -294,7 +294,7 @@ cost of its whole turn; `'sacrifice'` — it eats that neighbour instead, a grou
 feeding it one shot per creature), and city resupply. Tests asserting the
 Catapult's card says it eats its neighbours and the Ballista's does not.
 
-### Slice A — the third seat exists — **DONE, measurement running**
+### Slice A — the third seat exists — **DONE, measured**
 
 Landed 2026-10-02 across three commits on `feat/hivekin-seat`. Everything in the
 list below is built, 996 tests pass, and the two-sides-against-three sweep is the
@@ -359,6 +359,43 @@ is the floor for anything that matters.
 
 **Measure B** against slice A as the control, so any shift is attributable to
 one half or the other.
+
+Landed 2026-10-03. The measurement said the two arms were **identical**, which
+was not a null result but an instrument reading zero -- the AI never sinks and
+never burrows because nothing teaches it to, and it had never built a Burrower
+either. See `DESIGN_QUEUE.md`.
+
+### Slice C — they have to be able to fight — **in progress**
+
+Not planned as a slice. It is what three measurements in a row asked for: every
+fix to how the Hivekin *arrive* bought them ground and none of it bought a win.
+
+Done, each probed before it was swept:
+
+- **A research plan of their own.** `PERSONALITIES[faction] ?? PERSONALITIES.orc`
+  handed them the Horde's list, made entirely of advances they cannot have, so
+  they never grew a caste. One Grub to a full roster; still 0 of 108 wins.
+- **Siting the arrival by yield rather than emptiness.** `emergenceSpot` scored
+  land count, so they founded on ground that could not feed them: 4.6 citizens
+  against the empires' 9.7. Now 5.7, and site score 152 to 168.
+- **A second founder.** 2.8 Hives to 3.5 and 17% of the world to 21%. Bought no
+  win, and moved Horde against Kingdom nine points on both seed sets, which is
+  deliberately left uncorrected for now.
+- **The bar they will swing at**, `caution` 0.5 to 0.35. The one that was
+  actually about fighting: with something standing next to them the best odds on
+  offer average 0.44, so a bar of 0.5 declined eleven adjacent fights in twelve
+  and they attacked eight times a game against the empires' hundred. Sweeping.
+
+Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
+
+- **The garrison treadmill**, which is not a Hivekin problem. Half of every
+  Hivekin soldier-turn and a third of each empire's goes on walking to one of
+  its own undefended cities, and the branch that would make a unit *stay* in one
+  has never fired in 77,000 turns because it cannot. Shared code, and the
+  obvious repair is the one already measured as a disaster, so it is its own
+  piece of work and Jeremy's call.
+- **Teaching the AI to sink and burrow**, which is the other half of what makes
+  them them and is currently inert.
 
 ---
 
