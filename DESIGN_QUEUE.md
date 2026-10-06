@@ -10879,13 +10879,21 @@ the whole chain to the outcome, not the nearest plausible defect.
 
 ### What this leaves on the table
 
-**The Kingdom is now clearly down.** Across both sets the two empires split
-50-31 to the Horde, 62/38, where the game before the Hivekin ran nearer even.
-Some of that is the second Grub's nine points, deliberately left uncorrected
-while the Hive was still changing. The Hive has now stopped changing in the way
-that was the excuse -- except for the counting ladder, which is committed and
-unmeasured -- so this is the next thing to measure and the first real candidate
-for a correction to `targetCities` or the Kingdom's own prices.
+**The Kingdom looks down, and that is as strong as it can honestly be put.**
+This said "clearly down, 62/38" off one sweep. Three measurements of what is
+essentially the shipped game disagree by more than the effect:
+
+  short road arm    orc 50  hum 31   62%
+  ladder arm        orc 52  hum 39   57%
+  no-ladder arm     orc 44  hum 36   55%
+
+55 to 62 across three runs is the spread of the instrument at 108 games an arm,
+and the game before the Hivekin ran at 51 to 57. So the third seat *may* have
+tilted it and nothing here shows that it did. **It wants its own paired run with
+the seat on and off** -- which is measurable, because the Hivekin arrive after
+worldgen and switching them off does not change the map. Until then, no
+correction to `targetCities` or the Kingdom's prices: tuning against a number
+this soft is how a real imbalance gets hidden behind a compensating one.
 
 Worth noting what is *not* disturbed: the Hive takes its wins out of both
 empires and inconsistently between seed sets -- tuned costs the Horde twelve
