@@ -19,6 +19,7 @@ import { HELD_OUT_BASES, playGame, seedSet, TUNED_BASES } from './sweep';
 // skips it is answering a question about a different game, which is how this
 // file spent an afternoon disagreeing with a 216-game sweep about a sign.
 import { control } from './control';
+import { BURROW } from '../src/sim/burrow';
 
 /**
  * Section 125: what the Hive does with the army it now has.
@@ -504,91 +505,52 @@ describe('what the hive does with its army', () => {
  * question is what price puts them in the race, and whether being in it is
  * enough when they join it a hundred turns late.
  */
-describe('what the counting ladder costs them', () => {
+describe('whether the Hive actually uses the ground', () => {
   /**
-   * Swept at 216: the ladder took them from 28 wins in 108 to 17, both seed
-   * sets agreeing. The first attempt to explain that used twelve games an arm
-   * and came back saying the ladder *helped* -- which it could not possibly
-   * have shown, because an eleven-in-108 effect is about one game in twelve.
-   * The tell was that the off arm matched the sweep exactly (3/12 against
-   * 13/54) and the on arm missed it by a single game.
+   * The sweep of `BURROW.ai` came back inside the noise: 30 wins of 108 against
+   * 23, the two seed sets disagreeing (14 to 8, and 16 to 15), which is 1.1
+   * sigma and not a result.
    *
-   * So this one is sized off the effect and counts **what the Hive spent its
-   * game on** rather than how the game ended. Wins need hundreds of games to
-   * resolve ten points; "the turn it learned its ending advance" is one number
-   * per game and barely moves for any other reason.
-   *
-   * Research cost looks like: `advance on turn` slipping later, fewer advances.
-   * Shields cost looks like: the advance landing at the same time, but the
-   * first work later, fewer works, and a pile of shields in `groups` and
-   * `lost groups`.
+   * A null is only worth having if the thing was on the board. Slice B's null
+   * was an instrument reading zero -- the AI built 0.2 Burrower-caste a game and
+   * never put one underground -- and the whole point of this change was to stop
+   * that being true. So count the digging before believing the null.
    */
-  it('counts what they spent it on', () => {
-    // Both base sets, twelve a base: 72 games an arm. The sweep's effect is ten
-    // points; this is the smallest honest sample for a mechanism column.
+  it('counts the digging', () => {
     const seeds = [
-      ...seedSet('tuned', TUNED_BASES, 12).seeds,
-      ...seedSet('held-out', HELD_OUT_BASES, 12).seeds,
+      ...seedSet('tuned', TUNED_BASES, 4).seeds,
+      ...seedSet('held-out', HELD_OUT_BASES, 4).seeds,
     ];
-    const rungs: Record<string, string[]> = {
-      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2'],
-      'assumed-fewer': ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
-    };
-    const plan = [...PERSONALITIES.hivekin.techPriority];
-    const rows: Array<[string, Spend, number]> = [];
-    const out: string[] = [];
-
+    const out: string[] = [
+      'digging  burrowers at end  went under  stayed under  came up swinging  hive units  wins',
+      '-------------------------------------------------------------------------------------',
+    ];
+    const was = BURROW.ai;
     for (const on of [false, true]) {
-      for (const [id, units] of Object.entries(rungs)) {
-        TECHS.find((x) => x.id === id)!.units = on ? units : [];
-      }
-      PERSONALITIES.hivekin.techPriority = on ? [...plan] : plan.filter((t) => !(t in rungs));
-
-      const total: Spend = {
-        techTurn: 0, firstWork: 0, works: 0, finished: 0, singles: 0, groups: 0,
-        lostSingles: 0, lostGroups: 0, advances: 0, beakers: 0, games: 0, wins: 0,
-      };
-      // Counted separately, because a game where the advance never landed must
-      // not drag the average turn down to look early.
-      let gotTech = 0;
-      let gotWork = 0;
+      BURROW.ai = on;
+      AI_TRACE.on = true;
+      AI_TRACE.hits = {};
+      let diggers = 0, units = 0, wins = 0;
       for (const seed of seeds) {
         const r = probe(seed);
-        const sp = r.spend;
-        for (const k of Object.keys(total) as Array<keyof Spend>) total[k] += sp[k];
-        if (sp.techTurn) gotTech++;
-        if (sp.firstWork) gotWork++;
+        diggers += [...r.roster].filter(([n]) => /Burrower/.test(n)).reduce((a, [, n]) => a + n, 0);
+        units += r.sides.hive.units;
+        wins += r.wonByHive ? 1 : 0;
       }
-      rows.push([on ? 'ladder' : 'no ladder', total, 0]);
+      AI_TRACE.on = false;
       const n = seeds.length;
-      const avg = (v: number, d = 1) => (v / n).toFixed(d);
-      const when = (v: number, got: number) => (got ? (v / got).toFixed(0) : '--');
-      if (rows.length === 1) {
-        out.push(
-          'arm        games  advance on turn (of n)  first work (of n)  works  finished  wins' +
-            '   advances  beakers  shields: singles  groups  lost singles  lost groups',
-        );
-        out.push('-'.repeat(160));
-      }
+      const hit = (k: string) => AI_TRACE.hits[k + '|hivekin'] ?? 0;
       out.push(
-        `${rows[rows.length - 1][0].padEnd(10)} ${String(n).padStart(5)} ` +
-          `${when(total.techTurn, gotTech).padStart(15)} (${String(gotTech).padStart(2)})  ` +
-          `${when(total.firstWork, gotWork).padStart(13)} (${String(gotWork).padStart(2)})  ` +
-          `${avg(total.works, 2).padStart(5)} ${String(total.finished).padStart(9)} ` +
-          `${String(total.wins).padStart(5)} ${avg(total.advances).padStart(10)} ` +
-          `${avg(total.beakers).padStart(8)} ${avg(total.singles, 0).padStart(17)} ` +
-          `${avg(total.groups, 0).padStart(7)} ${avg(total.lostSingles, 0).padStart(13)} ` +
-          `${avg(total.lostGroups, 0).padStart(12)}`,
+        `${(on ? 'on' : 'off').padEnd(8)} ${(diggers / n).toFixed(2).padStart(16)} ` +
+          `${(hit('04c goes to ground') / n).toFixed(1).padStart(10)} ` +
+          `${(hit('04b stays under') / n).toFixed(1).padStart(13)} ` +
+          `${(hit('06 swung: combat') / n).toFixed(1).padStart(17)} ` +
+          `${(units / n).toFixed(1).padStart(10)} ${(wins + '/' + n).padStart(5)}`,
       );
     }
-
-    for (const [id, units] of Object.entries(rungs)) {
-      TECHS.find((x) => x.id === id)!.units = units;
-    }
-    PERSONALITIES.hivekin.techPriority = plan;
-
+    BURROW.ai = was;
     const text = out.join('\n');
-    writeFileSync('hiveladder.txt', text, 'utf8');
+    writeFileSync('hivedig.txt', text, 'utf8');
     console.log('\n' + text + '\n');
   }, 3_600_000);
 });

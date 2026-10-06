@@ -1,4 +1,14 @@
-import { BURROW, burrows, isSunk, seenBy, sink, sinkBlocked, surface } from '../sim/burrow';
+import {
+  BURROW,
+  burrow,
+  burrowTargets,
+  burrows,
+  isSunk,
+  seenBy,
+  sink,
+  sinkBlocked,
+  surface,
+} from '../sim/burrow';
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
@@ -326,11 +336,15 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'mapmaking',
       'bridge-building',
       'caste-spitter',
+      // Seventh rather than twelfth. They research about ten advances in a
+      // whole game, so a caste asked for twelfth is a caste they often never
+      // grow -- and a Burrower is the only shape that can go under a wall. It
+      // was 0.17 of one a game.
+      'caste-burrower',
       'assumed-fewer',
       'tree-hugging',
       'caste-elite',
       'not-you-again',
-      'caste-burrower',
       'joy-making',
       'wall-building',
       'hammers-of-glory',
@@ -1661,14 +1675,22 @@ function trace(state: GameState, unit: Unit, where: string): void {
 /**
  * Go to ground to wait for somebody, when that is worth a turn.
  *
- * Only for a Hive that has learned Ambush: one that has not gains nothing
- * whatever from the turn it spends going down, and would simply be a soldier
- * that hid. Only with something near enough to arrive, because lying in wait on
- * an empty map is a Burrower that never fights. And only when there is nothing
- * to swing at already -- if the fight is worth taking standing up, take it.
+ * **This used to require the Ambush advance and therefore never happened.**
+ * `burrower-ambush` sits twenty-second in a research plan that reaches about
+ * ten advances, so gating the behaviour on it gated it on nothing -- measured,
+ * 0.0 sinks a game. The same arithmetic that made their ending road unwalkable,
+ * for the third time in this section.
+ *
+ * It does not need the advance. Going down hides the unit outright: nobody can
+ * see it, nothing marches at it, and it comes up swinging when something walks
+ * into reach. Ambush makes that *better* rather than making it possible, which
+ * is what the advance should have been doing all along.
+ *
+ * Still only with something near enough to arrive, because lying in wait on an
+ * empty map is a Burrower that never fights; and only with nothing to swing at
+ * already, because a fight worth taking standing up should be taken.
  */
 function lieInWait(state: GameState, unit: Unit): boolean {
-  if (!hasFlag(state.players[unit.owner], 'ambush-burrowing')) return false;
   if (sinkBlocked(state, unit) !== null) return false;
   if (attackTargets(state, unit).size > 0) return false;
   const coming = state.units.some(
@@ -1680,6 +1702,43 @@ function lieInWait(state: GameState, unit: Unit): boolean {
       distance(unit.x, unit.y, u.x, u.y) <= BURROW.aiLieInWait,
   );
   return coming && sink(state, unit);
+}
+
+/**
+ * Go *through* what cannot be walked round.
+ *
+ * The half of the Burrower that needs no advance at all -- two tiles from the
+ * moment one exists -- and the half the AI was never taught, so every number
+ * this section took on Sink and Burrow was taken on a side that only ever
+ * walked. A wall, a river, a mountain, somebody's army: the crossing is what is
+ * being bought, which is why it costs the whole turn however far it goes.
+ *
+ * Only when walking cannot do as well. If a step gets as close, step -- that
+ * keeps the turn and leaves the burrow for the thing it is for.
+ */
+function crossUnderground(
+  state: GameState,
+  unit: Unit,
+  target: { x: number; y: number },
+): boolean {
+  const landings = burrowTargets(state, unit);
+  if (landings.length === 0) return false;
+  const away = (x: number, y: number) => distance(x, y, target.x, target.y);
+  let best: [number, number] | null = null;
+  let bestDist = away(unit.x, unit.y);
+  for (const [x, y] of landings) {
+    if (away(x, y) < bestDist) {
+      bestDist = away(x, y);
+      best = [x, y];
+    }
+  }
+  if (!best) return false;
+  let walked = away(unit.x, unit.y);
+  for (const [i] of reachableTiles(state, unit)) {
+    walked = Math.min(walked, away(i % state.width, Math.floor(i / state.width)));
+  }
+  if (walked <= bestDist) return false;
+  return burrow(state, unit, best[0], best[1]);
 }
 
 function actSoldier(
@@ -1918,6 +1977,9 @@ function actSoldier(
     // worked; arriving next door is enough, because the attack branch at the
     // top of this function takes it from there next turn.
     trace(state, unit, '13 knows a target');
+    if (BURROW.ai && burrows(unit) && crossUnderground(state, unit, target)) {
+      return trace(state, unit, '13b goes under it');
+    }
     const spot = approachTile(state, unit, target.x, target.y);
     if (spot && (spot.x !== unit.x || spot.y !== unit.y)) {
       moveToward(state, unit, spot.x, spot.y);

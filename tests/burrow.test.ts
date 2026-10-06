@@ -403,26 +403,63 @@ describe('the AI and the ground', () => {
     expect(isSunk(b), 'still under').toBe(true);
   });
 
-  it('lies in wait only for a Hive that has learned to', () => {
-    const quiet = board();
-    const plain = hiveWith(quiet, []);
-    foundCity(quiet, spawnUnit(quiet, plain, 'grub', 4, 4));
-    const a = spawnUnit(quiet, plain, 'burrower', 10, 8);
-    spawnUnit(quiet, 0, 'peon', 12, 8);
-    beginPlayerTurn(quiet, plain);
-    runAiTurn(quiet, plain);
-    // Without Ambush the turn spent going down buys nothing at all, so it is
-    // not spent: this one is a soldier that happens to dig.
-    expect(isSunk(a), 'no Ambush, no hiding').toBe(false);
+  it('lies in wait without needing the advance, because hiding is the point', () => {
+    // This used to require Ambush, and `burrower-ambush` sits twenty-second in
+    // a plan that reaches about ten advances -- so the behaviour was gated on
+    // something that never happens, and the probe read 0.0 sinks a game. Going
+    // down hides the unit outright; the advance makes the swing harder, which
+    // is a different thing from making it possible.
+    const state = board();
+    const hive = hiveWith(state, []);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    spawnUnit(state, 0, 'peon', 12, 8);
 
-    const ready = board();
-    const taught = hiveWith(ready, ['burrower-ambush']);
-    foundCity(ready, spawnUnit(ready, taught, 'grub', 4, 4));
-    const c = spawnUnit(ready, taught, 'burrower', 10, 8);
-    spawnUnit(ready, 0, 'peon', 12, 8);
-    beginPlayerTurn(ready, taught);
-    runAiTurn(ready, taught);
-    expect(isSunk(c), 'something is coming, and it is waiting').toBe(true);
+    beginPlayerTurn(state, hive);
+    runAiTurn(state, hive);
+
+    expect(isSunk(b), 'something is coming, and it is waiting').toBe(true);
+  });
+
+  it('does not lie in wait with nobody coming', () => {
+    const state = board();
+    const hive = hiveWith(state, []);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    // The nearest enemy is far outside `aiLieInWait`, so hiding here is a
+    // Burrower that never fights.
+    spawnUnit(state, 0, 'peon', 22, 14);
+
+    beginPlayerTurn(state, hive);
+    runAiTurn(state, hive);
+
+    expect(isSunk(b)).toBe(false);
+  });
+
+  it('goes through what it cannot walk round', () => {
+    const state = board();
+    const hive = hiveWith(state, []);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    spawnUnit(state, hive, 'soldier', 4, 4);
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    // Something to march on, far enough that it is the nearest target, and a
+    // rank of our own bodies in the way -- our own, so the wall blocks the walk
+    // without being a thing worth attacking instead.
+    const far = foundCity(state, spawnUnit(state, 0, 'peon', 14, 8))!;
+    const wall = [];
+    for (let y = 5; y <= 11; y++) wall.push(spawnUnit(state, hive, 'fodder', 11, y));
+    const before = Math.max(Math.abs(b.x - far.x), Math.abs(b.y - far.y));
+
+    beginPlayerTurn(state, hive);
+    // Everybody else stands still, so what moves is the Burrower and the branch
+    // under test is the only one that could have moved it.
+    for (const u of state.units) if (u !== b) u.moves = 0;
+    runAiTurn(state, hive);
+
+    const after = Math.max(Math.abs(b.x - far.x), Math.abs(b.y - far.y));
+    expect(wall.every((u) => u.x === 11), 'the wall held').toBe(true);
+    expect(after, 'it got closer than any step could').toBeLessThan(before - 1);
+    expect(isSunk(b), 'it comes up on the far side').toBe(false);
   });
 
   it('does none of it with the lever off, which is the control arm', () => {
