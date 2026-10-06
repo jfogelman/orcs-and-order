@@ -1,4 +1,4 @@
-import { seenBy } from '../sim/burrow';
+import { BURROW, burrows, isSunk, seenBy, sink, sinkBlocked, surface } from '../sim/burrow';
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
@@ -611,7 +611,7 @@ const FIRST_STRIKE_EDGE = 0.16;
 const RELOAD_COST = 1;
 const RANGED_EDGE = 1.15;
 
-function worth(u: UnitTypeDef, defending: boolean): number {
+export function worth(u: UnitTypeDef, defending: boolean): number {
   const strength = defending ? u.defense : u.attack;
   // Only on the attack: reach does nothing for you when something has already
   // closed and is swinging at you, which is exactly a ranged unit's problem.
@@ -692,7 +692,7 @@ function pickWeighted(
   });
 }
 
-function chooseProduction(
+export function chooseProduction(
   state: GameState,
   city: City,
   personality: AiPersonality,
@@ -744,6 +744,26 @@ function chooseProduction(
   // since ships were taken out of `options` above.
   const ship = shipToBuild(state, city, inYard.units);
   if (ship) return ship;
+
+  // 2b. Section 125: a couple of Burrower-caste, which nothing else will ever
+  // ask for.
+  //
+  // `worth()` ranks a unit on strength, health and price, and all three of a
+  // Burrower's reasons to exist are invisible to it -- it hides, it crosses
+  // what cannot be walked round, and it swings harder coming up out of the
+  // ground. By the numbers it is a Soldier-caste costing three quarters again
+  // as much, so the chooser put it last and built 0.2 a game. Slice B then
+  // measured Sink and Burrow and got **identical numbers on both arms**,
+  // because the mechanic was never once on the board.
+  //
+  // A standing want, like the garrison, and a small one: two. See `BURROW`.
+  if (BURROW.ai && BURROW.enabled) {
+    const diggers = allUnitsOf(state, city.owner).filter((u) => burrows(u)).length;
+    if (diggers < BURROW.aiWants) {
+      const digger = options.units.find((u) => burrows({ type: u.id }));
+      if (digger) return { kind: 'unit', id: digger.id };
+    }
+  }
 
   // 3. Keep the lid on first. A city at its content limit stops growing and
   // produces nothing at all, so a happiness building is worth more than any
@@ -1638,6 +1658,30 @@ function trace(state: GameState, unit: Unit, where: string): void {
   AI_TRACE.hits[key] = (AI_TRACE.hits[key] ?? 0) + 1;
 }
 
+/**
+ * Go to ground to wait for somebody, when that is worth a turn.
+ *
+ * Only for a Hive that has learned Ambush: one that has not gains nothing
+ * whatever from the turn it spends going down, and would simply be a soldier
+ * that hid. Only with something near enough to arrive, because lying in wait on
+ * an empty map is a Burrower that never fights. And only when there is nothing
+ * to swing at already -- if the fight is worth taking standing up, take it.
+ */
+function lieInWait(state: GameState, unit: Unit): boolean {
+  if (!hasFlag(state.players[unit.owner], 'ambush-burrowing')) return false;
+  if (sinkBlocked(state, unit) !== null) return false;
+  if (attackTargets(state, unit).size > 0) return false;
+  const coming = state.units.some(
+    (u) =>
+      u.owner !== unit.owner &&
+      !isWarden(u) &&
+      hostile(state, unit.owner, u.owner) &&
+      seenBy(state, u, unit.owner) &&
+      distance(unit.x, unit.y, u.x, u.y) <= BURROW.aiLieInWait,
+  );
+  return coming && sink(state, unit);
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
@@ -1662,6 +1706,27 @@ function actSoldier(
   // party still at sea. Hold the beach rather than walking into a town in ones
   // and twos, which is what made invasions land and achieve nothing.
   if (holdTheBeach(state, unit)) return trace(state, unit, '04 beach');
+
+  // Section 125: the Burrower-caste, which until now the AI did not know it had.
+  //
+  // Deliberately *above* the attack branch, and deliberately not returning when
+  // it surfaces, because the timing is the whole mechanic. `surface` is free;
+  // `sink` and `burrow` each cost the entire turn; and `clearAmbush` wipes the
+  // bonus at the start of its own next turn. So the only sequence that ever
+  // collects the Ambush multiplier is **go down one turn and come up swinging
+  // the next** -- come up here for nothing, then fall through and let the
+  // ordinary attack branch take the better odds.
+  if (BURROW.ai && BURROW.enabled && burrows(unit)) {
+    if (isSunk(unit)) {
+      // Something is standing next to us and we have a whole turn in hand.
+      if (attackTargets(state, unit).size > 0) surface(state, unit, true);
+      // Nothing to hit, so stay down. A sunk Burrower costs nobody a turn, and
+      // being somewhere nobody knows about is the point of it.
+      else return trace(state, unit, '04b stays under');
+    } else if (lieInWait(state, unit)) {
+      return trace(state, unit, '04c goes to ground');
+    }
+  }
 
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);

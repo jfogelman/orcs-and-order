@@ -126,7 +126,18 @@ function garrison(state: GameState, city: City): Unit {
  * the front -- the list is an ordering, not a set. The timeout below allows for
  * a bad day on a shared runner rather than for the happy path.
  */
-const LATE_SEEDS = [32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
+// Reordered 2026-10-05, after section 125 made the endings faster again: the
+// Hivekin win about a quarter of their games off their own ending around turn
+// 240, so a game still running at 299 with *both* empires alive is now rare.
+// Scanned the first sixty seeds and four qualified -- a 7% hit rate, which is
+// why a list of twelve stopped working: it was not unlucky, there was nothing
+// in it. `tools/lateseed.run.test.ts` does the scan, and exists so the next
+// reorder costs eight minutes rather than an afternoon.
+//
+// The scan has to play the same game this test does, which is the shipped one.
+// An earlier pass of it found three *different* seeds because the shared
+// `control()` still forced `RUINS.aiOdds` to 0.25; see the note on that lever.
+const LATE_SEEDS = [5, 22, 38, 55, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
 
 function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   const want = [200, 269, 299];

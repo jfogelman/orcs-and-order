@@ -81,7 +81,17 @@ export const control = () => {
   RUINS.enabled = true;
   RUINS.perLand = 100;
   RUINS.wardenDefence = 1;
-  RUINS.aiOdds = 0.25;
+  // **0.4, which is what the game ships.** This said 0.25 from the day ruins
+  // landed: PR #126 added `aiOdds: 0.4` to `ruins.ts` and `RUINS.aiOdds = 0.25`
+  // to the control in the same commit, the 0.25 being a leftover of the arm
+  // that *lost*. So every sweep since has measured a game where the AI attacks
+  // a thing standing in a doorway at one-in-four odds -- the behaviour section
+  // 123 measured as costing the Horde fifteen games and then rejected.
+  //
+  // Paired comparisons survive it, since both arms had it. Absolute numbers do
+  // not: anything quoted from a sweep before 2026-10-05 describes a game
+  // nobody plays.
+  RUINS.aiOdds = 0.4;
   RUINS.aiSeeks = true;
   RUINS.wardensStrike = false;
   RUINS.wardensHold = true;

@@ -1,4 +1,4 @@
-import type { GameState, Unit } from '../model/types';
+import type { GameState, Unit, UnitTypeId } from '../model/types';
 import { unitType } from '../model/units';
 import { TERRAIN } from '../model/terrain';
 import { idx, inBounds } from '../engine/grid';
@@ -48,10 +48,41 @@ export const BURROW = {
    * arrived somewhere nobody expected.
    */
   ambush: 1.5,
+  /**
+   * Whether the AI knows any of this exists. Off is slice B as it shipped.
+   *
+   * It did not, and that was the whole of why slice B's sweep came back with
+   * two arms reading **identical numbers**: Sink, Burrow and the succession
+   * were measured against a game in which no Burrower-caste was ever built and
+   * none ever went underground. A mechanic the AI has no route to is a mechanic
+   * that does not happen -- sections 37 and 38 are the standing warning, and
+   * this is the third time it has been written down.
+   */
+  ai: true,
+  /**
+   * How many Burrower-caste a Hive wants about the place, once it can grow one.
+   *
+   * A standing count rather than a price, for the same reason the garrison is a
+   * count. `worth()` ranks a unit on attack, health and cost, and every scrap of
+   * a Burrower's value is in the three things that formula cannot see: it hides,
+   * it crosses what cannot be walked round, and it swings harder coming up out
+   * of the ground. By the numbers it is a Soldier-caste costing three quarters
+   * again as much, so the chooser rated it below everything and built 0.2 a
+   * game. There is no price at which "some of these are useful" becomes a
+   * number in that formula.
+   */
+  aiWants: 2,
+  /**
+   * How near something hostile has to be before one lies down to wait for it.
+   *
+   * Only ever done by a Hive that has learned Ambush, because a Hive that has
+   * not gains nothing from the turn it spends going down.
+   */
+  aiLieInWait: 3,
 };
 
 /** Whether this creature is one that goes under the ground at all. */
-export function burrows(unit: Unit): boolean {
+export function burrows(unit: { type: UnitTypeId }): boolean {
   return unitType(unit.type).base === 'burrower';
 }
 

@@ -1,12 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import { PERSONALITIES } from '../src/ai/ai';
-import { TECHS } from '../src/model/techs';
 import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
+import { BURROW } from '../src/sim/burrow';
 
 /**
  * The question this sweep is currently asking.
@@ -43,54 +42,32 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 125: the counting ladder, now that they can win without it.
+  // Section 125: does the AI knowing it has Burrowers change anything?
   //
-  // The short road took them from 0 of 108 to 27, so this measures the ladder
-  // against a Hive that is already a contender rather than against one that
-  // could not win at all -- which is the only way to read what the ladder
-  // itself is worth.
+  // Slice B swept Sink and Burrow and got two arms reading **identical
+  // numbers**, which was an instrument reading zero: `worth()` prices a unit on
+  // strength, health and cost, all three of a Burrower's reasons to exist are
+  // invisible to that, so the Hive built 0.2 a game and none of them ever went
+  // underground. `BURROW.ai` is a standing want of two plus the behaviour --
+  // come up swinging, stay down when there is nothing to hit, lie in wait only
+  // once Ambush is known.
   //
-  // Five castes stack and two advances at 120 beakers unlock the rungs. Expect
-  // it in the fight columns rather than the win column: three Soldier-caste on
-  // one tile is 9/6/12 for sixty shields, and a side whose bar is 0.35 should
-  // clear it more often when it brings more of itself.
-  //
-  // Both arms state the counts, for the reason the road arms did: `UNIT_TYPES`
-  // is generated from `CREATURES` at module load, so an arm cannot simply set
-  // `counts` and expect the variants to exist. The off arm therefore takes the
-  // rungs away where it can be done without rebuilding the table -- by making
-  // the two advances grant nothing, which leaves the variants defined and
-  // unbuildable. That is the honest control: the question is whether the Hive
-  // can *field* groups, not whether the types exist.
-  const ladder = (on: boolean) => {
-    const rungs: Record<string, string[]> = {
-      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2'],
-      'assumed-fewer': ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
-    };
-    for (const [id, units] of Object.entries(rungs)) {
-      const t = TECHS.find((x) => x.id === id)!;
-      t.units = on ? units : [];
-    }
-    const list = PERSONALITIES.hivekin.techPriority.filter((t) => !(t in rungs));
-    if (on) {
-      list.splice(4, 0, 'always-this-many');
-      list.splice(9, 0, 'assumed-fewer');
-    }
-    PERSONALITIES.hivekin.techPriority = list;
-  };
+  // The first measurement of this section taken on a control that matches the
+  // shipped game: `RUINS.aiOdds` was pinned at 0.25 here from the day ruins
+  // landed, against 0.4 in `ruins.ts`.
   return [
     {
-      label: 'no ladder',
+      label: 'no digging',
       apply: () => {
         control();
-        ladder(false);
+        BURROW.ai = false;
       },
     },
     {
-      label: 'ladder',
+      label: 'digging',
       apply: () => {
         control();
-        ladder(true);
+        BURROW.ai = true;
       },
     },
   ];

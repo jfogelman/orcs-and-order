@@ -7,6 +7,8 @@ import { foundCity } from '../src/sim/city';
 import { moveToward, reachableTiles, visibleEnemies } from '../src/sim/movement';
 import { attackStrength } from '../src/sim/combat';
 import { beginPlayerTurn } from '../src/sim/turn';
+import { PERSONALITIES, chooseProduction, runAiTurn, worth } from '../src/ai/ai';
+import { unitType } from '../src/model/units';
 import { idx } from '../src/engine/grid';
 import {
   BURROW,
@@ -307,5 +309,136 @@ describe('already waiting', () => {
     sink(state, b);
     surface(state, b);
     expect(b.ambushing).toBeUndefined();
+  });
+});
+
+/**
+ * Section 125, second pass: the AI knows it has these.
+ *
+ * Slice B measured Sink and Burrow and got two arms reading identical numbers,
+ * which was not a null result but an instrument reading zero -- the AI built
+ * 0.2 Burrower-caste a game and never once put one underground. These tests
+ * exist so that cannot quietly become true again.
+ */
+describe('the AI and the ground', () => {
+  function hiveWith(state: GameState, techs: string[]): number {
+    const id = state.players.length;
+    state.players.push({
+      ...state.players[1],
+      id,
+      faction: 'hivekin',
+      name: FACTIONS.hivekin.civName,
+      alive: true,
+      controller: 'ai',
+      techs: ['first-hivekin', 'caste-fodder', 'caste-soldier', 'caste-burrower', ...techs],
+      explored: new Array(state.width * state.height).fill(1),
+      visible: new Array(state.width * state.height).fill(1),
+    });
+    return id;
+  }
+
+  it('wants a couple of them, which nothing in the value formula ever would', () => {
+    const state = board();
+    const hive = hiveWith(state, []);
+    const city = foundCity(state, spawnUnit(state, hive, 'grub', 10, 8))!;
+    city.size = 6;
+    // A Burrower is a Soldier-caste that costs three quarters again as much, so
+    // `worth()` puts it last and the Hive built almost none.
+    expect(worth(unitType('burrower'), false)).toBeLessThan(worth(unitType('soldier'), false));
+
+    // A personality with nowhere left to expand to, so the settler step is
+    // satisfied and the question is only what it builds for the army.
+    const settled = { ...PERSONALITIES.hivekin, targetCities: 1 };
+    for (let n = 0; n < 6; n++) {
+      const pick = chooseProduction(state, city, settled);
+      if (pick.kind === 'unit' && unitType(pick.id).base === 'burrower') return;
+      if (pick.kind === 'unit') spawnUnit(state, hive, pick.id, city.x, city.y);
+      else break;
+    }
+    throw new Error('the Hive never asked for a Burrower-caste');
+  });
+
+  it('stops wanting them once it has enough', () => {
+    const state = board();
+    const hive = hiveWith(state, []);
+    const city = foundCity(state, spawnUnit(state, hive, 'grub', 10, 8))!;
+    city.size = 6;
+    for (let n = 0; n < BURROW.aiWants; n++) spawnUnit(state, hive, 'burrower', 12 + n, 8);
+    for (let n = 0; n < 3; n++) spawnUnit(state, hive, 'soldier', 10 + n, 9);
+
+    const settled = { ...PERSONALITIES.hivekin, targetCities: 1 };
+    const pick = chooseProduction(state, city, settled);
+    expect(pick.kind === 'unit' && unitType(pick.id).base === 'burrower').toBe(false);
+  });
+
+  it('comes up swinging rather than attacking from under the ground', () => {
+    const state = board();
+    const hive = hiveWith(state, ['burrower-ambush']);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    const foe = spawnUnit(state, 0, 'peon', 11, 8);
+    sink(state, b);
+    expect(isSunk(b)).toBe(true);
+
+    beginPlayerTurn(state, hive);
+    runAiTurn(state, hive);
+
+    // It surfaced first -- which is free -- and that is the only way the Ambush
+    // multiplier is ever collected, since going down costs the whole turn and
+    // the bonus is wiped at the start of the next one.
+    expect(isSunk(b)).toBe(false);
+    expect(state.units.includes(foe), 'the peon').toBe(false);
+  });
+
+  it('stays down when there is nothing up there to hit', () => {
+    const state = board();
+    const hive = hiveWith(state, ['burrower-ambush']);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    sink(state, b);
+
+    beginPlayerTurn(state, hive);
+    runAiTurn(state, hive);
+
+    expect(isSunk(b), 'still under').toBe(true);
+  });
+
+  it('lies in wait only for a Hive that has learned to', () => {
+    const quiet = board();
+    const plain = hiveWith(quiet, []);
+    foundCity(quiet, spawnUnit(quiet, plain, 'grub', 4, 4));
+    const a = spawnUnit(quiet, plain, 'burrower', 10, 8);
+    spawnUnit(quiet, 0, 'peon', 12, 8);
+    beginPlayerTurn(quiet, plain);
+    runAiTurn(quiet, plain);
+    // Without Ambush the turn spent going down buys nothing at all, so it is
+    // not spent: this one is a soldier that happens to dig.
+    expect(isSunk(a), 'no Ambush, no hiding').toBe(false);
+
+    const ready = board();
+    const taught = hiveWith(ready, ['burrower-ambush']);
+    foundCity(ready, spawnUnit(ready, taught, 'grub', 4, 4));
+    const c = spawnUnit(ready, taught, 'burrower', 10, 8);
+    spawnUnit(ready, 0, 'peon', 12, 8);
+    beginPlayerTurn(ready, taught);
+    runAiTurn(ready, taught);
+    expect(isSunk(c), 'something is coming, and it is waiting').toBe(true);
+  });
+
+  it('does none of it with the lever off, which is the control arm', () => {
+    const state = board();
+    const hive = hiveWith(state, ['burrower-ambush']);
+    foundCity(state, spawnUnit(state, hive, 'grub', 4, 4));
+    const b = spawnUnit(state, hive, 'burrower', 10, 8);
+    spawnUnit(state, 0, 'peon', 12, 8);
+
+    BURROW.ai = false;
+    try {
+      beginPlayerTurn(state, hive);
+      runAiTurn(state, hive);
+      expect(isSunk(b)).toBe(false);
+    } finally {
+      BURROW.ai = true;
+    }
   });
 });
