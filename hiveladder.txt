@@ -1,0 +1,4 @@
+arm        games  advance on turn (of n)  first work (of n)  works  finished  wins   advances  beakers  shields: singles  groups  lost singles  lost groups
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+no ladder     72             156 (53)            180 (40)   1.24        24    20        9.6      7.4               971       0           594            0
+ladder        72             156 (53)            175 (37)   1.11        23    19        9.6      5.5               882      62           565           30

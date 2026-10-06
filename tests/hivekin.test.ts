@@ -75,7 +75,7 @@ describe('the roster', () => {
     const castes = CREATURES.filter((c) => c.faction === 'hivekin');
     expect(castes.length).toBe(14);
     const ladder = castes.filter((c) => c.counts.length > 1).map((c) => c.id);
-    expect(ladder.sort()).toEqual(['elite', 'fodder', 'soldier', 'spitter', 'worker']);
+    expect(ladder.sort()).toEqual(['elite', 'fodder', 'soldier', 'spitter']);
 
     // The Fodder-caste *is* the Goblin -- same attack, defence, health and
     // price -- so it gets the Goblin's ladder exactly, and nothing about the
@@ -89,6 +89,21 @@ describe('the roster', () => {
       goblin.cost,
     ]);
     expect(fodder.counts).toEqual(goblin.counts);
+  });
+
+  it('never groups a shape whose work would not double', () => {
+    // A group is N times the attack, N times the defence and N times the price,
+    // and exactly one unit's worth of *actions* -- nothing scales those. So the
+    // ladder belongs only on shapes whose whole job is a number in a fight.
+    // Two Workers at fifteen each dig two tiles; Two Workers as one unit costs
+    // thirty and digs one. The AI never built one, so this costs nothing today
+    // -- it is here for the player who will be able to pick the Hivekin, and
+    // whose unit card would show doubled attack and defence and say nothing
+    // about digging.
+    for (const c of CREATURES.filter((x) => x.faction === 'hivekin' && x.counts.length > 1)) {
+      expect(c.role, `${c.id} groups but does not fight`).not.toBe('worker');
+      expect(c.attack, `${c.id} groups but has no attack to multiply`).toBeGreaterThan(0);
+    }
   });
 
   it('never puts two Queens or two Princesses on one tile', () => {

@@ -1028,7 +1028,20 @@ export const CREATURES: CreatureDef[] = [
     move: 1,
     cost: 15,
     sight: 1,
-    counts: [1, 2],
+    // No ladder, and this is the one place the joke would be a straight loss. A
+    // group is N times the attack, N times the defence and N times the price --
+    // but its *actions* do not scale, because nothing scales them: `makeVariant`
+    // multiplies cost and leaves `move` alone, and terraforming never reads the
+    // count at all. Two Workers at fifteen each dig two tiles and can be in two
+    // places; Two Workers as one unit costs thirty and digs one.
+    //
+    // Taken out on that argument alone. It is **not** what cost the Hive
+    // anything measurable: 144 games with the rung and without came back
+    // identical in all eleven columns, which can only mean the AI never built
+    // one. The reason to keep it out is the player who will be able to pick the
+    // Hivekin one day, and whose unit card would show doubled attack and
+    // defence while saying nothing about digging.
+    counts: [1],
     artScale: 0.76,
     silhouette: 'worker',
     body: '#c4b183',

@@ -10905,3 +10905,66 @@ so the third seat is not systematically eating one side.
 - The two Burrower branches are not mutually exclusive.
 - The brood choice has no dialog.
 - The three tiles still owe their own unpaired, more-games measurement.
+
+### The ladder, and an afternoon spent measuring the wrong game
+
+Swept at 216: the counting ladder took the Hivekin from 28 wins in 108 to 17,
+both seed sets moving the same way. Probed at 144 games to find out why, and the
+probe said it was neutral. They disagreed, so one of them was wrong about the
+game rather than about the ladder.
+
+**It was the probe, and it had been wrong all section.** `control()` lived inside
+`sweep.run.test.ts`, so the sweeps played the shipped game and the probes played
+whatever the modules happened to default to. Comparing all 53 levers, one
+differed: `RUINS.aiOdds` ships at **0.4** and every sweep since section 123 has
+measured it at **0.25**. Every probe this section -- arrival packages, the fight
+bar, the roads, both ladder probes -- ran a game where all three sides were
+markedly more cautious about attacking a ruin.
+
+`control()` now lives in `tools/control.ts` and both import it. The check that
+it worked: the two instruments' **no ladder** arms agree where they did not
+before, 25.9% against 27.8%.
+
+### And the effect was never established in the first place
+
+Run the arithmetic on the sweep that started this: 28 of 108 against 17 of 108
+is **1.85 sigma**. Each seed set alone is about 1.3. Both sets agreeing is a
+good filter against map luck and it is *not* a substitute for an effect being
+big enough to see, which is what it was treated as. Section 123's rule in this
+file says believe a shift when both sets agree and a supporting column moves;
+it should also say, and when it clears two sigma.
+
+On the corrected game, 72 games an arm:
+
+  arm        advance on turn  advances  beakers  works  finished  wins
+  no ladder      156 (53/72)       9.6      7.4   1.24        24    20
+  ladder         156 (53/72)       9.6      5.5   1.11        23    19
+
+**No research cost**, and not by luck: `all-is-the-hive` is fourth in their plan
+and the ladder fifth and tenth, so everything up to the ending advance is
+identical by construction. Wins 20 against 19 is nothing. So the ladder is about
+neutral and stays.
+
+### The Worker rung, removed for a reason that turned out not to be the measured one
+
+`makeVariant` multiplies attack, defence and **cost** by the count, leaves
+`move` alone, and terraforming never reads the count: a group's *actions* do not
+scale. Two Workers at fifteen each dig two tiles and stand in two places; Two
+Workers as one unit costs thirty and digs one.
+
+I removed it and claimed it explained the 7.4 to 5.5 beakers gap. **It did not.**
+The re-run came back identical in all eleven columns, which for a deterministic
+simulation can only mean the AI had never built one. Kept out anyway, on the
+argument rather than the measurement: the Hivekin are to be playable, and a
+player's unit card would show doubled attack and defence while saying nothing
+about digging. A test pins the rule rather than the list -- a caste may only
+group if it has an attack to multiply.
+
+### Open
+
+- **Beakers 7.4 to 5.5 with the ladder on, unexplained.** It is the one column
+  that moved, it is the Hive's binding constraint, and the Worker was not it.
+  Worth a probe with cities, population and trade routes in the table.
+- Whether the sweep's -11 reproduces at all, now that both instruments agree on
+  the game. The honest position is that the ladder's cost is unmeasured rather
+  than small.

@@ -1,26 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import { AI_TUNING, PERSONALITIES } from '../src/ai/ai';
-import { CALM, POSTING } from '../src/sim/city';
-import { TRADE } from '../src/sim/trade';
-import { PILLAGE } from '../src/sim/roads';
-import { POSTS } from '../src/sim/posts';
-import { SPECIALS } from '../src/model/terrain';
-import { ALT_VICTORY } from '../src/sim/endings';
-import type { Arm } from './sweep';
-import { GOBLIN_SCOUT } from '../src/model/units';
-import { NAVAL } from '../src/ai/naval';
-import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { PERSONALITIES } from '../src/ai/ai';
 import { TECHS } from '../src/model/techs';
-import { PREY } from '../src/sim/barbarians';
-import { PEACE } from '../src/sim/diplomacy';
-import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
-import { FOLLIES } from '../src/sim/follyEffects';
-import { TERRAFORM } from '../src/sim/terraform';
-import { AUTO_TILES } from '../src/sim/city';
+import type { Arm } from './sweep';
+import { rawRows, report, runSweep, seedSet } from './sweep';
+// The shipped game, shared with the probes. See the note at the top of it.
+import { control } from './control';
 
 /**
  * The question this sweep is currently asking.
@@ -53,84 +39,8 @@ declare const process: { env: Record<string, string | undefined> };
  * behind, which is a different bug from section 59's and the same kind of wrong
  * answer.
  */
-/** The Horde's research list as it stands, kept so an arm can put it back. */
-const HORDE_LIST = [...PERSONALITIES.orc.techPriority];
-
-const control = () => {
-  CALM.base = 6;
-  PERSONALITIES.orc.targetCities = 5;
-  PERSONALITIES.human.targetCities = 6;
-  AI_TUNING.calmBuildAhead = 1;
-  AI_TUNING.calmRateAtLimit = 1;
-  AI_TUNING.buildRoads = true;
-  AI_TUNING.citiesPerRoadWorker = 4;
-  AI_TUNING.guardTheGold = true;
-  POSTING.enabled = false;
-  SPECIALS.chance = 0.06;
-  SPECIALS.rules = true;
-  SPECIALS.ruleTiles = true;
-  TRADE.enabled = true;
-  PILLAGE.enabled = true;
-  AI_TUNING.pillage = true;
-  POSTS.enabled = true;
-  AI_TUNING.buildPosts = true;
-  // Back to the quiet game for section 102: the baseline it has to beat is
-  // section 101's Posting table, which was measured without raiders.
-  NEW_GAME.barbarians = false;
-  NEW_GAME.world = 'continent';
-  NEW_GAME.difficulty = 'normal';
-  // Section 125: what the Hive arrives with, named here rather than left to
-  // the harness putting the levers back. The arms below are about the bar they
-  // swing at, and an arm that silently depends on a default it does not state
-  // is the shape of mistake this file's own rule is against.
-  HIVEKIN.founders = 2;
-  HIVEKIN.escort = 2;
-  NAVAL.enabled = true;
-  NAVAL.overseasExtra = 3;
-  NAVAL.crossFor = 1.2;
-  NAVAL.beachhead = 1;
-  RAIDER_TIERS.enabled = true;
-  // Section 120 measured the chieftain's summons on and shipped them on, so a
-  // control that left them off would be measuring a game nobody plays.
-  RAIDER_TIERS.leader.summons = true;
-  // Section 121's bellow, likewise on in the shipped game; the arms move it.
-  INTIMIDATE.enabled = true;
-  // Section 122: the Sunken Legion, and how often a due wave comes by sea.
-  LEGION.enabled = true;
-  LEGION.share = 0.2;
-  // Section 123: ruins are a map feature rather than a raider one, so they are
-  // on in the quiet game too -- which is the game this baseline measures.
-  RUINS.enabled = true;
-  RUINS.perLand = 100;
-  RUINS.wardenDefence = 1;
-  RUINS.aiOdds = 0.25;
-  RUINS.aiSeeks = true;
-  RUINS.wardensStrike = false;
-  RUINS.wardensHold = true;
-  RUINS.soldiersOnly = true;
-  // Section 120: what a band walks at. On in the shipped game; off is the old
-  // rule, which is the arm this was measured against.
-  PREY.enabled = true;
-  PREY.town = 4;
-  PREY.works = 3;
-  PREY.mob = 3;
-  PEACE.enabled = true;
-  GOBLIN_SCOUT.enabled = true;
-  // Section 110's endings, at their shipping settings -- fifteen turns, not the
-  // ten they were first measured at. Left at ten here, every arm since would have
-  // been measuring a game nobody plays.
-  ALT_VICTORY.enabled = true;
-  ALT_VICTORY.portalTurns = 15;
-  ALT_VICTORY.objectTurns = 15;
-  // Section 111's follies ship too, so the game being measured has them.
-  FOLLIES.enabled = true;
-  AI_TUNING.sharedFollyFirst = true;
-  PERSONALITIES.orc.techPriority = [...HORDE_LIST];
-  // Section 112: terraforming ships, so the game being measured has it.
-  TERRAFORM.enabled = true;
-  // And a city at its content limit stops chasing food, which is what keeps it.
-  AUTO_TILES.spareFoodAtLimit = true;
-};
+// The shipped game lives in `control.ts` now, so the probes can play it too.
+// See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
   // Section 125: the counting ladder, now that they can win without it.
@@ -154,7 +64,7 @@ const buildArms = (): Arm[] => {
   // can *field* groups, not whether the types exist.
   const ladder = (on: boolean) => {
     const rungs: Record<string, string[]> = {
-      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2', 'worker_x2'],
+      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2'],
       'assumed-fewer': ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
     };
     for (const [id, units] of Object.entries(rungs)) {

@@ -702,7 +702,7 @@ export const TECHS: TechDef[] = [
     faction: 'hivekin',
     cost: 40,
     prereqs: ['caste-soldier'],
-    units: ['fodder_x2', 'fodder_x3', 'soldier_x2', 'worker_x2'],
+    units: ['fodder_x2', 'fodder_x3', 'soldier_x2'],
     buildings: [],
     flags: [],
     flavor:

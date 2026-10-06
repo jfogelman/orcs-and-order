@@ -12,7 +12,13 @@ import { beakersPerTurn } from '../src/sim/turn';
 import { idx } from '../src/engine/grid';
 import { distance } from '../src/engine/grid';
 import type { GameState, LogEntry } from '../src/model/types';
-import { playGame, seedSet, TUNED_BASES } from './sweep';
+import { HELD_OUT_BASES, playGame, seedSet, TUNED_BASES } from './sweep';
+// **Call this before measuring anything.** `playGame` reads the levers as they
+// stand, and the levers as they stand are not the game the sweeps measure --
+// `RUINS.aiOdds` alone ships at 0.4 against the sweeps' 0.25. A probe that
+// skips it is answering a question about a different game, which is how this
+// file spent an afternoon disagreeing with a 216-game sweep about a sign.
+import { control } from './control';
 
 /**
  * Section 125: what the Hive does with the army it now has.
@@ -102,6 +108,36 @@ interface Reach {
   odds: number;
 }
 
+/**
+ * What the Hive spent its game on, which is the only way to tell a research
+ * cost from a shields cost.
+ *
+ * Every figure is a count of something the Hive did, not something that
+ * happened to it. Outcomes are the wrong instrument here: the effect being
+ * chased is eleven games in a hundred and eight, and a win rate needs hundreds
+ * of games to see that, where "the turn it learned the advance" is one number a
+ * game with almost no variance in it.
+ */
+interface Spend {
+  /** Turn `all-is-the-hive` was learned, or 0 if it never was. */
+  techTurn: number;
+  /** Turn the first work towards the ending appeared in a Hive. */
+  firstWork: number;
+  /** Works standing at the end, of three. */
+  works: number;
+  finished: number;
+  /** Shields of units built, split by whether the unit is a group. */
+  singles: number;
+  groups: number;
+  /** Shields of units lost, likewise -- the "all of them at once" tax. */
+  lostSingles: number;
+  lostGroups: number;
+  advances: number;
+  beakers: number;
+  games: number;
+  wins: number;
+}
+
 /** One game, watched. Returns a tally per side plus the Hive's final roster. */
 function probe(seed: number): {
   sides: Record<string, Tally>;
@@ -110,6 +146,7 @@ function probe(seed: number): {
   arrived: boolean;
   reach: Reach;
   wonByHive: boolean;
+  spend: Spend;
 } {
   const sides: Record<string, Tally> = { orc: blank(), human: blank(), hive: blank() };
   const reach: Reach = {
@@ -117,6 +154,14 @@ function probe(seed: number): {
     units: 0, itsTurn: 0, couldSwing: 0, worthIt: 0, odds: 0,
   };
   const roster = new Map<string, number>();
+  const spend: Spend = {
+    techTurn: 0, firstWork: 0, works: 0, finished: 0, singles: 0, groups: 0,
+    lostSingles: 0, lostGroups: 0, advances: 0, beakers: 0, games: 1, wins: 0,
+  };
+  /** Units already counted as built, so each is paid for once. */
+  const counted = new Set<number>();
+  /** What each unit was, so a death can be priced after the unit is gone. */
+  const lostType = new Map<number, string>();
   // Who owned which unit at the last look. A unit that attacked and died this
   // half-turn is still in here, which is the whole reason it is kept.
   const owners = new Map<number, number>();
@@ -173,12 +218,22 @@ function probe(seed: number): {
     for (const u of state.units) {
       seen.add(u.id);
       owners.set(u.id, u.owner);
+      lostType.set(u.id, u.type);
     }
     for (const [id, owner] of owners) {
       if (seen.has(id)) continue;
       const side = nameFor(state, owner);
       if (side) sides[side].lost++;
+      if (side === 'hive') {
+        const t = lostType.get(id);
+        if (t) {
+          const def = unitType(t);
+          if (def.count > 1) spend.lostGroups += def.cost;
+          else spend.lostSingles += def.cost;
+        }
+      }
       owners.delete(id);
+      lostType.delete(id);
     }
 
     // --- cities changing hands
@@ -194,6 +249,29 @@ function probe(seed: number): {
     }
 
     // --- what the Hive knows, and how close it ever gets
+    // --- what the Hive is spending its game on
+    if (hive) {
+      const mine = playerUnits(state, hive.id);
+      for (const u of mine) {
+        if (counted.has(u.id)) continue;
+        counted.add(u.id);
+        const t = unitType(u.type);
+        if (t.count > 1) spend.groups += t.cost;
+        else spend.singles += t.cost;
+      }
+      if (!spend.techTurn && hive.techs.includes('all-is-the-hive')) {
+        spend.techTurn = state.turn;
+      }
+      const works = endingWorks('hive');
+      const here = playerCities(state, hive.id);
+      const standing = works.filter((b) => here.some((c) => c.buildings.includes(b.id)));
+      if (!spend.firstWork && standing.length > 0) spend.firstWork = state.turn;
+      spend.works = standing.length;
+      spend.finished = standing.some((b) => b.victory) ? 1 : 0;
+      spend.advances = hive.techs.length;
+      spend.beakers = beakersPerTurn(state, hive.id);
+    }
+
     if (hive && hive.alive) {
       reach.looks++;
       const mine = playerUnits(state, hive.id);
@@ -275,10 +353,12 @@ function probe(seed: number): {
     }
   };
 
+  control();
   const outcome = playGame(seed, undefined, watch);
   const wonByHive = outcome.winner !== null
     && outcome.winner !== 0 && outcome.winner !== 1;
-  return { sides, roster, alive, arrived, reach, wonByHive };
+  spend.wins = wonByHive ? 1 : 0;
+  return { sides, roster, alive, arrived, reach, wonByHive, spend };
 }
 
 describe('what the hive does with its army', () => {
@@ -424,131 +504,91 @@ describe('what the hive does with its army', () => {
  * question is what price puts them in the race, and whether being in it is
  * enough when they join it a hundred turns late.
  */
-describe('the road to their ending', () => {
-  it('asks what would put them in the race at all', () => {
-    const seeds = seedSet('probe', TUNED_BASES, 4).seeds;
-    const works = endingWorks('hive');
-    const road = TECHS.find((t) => t.id === 'all-is-the-hive')!;
-    const plan = PERSONALITIES.hivekin;
-    const shipped = {
-      works: works.map((b) => b.cost),
-      cost: road.cost,
-      prereqs: [...road.prereqs],
-      order: [...plan.techPriority],
+describe('what the counting ladder costs them', () => {
+  /**
+   * Swept at 216: the ladder took them from 28 wins in 108 to 17, both seed
+   * sets agreeing. The first attempt to explain that used twelve games an arm
+   * and came back saying the ladder *helped* -- which it could not possibly
+   * have shown, because an eleven-in-108 effect is about one game in twelve.
+   * The tell was that the off arm matched the sweep exactly (3/12 against
+   * 13/54) and the on arm missed it by a single game.
+   *
+   * So this one is sized off the effect and counts **what the Hive spent its
+   * game on** rather than how the game ended. Wins need hundreds of games to
+   * resolve ten points; "the turn it learned its ending advance" is one number
+   * per game and barely moves for any other reason.
+   *
+   * Research cost looks like: `advance on turn` slipping later, fewer advances.
+   * Shields cost looks like: the advance landing at the same time, but the
+   * first work later, fewer works, and a pile of shields in `groups` and
+   * `lost groups`.
+   */
+  it('counts what they spent it on', () => {
+    // Both base sets, twelve a base: 72 games an arm. The sweep's effect is ten
+    // points; this is the smallest honest sample for a mechanism column.
+    const seeds = [
+      ...seedSet('tuned', TUNED_BASES, 12).seeds,
+      ...seedSet('held-out', HELD_OUT_BASES, 12).seeds,
+    ];
+    const rungs: Record<string, string[]> = {
+      'always-this-many': ['fodder_x2', 'fodder_x3', 'soldier_x2'],
+      'assumed-fewer': ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
     };
+    const plan = [...PERSONALITIES.hivekin.techPriority];
+    const rows: Array<[string, Spend, number]> = [];
+    const out: string[] = [];
 
-    /**
-     * The price of the works was never the gate -- probed at forty per cent of
-     * it, they still built 0.2 and reached the advance twice in twelve. The
-     * gate is the **road**: 860 beakers over eleven advances at 9.9 beakers a
-     * turn is eighty-seven turns of pure research, against the Horde's
-     * twenty-three and the Kingdom's thirty, and the Hive only exists for about
-     * a hundred and forty.
-     *
-     * Of that 860, 400 is the shared happiness-and-insanity branch and 460 is
-     * theirs. Only theirs is touched here: dropping `insanity` as a prerequisite
-     * removes a dependency rather than cheapening a shared advance, so the two
-     * empires' own roads are untouched and the comparison stays honest.
-     */
-    const arms: Array<[string, () => void]> = [
-      ['as shipped (road 860, 22nd of 25)', () => {}],
-      [
-        'road 710: insanity dropped',
-        () => {
-          road.prereqs = ['caste-princess'];
-        },
-      ],
-      [
-        'road 610, and asked for 13th',
-        () => {
-          road.prereqs = ['caste-princess'];
-          road.cost = 100;
-          plan.techPriority = shipped.order.filter((t) => t !== 'all-is-the-hive');
-          plan.techPriority.splice(12, 0, 'all-is-the-hive');
-        },
-      ],
-      [
-        'that, and works at 60%',
-        () => {
-          road.prereqs = ['caste-princess'];
-          road.cost = 100;
-          plan.techPriority = shipped.order.filter((t) => t !== 'all-is-the-hive');
-          plan.techPriority.splice(12, 0, 'all-is-the-hive');
-          works.forEach((b, i) => (b.cost = [180, 180, 240][i]));
-        },
-      ],
-      /**
-       * The only shape the arithmetic actually permits.
-       *
-       * Their advances per game are **11.8 in every arm above** -- repricing the
-       * road does not buy them any more research, it only changes what they
-       * spend it on, and an eleven-advance road is their whole game. So the
-       * road has to fit inside four or five of those twelve, leaving the rest
-       * for castes. Off `caste-soldier` at 100 it is 165 beakers over four
-       * advances, all of which they were going to research anyway.
-       *
-       * This is a change to the tree's shape rather than a price, and the bible
-       * put the ending behind the Princess. Measured here so the question comes
-       * with its answer attached, not applied.
-       */
-      [
-        'road 165: off caste-soldier, 5th',
-        () => {
-          road.prereqs = ['caste-soldier'];
-          road.cost = 100;
-          plan.techPriority = shipped.order.filter((t) => t !== 'all-is-the-hive');
-          plan.techPriority.splice(4, 0, 'all-is-the-hive');
-        },
-      ],
-      [
-        'that, and works at 60%',
-        () => {
-          road.prereqs = ['caste-soldier'];
-          road.cost = 100;
-          plan.techPriority = shipped.order.filter((t) => t !== 'all-is-the-hive');
-          plan.techPriority.splice(4, 0, 'all-is-the-hive');
-          works.forEach((b, i) => (b.cost = [180, 180, 240][i]));
-        },
-      ],
-    ];
+    for (const on of [false, true]) {
+      for (const [id, units] of Object.entries(rungs)) {
+        TECHS.find((x) => x.id === id)!.units = on ? units : [];
+      }
+      PERSONALITIES.hivekin.techPriority = on ? [...plan] : plan.filter((t) => !(t in rungs));
 
-    const out: string[] = [
-      'hive ending                          advance  works  finished  wins  advances  cities  pop  units',
-      '-------------------------------------------------------------------------------------------------',
-    ];
-    for (const [label, apply] of arms) {
-      works.forEach((b, i) => (b.cost = shipped.works[i]));
-      road.cost = shipped.cost;
-      road.prereqs = [...shipped.prereqs];
-      plan.techPriority = [...shipped.order];
-      apply();
-      let advance = 0, standing = 0, finished = 0, wins = 0, techs = 0, cities = 0, pop = 0, units = 0;
+      const total: Spend = {
+        techTurn: 0, firstWork: 0, works: 0, finished: 0, singles: 0, groups: 0,
+        lostSingles: 0, lostGroups: 0, advances: 0, beakers: 0, games: 0, wins: 0,
+      };
+      // Counted separately, because a game where the advance never landed must
+      // not drag the average turn down to look early.
+      let gotTech = 0;
+      let gotWork = 0;
       for (const seed of seeds) {
         const r = probe(seed);
-        advance += r.sides.hive.endingTech;
-        standing += r.sides.hive.works;
-        finished += r.sides.hive.finished;
-        wins += r.wonByHive ? 1 : 0;
-        techs += r.sides.hive.techs;
-        cities += r.sides.hive.cities;
-        pop += r.sides.hive.pop;
-        units += r.sides.hive.units;
+        const sp = r.spend;
+        for (const k of Object.keys(total) as Array<keyof Spend>) total[k] += sp[k];
+        if (sp.techTurn) gotTech++;
+        if (sp.firstWork) gotWork++;
       }
+      rows.push([on ? 'ladder' : 'no ladder', total, 0]);
       const n = seeds.length;
+      const avg = (v: number, d = 1) => (v / n).toFixed(d);
+      const when = (v: number, got: number) => (got ? (v / got).toFixed(0) : '--');
+      if (rows.length === 1) {
+        out.push(
+          'arm        games  advance on turn (of n)  first work (of n)  works  finished  wins' +
+            '   advances  beakers  shields: singles  groups  lost singles  lost groups',
+        );
+        out.push('-'.repeat(160));
+      }
       out.push(
-        `${label.padEnd(36)} ${(advance + '/' + n).padStart(7)} ${(standing / n).toFixed(1).padStart(6)} ` +
-          `${(finished + '/' + n).padStart(9)} ${(wins + '/' + n).padStart(5)} ` +
-          `${(techs / n).toFixed(1).padStart(9)} ${(cities / n).toFixed(1).padStart(7)} ` +
-          `${(pop / n).toFixed(1).padStart(4)} ${(units / n).toFixed(1).padStart(6)}`,
+        `${rows[rows.length - 1][0].padEnd(10)} ${String(n).padStart(5)} ` +
+          `${when(total.techTurn, gotTech).padStart(15)} (${String(gotTech).padStart(2)})  ` +
+          `${when(total.firstWork, gotWork).padStart(13)} (${String(gotWork).padStart(2)})  ` +
+          `${avg(total.works, 2).padStart(5)} ${String(total.finished).padStart(9)} ` +
+          `${String(total.wins).padStart(5)} ${avg(total.advances).padStart(10)} ` +
+          `${avg(total.beakers).padStart(8)} ${avg(total.singles, 0).padStart(17)} ` +
+          `${avg(total.groups, 0).padStart(7)} ${avg(total.lostSingles, 0).padStart(13)} ` +
+          `${avg(total.lostGroups, 0).padStart(12)}`,
       );
     }
-    works.forEach((b, i) => (b.cost = shipped.works[i]));
-    road.cost = shipped.cost;
-    road.prereqs = [...shipped.prereqs];
-    plan.techPriority = [...shipped.order];
+
+    for (const [id, units] of Object.entries(rungs)) {
+      TECHS.find((x) => x.id === id)!.units = units;
+    }
+    PERSONALITIES.hivekin.techPriority = plan;
 
     const text = out.join('\n');
-    writeFileSync('hiveprice.txt', text, 'utf8');
+    writeFileSync('hiveladder.txt', text, 'utf8');
     console.log('\n' + text + '\n');
-  }, 1_800_000);
+  }, 3_600_000);
 });
