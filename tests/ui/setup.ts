@@ -38,13 +38,33 @@ function pageShell(): string {
  * values is the whole requirement.
  */
 function stubCanvas(): void {
+  /**
+   * Every call the renderer makes, in order.
+   *
+   * There are no pixels to look at, so this is the only honest question a test
+   * can ask of the drawing: *what did it ask the canvas to do?* It is enough to
+   * tell a woken ruin's glow from an undisturbed one's absence of a glow, which
+   * is a fact about behaviour rather than about taste.
+   */
+  const calls: string[] = [];
+  (globalThis as unknown as Record<string, unknown>).canvasCalls = {
+    seen: () => calls.slice(),
+    clear: () => {
+      calls.length = 0;
+    },
+  };
   const noop = () => undefined;
+  const record = (name: string, result?: unknown) => (...args: unknown[]) => {
+    void args;
+    calls.push(name);
+    return result;
+  };
   const ctx = new Proxy(
     {
       canvas: null,
       measureText: () => ({ width: 10 }),
-      createLinearGradient: () => ({ addColorStop: noop }),
-      createRadialGradient: () => ({ addColorStop: noop }),
+      createLinearGradient: record('createLinearGradient', { addColorStop: noop }),
+      createRadialGradient: record('createRadialGradient', { addColorStop: noop }),
       createPattern: () => null,
       getImageData: () => ({ data: new Uint8ClampedArray(4) }),
       save: noop,
@@ -53,9 +73,10 @@ function stubCanvas(): void {
     {
       get: (target, prop) => {
         if (prop in target) return target[prop as string];
-        // Anything else the renderer reaches for: a function that does nothing,
-        // and a writable property for the dozens of `ctx.fillStyle = ...` lines.
-        return typeof prop === 'string' && /^[a-z]/.test(prop) ? noop : undefined;
+        // Anything else the renderer reaches for: a function that records that
+        // it happened and does nothing, and a writable property for the dozens
+        // of `ctx.fillStyle = ...` lines.
+        return typeof prop === 'string' && /^[a-z]/.test(prop) ? record(prop) : undefined;
       },
       set: () => true,
     },
