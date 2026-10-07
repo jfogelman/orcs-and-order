@@ -125,10 +125,32 @@ the world had exactly two seats.
   units leave through, because nothing outside that function can see which one a
   turn went out of.
 
+## A caveat on every number above
+
+**`RUINS.aiOdds` ships at 0.4 and the sweep's control arm pinned it to 0.25
+from the day ruins landed.** PR #126 added both in one commit, the 0.25 being a
+leftover of the arm that lost — so every sweep since has measured the AI
+attacking a thing standing in a doorway at one-in-four odds, which §123
+measured as costing the Horde fifteen games and then rejected.
+
+Paired comparisons survive it, because both arms always had it: the short road
+really does beat the long one, and the ordering of the five fixes above holds.
+**Absolute figures do not.** "27 of 108" describes a game nobody plays. The
+Hivekin's win rate on the shipped game is being re-measured, and that number
+will be corrected here rather than quietly left standing.
+
+The same class of bug twice in one day — a measurement setup drifting from the
+game with nothing checking it — is why `control()` now lives in `tools/control.ts`
+and is imported by the sweeps, the probes and the seed scanner alike.
+
 ## What this does not do
 
-- **The AI has no idea Sink and Burrow exist**, so every number above describes
-  a faction playing without half of what makes it itself. Next.
+- **Sink and Burrow are measured but not settled.** The AI now builds Burrowers
+  and uses them — it crosses what it cannot walk round, comes up swinging, and
+  lies in wait — where before it built 0.2 a game and never once went
+  underground. Whether that is worth having is a sweep in flight. Fourteen turns
+  a game spent under the ground across 1.8 sinks is about eight turns apiece,
+  and is the first thing to tune if it costs them games.
 - **The garrison treadmill.** Half of every Hivekin soldier-turn and a third of
   each empire's goes on walking to one of its own undefended cities, and the
   branch that would make a unit *stay* has never fired in 77,000 turns because
@@ -139,4 +161,4 @@ the world had exactly two seats.
   still owe an unpaired measurement; and whether the third seat moved the
   Horde-Kingdom balance at all is not established either way.
 
-1033 tests.
+1041 tests.
