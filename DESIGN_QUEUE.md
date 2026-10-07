@@ -10976,3 +10976,45 @@ group if it has an attack to multiply.
 - Whether the sweep's -11 reproduces at all, now that both instruments agree on
   the game. The honest position is that the ladder's cost is unmeasured rather
   than small.
+
+### The digging, measured properly — and a null worth having
+
+    arm           set        orc  hum  hive
+    no digging    tuned       25   19    10
+    no digging    held-out    22   17    15
+    digging       tuned       23   18    13
+    digging       held-out    23   16    15
+
+25 of 108 against 28, one seed set moving three games and the other none. Half a
+sigma. **No effect on the win rate.**
+
+What makes this a null worth having rather than slice B's is that the mechanism
+was counted before the outcome was believed: 1.08 Burrower-caste owned, 1.8
+sinks and fourteen turns underground a game, against 0.08 / 0.0 / 0.0 before.
+Slice B's two arms agreed because nothing was ever on the board; these two
+agree because two Burrowers in an army of fifteen is a small lever.
+
+It took three passes to get there, and two of the faults were mine: the first
+sweep measured a version where the AI owned Burrowers and never dug, because the
+crossing was never implemented and lying in wait was gated on an advance that
+sits twenty-second in a ten-advance research budget.
+
+**And it hands over the number the section was missing.** Both arms ran on the
+corrected control and `digging` is the shipped configuration, so the Hivekin's
+win rate on the game people actually play is **28 of 108**. The figure quoted
+before the control bug was 27. It did not move — which is luck, not vindication.
+
+### Still open
+
+- **Whether the third seat moved the Horde-Kingdom split.** The one measurement
+  125 still owes: seat on against seat off, paired, which works because the
+  Hivekin arrive after worldgen. It answers the balance question and re-baselines
+  the two empires on a corrected control in the same run.
+- **The two Burrower branches are not mutually exclusive.** The bible says they
+  should be; the tech tree cannot express it; a player can take both. A decision,
+  not a measurement.
+- Beakers 7.4 to 5.5 with the ladder on, unexplained.
+- The garrison treadmill, its own section.
+- Five turns for the succession, unmeasured; the brood choice has no dialog,
+  which only matters once the Hivekin are playable; the three tiles still owe an
+  unpaired measurement.

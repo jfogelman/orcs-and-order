@@ -135,9 +135,10 @@ measured as costing the Horde fifteen games and then rejected.
 
 Paired comparisons survive it, because both arms always had it: the short road
 really does beat the long one, and the ordering of the five fixes above holds.
-**Absolute figures do not.** "27 of 108" describes a game nobody plays. The
-Hivekin's win rate on the shipped game is being re-measured, and that number
-will be corrected here rather than quietly left standing.
+Absolute figures did not, so they were re-measured on a corrected control:
+**28 of 108, against the 27 quoted before.** The headline did not move, which is
+luck rather than vindication — it could as easily have gone the other way, and
+nothing but the re-run could have said which.
 
 The same class of bug twice in one day — a measurement setup drifting from the
 game with nothing checking it — is why `control()` now lives in `tools/control.ts`
@@ -145,12 +146,15 @@ and is imported by the sweeps, the probes and the seed scanner alike.
 
 ## What this does not do
 
-- **Sink and Burrow are measured but not settled.** The AI now builds Burrowers
-  and uses them — it crosses what it cannot walk round, comes up swinging, and
-  lies in wait — where before it built 0.2 a game and never once went
-  underground. Whether that is worth having is a sweep in flight. Fourteen turns
-  a game spent under the ground across 1.8 sinks is about eight turns apiece,
-  and is the first thing to tune if it costs them games.
+- **Sink and Burrow cost nothing and buy nothing, measured.** The AI builds
+  Burrowers and uses them now — crossing what it cannot walk round, coming up
+  swinging, lying in wait — where before it built 0.2 a game and never once went
+  underground. Swept at 216: 25 wins of 108 against 28, one seed set moving and
+  one not, which is half a sigma. A genuine null, unlike slice B's, because the
+  mechanism was counted first: 1.08 Burrowers owned, 1.8 sinks and fourteen
+  turns underground a game. Kept because it is what the faction *is*, and
+  because a player gets it either way. Fourteen turns across 1.8 sinks is about
+  eight apiece, which is the first thing to tune if it ever does cost them.
 - **The garrison treadmill.** Half of every Hivekin soldier-turn and a third of
   each empire's goes on walking to one of its own undefended cities, and the
   branch that would make a unit *stay* has never fired in 77,000 turns because
