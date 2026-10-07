@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { BURROW } from '../src/sim/burrow';
+import { HIVEKIN } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -42,32 +42,37 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 125: does the AI knowing it has Burrowers change anything?
+  // Section 125, the last thing it owes: did the third seat move the two
+  // empires, and what is the game actually balanced at now?
   //
-  // Slice B swept Sink and Burrow and got two arms reading **identical
-  // numbers**, which was an instrument reading zero: `worth()` prices a unit on
-  // strength, health and cost, all three of a Burrower's reasons to exist are
-  // invisible to that, so the Hive built 0.2 a game and none of them ever went
-  // underground. `BURROW.ai` is a standing want of two plus the behaviour --
-  // come up swinging, stay down when there is nothing to hit, lie in wait only
-  // once Ambush is known.
+  // One run answers both. The Horde-against-Kingdom split in the three-sided
+  // arm is the stated balance target; the two-sided arm is what that split was
+  // before the Hivekin existed, measured on the same maps and on a control that
+  // finally matches the shipped game.
   //
-  // The first measurement of this section taken on a control that matches the
-  // shipped game: `RUINS.aiOdds` was pinned at 0.25 here from the day ruins
-  // landed, against 0.4 in `ruins.ts`.
+  // **Pairable, which a worldgen lever would not be.** The Hivekin arrive long
+  // after the map is made, and their three specials are a separate lever left on
+  // in both arms, so the two arms play the same world. The harness checks the
+  // map signature and will say so if that is ever wrong -- which is how section
+  // 94's confident, meaningless result got caught.
+  //
+  // What this cannot do is tell the two apart from the correction to
+  // `RUINS.aiOdds`: everything before 2026-10-05 was measured at 0.25 against
+  // the 0.4 that ships. Both arms here are at 0.4, so this *is* the new
+  // baseline rather than a comparison against the old numbers.
   return [
     {
-      label: 'no digging',
+      label: 'two sides',
       apply: () => {
         control();
-        BURROW.ai = false;
+        HIVEKIN.enabled = false;
       },
     },
     {
-      label: 'digging',
+      label: 'three sides',
       apply: () => {
         control();
-        BURROW.ai = true;
+        HIVEKIN.enabled = true;
       },
     },
   ];

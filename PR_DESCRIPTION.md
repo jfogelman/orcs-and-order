@@ -144,6 +144,27 @@ The same class of bug twice in one day — a measurement setup drifting from the
 game with nothing checking it — is why `control()` now lives in `tools/control.ts`
 and is imported by the sweeps, the probes and the seed scanner alike.
 
+## What the third seat did to the two empires
+
+Measured last, paired, both arms on the corrected control:
+
+|  | Horde | Kingdom | split |
+|---|---|---|---|
+| two sides | 66 | 42 | **61%** |
+| three sides | 46 | 34 | 57.5% |
+
+**It narrows them.** The Horde's lead exists without the Hivekin and is slightly
+larger without them, and the Kingdom does better with the Hive in the game —
+5.50 cities to 7.02 on tuned, 45.2 population to 54.6. The mechanism is in the
+victory routes: conquest wins collapse from 13 to 2, because nobody finishes the
+Kingdom while something else is taking ground.
+
+Which leaves a real imbalance that is not this section's: 66–42 is about 2.3
+sigma, so the two-sided game is genuinely Horde-favoured. Possibly revealed
+rather than caused by the control fix — at 0.25 every side threw its army at
+ruin guardians, and §123 measured that as costing the *Horde* fifteen games. The
+queue says to measure 0.25 against 0.4 before anyone tunes `targetCities`.
+
 ## What this does not do
 
 - **Sink and Burrow cost nothing and buy nothing, measured.** The AI builds
@@ -160,9 +181,8 @@ and is imported by the sweeps, the probes and the seed scanner alike.
   branch that would make a unit *stay* has never fired in 77,000 turns because
   it cannot. Shared code, its own section.
 - Five turns for the succession is unmeasured; the brood choice has no dialog
-  yet, which only matters once the Hivekin are playable; the three Hivekin
-  specials still owe an unpaired measurement; and whether the third seat moved
-  the Horde-Kingdom balance at all is not established either way.
+  yet, which only matters once the Hivekin are playable; and the three Hivekin
+  specials still owe an unpaired measurement.
 - The Burrower's two branches are both researchable, which is a decision rather
   than an omission: the bible called them mutually exclusive, and exclusivity
   there would guard a boundary nothing is crossing, since both branches are the

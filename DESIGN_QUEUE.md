@@ -11025,3 +11025,47 @@ before the control bug was 27. It did not move — which is luck, not vindicatio
 - Five turns for the succession, unmeasured; the brood choice has no dialog,
   which only matters once the Hivekin are playable; the three tiles still owe an
   unpaired measurement.
+
+### The third seat did not tilt the empires — it narrows them
+
+The last thing section 125 owed, paired, 216 games, both arms on the corrected
+control:
+
+    arm           set        orc  hum  hive   cq/dm/pt/po/ob/hv
+    two sides     tuned       34   20     0   13/6/8/15/12/0
+    two sides     held-out    32   22     0   14/4/6/14/16/0
+    three sides   tuned       23   18    13   2/8/4/17/10/13
+    three sides   held-out    23   16    15   8/6/3/11/11/15
+
+                   Horde  Kingdom  split
+    two sides         66       42    61%
+    three sides       46       34  57.5%
+
+**The Horde's lead exists without the Hivekin and is slightly larger without
+them.** This file said "the Kingdom is now clearly down" off one sweep, then
+"looks down, not shown" after the arithmetic; it is now refuted. The Kingdom does
+*better* with the Hive in the game -- 5.50 cities to 7.02 on tuned, 45.2
+population to 54.6.
+
+The mechanism is in the victory routes: **conquest collapses from 13 to 2**.
+The Horde's edge in the two-sided game is substantially conquest, and a third
+side suppresses it -- nobody finishes the Kingdom while something else is taking
+ground. That is the third seat doing exactly what a third seat should.
+
+The Hive's **28 of 108 reproduced exactly** (13 + 15), on a different arm pair
+from the run that first measured it.
+
+### What this leaves, and it is not this section's
+
+**66-42 is about 2.3 sigma, so the two-sided game really is Horde-favoured.**
+That is a balance problem the Hivekin did not cause and do not fix.
+
+A hypothesis worth one run before anybody tunes anything: the control bug was
+hiding it. At `RUINS.aiOdds` 0.25 all three sides threw armies at ruin
+guardians, which section 123 measured as costing the *Horde* fifteen games;
+correcting it to the shipped 0.4 should help the Horde specifically, and the
+two-sided split now reads 61% where the historical figure was nearer 53%. That
+is consistent, not established. **Measure 0.25 against 0.4 on two sides before
+touching `targetCities` or the Kingdom's prices** -- otherwise the correction
+lands on top of a cause nobody has confirmed, which is how a real imbalance ends
+up hidden behind a compensating one.
