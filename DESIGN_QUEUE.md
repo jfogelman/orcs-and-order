@@ -11069,3 +11069,64 @@ is consistent, not established. **Measure 0.25 against 0.4 on two sides before
 touching `targetCities` or the Kingdom's prices** -- otherwise the correction
 lands on top of a cause nobody has confirmed, which is how a real imbalance ends
 up hidden behind a compensating one.
+
+## 131. A browser for the interface to be tested in
+
+Two bugs reached a real game in one week, and both lived where the suite could
+not reach: the tests run in node, so anything in `src/ui/` or `src/main.ts` was
+only ever verified by somebody clicking it. A unit that could not be told to
+hold the city it had just walked into, and a ruin that asked whether you wanted
+to risk it *after* you had already opened it.
+
+**jsdom, per file, opted into.** `vitest.config.ts` stays on the node
+environment -- a thousand simulation tests have no use for a browser and pay for
+one in start-up -- and a test that wants the interface says
+`// @vitest-environment jsdom` at the top of the file. `tests/ui/setup.ts` runs
+for every test file and does nothing at all unless there is a document.
+
+What the browser needs, and nothing more:
+
+- **The page shell out of `index.html`**, imported through Vite as `?raw`
+  rather than copied, so the fixture cannot drift from what is served -- and
+  rather than read off disk, because this project does not install
+  `@types/node` and `tools/` already makes that bargain for `process`.
+- **A canvas that accepts everything.** jsdom has none, and the alternative is
+  the `canvas` package, which is a native build. Nothing here tests what the map
+  *looks* like, so a proxy that answers every call is the whole requirement.
+  `Path2D` and `ResizeObserver` likewise: they have to exist, not work.
+- **No animation frame.** The loop is deliberately never called back; a test
+  drives the game by calling into it.
+
+The seam is `window.game`, which `main.ts` already hangs the running `App` on in
+dev for the console. Tests drive the real thing rather than a copy of its logic.
+
+### Two tests that passed against the bugs they were written for
+
+Worth recording, because both are the same mistake and it is an easy one.
+
+**The selection test asserted before the interface had done anything.** Moving
+on to the next unit is deferred by `ATTACK_HOLD_MS` so a swing can play, and the
+assertion ran straight after the move -- so it passed on the broken code. It is
+a test of this only with `vi.useFakeTimers()` and the clock run forward.
+
+**"Never says what the prize is" passed because no dialog existed at all.** An
+absent modal also fails to mention gold. It asserts the dialog is there first
+now. And modals leak between tests through the one shared document, which is how
+it was reading the *previous* test's dialog -- cleared in `afterEach`.
+
+Every one of these was found by checking the tests fail against the code from
+before the fix. That check is the point of writing them.
+
+### And the fix they then found
+
+Holding focus only when *nothing else* was idle was not enough for the reported
+case: the garrison you walk out to make room still has a movement point, so the
+cycle jumped to it and the unit you were in the middle of a plan about left the
+panel anyway. A unit that has just walked into one of our own settlements and
+has no order now keeps focus outright -- walking in *was* the decision, and `F`
+is one key away. Everywhere else the cycle moves on as it always has.
+
+### Still open
+
+- `src/ui/` has a dozen modules and this covers the two that had bugs in them.
+  The harness is the point; the coverage will follow whatever breaks next.
