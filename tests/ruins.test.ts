@@ -7,6 +7,7 @@ import {
   guarded,
   isWarden,
   ruinAt,
+  ruinState,
   sleepRuins,
   standingRuins,
   tickRuins,
@@ -433,5 +434,54 @@ describe('the map remembers', () => {
     tryStep(state, orc, ruin.x, ruin.y);
     expect(ruin.wokeOn).toBeUndefined();
     expect(state.units.filter(isWarden)).toHaveLength(0);
+  });
+});
+
+/**
+ * What the interface is allowed to say about a ruin. Section 130.
+ *
+ * The map drew ruins and nothing described them: hovering one gave the terrain
+ * under it and no hint that the thing on the tile was anything but scenery, so
+ * the first most players learned about ruins was something coming out of one.
+ */
+describe('what a ruin looks like from outside', () => {
+  function board(): GameState {
+    const state = createGame({ seed: 4242, width: 24, height: 16, barbarians: false });
+    state.units.length = 0;
+    state.ruins = [{ x: 10, y: 8, prize: 'gold' }];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+    }
+    return state;
+  }
+
+  it('says nothing at all about a tile with no ruin on it', () => {
+    expect(ruinState(board(), 3, 3)).toBeNull();
+  });
+
+  it('tells the four states apart', () => {
+    const state = board();
+    const ruin = state.ruins![0];
+    expect(ruinState(state, 10, 8), 'never touched').toBe('undisturbed');
+
+    ruin.wokeOn = 20;
+    expect(ruinState(state, 10, 8), 'woken, nothing standing').toBe('awake');
+
+    spawnUnit(state, 1, WARDENS.sentinel, 10, 8);
+    expect(ruinState(state, 10, 8), 'something in the doorway').toBe('held');
+
+    ruin.takenOn = 30;
+    expect(ruinState(state, 10, 8), 'emptied, now scenery').toBe('emptied');
+  });
+
+  it('never says what is inside, in any state', () => {
+    const state = board();
+    state.ruins![0].wokeOn = 20;
+    // The prize is on the record and must not reach the player through this.
+    expect(state.ruins![0].prize).toBe('gold');
+    for (const answer of ['undisturbed', 'awake', 'held', 'emptied']) {
+      expect(answer).not.toContain('gold');
+    }
   });
 });

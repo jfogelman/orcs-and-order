@@ -55,6 +55,7 @@ import {
   beginPlayerTurn,
   continuePlaying,
   endPlayerTurn,
+  awaitingDecision,
   idleUnits,
   isOver,
   scoreBreakdown,
@@ -67,9 +68,11 @@ import {
   resupply,
   resupplyBlocked,
 } from './sim/combat';
+import { attackOdds } from './ai/ai';
 import { openAdvisors, openCrisisCall, situationOf } from './ui/advisors';
 import { openPrideOffer } from './ui/pride';
 import { openNotice } from './ui/notice';
+import { RUINS, expectedGuard, isWarden, ruinState } from './sim/ruins';
 import { endingTurnsLeft, portalOpen } from './sim/endings';
 import { installOverflowTips } from './ui/overflowTips';
 import { installTopbarMore } from './ui/topbarMore';
@@ -179,6 +182,8 @@ class App {
    * `disarmEndTurn`.
    */
   private endTurnArmed = false;
+  /** Answered "yes" to one ruin risk, good for the next `actOn` only. */
+  private ruinRiskConfirmed = false;
   /** Where the city cycle got to, so the next press carries on from it. */
   private lastCityLooked: number | null = null;
   /** Cities already asked what to build this turn, so none is asked twice. */
@@ -460,10 +465,29 @@ class App {
     this.camera.centerOnTile(next.x, next.y);
   }
 
+  /**
+   * Move focus to the next unit still waiting for orders.
+   *
+   * **Holding on to the last one is deliberate.** A unit that has just spent
+   * its final movement point is not idle any more -- `idleUnits` asks for
+   * `moves > 0` -- so this used to clear the selection outright, and with it
+   * the Fortify button. Walk a freshly built unit into the city you have just
+   * walked the garrison out of and there was no way to tell it to hold the
+   * place: the panel was empty and End Turn sat there as though the turn were
+   * done. Reported from a real game.
+   *
+   * Nothing is idle means nothing left to *move*, which is not the same as
+   * nothing left to *decide*. Fortify, Sentry and Skip all still apply to a
+   * unit with no movement left, so the unit stays selected and keeps offering
+   * them.
+   */
   private selectNextIdle(): void {
     const idle = idleUnits(this.state, this.viewerId);
     if (idle.length === 0) {
-      this.select(null);
+      const here = this.selected;
+      // Keep a unit of ours that is still standing and still undecided; drop
+      // anything else, so a dead or foreign selection does not linger.
+      if (!awaitingDecision(this.state, this.viewerId, here)) this.select(null);
       return;
     }
     const current = this.selected;
@@ -511,15 +535,46 @@ class App {
 
     const targets = attackTargets(this.state, unit);
     const attacking = targets.has(idx(x, y, this.state.width));
+    // Section 123 made a ruin an optional fight and the interface never said
+    // so: a right-click that meant "walk over there" swung at a Tomb Warden
+    // instead, and the first a player knew of it was the corpse. The AI has had
+    // a higher bar for exactly this fight since the day ruins landed
+    // (`RUINS.aiOdds`); this is the player's version of that bar, and it is a
+    // question rather than a refusal because risking it is a legitimate play.
+    if (!this.ruinRiskConfirmed) {
+      const guard = attacking ? unitAt(this.state, x, y) : undefined;
+      // Any warden, not only one standing exactly on the ruin tile: they wake
+      // up *beside* the ruin and step onto it afterwards, so keying this to the
+      // tile would have asked about half of them.
+      if (guard && isWarden(guard)) {
+        this.askAboutTheGuard(unit, guard, x, y);
+        return;
+      }
+      // **The one that matters, and the one asked for.** Walking in is where
+      // the risk is taken: it wakes whatever is in there, spends the rest of
+      // the turn, and cannot be undone by walking out again. Asking only before
+      // the fight was asking after the decision.
+      if (!attacking && ruinState(this.state, x, y) === 'undisturbed') {
+        this.askAboutGoingIn(unit, x, y);
+        return;
+      }
+    }
+    this.ruinRiskConfirmed = false;
     // Started before the fight resolves, so the swing is already playing while
     // the result is worked out -- and so it still plays if the attacker dies.
     if (attacking) this.animateAttack(unit);
     // Moving is doing something else, whether or not it lands: the warning that
     // armed End Turn was about the board as it stood before this.
     this.disarmEndTurn();
+    // Noted before the step so the notice afterwards names only what *this*
+    // walk woke, never something that has been standing there for a week.
+    const wardensBefore = new Set(
+      this.state.units.filter((u) => isWarden(u)).map((u) => u.id),
+    );
     const outcome = attacking
       ? tryStep(this.state, unit, x, y)
       : moveToward(this.state, unit, x, y);
+    const woken = this.state.units.filter((u) => isWarden(u) && !wardensBefore.has(u.id));
 
     if (outcome.kind === 'blocked') {
       // Nothing happened, so take the swing back. It was started before the
@@ -550,6 +605,11 @@ class App {
         this.promptPerkIfOwed();
       }, ATTACK_HOLD_MS);
     }
+
+    // Whatever came up out of the ground, by name. After the move has resolved
+    // and after the selection has been dealt with, so the dialog is the last
+    // thing to happen rather than something the next step talks over.
+    this.sayWhatWokeUp(woken);
 
     // Drain here, not only at end of turn. Without this a city razed by the
     // player's own move produced its animation on the *next* drain, which is
@@ -595,6 +655,117 @@ class App {
         this.playLogCues();
       },
     });
+  }
+
+  /**
+   * "There is a thing in the doorway. Do you want it?"
+   *
+   * Everything in here is something the player could work out by looking, said
+   * plainly at the moment it matters: what is standing there, how the fight
+   * looks, and that walking away costs nothing. The prize stays secret, because
+   * a ruin whose contents you can read before deciding is a shop.
+   */
+  private askAboutTheGuard(unit: Unit, guard: Unit, x: number, y: number): void {
+    const mine = unitType(unit.type);
+    const theirs = unitType(guard.type);
+    const odds = attackOdds(this.state, unit, guard);
+    const chance = Math.round(odds * 100);
+    const grim = odds < RUINS.aiOdds;
+    openModal({
+      title: `${theirs.name} is standing in it`,
+      width: 'min(460px, 92vw)',
+      body: `
+        <div class="panel-body">
+          <p class="flavor">It has not moved and it is not coming for you. The
+          ruin keeps what it keeps until somebody takes it off the thing in the
+          doorway.</p>
+          <div class="stat-row"><span class="label">Your ${escapeHtml(mine.name)}</span><span class="value">${mine.attack} attack</span></div>
+          <div class="stat-row"><span class="label">${escapeHtml(theirs.name)}</span><span class="value">${theirs.defense} defence, ${guard.hp}/${theirs.hp} health</span></div>
+          <div class="stat-row"><span class="label">Roughly</span><span class="value">${chance}%</span></div>
+          ${grim ? '<p class="flavor">Your advisors would walk away from this one.</p>' : ''}
+        </div>
+        <div class="modal-actions">
+          <button class="small" data-act="ruin-leave">Leave it</button>
+          <button class="small primary" data-act="ruin-fight">Risk it</button>
+        </div>`,
+      onMount: (root, close) => {
+        root.querySelector('[data-act="ruin-leave"]')?.addEventListener('click', () => close());
+        root.querySelector('[data-act="ruin-fight"]')?.addEventListener('click', () => {
+          close();
+          // Set for exactly one pass through `actOn`, which clears it: a
+          // standing "yes" would quietly answer the next ruin too.
+          this.ruinRiskConfirmed = true;
+          this.select(unit);
+          this.actOn(x, y);
+        });
+      },
+    });
+  }
+
+  /**
+   * "There is a ruin here. Do you want to find out?"
+   *
+   * Asked before the step, because the step *is* the decision: walking in wakes
+   * whatever is inside, spends the rest of the turn, and cannot be taken back
+   * by walking out again. The first version of this asked before attacking the
+   * guard instead, which is asking after the risk has already been taken --
+   * reported, correctly, as still no prompt before exploring the ruin.
+   *
+   * What it will not say is what is inside. It says what usually stands up,
+   * which is a thing the player could work out from the last ruin they opened.
+   */
+  private askAboutGoingIn(unit: Unit, x: number, y: number): void {
+    const likely = unitType(expectedGuard(this.state));
+    openModal({
+      title: 'A ruin, undisturbed',
+      width: 'min(460px, 92vw)',
+      body: `
+        <div class="panel-body">
+          <p class="flavor">Old, standing, and holding something. Walking in
+          wakes it, and whatever is in there has been waiting for exactly this.
+          It takes the rest of the turn either way.</p>
+          <div class="stat-row"><span class="label">Usually standing up</span><span class="value">${escapeHtml(likely.name)}</span></div>
+          <div class="stat-row"><span class="label">Going in</span><span class="value">${escapeHtml(unitType(unit.type).name)}</span></div>
+          <p class="flavor">What is inside is not known until it is opened.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="small" data-act="ruin-stay">Leave it</button>
+          <button class="small primary" data-act="ruin-enter">Go in</button>
+        </div>`,
+      onMount: (root, close) => {
+        root.querySelector('[data-act="ruin-stay"]')?.addEventListener('click', () => close());
+        root.querySelector('[data-act="ruin-enter"]')?.addEventListener('click', () => {
+          close();
+          this.ruinRiskConfirmed = true;
+          this.select(unit);
+          this.actOn(x, y);
+        });
+      },
+    });
+  }
+
+  /**
+   * And what came out of it, by name.
+   *
+   * The log said "something in the ruin stands up", which is the right line for
+   * the log and no use at all for deciding what to do next -- the player has
+   * just spent a unit's turn and wants to know what they are now standing in
+   * front of. Only for what *this* step woke, so it never reports a warden that
+   * has been there since last week.
+   */
+  private sayWhatWokeUp(woken: Unit[]): void {
+    if (woken.length === 0) return;
+    const names = woken.map((u) => unitType(u.type).name);
+    const first = unitType(woken[0].type);
+    openNotice(
+      names.length === 1 ? `${names[0]} stands up` : 'Something stands up',
+      [
+        names.length === 1
+          ? `A ${first.name} was in there, and is not any more. ${first.attack} attack, ${first.defense} defence, ${first.hp} health.`
+          : `${names.join(' and ')} were in there, and are not any more.`,
+        'It will not come for you. The ruin keeps what it keeps until somebody takes it off whatever is standing in the doorway.',
+      ],
+    );
   }
 
   private orderFortify(): void {
@@ -2651,9 +2822,38 @@ class App {
         <div class="stat-row"><span class="label">Move cost</span><span class="value">${def.moveCost}</span></div>
         <div class="stat-row"><span class="label">Defence</span><span class="value">x${def.defense}</span></div>
         ${special ? `<div class="chip">${escapeHtml(special.name)}</div>` : ''}
+        ${this.ruinChip(h.x, h.y)}
         ${city ? `<div class="chip ${this.state.players[city.owner].faction}">${escapeHtml(city.name)} (${city.size})</div>` : ''}
         ${occupant ? `<div class="chip ${this.state.players[occupant.owner].faction}">${escapeHtml(unitType(occupant.type).name)}</div>` : ''}
       </div>`;
+  }
+
+  /**
+   * What the readout says about a ruin, which until now was nothing at all.
+   *
+   * A ruin is drawn on the map and was described nowhere: hovering one gave
+   * the terrain under it and no hint that the thing on the tile was anything
+   * but scenery -- so the first time most players learn what a ruin is, it is
+   * because something came out of one.
+   *
+   * It does **not** say what is inside. That is the whole of a ruin: you are
+   * buying a sealed box with a fight. What it says is which of the three states
+   * the box is in, because all three are things the player can see for
+   * themselves on the map and should not have to infer.
+   */
+  private ruinChip(x: number, y: number): string {
+    const state = ruinState(this.state, x, y);
+    if (!state) return '';
+    if (state === 'emptied') return `<div class="chip muted">Ruin &mdash; emptied</div>`;
+    const note =
+      state === 'held'
+        ? 'something is standing in it'
+        : state === 'awake'
+          ? 'awake, and nothing is standing in it'
+          : 'undisturbed';
+    return `<div class="chip">Ruin &mdash; ${note}</div>
+      <div class="panel-body muted" style="margin-top:4px">Old, standing, and holding
+      something. What, nobody knows until it is opened.</div>`;
   }
 
   private cityList(): string {
