@@ -1,0 +1,72 @@
+12 games on the sweep's tuned bases. Hive arrived in 12, alive at the end in 11.
+
+side   war%  attacks  won   defences  held  lost  caps  lost  cities  pop  units techs
+------------------------------------------------------------------------------------
+orc     100     87.5  38.9       4.9   4.9  89.1   2.7   2.4     4.8 46.1   28.2  27.7
+human   106     83.7  46.7      19.9  19.9  82.7   3.4   2.6     7.8 53.4   32.8  26.8
+hive     75     13.4   9.4      50.8  50.8  32.4   0.2   1.3     3.3 17.6   12.4  11.5
+
+The ending race, which is how these games are actually decided:
+side    beakers/turn  advances  got the advance  works standing  finished
+orc             13.4      27.7             9/12             1.1      3/12
+human           37.3      26.8             9/12             1.3      3/12
+hive             6.7      11.5             9/12             1.3      4/12
+
+What the Hive is holding at the end, per game:
+  Soldier-caste          5.3
+  Spitter-caste          1.7
+  Burrower-caste         1.2
+  Fodder-caste           1.1
+  The Queen              0.9
+  Grub                   0.8
+  Two Soldier-caste      0.5
+  Tide-caste             0.3
+  Two Fodder-caste       0.3
+  Elite-caste            0.2
+  Three Fodder-caste     0.2
+  Bloat-caste            0.1
+  Two Spitter-caste      0.1
+
+And what it can reach, per look while it is on the board:
+  enemy cities on its own map   1.8
+  enemy units it can see        4.97
+  looks with a foe next to it   64%
+  nearest enemy city, tiles     12.77
+  its units dug in              5%
+  how far they stand from home  1.36
+
+Its own turns, with its moves still in hand: 1534
+  something it could swing at    20%
+  best odds when there was       0.46 (its bar is 0.35)
+  turns the bar was cleared      12%
+
+Where its soldiers spent their turns:
+  branch                       orc   human    hive   (share of its soldier-turns)
+  00 called                   100%    100%    100%
+  01 restock                    0%      0%      0%
+  02 fire                       0%      1%      0%
+  03 aim                        0%      1%      0%
+  04b stays under               0%      0%      5%
+  04c goes to ground            0%      0%      1%
+  05 had a target               8%     13%      8%
+  06 swung: blocked             0%      0%      1%
+  06 swung: captured            0%      0%      0%
+  06 swung: combat              3%      2%      3%
+  06 swung: moved               0%      0%      0%
+  07 beside a city              3%      4%      0%
+  08 pillage                    0%      0%      0%
+  09 escort                     5%      3%      5%
+  10 keeps the gold            10%      9%      9%
+  10 walks to the gold          2%      2%      2%
+  11 walks to a bare city      33%     34%     36%
+  12 ruin                       1%     15%      1%
+  13 knows a target            16%     12%      8%
+  13 marches                   16%     11%      7%
+  13 no approach tile           1%      1%      1%
+  13b goes under it             0%      0%      0%
+  soldier-turns in all       28434   33109    5442
+
+What each bar is worth, per game:
+bar   attacks  won  caps  lost  cities  pop  units  alive  share
+-----------------------------------------------------------------
+0.35     13.4  9.4   0.2   1.3     3.3 17.6   12.4  11/12   21%

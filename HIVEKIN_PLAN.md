@@ -147,33 +147,64 @@ ready to paste, plus two advances the second draft added:
 | `caste-bloat` | 95 | caste-spitter | Bloat-caste |
 | `burrower-deep` | 120 | burrower-veteran | Burrow range 3, + The Undercity |
 | `burrower-ambush` | 120 | burrower-veteran | First-strike on emerge |
+
+**Deep and Ambush are both researchable, and that is the decision rather than
+the omission it looked like.** The bible calls them "two mutually exclusive
+specializations"; the tech tree has no way to say that, and nothing else in the
+game has ever needed one. Jeremy's answer of 2026-10-06: allow both, because
+exclusivity here would be guarding a line that is not under threat — both
+branches sit inside the Burrower-caste's own idea, and nothing bleeds between
+*castes*. Further Down is mobility and Already Waiting is damage; a Hive that
+pays 90 + 240 beakers out of the ten advances it gets in a game has specialised
+by paying, which is the sacrifice the exclusivity was there to create.
+
+Reconsider only if a later caste wants branches that really are opposed. That is
+when the tech tree earns an `excludes` field, and it would then be available to
+everybody rather than invented for one pair.
 | `caste-elite` | 85 | caste-soldier | Elite-caste |
 | `caste-broodlord` | 130 | caste-elite | Broodlord-caste, + The Broodwarmth |
 | `caste-warden` | 140 | caste-elite, hammers-of-glory | Warden-caste |
 | `caste-princess` | 110 | caste-elite, happiness | Princess-caste, + The Old Queen's Shell |
-| `all-is-the-hive` | 200 | caste-princess, insanity | The ending's three works |
+| `all-is-the-hive` | 100 | caste-soldier | The ending's three works |
 
 `tidecaste` is added to the shared `mapmaking` advance's `units` list, which is
 how `raft` and `barge` already work — the per-faction filter happens where units
 are offered.
 
-### The one number that needs measuring, not guessing
+### The one number that needed measuring, and what it said — 2026-10-04
 
-The ending roads, computed from the actual tree:
+The ending roads, computed from the actual tree, with the research rate that
+has to pay for them:
 
-| Side | Beakers to the ending advance | Works priced at |
-|---|---|---|
-| Horde | **430** | 300 / 300 / 400 |
-| Kingdom | **965** | 360 / 360 / 480 |
-| Hivekin as written | **860** | 300 / 300 / 400 |
+| Side | Beakers to the ending advance | Beakers a turn | Turns of pure research | Works priced at |
+|---|---|---|---|---|
+| Horde | 430 over 7 advances | 19.1 | **23** | 300 / 300 / 400 |
+| Kingdom | 965 over 12 advances | 32.4 | **30** | 360 / 360 / 480 |
+| Hivekin as written | 860 over 11 advances | **9.9** | **87** | 300 / 300 / 400 |
+| Hivekin as it now ships | **165 over 4 advances** | 9.9 | **17** | 180 / 180 / 240 |
 
-So the Hivekin get essentially the Kingdom's long road to the Horde's cheap
-works — a combination neither side has ever been measured at. Section 110 priced
-the Kingdom's works a fifth higher *because* its Object was landing nearly three
-times as often as the Portal despite the longer road, since the Kingdom
-researches faster. Which way the Hivekin fall out depends on their research rate
-and nothing else will tell us. This is the first dial to turn if the ending
-lands too often or never.
+The guess above this line was that the Hivekin had the Kingdom's long road at
+the Horde's cheap works and the answer would turn on their research rate. The
+rate was the answer, and it was worse than the question allowed for: **9.9
+beakers a turn against 19.1 and 32.4**, so the road was 87 turns of pure
+research in a life of about 140. In twelve games they reached the advance twice
+and built, in total, no works at all, while thirty-eight of every fifty-four
+games are decided by somebody finishing an ending.
+
+The second thing it said is that **the price was not a lever**. Their advances
+per game read 11.8 whatever the road costs — repricing buys no research, it only
+changes what the research is spent on, so an eleven-advance road is their whole
+game at any price. 860, 710 and 610 all gave zero wins; the works at forty per
+cent gave zero wins.
+
+So the road had to fit inside four of their twelve advances. It hangs off
+`caste-soldier` now, 165 beakers over four advances they research anyway, asked
+for fifth of twenty-five — the most aggressive ending priority of the three
+sides, which is the asymmetry their research rate pays for. 4 wins in 12
+probed, every one an ending win. Jeremy chose this over giving them a research
+mechanic of their own, which stays on the table as the bigger-ceiling option:
+beakers off total Hives or total population rather than per-city trade, which is
+the one lever that moves the 9.9 itself.
 
 ---
 
@@ -185,9 +216,14 @@ buildable in a Hive already holding one of the two, once both stand somewhere.
 
 | id | Cost | Kind |
 |---|---|---|
-| `moltingChamber` | 300 | `endingPart: 'hive'` |
-| `secondFeeding` | 300 | `endingPart: 'hive'` |
-| `secondQueenShell` | 400 | `victory: 'hive'` |
+| `moltingChamber` | 180 | `endingPart: 'hive'` |
+| `secondFeeding` | 180 | `endingPart: 'hive'` |
+| `secondQueenShell` | 240 | `victory: 'hive'` |
+
+Six hundred shields against the other two endings' thousand, because of what it
+is paid out of: 3.5 Hives of 5.5 citizens where an empire pays out of six cities
+of eight. Worth double once the road was short — 2 wins in 12 at a thousand, 4
+at six hundred — and worth nothing at all while it was long.
 
 `VictoryKind` and `endingPart` both gain `'hive'`, and `checkEndings` gains a
 third branch for the "work has begun" announcement that currently reads
@@ -294,7 +330,18 @@ cost of its whole turn; `'sacrifice'` — it eats that neighbour instead, a grou
 feeding it one shot per creature), and city resupply. Tests asserting the
 Catapult's card says it eats its neighbours and the Ballista's does not.
 
-### Slice A — the third seat exists
+### Slice A — the third seat exists — **DONE, measured**
+
+Landed 2026-10-02 across three commits on `feat/hivekin-seat`. Everything in the
+list below is built, 996 tests pass, and the two-sides-against-three sweep is the
+only thing outstanding. Section 125 in `DESIGN_QUEUE.md` has the full account,
+including the three bugs the probe found and the four fixtures that assumed two
+seats. The one finding worth carrying forward on its own: **the first draw of a
+fresh game is very nearly seed-independent**, because `state.rngState` starts as
+`seed ^ 0x1d872b41` and one xorshift round does not mix the top bits that
+`float()` reads. Left alone deliberately -- fixing it would change every seed's
+worldgen -- but anything that wants one early roll should hash the seed instead.
+
 
 Everything needed for a Hivekin game to run and be counted, and nothing with a
 new mechanic in it. That is the whole point of the split: if the numbers move,
@@ -349,6 +396,88 @@ is the floor for anything that matters.
 **Measure B** against slice A as the control, so any shift is attributable to
 one half or the other.
 
+Landed 2026-10-03. The measurement said the two arms were **identical**, which
+was not a null result but an instrument reading zero -- the AI never sinks and
+never burrows because nothing teaches it to, and it had never built a Burrower
+either. See `DESIGN_QUEUE.md`.
+
+### Slice C — they have to be able to fight — **in progress**
+
+Not planned as a slice. It is what three measurements in a row asked for: every
+fix to how the Hivekin *arrive* bought them ground and none of it bought a win.
+
+Done, each probed before it was swept:
+
+- **A research plan of their own.** `PERSONALITIES[faction] ?? PERSONALITIES.orc`
+  handed them the Horde's list, made entirely of advances they cannot have, so
+  they never grew a caste. One Grub to a full roster; still 0 of 108 wins.
+- **Siting the arrival by yield rather than emptiness.** `emergenceSpot` scored
+  land count, so they founded on ground that could not feed them: 4.6 citizens
+  against the empires' 9.7. Now 5.7, and site score 152 to 168.
+- **A second founder.** 2.8 Hives to 3.5 and 17% of the world to 21%. Bought no
+  win, and moved Horde against Kingdom nine points on both seed sets, which is
+  deliberately left uncorrected for now.
+- **The bar they will swing at**, `caution` 0.5 to 0.35. The one that was
+  actually about fighting: with something standing next to them the best odds on
+  offer average 0.44, so a bar of 0.5 declined eleven adjacent fights in twelve
+  and they attacked eight times a game against the empires' hundred. Swept: the
+  mechanism moved -- captures up and both empires' populations down on both seed
+  sets -- and the win rate did not. Still 0 of 108.
+- **The counting ladder, inverted** — Jeremy's answer of 2026-10-04 that he is
+  not beholden to the first bible, which had the Hivekin refuse the game's
+  oldest joke entirely. Five castes stack: Fodder `[1,2,3,5]`, Soldier
+  `[1,2,3]`, Worker, Spitter and Elite `[1,2]`. The Queen and the Princess never
+  will, because the whole faction is built on there being one of each.
+
+  Nothing needed calibrating. **The Fodder-caste is the Goblin** — 1/1/10 at ten
+  shields, to the last number — so it took the Goblin's ladder as it stands, and
+  **the Soldier-caste is the Orc** at 3/2/12 for twenty, so it took three rungs
+  of the Orc's seven.
+
+  The tech half is where their version lives. The Horde's ladder is six
+  advances and 590 beakers — *Let's Orc Together*, *Idiots Stick Together*, *The
+  Next Level of Stupid*, *Beyond Stupid*, *Not Just Stupid Anymore*, *And
+  Stupidity for All* — one painful realisation about numbers at a time. The Hive
+  gets **two, at 120 beakers, each raising every shape at once**: *There Were
+  Always This Many* and *You Had Assumed Fewer*. That is the better joke, since
+  a hive never had to learn to count and being counted is something that happens
+  *to* it — and it is the only affordable shape, because they research 11.8
+  advances in a whole game and a six-advance ladder would be half of it. The
+  same arithmetic that made their ending road unwalkable.
+
+  No `coordination` advance, and they want none: every caste with a ladder moves
+  one and `effectiveMove` floors at one, so the movement penalty that costs the
+  Horde a point until it learns to walk in a line cannot reach them. Ten of them
+  were always one thought.
+
+  **No art needed.** Group sprites are composed by stamping the base creature N
+  times, so the castes already drawn cover every rung.
+- **A short road to their ending**, which is the one that finally produced a
+  win. Thirty-eight of fifty-four games are decided by somebody finishing an
+  ending; the Hive had built **no works in any game, ever**, because its road
+  cost 860 beakers over eleven advances at 9.9 beakers a turn. Repricing was
+  measured and does nothing -- their advances per game read 11.8 whatever it
+  costs. `all-is-the-hive` now hangs off `caste-soldier` at 100 (165 over four
+  advances), is asked for fifth of twenty-five, and its works cost 180/180/240
+  against the other endings' 300/300/400. Probed at 4 wins in 12, every one an
+  ending win; Jeremy chose this over a research mechanic on 2026-10-04.
+  **Swept at 216: 0 of 108 to 27 of 108**, 16 of 54 tuned and 11 of 54 held-out,
+  with portals and objects thinning to make room. Every one of the 27 is their
+  own ending. An equal third would be 36 and they are at 27, which for a side
+  arriving on turn a hundred is about right.
+
+Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
+
+- **The garrison treadmill**, which is not a Hivekin problem. Half of every
+  Hivekin soldier-turn and a third of each empire's goes on walking to one of
+  its own undefended cities, and the branch that would make a unit *stay* in one
+  has never fired in 77,000 turns because it cannot. Shared code, and the
+  obvious repair is the one already measured as a disaster. **Jeremy's answer of
+  2026-10-04: its own measured section after 125 closes**, since it changes all
+  three sides and wants 216 games and both seed sets.
+- **Teaching the AI to sink and burrow**, which is the other half of what makes
+  them them and is currently inert.
+
 ---
 
 ## Still open
@@ -357,7 +486,11 @@ one half or the other.
 - **Citizen weights.** Four kinds are specified (see `ART_PROMPTS.md`); the
   weights default to 4 / 4 / 2 / 1 unless Jeremy says otherwise.
 - **Upgrade lines for the other castes.** Only the Burrower's is specified. The
-  rest want the same linear-plus-two-branch treatment eventually.
+  rest want the same linear-plus-two-branch treatment eventually — and when they
+  arrive, the question of whether two branches may be taken together is worth
+  asking per caste rather than globally. It was answered "both" for the
+  Burrower's on the grounds that its two branches do not compete with anything
+  outside itself.
 - **Biomass as a fifth resource** was floated and the bible assumes it away, in
   favour of the ordinary shields/gold/beakers/happiness four. Taken as settled
   unless Jeremy revisits it.

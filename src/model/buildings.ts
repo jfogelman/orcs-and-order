@@ -84,12 +84,12 @@ export interface BuildingDef {
    * the game is over if it is still standing in its builder's hands when its
    * clock runs out. See `sim/endings.ts`.
    */
-  victory?: 'portal' | 'object';
+  victory?: 'portal' | 'object' | 'hive';
   /**
    * One of the two lesser works an ending needs before its final work can be
    * begun. Any city, one per empire, never for gold. See `sim/endings.ts`.
    */
-  endingPart?: 'portal' | 'object';
+  endingPart?: 'portal' | 'object' | 'hive';
   /**
    * Section 111: a folly, of which there is only one. `'world'` once in the whole
    * game, and a race between both sides; `'faction'` once per empire. Never for
@@ -116,8 +116,32 @@ export interface BuildingDef {
   homeMoves?: number;
   /** Defence added to the holder's mounted units. */
   mountedDefense?: number;
+  /**
+   * Attack added to the Princess-caste and the Broodlord-caste, empire-wide.
+   *
+   * Restricted to named creatures the way the Long Vigil's `mountedDefense` is,
+   * and for the same reason: the rule is about *those* two and saying so in the
+   * data is better than a second list somewhere else.
+   */
+  casteAttack?: number;
   /** Sight added to every one of the holder's units. */
   unitSight?: number;
+  /**
+   * Shields this city makes on top of what its land does. Section 125.
+   *
+   * Deliberately not a tile yield: the Undercity is underneath the Hive, and
+   * Jeremy's rule is that it keeps producing when the fields above have been
+   * pillaged. A building bonus does that by construction -- pillaging takes
+   * improvements off tiles and cannot reach a building at all.
+   */
+  cityShields?: number;
+  /**
+   * Share off the price of a **unit** built in this city, as a fraction.
+   *
+   * Only units, and only this city: the Broodwarmth is a warm place to grow
+   * things in, not a tax break. Buildings are priced the same as everywhere.
+   */
+  unitDiscount?: number;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -457,6 +481,55 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'Committee Chamber or the Pedestal, once both stand. Nobody is told what the button does. Hold the city ' +
       'long enough and somebody finds out.',
   },
+  // ------------------------------------------------- section 125: the Hivekin
+  //
+  // The ending, in section 110's shape: two lesser works buildable once the
+  // advance is known, then the final one, only in a Hive already holding one of
+  // them and only once both stand.
+  //
+  // **Six hundred shields against the other two endings' thousand**, and the
+  // reason is the thing it is paid out of: 3.5 Hives of 5.5 citizens, where an
+  // empire pays out of six cities of eight. Measured both ways round -- while
+  // the road to the advance was long this price was not a lever at all (at 40%
+  // of it they still built 0.2 works, because cheapening the end of a road
+  // nobody walks changes nothing), and once the road was shortened it was worth
+  // double: 2 wins in 12 at a thousand shields, 4 at six hundred. See the note
+  // on `all-is-the-hive` in techs.ts for the road.
+  moltingChamber: {
+    id: 'moltingChamber',
+    name: 'The Molting Chamber',
+    faction: 'hivekin',
+    cost: 180,
+    upkeep: 0,
+    endingPart: 'hive',
+    blurb:
+      'A space built for shedding what no longer fits. The Hive has never needed one this ' +
+      "large before. One of two works the Second Queen's Shell needs.",
+  },
+  secondFeeding: {
+    id: 'secondFeeding',
+    name: 'The Second Feeding',
+    faction: 'hivekin',
+    cost: 180,
+    upkeep: 0,
+    endingPart: 'hive',
+    blurb:
+      'Enough was gathered to feed one Queen. This gathers enough for two. One of two works ' +
+      "the Second Queen's Shell needs.",
+  },
+  secondQueenShell: {
+    id: 'secondQueenShell',
+    name: "The Second Queen's Shell",
+    faction: 'hivekin',
+    cost: 240,
+    upkeep: 0,
+    victory: 'hive',
+    blurb:
+      'Two queens should not have been possible. This makes it possible anyway. Only in a Hive ' +
+      'holding the Molting Chamber or the Second Feeding, once both stand. Hold the Hive long ' +
+      'enough and the shapes decide there was only ever the one Hive after all.',
+  },
+
   // Section 111: the follies. One of each, ever -- shared ones once in the whole
   // game, the rest once per empire. Priced by how deep the advance they ride on
   // sits: 150 behind one of 45 to 85 beakers, 200 behind 100 to 130, 250 beyond.
@@ -604,6 +677,48 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     blurb:
       "A standing body convened to watch the horizon on the Kingdom's behalf. It has produced " +
       'fourteen reports and no horizon.',
+  },
+  // Section 125: three rather than four, which the Hivekin have not noticed.
+  // One civ-wide and two city-wide, read through `empireBonus` and
+  // `cityFollyBonus` respectively, exactly as the other eight are.
+  oldQueensShell: {
+    id: 'oldQueensShell',
+    name: "The Old Queen's Shell",
+    faction: 'hivekin',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    casteAttack: 1,
+    blurb:
+      'The molted exoskeleton of the very first, immobile founding Queen, enshrined exactly ' +
+      'where her Hive still stands. A Princess is a queen already being kept in reserve; this ' +
+      'is what she is being kept in reserve for.',
+  },
+  broodwarmth: {
+    id: 'broodwarmth',
+    name: 'The Broodwarmth',
+    faction: 'hivekin',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    unitDiscount: 0.15,
+    blurb:
+      'Four arms produce faster than two. This was always true. It has now been built ' +
+      'somewhere permanent, mostly so it stops needing to be explained to new shapes as they ' +
+      'are finished.',
+  },
+  undercity: {
+    id: 'undercity',
+    name: 'The Undercity',
+    faction: 'hivekin',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    cityShields: 2,
+    blurb:
+      'The tunnels went further down than the Hive above them ever needed to. Eventually the ' +
+      'Hive noticed and extended downward to match, on the theory that unused space is a shape ' +
+      'problem like any other.',
   },
 };
 

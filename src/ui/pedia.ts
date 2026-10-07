@@ -1,6 +1,6 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
-import { FACTIONS } from '../model/factions';
+import { FACTIONS, rivalFactions } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
 import type { TerrainDef, TerrainSpecial } from '../model/terrain';
 import { SPECIALS } from '../model/terrain';
@@ -15,6 +15,8 @@ import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbari
 import { LEGION } from '../sim/wilds';
 import { RUINS } from '../sim/ruins';
 import { COWED } from '../sim/status';
+import { HIVEKIN, QUEEN } from '../sim/hivekin';
+import { BURROW } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { PEACE } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
@@ -236,7 +238,15 @@ export function abilityNotes(def: UnitTypeDef): string[] {
     );
   }
   if (def.regenMultiplier > 1) notes.push(`heals ${def.regenMultiplier}× as fast as anything else`);
-  if (def.crowded) notes.push('−1 movement until coordinated: too many of them, nobody agreeing');
+  // Only where it can actually bite. `effectiveMove` floors at one, so a group
+  // of something that moves one loses nothing to disagreement -- and promising
+  // a penalty that cannot happen is worse than saying nothing. True of Five
+  // Goblins since the ladder was built, and of every Hivekin group, which is
+  // the whole of their version of the joke: ten of them were always one
+  // thought, and the card should not claim otherwise.
+  if (def.crowded && def.move > 1) {
+    notes.push('−1 movement until coordinated: too many of them, nobody agreeing');
+  }
   return notes;
 }
 
@@ -376,9 +386,71 @@ function creatureSection(faction: FactionId): string {
  * `focus` takes either a unit type or a building id and works out which it is,
  * so callers can pass whatever they happen to be showing without caring.
  */
+/**
+ * The Hive's three rules that are not on any card. Section 125.
+ *
+ * Written here rather than left to the units, because none of them is a fact
+ * about one creature: the Queen is a rule about a *city*, going to ground is a
+ * rule about what enemies can see, and the Princesses are a rule about what
+ * happens after something goes wrong. A player who meets the Hivekin and loses
+ * a city to something that came up out of the floor deserves to be able to
+ * look it up.
+ *
+ * **It opens by saying who everybody is**, which it did not. The first line
+ * used to be "She does not move", with no antecedent for "she" anywhere above
+ * it except a flavour blurb -- and nothing at all to say that a Hive is their
+ * word for a city, that a caste is their word for a unit, that they are not on
+ * the map when the game begins, or that they will not be talked to. Every rule
+ * below assumes those four things.
+ *
+ * Shown in two places, so it is written in the third person throughout: the
+ * Hivekin player's own pane and, for everybody else, the pane about them.
+ */
+export const HIVE_RULES = `
+  <p>They are not on the map when the game starts. Somewhere around turn
+  ${HIVEKIN.from} to ${HIVEKIN.until} the ground opens on ground nobody had
+  claimed, and a third side is simply there, with no explanation offered and
+  none apparently required. Their cities are <strong>Hives</strong> and their
+  units are <strong>castes</strong> &mdash; one shape per job, grown rather than
+  recruited &mdash; and there is exactly one <strong>Queen</strong>, who is the
+  reason any of it works.</p>
+  <p><strong>Nobody negotiates with them.</strong> There is no peace to be made
+  with the Hive and none to be broken: the two empires can sign with each other,
+  and whatever either of them has agreed, the Hive is still at war with both.
+  It is not hostility so much as a difference of opinion about whether the
+  conversation is happening. For the first ${HIVEKIN.grace} turns after they
+  come up they cannot be attacked at all, which is the only courtesy in the
+  arrangement and runs in their favour.</p>
+  <p><strong>She does not move.</strong> The Queen sits in the first Hive and never
+  leaves it. That Hive <em>makes nothing at all</em> while she is not in it &mdash;
+  production there is a thing she is doing, not a thing it is doing.</p>
+  <p><strong>Losing her is not the end, but it is a clock.</strong> The Hive has
+  ${QUEEN.countdown} turns to grow a replacement. A <em>Princess-caste</em> standing
+  in that Hive becomes the new Queen &mdash; walked in on the last turn still counts.
+  If nobody does, the place is given up and everything the Hive owned stops taking
+  instructions and starts wandering about on its own.</p>
+  <p><strong>Spare Princesses are not wasted.</strong> Any others waiting when a new
+  Queen is grown become part of that Hive instead, as shields, calm, study or coin
+  &mdash; and <em>which</em> is decided then, not when they were built.</p>
+  <p><strong>A Burrower-caste goes under the ground.</strong> <em>Sink</em> (G) hides
+  it where it stands: nobody else can see it, and it does not block anyone, but the
+  disturbed dirt shows where something went down. <em>Burrow</em> (Shift+G) crosses up
+  to ${BURROW.range} tiles <strong>through</strong> whatever is in the way &mdash; a
+  wall, a river, an army &mdash; and comes up on free ground on the other side. Both
+  cost the whole turn.</p>
+  <p>Walk onto a tile with one hiding under it and you find it out: it is pushed clear
+  and loses its turn. With nowhere to be pushed, it stays down there.</p>
+`;
+
 export function openPedia(state: GameState, player: Player, focus?: string): void {
   const faction = player.faction;
-  const other: FactionId = faction === 'orc' ? 'human' : 'orc';
+  // Everybody else, in order, rather than "the other one". The roster used to
+  // be two tabs because there were two sides; a third would simply not have
+  // been in the book at all, which is the one place a player goes to find out
+  // what the thing that just appeared can do.
+  const others: FactionId[] = rivalFactions(faction);
+  /** The pane a creature of this faction lives in. */
+  const paneFor = (f: FactionId) => (f === faction ? 'yours' : `them-${f}`);
 
   const techList = TECHS.filter((t) => t.faction === 'both' || t.faction === faction)
     .map(
@@ -460,7 +532,12 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
     body: `
       <div class="pedia-tabs">
         <button class="pedia-tab active" data-tab="yours">${escapeHtml(FACTIONS[faction].name)}</button>
-        <button class="pedia-tab" data-tab="theirs">${escapeHtml(FACTIONS[other].name)}</button>
+        ${others
+          .map(
+            (f) =>
+              `<button class="pedia-tab" data-tab="${paneFor(f)}">${escapeHtml(FACTIONS[f].name)}</button>`,
+          )
+          .join('')}
         <button class="pedia-tab" data-tab="techs">Advances</button>
         <button class="pedia-tab" data-tab="buildings">Structures</button>
         <button class="pedia-tab" data-tab="terrain">Terrain</button>
@@ -472,12 +549,19 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
       <div class="pedia-pane" data-pane="yours">
         <p class="flavor">${escapeHtml(FACTIONS[faction].blurb)}</p>
+        ${faction === 'hivekin' ? HIVE_RULES : ''}
         <div class="pedia-grid">${creatureSection(faction)}</div>
       </div>
-      <div class="pedia-pane" data-pane="theirs" hidden>
-        <p class="flavor">${escapeHtml(FACTIONS[other].blurb)}</p>
-        <div class="pedia-grid">${creatureSection(other)}</div>
-      </div>
+      ${others
+        .map(
+          (f) => `
+      <div class="pedia-pane" data-pane="${paneFor(f)}" hidden>
+        <p class="flavor">${escapeHtml(FACTIONS[f].blurb)}</p>
+        ${f === 'hivekin' ? HIVE_RULES : ''}
+        <div class="pedia-grid">${creatureSection(f)}</div>
+      </div>`,
+        )
+        .join('')}
       <div class="pedia-pane" data-pane="techs" hidden>
         <p class="flavor">Costs shown are the base price, before the surcharge for
         everything already known.</p>
@@ -514,12 +598,21 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         ${
           ALT_VICTORY.enabled
             ? `<p class="flavor">
-          <strong>Three works end the game.</strong> The Horde's <em>Demonic Portal</em> and the
-          Kingdom's <em>Mysterious Object</em> each need two lesser works first; the last one goes
-          up in a city holding one of them, and its builder wins if it still holds that city
-          ${ALT_VICTORY.portalTurns} turns later. One of each per empire, never bought with gold,
-          and everybody is told when work begins and as each is finished. Take the city and
-          whatever stands in it is torn down. The advance is at the far end of your own tree.
+          <strong>Three works end the game.</strong> The Horde's <em>Demonic Portal</em>, the
+          Kingdom's <em>Mysterious Object</em> and the Hive's <em>Second Queen's Shell</em> each
+          need two lesser works first; the last one goes up in a city holding one of them, and its
+          builder wins if it still holds that city ${ALT_VICTORY.portalTurns} turns later. One of
+          each per side, never bought with gold, and everybody is told when work begins and as
+          each is finished. Take the city and whatever stands in it is torn down.
+        </p>
+        <p class="flavor">
+          <strong>The two empires keep theirs at the far end of their own tree. The Hive does
+          not.</strong> <em>All Is The Hive</em> sits four advances in, behind the Soldier-caste,
+          and its three works cost six hundred shields against the empires' thousand. The Hive
+          comes up out of the ground around turn a hundred with two Grubs, against empires six
+          cities deep, and studies at a third their rate &mdash; so where they can afford an
+          ending at the end of everything else, the Hive can only afford one it was always going
+          to walk past. It is the only road it has, and it is a short one.
         </p>`
             : ''
         }
@@ -912,10 +1005,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
       if (focus && UNIT_TYPES[focus]) {
         const creature = CREATURES_BY_ID[unitType(focus).base];
-        jumpTo(
-          creature.faction === faction ? 'yours' : 'theirs',
-          `#pedia-${CSS.escape(creature.id)}`,
-        );
+        jumpTo(paneFor(creature.faction), `#pedia-${CSS.escape(creature.id)}`);
       } else if (focus && BUILDINGS[focus]) {
         jumpTo('buildings', `#pedia-b-${CSS.escape(focus)}`);
       }

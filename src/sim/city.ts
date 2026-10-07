@@ -1,3 +1,5 @@
+import { broodBonus, placeQueen, queenless } from './hivekin';
+import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
 import { distance, fatCrossIndices, idx } from '../engine/grid';
@@ -263,6 +265,19 @@ export function cityYield(state: GameState, city: City): Yield {
     total.shields += y.shields;
     total.trade += y.trade;
   }
+  // Section 125: the Undercity, which is below all of that. Added after the
+  // tiles rather than to one of them, which is the whole of Jeremy's rule that
+  // it keeps producing through a pillaging -- raiders tear up improvements on
+  // the ground, and the ground is not where this is.
+  total.shields += cityFollyBonus(city, (b) => b.cityShields);
+  // Section 125: the spare Princesses, whatever the player decided they were
+  // for. One apiece, so redundancy across several Hives is worth what it cost.
+  total.shields += broodBonus(city, 'shields');
+  total.trade += broodBonus(city, 'gold') + broodBonus(city, 'beakers');
+  // And the seat with no Queen in it, which makes nothing at all. Last, so it
+  // is unambiguous that it zeroes everything above rather than competing with
+  // it: production in her Hive is a thing she is doing.
+  if (queenless(state, city)) total.shields = 0;
   if (city.disorder) {
     // A rioting city downs tools -- except on the one thing everybody in it
     // agrees about, which is whatever will calm the place down.
@@ -332,7 +347,7 @@ export function contentLimit(state: GameState, city: City): number {
   // requirement. This used to add `contentBonus` straight off the building
   // list, so a posting would have calmed a city with nobody standing in it --
   // the gate existed and this was not asking it.
-  let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus);
+  let limit = CALM.base + sumBonus(state, city, (b) => b.contentBonus) + broodBonus(city, 'calm');
   // Section 113: the level's patience, on the player's side only.
   limit += handicapContent(owner);
   // Section 116: a people ashamed of the peace their rulers just broke.
@@ -612,6 +627,12 @@ export function productionCostIn(state: GameState, city: City, item: ProductionI
 
 function baseCostIn(state: GameState, city: City, item: ProductionItem): number {
   const base = productionCost(item);
+  // Section 125: the Broodwarmth, a warm place to grow things in. Units only,
+  // and only in the Hive it stands in -- a building costs what it costs.
+  if (item.kind === 'unit') {
+    const off = cityFollyBonus(city, (b) => b.unitDiscount);
+    return off > 0 ? Math.max(1, Math.round(base * (1 - off))) : base;
+  }
   if (item.kind !== 'building' || !BUILDINGS[item.id]?.suppliesArmy) return base;
   const seat = capitalOf(state, city.owner);
   if (!seat) return base;
@@ -1294,7 +1315,15 @@ export function foundCity(state: GameState, unit: Unit): City | null {
     food: 0,
     shields: 0,
     buildings: [],
-    producing: { kind: 'unit', id: state.players[unit.owner].faction === 'orc' ? 'goblin' : 'footman' },
+    // Whatever this side's first fighting unit is. Read off the faction rather
+    // than branched on, because the branch said "orc, else footman" and a third
+    // side would have founded Hives that opened by trying to build a Footman --
+    // which is section 123's settler-prize bug exactly, and that one cost twenty
+    // games and three sweeps to find because it looks like nothing at all.
+    producing: {
+      kind: 'unit',
+      id: FACTIONS[state.players[unit.owner].faction].starterUnit,
+    },
     workedTiles: [],
     disorder: false,
     foundedTurn: state.turn,
@@ -1308,6 +1337,8 @@ export function foundCity(state: GameState, unit: Unit): City | null {
   if (i >= 0) state.units.splice(i, 1);
 
   log(state, `${city.name} is founded.`, 'good', city.owner, 'city-founded');
+  // Section 125: the first Hive is built around her, so she arrives with it.
+  placeQueen(state, city);
   recomputeVisibility(state, city.owner);
   return city;
 }

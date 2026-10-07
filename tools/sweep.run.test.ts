@@ -1,24 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import { AI_TUNING, PERSONALITIES } from '../src/ai/ai';
-import { CALM, POSTING } from '../src/sim/city';
-import { TRADE } from '../src/sim/trade';
-import { PILLAGE } from '../src/sim/roads';
-import { POSTS } from '../src/sim/posts';
-import { SPECIALS } from '../src/model/terrain';
-import { ALT_VICTORY } from '../src/sim/endings';
 import type { Arm } from './sweep';
-import { GOBLIN_SCOUT } from '../src/model/units';
-import { NAVAL } from '../src/ai/naval';
-import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { RUINS } from '../src/sim/ruins';
-import { PREY } from '../src/sim/barbarians';
-import { PEACE } from '../src/sim/diplomacy';
-import { NEW_GAME, rawRows, report, runSweep, seedSet } from './sweep';
-import { FOLLIES } from '../src/sim/follyEffects';
-import { TERRAFORM } from '../src/sim/terraform';
-import { AUTO_TILES } from '../src/sim/city';
+import { rawRows, report, runSweep, seedSet } from './sweep';
+// The shipped game, shared with the probes. See the note at the top of it.
+import { control } from './control';
+import { HIVEKIN } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -51,105 +38,47 @@ declare const process: { env: Record<string, string | undefined> };
  * behind, which is a different bug from section 59's and the same kind of wrong
  * answer.
  */
-/** The Horde's research list as it stands, kept so an arm can put it back. */
-const HORDE_LIST = [...PERSONALITIES.orc.techPriority];
+// The shipped game lives in `control.ts` now, so the probes can play it too.
+// See the note at the top of that file: they were not, and it showed.
 
-const control = () => {
-  CALM.base = 6;
-  PERSONALITIES.orc.targetCities = 5;
-  PERSONALITIES.human.targetCities = 6;
-  AI_TUNING.calmBuildAhead = 1;
-  AI_TUNING.calmRateAtLimit = 1;
-  AI_TUNING.buildRoads = true;
-  AI_TUNING.citiesPerRoadWorker = 4;
-  AI_TUNING.guardTheGold = true;
-  POSTING.enabled = false;
-  SPECIALS.chance = 0.06;
-  SPECIALS.rules = true;
-  SPECIALS.ruleTiles = true;
-  TRADE.enabled = true;
-  PILLAGE.enabled = true;
-  AI_TUNING.pillage = true;
-  POSTS.enabled = true;
-  AI_TUNING.buildPosts = true;
-  // Back to the quiet game for section 102: the baseline it has to beat is
-  // section 101's Posting table, which was measured without raiders.
-  NEW_GAME.barbarians = false;
-  NEW_GAME.world = 'continent';
-  NEW_GAME.difficulty = 'normal';
-  NAVAL.enabled = true;
-  NAVAL.overseasExtra = 3;
-  NAVAL.crossFor = 1.2;
-  NAVAL.beachhead = 1;
-  RAIDER_TIERS.enabled = true;
-  // Section 120 measured the chieftain's summons on and shipped them on, so a
-  // control that left them off would be measuring a game nobody plays.
-  RAIDER_TIERS.leader.summons = true;
-  // Section 121's bellow, likewise on in the shipped game; the arms move it.
-  INTIMIDATE.enabled = true;
-  // Section 122: the Sunken Legion, and how often a due wave comes by sea.
-  LEGION.enabled = true;
-  LEGION.share = 0.2;
-  // Section 123: ruins are a map feature rather than a raider one, so they are
-  // on in the quiet game too -- which is the game this baseline measures.
-  RUINS.enabled = true;
-  RUINS.perLand = 100;
-  RUINS.wardenDefence = 1;
-  RUINS.aiOdds = 0.25;
-  RUINS.aiSeeks = true;
-  RUINS.wardensStrike = false;
-  RUINS.wardensHold = true;
-  RUINS.soldiersOnly = true;
-  // Section 120: what a band walks at. On in the shipped game; off is the old
-  // rule, which is the arm this was measured against.
-  PREY.enabled = true;
-  PREY.town = 4;
-  PREY.works = 3;
-  PREY.mob = 3;
-  PEACE.enabled = true;
-  GOBLIN_SCOUT.enabled = true;
-  // Section 110's endings, at their shipping settings -- fifteen turns, not the
-  // ten they were first measured at. Left at ten here, every arm since would have
-  // been measuring a game nobody plays.
-  ALT_VICTORY.enabled = true;
-  ALT_VICTORY.portalTurns = 15;
-  ALT_VICTORY.objectTurns = 15;
-  // Section 111's follies ship too, so the game being measured has them.
-  FOLLIES.enabled = true;
-  AI_TUNING.sharedFollyFirst = true;
-  PERSONALITIES.orc.techPriority = [...HORDE_LIST];
-  // Section 112: terraforming ships, so the game being measured has it.
-  TERRAFORM.enabled = true;
-  // And a city at its content limit stops chasing food, which is what keeps it.
-  AUTO_TILES.spareFoodAtLimit = true;
+const buildArms = (): Arm[] => {
+  // Section 125, the last thing it owes: did the third seat move the two
+  // empires, and what is the game actually balanced at now?
+  //
+  // One run answers both. The Horde-against-Kingdom split in the three-sided
+  // arm is the stated balance target; the two-sided arm is what that split was
+  // before the Hivekin existed, measured on the same maps and on a control that
+  // finally matches the shipped game.
+  //
+  // **Pairable, which a worldgen lever would not be.** The Hivekin arrive long
+  // after the map is made, and their three specials are a separate lever left on
+  // in both arms, so the two arms play the same world. The harness checks the
+  // map signature and will say so if that is ever wrong -- which is how section
+  // 94's confident, meaningless result got caught.
+  //
+  // What this cannot do is tell the two apart from the correction to
+  // `RUINS.aiOdds`: everything before 2026-10-05 was measured at 0.25 against
+  // the 0.4 that ships. Both arms here are at 0.4, so this *is* the new
+  // baseline rather than a comparison against the old numbers.
+  return [
+    {
+      label: 'two sides',
+      apply: () => {
+        control();
+        HIVEKIN.enabled = false;
+      },
+    },
+    {
+      label: 'three sides',
+      apply: () => {
+        control();
+        HIVEKIN.enabled = true;
+      },
+    },
+  ];
 };
 
-const ARMS: Arm[] = [
-  // Section 123, twelfth pass, and the probe has been doing the work for the
-  // last three. What it found, in order: guardians that strike charge the side
-  // that stumbles; guardians that never die block the roads; and an AI that
-  // walks at a sleeping ruin without asking what lives there loses a dozen
-  // units a game to what stands up.
-  //
-  // All three are shut now -- a guard that never swings first, a ruin that lies
-  // back down when nobody is bothering it, and an errand nobody starts unless
-  // they would win the fight at the end of it. The probe says the sides now
-  // wake 4.1 against 3.2 and lose 8.7 against 6.7, where it was 5.7/1.6 and
-  // 11.8/6.3. This asks what that is worth in games.
-  {
-    label: 'empty map',
-    apply: () => {
-      control();
-      RUINS.enabled = false;
-    },
-  },
-  {
-    label: 'ruins',
-    apply: () => {
-      control();
-    },
-  },
-];
+const ARMS: Arm[] = buildArms();
 
 
 /**
@@ -208,6 +137,12 @@ describe('sweep', () => {
     },
     // Generous, and scaled: an explicit timeout overrides the config entirely,
     // so a fixed one silently caps how many seeds can ever be run.
-    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 15_000),
+    //
+    // Twenty-five seconds a game, up from fifteen. Section 125's fight-bar
+    // sweep took 15.7s a game over 216 games -- 56.6 minutes against a budget
+    // of exactly 54 -- so it printed its whole table and *then* failed on the
+    // timeout. A third seat makes games longer, and a measurement that has to
+    // be read out of a failed test is one somebody will eventually throw away.
+    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
   );
 });

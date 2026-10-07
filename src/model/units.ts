@@ -990,6 +990,335 @@ export const CREATURES: CreatureDef[] = [
       'Cannon, a chaplain, and a letter of complaint for every port. Sinks ' +
       'ships, and shells the shore while the letter is being drafted.',
   },
+  //
+  // Every one of them has `counts: [1]`, and that absence is the whole point.
+  // The Horde's identity is a counting ladder and the Kingdom's is a committee
+  // that approves one; the Hivekin field numbers by growing Fodder cheaply and
+  // have no headcount tech at all. Nothing here should ever acquire a `counts`
+  // array without that being a deliberate change of what they are.
+  {
+    id: 'grub',
+    name: 'Grub',
+    plural: 'Grubs',
+    faction: 'hivekin',
+    role: 'worker',
+    settler: true,
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 20,
+    sight: 1,
+    counts: [1],
+    artScale: 0.68,
+    silhouette: 'worker',
+    body: '#d9cfa8',
+    trim: '#8a7340',
+    blurb: 'Founds a Hive. It was going to be founded somewhere. This is where it stopped.',
+  },
+  {
+    id: 'worker',
+    name: 'Worker',
+    plural: 'Workers',
+    faction: 'hivekin',
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 15,
+    sight: 1,
+    // No ladder, and this is the one place the joke would be a straight loss. A
+    // group is N times the attack, N times the defence and N times the price --
+    // but its *actions* do not scale, because nothing scales them: `makeVariant`
+    // multiplies cost and leaves `move` alone, and terraforming never reads the
+    // count at all. Two Workers at fifteen each dig two tiles and can be in two
+    // places; Two Workers as one unit costs thirty and digs one.
+    //
+    // Taken out on that argument alone. It is **not** what cost the Hive
+    // anything measurable: 144 games with the rung and without came back
+    // identical in all eleven columns, which can only mean the AI never built
+    // one. The reason to keep it out is the player who will be able to pick the
+    // Hivekin one day, and whose unit card would show doubled attack and
+    // defence while saying nothing about digging.
+    counts: [1],
+    artScale: 0.76,
+    silhouette: 'worker',
+    body: '#c4b183',
+    trim: '#6f5a33',
+    blurb: 'Digs, drains and improves the ground. Has not been told why, and has not asked.',
+  },
+  {
+    // Expendable, which today feeds nothing: the Hivekin's artillery is loaded
+    // by labour, not by sacrifice. Jeremy's call, and kept as asked -- it costs
+    // nothing, says something true about them, and is already correct if a
+    // caste that eats its loader is ever grown.
+    id: 'fodder',
+    expendable: true,
+    name: 'Fodder-caste',
+    plural: 'Fodder-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 1,
+    defense: 1,
+    hp: 10,
+    // One, where the Goblin has two. The Hivekin have no scout of any kind, and
+    // a cheap unit that is also the fastest would quietly become one.
+    move: 1,
+    cost: 10,
+    sight: 1,
+    // The Goblin's ladder exactly, because this *is* the Goblin: 1/1/10 at ten
+    // shields, down to the last number. Nothing here needed calibrating, only
+    // unlocking -- see the two advances in `techs.ts` that do it.
+    counts: [1, 2, 3, 5],
+    artScale: 0.7,
+    silhouette: 'small',
+    body: '#b9a878',
+    trim: '#7d5f2e',
+    blurb: 'A shape existed for this. It has been made, in quantity.',
+  },
+  {
+    id: 'soldier',
+    name: 'Soldier-caste',
+    plural: 'Soldier-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 3,
+    defense: 2,
+    hp: 12,
+    move: 1,
+    cost: 20,
+    sight: 1,
+    // Three rungs of the Orc's seven, because this is the Orc -- 3/2/12 at
+    // twenty -- and the Horde needs six advances to climb the rest. The Hive
+    // researches twelve advances in a whole game and cannot buy a ladder.
+    counts: [1, 2, 3],
+    artScale: 0.85,
+    silhouette: 'armored',
+    body: '#a8976a',
+    trim: '#5d4a22',
+    blurb: 'The last shape held. A better one was owed regardless.',
+  },
+  {
+    id: 'elite',
+    name: 'Elite-caste',
+    plural: 'Elite-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 5,
+    defense: 4,
+    hp: 16,
+    // The Knight's tier without the Knight's horse, which is what the extra
+    // point of defence is paying for.
+    move: 1,
+    cost: 40,
+    sight: 2,
+    counts: [1, 2],
+    artScale: 0.95,
+    silhouette: 'armored',
+    body: '#9d8a5c',
+    trim: '#c9a23f',
+    blurb: 'Better shapes remain possible. This one will do for now.',
+  },
+  {
+    // `firstStrikes`, as the Archer and the Axethrower have, which also makes it
+    // the only thing that can reload a Bloat-caste -- see section 125 slice 0.
+    id: 'spitter',
+    name: 'Spitter-caste',
+    plural: 'Spitter-caste',
+    faction: 'hivekin',
+    role: 'ranged',
+    firstStrikes: 1,
+    attack: 4,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 25,
+    sight: 2,
+    counts: [1, 2],
+    artScale: 0.8,
+    silhouette: 'thrower',
+    body: '#a9b06a',
+    trim: '#6c7a2c',
+    blurb: 'Distance was the only thing missing. It no longer is.',
+  },
+  {
+    id: 'burrower',
+    name: 'Burrower-caste',
+    plural: 'Burrower-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 3,
+    defense: 2,
+    hp: 12,
+    move: 2,
+    cost: 35,
+    sight: 2,
+    counts: [1],
+    artScale: 0.82,
+    silhouette: 'brute',
+    body: '#8f7b52',
+    trim: '#4f3d1c',
+    blurb: 'The ground was already hollow. This was noticed, and then used.',
+  },
+  {
+    id: 'broodlord',
+    name: 'Broodlord-caste',
+    plural: 'Broodlord-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 7,
+    defense: 4,
+    hp: 18,
+    move: 1,
+    cost: 58,
+    sight: 1,
+    counts: [1],
+    artScale: 1.15,
+    silhouette: 'brute',
+    body: '#8a7444',
+    trim: '#b4832a',
+    blurb: 'Two arms were doing the work of four. This has been corrected.',
+  },
+  {
+    id: 'princess',
+    name: 'Princess-caste',
+    plural: 'Princess-caste',
+    faction: 'hivekin',
+    role: 'worker',
+    attack: 0,
+    defense: 2,
+    hp: 12,
+    move: 1,
+    cost: 60,
+    sight: 1,
+    counts: [1],
+    artScale: 0.9,
+    silhouette: 'robed',
+    body: '#e2d8b4',
+    trim: '#c6a94e',
+    blurb:
+      'She was always going to be needed eventually. Eventually has not ' +
+      'arrived. She waits regardless.',
+  },
+  {
+    // Section 125 holds the exorcism rule back until the Unbound exist to be
+    // exorcised, so for now this is simply the best defensive caste there is.
+    id: 'warden',
+    name: 'Warden-caste',
+    plural: 'Warden-caste',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 4,
+    defense: 7,
+    hp: 18,
+    move: 1,
+    cost: 65,
+    sight: 2,
+    counts: [1],
+    artScale: 1.0,
+    silhouette: 'armored',
+    body: '#ded5bd',
+    trim: '#7f8c6a',
+    blurb: 'Something was needed against what does not have a shape to begin with.',
+  },
+  {
+    // Immobile, and the only unit in the game that is. She is not granted by any
+    // advance: she is placed in the first Hive when it is founded, and grown
+    // again out of a Princess if she is lost. The cost is here because the type
+    // wants one, and is set high enough that a bug which offered her for sale
+    // would be obvious rather than cheap.
+    id: 'queen',
+    name: 'The Queen',
+    plural: 'Queens',
+    faction: 'hivekin',
+    role: 'melee',
+    attack: 0,
+    defense: 6,
+    hp: 25,
+    move: 0,
+    cost: 200,
+    sight: 2,
+    counts: [1],
+    artScale: 1.3,
+    silhouette: 'brute',
+    body: '#e6d49a',
+    trim: '#b8862c',
+    blurb:
+      'Does not move, and has never been asked to. Production in her Hive is ' +
+      'a thing she is doing, not a thing it is doing.',
+  },
+  {
+    id: 'tidecaste',
+    name: 'Tide-caste',
+    plural: 'Tide-caste',
+    faction: 'hivekin',
+    role: 'naval',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 3,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    carries: 3,
+    artScale: 1.25,
+    silhouette: 'ship',
+    body: '#9a8558',
+    trim: '#5d4a22',
+    blurb:
+      'A shape existed for crossing water. It floats, and carries three other ' +
+      'shapes without complaint. The complaint was considered and removed early.',
+  },
+  {
+    id: 'riptidecaste',
+    name: 'Riptide-caste',
+    plural: 'Riptide-caste',
+    faction: 'hivekin',
+    role: 'naval',
+    attack: 5,
+    defense: 2,
+    hp: 12,
+    move: 3,
+    cost: 55,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    artScale: 1.3,
+    silhouette: 'ship',
+    body: '#8d7647',
+    trim: '#c08a30',
+    blurb:
+      'A shape that opens other shapes, even at sea. This has been demonstrated ' +
+      'repeatedly, and the demonstrations have stopped needing an audience.',
+  },
+  {
+    id: 'bloatcaste',
+    name: 'Bloat-caste',
+    plural: 'Bloat-caste',
+    faction: 'hivekin',
+    role: 'siege',
+    attack: 8,
+    defense: 1,
+    hp: 12,
+    move: 1,
+    cost: 45,
+    sight: 1,
+    counts: [1],
+    range: 2,
+    siegeBonus: 2,
+    ammo: 5,
+    reloadsBy: 'labour',
+    artScale: 1.05,
+    silhouette: 'engine',
+    body: '#a69156',
+    trim: '#9fae4e',
+    blurb:
+      'Built low and wide around one enormous sac, filled with something the ' +
+      'wall will not enjoy. Emptied once, from the correct distance, then ' +
+      'discouraged from doing anything else for the rest of the day.',
+  },
 ];
 
 // ------------------------------------------------------- generated types

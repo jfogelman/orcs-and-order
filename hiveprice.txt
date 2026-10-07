@@ -1,0 +1,8 @@
+hive ending                          advance  works  finished  wins  advances  cities  pop  units
+-------------------------------------------------------------------------------------------------
+as shipped (road 860, 22nd of 25)       2/12    0.0      0/12  0/12      11.8     3.5 19.1   19.3
+road 710: insanity dropped              2/12    0.0      0/12  0/12      11.8     3.5 19.1   19.3
+road 610, and asked for 13th            3/12    0.3      0/12  0/12      11.8     3.5 18.7   19.2
+that, and works at 60%                  3/12    0.3      0/12  0/12      11.8     3.3 18.4   19.0
+road 165: off caste-soldier, 5th        7/12    0.8      2/12  2/12      12.8     3.6 19.9   14.6
+that, and works at 60%                  7/12    1.3      4/12  4/12      12.0     3.3 19.5   15.3

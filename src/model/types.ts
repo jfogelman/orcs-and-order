@@ -8,7 +8,16 @@
 
 // ---------------------------------------------------------------- identifiers
 
-export type FactionId = 'orc' | 'human';
+/**
+ * The sides. Three of them since section 125.
+ *
+ * Widening this is the cheapest part of adding a faction and the compiler finds
+ * most of the rest: every `Record<FactionId, ...>` in the game goes red at once.
+ * What it does *not* find are the places that said "the other one" in prose --
+ * `otherFaction`, a single global peace, and the handful of `=== 'orc'` branches
+ * that meant "orc, else human". Those are listed in `HIVEKIN_PLAN.md`.
+ */
+export type FactionId = 'orc' | 'human' | 'hivekin';
 export type TerrainId =
   | 'deep'
   | 'water'
@@ -55,6 +64,27 @@ export interface Player {
    * research. Absent means Normal, which is every save before section 113.
    */
   handicap?: { content: number; cost: number };
+  /**
+   * Turn until which nothing may attack this side. Section 125.
+   *
+   * Only ever set on the Hivekin, and only for the few turns after they emerge:
+   * they arrive as a Grub and two Fodder-caste on open ground, and a wandering
+   * band that happened to be nearby would otherwise end a whole faction on the
+   * turn it appeared. Absent on every side that started on the map.
+   */
+  /**
+   * The turn this side joined the game. Absent means turn one.
+   *
+   * Only section 125's Hivekin ever set it, and the one rule that reads it is
+   * the capitulation grace: how long you may hold no city is counted from when
+   * you started, which is the same number for everybody and a different turn.
+   */
+  /** City the Queen sits in. Section 125, Hivekin only. */
+  queenSeat?: number;
+  /** Turn the seat is given up if no Queen has been grown by then. */
+  succession?: number;
+  joinedAt?: number;
+  safeUntil?: number;
   /** Map / UI colour, as a CSS hex string. */
   color: string;
   gold: number;
@@ -165,7 +195,18 @@ export interface Player {
 
 // ---------------------------------------------------------------------- units
 
-export type UnitOrder = 'none' | 'fortified' | 'sentry' | 'skip' | 'road' | 'post' | 'improve';
+export type UnitOrder =
+  | 'none'
+  | 'fortified'
+  | 'sentry'
+  | 'skip'
+  | 'road'
+  | 'post'
+  | 'improve'
+  // Section 125: underground, and not there as far as anybody else can tell.
+  // An order rather than a status because it is a stance held until something
+  // ends it, not a condition that wears off after a few turns.
+  | 'sunk';
 
 export interface Unit {
   id: number;
@@ -203,6 +244,19 @@ export interface Unit {
    * creatures that throw the thing they fight with.
    */
   disarmed: boolean;
+  /**
+   * Sunk, and the ground shows it. Section 125.
+   *
+   * An enemy who can see the tile knows *something* went down here, and nothing
+   * else -- not what, and not whether it is still there. `burrower-veteran`
+   * stops the mark being written, which is the whole of that advance.
+   */
+  sinkMark?: boolean;
+  /**
+   * Came up beside somebody this turn, and the Hive has learned to be already
+   * waiting. Worth a harder first swing, and true for exactly one turn.
+   */
+  ambushing?: boolean;
   /**
    * Turns until a thrower has walked over and picked its axe back up.
    *
@@ -410,7 +464,24 @@ export type DamageKind = 'physical' | 'magic';
  * Portal held open long enough, and the Kingdom's Mysterious Object with its
  * button pressed.
  */
-export type VictoryKind = 'conquest' | 'dominance' | 'points' | 'draw' | 'portal' | 'object';
+/**
+ * What a spare Princess became. Section 125.
+ *
+ * Chosen when she converts rather than when she was built, which is the point
+ * of the caste: insurance you can decide the use of after you know whether you
+ * needed it. `pending` is a conversion the player has not answered yet.
+ */
+export type BroodBonus = 'shields' | 'calm' | 'beakers' | 'gold' | 'pending';
+
+export type VictoryKind =
+  | 'conquest'
+  | 'dominance'
+  | 'points'
+  | 'draw'
+  | 'portal'
+  | 'object'
+  // Section 125: the Hivekin's Second Queen's Shell.
+  | 'hive';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
@@ -420,6 +491,14 @@ export type ProductionItem =
   | { kind: 'calm' };
 
 export interface City {
+  /**
+   * What the spare Princesses in this Hive turned into. Section 125.
+   *
+   * One entry per converted Princess, so a city that kept three of them is
+   * worth three of whatever was chosen. `pending` is one the player still owes
+   * an answer about.
+   */
+  brood?: BroodBonus[];
   id: number;
   owner: number;
   name: string;
@@ -703,6 +782,14 @@ export interface GameState {
    * for two of the three routes.
    */
   victory?: VictoryKind;
+  /**
+   * The turn section 125's Hivekin come up, drawn once from their window.
+   *
+   * Stored rather than recomputed: it comes out of the shared random stream, so
+   * asking a second time would draw a second number and shift every roll after
+   * it -- which is the bug section 110's ending clock had.
+   */
+  hivekinAt?: number;
   /**
    * The game was won and the player asked to carry on anyway.
    *

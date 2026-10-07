@@ -47,27 +47,27 @@ export interface PerkDef {
 export const PERKS: PerkDef[] = [
   {
     id: 'bloodied',
-    name: { orc: 'Worked Up', human: 'Commended' },
+    name: { orc: 'Worked Up', human: 'Commended', hivekin: 'Grown Into It' },
     blurb: 'Hits appreciably harder than it used to.',
   },
   {
     id: 'dug-in',
-    name: { orc: 'Stubborn', human: 'Drilled' },
+    name: { orc: 'Stubborn', human: 'Drilled', hivekin: 'Settled' },
     blurb: 'Much harder to shift once it has decided to stay.',
   },
   {
     id: 'quartermaster',
-    name: { orc: 'Knows a Bloke', human: 'Quartermaster' },
+    name: { orc: 'Knows a Bloke', human: 'Quartermaster', hivekin: 'Provided For' },
     blurb: 'Supply reaches it further out than it reaches anybody else.',
   },
   {
     id: 'field-repairs',
-    name: { orc: 'Licks It Better', human: 'Field Surgeon' },
+    name: { orc: 'Licks It Better', human: 'Field Surgeon', hivekin: 'Reseals' },
     blurb: 'Recovers even beyond the supply line, slowly.',
   },
   {
     id: 'butcher',
-    name: { orc: 'Thorough', human: 'Requisition Order' },
+    name: { orc: 'Thorough', human: 'Requisition Order', hivekin: 'Complete' },
     blurb: 'Takes noticeably more of a city when it takes one.',
   },
   /*
@@ -77,21 +77,21 @@ export const PERKS: PerkDef[] = [
    */
   {
     id: 'fiery-club',
-    name: { orc: 'Fiery Club', human: 'Fiery Club' },
+    name: { orc: 'Fiery Club', human: 'Fiery Club', hivekin: 'Fiery Club' },
     blurb: 'Sets fire to whatever it hits, and keeps it that way for a while.',
     only: ['ogre'],
     flag: 'clubs',
   },
   {
     id: 'exploding-club',
-    name: { orc: 'Exploding Club', human: 'Exploding Club' },
+    name: { orc: 'Exploding Club', human: 'Exploding Club', hivekin: 'Exploding Club' },
     blurb: 'Goes off on impact, catching everything around the target. The ogre included, though it minds less.',
     only: ['ogre'],
     flag: 'clubs',
   },
   {
     id: 'quake-club',
-    name: { orc: 'Quake Club', human: 'Quake Club' },
+    name: { orc: 'Quake Club', human: 'Quake Club', hivekin: 'Quake Club' },
     blurb: 'Hits the ground so hard that everyone standing near the ogre regrets it.',
     only: ['ogre'],
     flag: 'clubs',
@@ -102,28 +102,28 @@ export const PERKS: PerkDef[] = [
    */
   {
     id: 'mostly-volatile',
-    name: { orc: 'Mostly Volatile', human: 'Mostly Volatile' },
+    name: { orc: 'Mostly Volatile', human: 'Mostly Volatile', hivekin: 'Mostly Volatile' },
     blurb: 'Survives one killing blow. One. It does not go off that time either.',
     only: ['sapper'],
     flag: 'volatile',
   },
   {
     id: 'better-part-of-valour',
-    name: { orc: 'Better Part of Valour', human: 'Better Part of Valour' },
+    name: { orc: 'Better Part of Valour', human: 'Better Part of Valour', hivekin: 'Better Part of Valour' },
     blurb: 'Falls back a step when it attacks something and fails to finish it.',
     only: ['knight'],
     flag: 'valour',
   },
   {
     id: 'swampy-friend',
-    name: { orc: 'Swampy Friend', human: 'Swampy Friend' },
+    name: { orc: 'Swampy Friend', human: 'Swampy Friend', hivekin: 'Swampy Friend' },
     blurb: 'Alone, and standing in a swamp, it can make another of itself. It costs nearly everything.',
     only: ['troll'],
     flag: 'swampy',
   },
   {
     id: 'dark-bargain',
-    name: { orc: 'Dark Bargain', human: 'Dark Bargain' },
+    name: { orc: 'Dark Bargain', human: 'Dark Bargain', hivekin: 'Dark Bargain' },
     blurb: 'Takes the strength of somebody standing next to it. They are rarely asked.',
     only: ['deathknight'],
     flag: 'bargain',
@@ -131,7 +131,7 @@ export const PERKS: PerkDef[] = [
   },
   {
     id: 'reputation',
-    name: { orc: 'Preceded By Rumour', human: 'Reputation' },
+    name: { orc: 'Preceded By Rumour', human: 'Reputation', hivekin: 'Already Known Of' },
     blurb: 'Townsfolk do not bother throwing things. They have heard.',
   },
 ];

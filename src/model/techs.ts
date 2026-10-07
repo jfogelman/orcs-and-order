@@ -49,7 +49,13 @@ export type TechFlag =
   /** Workers may irrigate, mine and clear the land. Section 112. */
   | 'terraform'
   /** Workers may irrigate away from water. Section 112. */
-  | 'channels';
+  | 'channels'
+  /** Section 125: sinking no longer leaves the dirt disturbed. */
+  | 'quiet-sinking'
+  /** Section 125: a Burrower crosses three tiles underground rather than two. */
+  | 'deep-burrowing'
+  /** Section 125: coming up beside somebody is worth a harder first swing. */
+  | 'ambush-burrowing';
 
 export interface TechDef {
   id: TechId;
@@ -72,7 +78,9 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 25,
     prereqs: [],
-    units: ['raft', 'barge'],
+    // One ship a side. The filter that decides what a city may build asks the
+    // unit's own faction, so a shared advance can hand all three their boat.
+    units: ['raft', 'barge', 'tidecaste'],
     buildings: [],
     flags: ['mapmaking'],
     flavor: 'The world turns out to have a shape. Everyone is a little put out about it.',
@@ -625,6 +633,268 @@ export const TECHS: TechDef[] = [
     flavor:
       'A committee has been formed to establish what it does. So far it has agreed on the ' +
       'wording of the sign.',
+  },
+
+  // =========================================================== section 125
+  // The Hivekin. Not a counting ladder and not a committee ladder: every
+  // advance here is a shape the Hive has become capable of growing, and the
+  // tree is simply the order they arrive in.
+  {
+    id: 'first-hivekin',
+    name: 'There Was A Hive',
+    faction: 'hivekin',
+    cost: 0,
+    prereqs: [],
+    // The Queen is not here. She is placed in the first Hive when it is
+    // founded, which is what "starting unit" means for a side that cannot
+    // build one -- see `sim/hivekin.ts`.
+    units: ['grub', 'worker'],
+    buildings: [],
+    flags: [],
+    flavor: 'There was a hive. This took considerably less deliberation than usual.',
+  },
+  {
+    id: 'caste-fodder',
+    name: 'A Shape For This',
+    faction: 'hivekin',
+    cost: 20,
+    prereqs: ['first-hivekin'],
+    units: ['fodder'],
+    buildings: [],
+    flags: [],
+    flavor: 'A shape existed for this. It has been made.',
+  },
+  {
+    id: 'caste-soldier',
+    name: 'A Sturdier Shape',
+    faction: 'hivekin',
+    cost: 45,
+    prereqs: ['caste-fodder'],
+    units: ['soldier'],
+    buildings: [],
+    flags: [],
+    flavor: 'The last shape held. A better one was owed regardless.',
+  },
+  {
+    // ------------------------------------------- the counting ladder, inverted
+    //
+    // The Horde's ladder is the game's oldest joke and it is six advances long:
+    // Let's Orc Together, Idiots Stick Together, The Next Level of Stupid,
+    // Beyond Stupid, Not Just Stupid Anymore, And Stupidity for All. Five
+    // hundred and ninety beakers to get from one orc to ten, one painful
+    // realisation about numbers at a time.
+    //
+    // **The Hive gets two, and each one raises every shape at once**, which is
+    // both the better joke and the only affordable shape. The better joke
+    // because a hive did not have to learn to count -- quantity came with the
+    // shape, and being counted is something that happens to it rather than
+    // something it achieves. The only affordable shape because they research
+    // 11.8 advances in an entire game at 9.9 beakers a turn: a six-advance
+    // ladder would eat their game exactly as the eleven-advance road to their
+    // own ending did, which is the mistake this section already made once.
+    //
+    // No `coordination` flag, and they do not need one. Every caste with a
+    // ladder moves one, and `effectiveMove` floors at one, so the crowding
+    // penalty that costs the Horde a movement point until it learns to walk in
+    // a line cannot touch them. Ten of them were always one thought.
+    id: 'always-this-many',
+    name: 'There Were Always This Many',
+    faction: 'hivekin',
+    cost: 40,
+    prereqs: ['caste-soldier'],
+    units: ['fodder_x2', 'fodder_x3', 'soldier_x2'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'The Hive has not grown. The Hive has been counted, which is a different ' +
+      'thing, and it would prefer the counting to stop.',
+  },
+  {
+    id: 'assumed-fewer',
+    name: 'You Had Assumed Fewer',
+    faction: 'hivekin',
+    cost: 80,
+    prereqs: ['always-this-many'],
+    units: ['fodder_x5', 'soldier_x3', 'spitter_x2', 'elite_x2'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'No additional shapes were made for this. You were simply looking at ' +
+      'some of them.',
+  },
+  {
+    id: 'caste-spitter',
+    name: 'A Shape That Reaches',
+    faction: 'hivekin',
+    cost: 50,
+    prereqs: ['caste-fodder'],
+    units: ['spitter'],
+    buildings: [],
+    flags: [],
+    flavor: 'Distance was the only thing missing. It no longer is.',
+  },
+  {
+    id: 'caste-burrower',
+    name: 'The Ground Was Already Hollow',
+    faction: 'hivekin',
+    cost: 65,
+    prereqs: ['caste-fodder'],
+    units: ['burrower'],
+    buildings: [],
+    flags: [],
+    flavor: 'The ground was already hollow. This was noticed.',
+  },
+  {
+    id: 'caste-riptide',
+    name: 'A Shape That Opens Other Shapes',
+    faction: 'hivekin',
+    cost: 70,
+    prereqs: ['caste-soldier'],
+    units: ['riptidecaste'],
+    buildings: [],
+    flags: [],
+    flavor: 'The sea was previously unclaimed. This has been corrected.',
+  },
+  {
+    // Section 125 slice B wires the three burrower upgrades to an ability that
+    // does not exist yet. They are in the tree now so the road to the ending
+    // and the cost of walking it are the ones a sweep will measure.
+    id: 'burrower-veteran',
+    name: 'The Last Tile Forgotten',
+    faction: 'hivekin',
+    cost: 90,
+    prereqs: ['caste-burrower'],
+    units: [],
+    buildings: [],
+    flags: ['quiet-sinking'],
+    flavor: 'Where it was is no longer known. This was arranged on purpose.',
+  },
+  {
+    id: 'caste-bloat',
+    name: 'A Shape That Empties Once',
+    faction: 'hivekin',
+    cost: 95,
+    prereqs: ['caste-spitter'],
+    units: ['bloatcaste'],
+    buildings: [],
+    flags: [],
+    flavor: 'Distance solved the reaching problem. Walls remained. This solves that too.',
+  },
+  {
+    // Deep and Ambush hang off the same advance and **both may be taken**. The
+    // bible called them mutually exclusive; nothing in this tree can say that,
+    // and Jeremy's answer of 2026-10-06 was that it should not have to here --
+    // the exclusivity would be guarding a boundary that is not under threat,
+    // since both branches are the Burrower-caste being more itself and nothing
+    // bleeds between castes. One is mobility, the other damage, and paying 90
+    // plus 240 beakers out of a ten-advance game is the specialisation.
+    id: 'burrower-deep',
+    name: 'Further Down',
+    faction: 'hivekin',
+    cost: 120,
+    prereqs: ['burrower-veteran'],
+    units: [],
+    buildings: ['undercity'],
+    flags: ['deep-burrowing'],
+    flavor: 'Two tiles became three. The ground did not object.',
+  },
+  {
+    id: 'burrower-ambush',
+    name: 'Already Waiting',
+    faction: 'hivekin',
+    cost: 120,
+    prereqs: ['burrower-veteran'],
+    units: [],
+    buildings: [],
+    flags: ['ambush-burrowing'],
+    flavor: 'It was there first. It simply waited to be noticed.',
+  },
+  {
+    id: 'caste-elite',
+    name: 'The Best Shape So Far',
+    faction: 'hivekin',
+    cost: 85,
+    prereqs: ['caste-soldier'],
+    units: ['elite'],
+    buildings: [],
+    flags: [],
+    flavor: 'Better shapes remain possible. This one will do for now.',
+  },
+  {
+    id: 'caste-broodlord',
+    name: 'A Shape With Four Arms',
+    faction: 'hivekin',
+    cost: 130,
+    prereqs: ['caste-elite'],
+    units: ['broodlord'],
+    buildings: ['broodwarmth'],
+    flags: [],
+    flavor: 'Two arms were doing the work of four. This has been corrected.',
+  },
+  {
+    id: 'caste-warden',
+    name: 'A Shape That Dissolves Things',
+    faction: 'hivekin',
+    cost: 140,
+    prereqs: ['caste-elite', 'hammers-of-glory'],
+    units: ['warden'],
+    buildings: [],
+    flags: [],
+    flavor: 'Something was needed against what does not have a shape to begin with.',
+  },
+  {
+    id: 'caste-princess',
+    name: 'A Shape That Waits',
+    faction: 'hivekin',
+    cost: 110,
+    prereqs: ['caste-elite', 'happiness'],
+    units: ['princess'],
+    buildings: ['oldQueensShell'],
+    flags: [],
+    flavor:
+      'She was always going to be needed eventually. Eventually has not ' +
+      'arrived. She waits regardless.',
+  },
+  {
+    // **The shortest road to an ending in the game, on purpose.**
+    //
+    // It used to hang off `caste-princess` and `insanity`, which is where the
+    // bible put it and reads perfectly: the second Queen comes after the shape
+    // that waits, and after the world has stopped making sense. It also cost
+    // 860 beakers over eleven advances, and the Hive earns 9.9 beakers a turn
+    // against the Horde's 19.1 and the Kingdom's 32.4. That is 87 turns of pure
+    // research in a life of about 140, against the Horde's 23 and the Kingdom's
+    // 30 -- so in twelve games they reached this advance twice and built, in
+    // total, no works at all.
+    //
+    // Thirty-eight of fifty-four games are decided by somebody finishing an
+    // ending, and they hold 22% of the world against the 50% dominance needs,
+    // so this is the only door they have. Repricing it was measured and does
+    // nothing: their advances per game read 11.8 whatever the road costs,
+    // because repricing buys no research, it only changes what the research is
+    // spent on. 860, 710 and 610 all give zero wins.
+    //
+    // So the road has to fit inside four of their twelve advances. Off
+    // `caste-soldier` it is 165 beakers over four, every one of which they
+    // research anyway, and that is the first thing in section 125 to produce a
+    // win: 4 of 12 with the works at 180/180/240 below, and every win an ending
+    // win. Jeremy chose this over a research mechanic on 2026-10-04.
+    //
+    // What it means in play: their victory advance lands around turn 130 rather
+    // than never, and the race is theirs to lose rather than not to enter.
+    id: 'all-is-the-hive',
+    name: 'All Is The Hive',
+    faction: 'hivekin',
+    cost: 100,
+    prereqs: ['caste-soldier'],
+    units: [],
+    buildings: ['moltingChamber', 'secondFeeding', 'secondQueenShell'],
+    flags: ['ending'],
+    flavor:
+      'Two queens should not have been possible. Two queens were possible. All ' +
+      'is the Hive and the Hive are all, and if they were capable of joy, they ' +
+      'would be reasonably pleased about this. Not excessively. It is, after ' +
+      'all, only the one world.',
   },
 ];
 

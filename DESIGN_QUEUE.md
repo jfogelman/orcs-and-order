@@ -10285,3 +10285,787 @@ so. 15 tests; the suite is 969.
 One of those tests failed honestly on the way in. It asserted that nothing
 without a magazine mentions missiles, which the **Orc** now does -- because it is
 one. The assertion was wrong, not the note.
+
+### Slice A: a third side exists
+
+The seat, and nothing with a new mechanic in it. Sink, Burrow, the Queen's
+succession and the terrain resources are all slice B, deliberately: if the
+numbers move, they moved for a reason that is in this list.
+
+**What the compiler found.** Widening `FactionId` produced thirty-three errors
+across seven files -- `FACTIONS`, `PALACE_CHASSIS`, the palace modules' tiers,
+perk names, two tables in `suggestions.ts`, `VOICES` in the talks screen, and
+two in `tools/`. All of them wanted content rather than thought. `contenders()`
+was already a list, and dominance, elimination, points-at-deadline, scoring and
+the AI's target selection all iterated it correctly, which is why a third
+contender was ever affordable.
+
+**What it could not find** was every place that said "the other side" in prose.
+`otherFaction` was a coin flip and could only ever have been; it is
+`rivalFactions` now. The rest are below, and two of them were real bugs.
+
+### The three bugs only a third side could have found
+
+**Every seed emerged on turn 117.** `state.rngState` begins as `seed ^
+0x1d872b41`, so two small seeds differ only in the low byte. One xorshift round
+later `float()` reads the top bits, which have not been mixed yet, so **the
+first draw of a fresh game is very nearly seed-independent**. Anything taking a
+single early roll from the shared stream gets the same answer whatever the seed.
+The arrival turn is hashed off the seed instead -- better anyway, since taking
+nothing from the stream means an arm with the Hivekin switched off is the game
+from before this section rather than a differently-shuffled one, in the manner
+of section 59.
+
+The underlying weakness is left alone on purpose. Warming the generator would
+change every seed's worldgen and invalidate the fixtures and every historical
+sweep number in this file, which is not a thing to do inside another section.
+
+**They were eliminated the turn after arriving, every seed.** The capitulation
+grace was a calendar turn -- hold no city past turn 15 and you are finished --
+which was the same thing as "fifteen turns to get started" only while everybody
+started on turn one. Counted from `joinedAt` now, which is the rule that was
+always meant.
+
+**A new Hive would have opened by building a Footman.** `foundCity` set its
+default production with `faction === 'orc' ? 'goblin' : 'footman'`. That is
+section 123's settler-prize bug exactly -- the one that cost twenty games and
+three sweeps to find, because a side quietly building the wrong thing looks like
+nothing at all. Read off `FACTIONS[...].starterUnit` now, with a test that a new
+Hive opens on something it can actually grow.
+
+All three were found by one instrumented probe (`tools/hiveprobe.run.test.ts`,
+six seeds, forty seconds) rather than by a sweep. Section 123's lesson applied
+before the fact rather than after: **when something is not working, go and count
+something.**
+
+### Peace was a single global flag
+
+`atPeace` asked only whether both sides were contenders and whether a peace was
+running. That was a fair simplification with exactly two empires and a bug the
+moment there were three: a Horde-Kingdom treaty would have quietly made the
+Hivekin peaceful toward both, and `hostile` would have agreed that nobody could
+attack them. `empires()` now requires both sides to be a faction that talks, and
+"fought, not talked to" is what makes that the correct fix rather than merely
+the cheap one. If a later faction does negotiate, that is the line that has to
+become a peace per pair.
+
+### Dominance, with more than one rival
+
+Three quarters of the map was measured when it meant "three times as much as the
+only other side". With two rivals it would mean three times as much as both
+together, which is not a backstop -- it is an ending that never fires, and a
+game that cannot end on dominance decides on points, which section 23 exists to
+avoid. The share is held against the rest of the field instead: 0.75 at two
+seats, 0.60 at three, 0.50 at four, and **exactly 0.75 at two**, so every
+measured number in that file still describes the game it was measured on.
+
+### What the Hivekin are
+
+Fourteen castes, every one with `counts: [1]`. The absence is the point: the
+Horde's identity is a counting ladder and the Kingdom's is a committee that
+approves one, and the Hivekin field numbers by growing Fodder cheaply. Two
+weaknesses are deliberate -- no scout of any kind, which is why the Fodder is M1
+where the Goblin is M2, and no caster or flier at all, which is the premise the
+Warden-caste exists to preserve.
+
+Three follies rather than four, an asymmetry Jeremy chose and they have not
+noticed. Two of the effects wanted fields that did not exist: `cityShields`,
+read after the worked tiles rather than as one of them, which is the whole of
+the rule that the Undercity keeps producing through a pillaging; and
+`unitDiscount`, units only and that city only. The third, `casteAttack`, is
+restricted to two named creatures the way the Long Vigil's `mountedDefense`
+already was.
+
+Their ending is section 110's three-building shape at the Horde's pricing, down
+a road costing 860 beakers against the Horde's 430 and the Kingdom's 965.
+**That mixture is nobody's measured setting** and is the first dial to turn.
+
+They are not offered in the faction picker. `startsOnMap` is a field rather than
+an inference from `talks`, because a later faction could perfectly well emerge
+*and* negotiate: playing as a side that emerges would need an opening of its
+own, and leaving the measured opening alone was the entire point of emergence.
+
+### Six advisors, in the one register that is hardest to keep
+
+Nothing is remarkable and everything was always going to happen. A test asserts
+no exclamation, no rhetorical question and no word like "disaster" -- if a line
+would sound right in the Blademaster's mouth it is wrong in theirs. The Voice
+keeps the diplomacy seat and uses it to say there will be no talking, which is
+funnier than a table and is also why `VOICES` is `Partial`: a missing key is
+what makes `talks()` load-bearing rather than decorative.
+
+### Four fixtures that assumed two seats
+
+The late-game saves budgeted half-turns for three seats and stopped short of
+turn 299 with four -- the third time that exact trap has been walked into, so
+the budget is per seat now and generous. The dominance test counted two
+half-turns to a day. The expansion tally was an array of length two. And three
+`every(p => p.alive)` checks became "both of the original empires", since a side
+that emerges at turn ninety is a contender rather than a guarantee.
+
+### Slice B: what makes them them
+
+Sink, Burrow, the Queen's succession, and the three resources. Measured against
+slice A rather than against the two-sided game, so a shift here is attributable
+to this slice and not to the seat existing.
+
+### Nothing in this game had ever been hidden
+
+This is the part that needed a concept rather than a rule. Fog of war is a fact
+about **tiles** -- `player.visible` is a bitmap, and "a unit on a lit tile is a
+unit you can see" was true everywhere in the game until now. The Sunken Legion
+wades, the Ogre Clan Brute shouts, the Tomb Wardens stand still: not one of them
+is invisible, and the question "can this player see that unit" had simply never
+been asked.
+
+`seenBy` asks it, and is deliberately the only place the answer lives. Four
+readers go through it -- the renderer, the AI's target search, `visibleEnemies`,
+and the pathfinder's occupant map. A rule about who can see what that is
+implemented four times is four different rules within a month.
+
+The pathfinder was the interesting one, because its own comment had already made
+the argument from the other direction:
+
+> Route by what this player actually knows, not by the true state of the board.
+> An enemy standing unseen in the fog used to block the route, so a move order
+> across unexplored ground silently failed and the unit just stood there -- and
+> **the failure itself leaked the enemy's position**.
+
+A sunk Burrower is that same leak with the fog taken away.
+
+### And the correction that came with it
+
+The first version routed *and resolved* moves on what the mover could see. That
+let an army walk into a defended city and capture it without a fight, because
+the defender happened to be standing on an unlit tile -- caught by
+`militia.test.ts`, which exists for exactly that.
+
+The distinction is worth writing down: **routing is planned on what a player
+knows and resolved on what is true.** Walking into somebody is how you find out
+they were there. The one thing genuinely not in the way is a sunk Burrower, and
+that is a fact about the Burrower rather than about who is looking -- it is
+under the ground, nobody is standing on anybody, and treading on it finds it out
+instead of stopping anyone.
+
+Being found out pushes it to free ground and costs it the turn. With nowhere to
+be pushed it stays down there, which is the price of hiding under a road
+somebody was about to use.
+
+### The Queen
+
+The one unit that cannot move and the one unit a city depends on. Her seat makes
+nothing at all while she is not in it -- production there is a thing she is
+doing, not a thing the city is doing -- and losing her starts a five-turn clock
+rather than ending anything. A single lucky raid deciding a faction outright is
+not a thing this game does anywhere else.
+
+Order matters in the tick: a Princess standing in the seat is grown **before**
+the countdown is checked, so walking one in on the last turn works. The other
+way round would be a turn too late and would feel like a cheat.
+
+Spare Princesses convert to something the Hive keeps, and **the choice is made
+at conversion, not at build time**. That is the whole argument for the caste:
+insurance you pick the use of after you know whether you needed it. Nobody grows
+one and the seat is given up, its units feral in the band that already exists --
+the bible's own answer, and it invents no third kind of owner.
+
+### Three tiles, and the thing they taught
+
+The resources ship as **ordinary specials**, per Jeremy: the flavour is the
+Hive's and the machinery is everybody's. That turned out to be the interesting
+part of the slice.
+
+Adding them broke three tests -- a one-city empire with no beakers, an AI
+fielding fewer kinds of unit, a fixture whose towns stopped being fed. Taking
+them back out fixed all three, which is section 93's dilution warning landing
+exactly as it was written: *adding to an unmeasured baseline is how a sweep
+becomes unreadable.*
+
+But the cause was not the extra specials. It was their **profile**. Broodmoss
+went in at food 3 / shields 2 on grass, where the two specials it diluted are
+food-leaning; a shields-heavy grass special pulls the AI's build order about,
+and over six seeds it cost a kind of unit a game. Priced against what they
+displace -- Broodmoss food-leaning like the grass it grows on, Chitin Vein
+within a point of Shiny Rocks, Marrow Salt within a point of the Deep Hole --
+and all three tests pass with the specials still in.
+
+They also have their own switch (`SPECIALS.hiveTiles`), which takes them out of
+the **roll** rather than merely making them inert. Section 93 drew that
+distinction and it is the only one that measures anything: a tile left in the
+roll still dilutes whatever it sits beside. A map change folded in with three
+new mechanics is a measurement nobody can read, and that is the mistake section
+123 made twelve times before giving up and counting something.
+
+### What is still a placeholder
+
+- **Five turns** for the succession. The bible's number, and nothing has
+  measured what it is worth.
+- **The two Burrower branches are not exclusive.** The bible calls Deep and
+  Ambush "two mutually exclusive specializations" and then writes them as two
+  advances off the same prerequisite, which is not a thing the tech tree can
+  express -- both are researchable. Shipped as written in the tree; the
+  exclusivity is an open question for Jeremy.
+- **The brood choice has no dialog yet.** The rule is complete and the AI
+  answers it; a human owner gets `pending` and `chooseBrood` is waiting for a
+  prompt to call it.
+
+### Measured, and the sweep was the wrong instrument
+
+Two arms either side of Sink, Burrow and the succession came back with
+**identical numbers**. That is not a null result, it is an instrument reading
+zero, and it was worth more than the sweep would have been.
+
+A probe (`npm run hiveprobe`, six seeds, forty seconds) said why: **zero
+Burrowers ever built, zero turns underground, zero turns without a Queen.** The
+AI never sinks and never burrows, because nothing taught it to. But it had also
+never built a Burrower, which is a different and much larger problem.
+
+It had built nothing at all. One caste advance -- the free one. A roster of
+Grubs and the Queen. Studying Pyromancy.
+
+### The Hive had no plan of its own
+
+`PERSONALITIES[player.faction] ?? PERSONALITIES.orc`. With no entry of their own
+the Hivekin inherited **the Horde's research plan**, every line of which is
+either an orc advance they cannot research or a shared one they can. So they
+worked straight down the shared spine -- mapmaking, bridges, tree-hugging,
+walls, happiness, insanity -- and never grew a caste in their lives.
+
+**That is why they won none of 216 games in slice A's measurement.** No column
+could have said so: `wins: 0` looks identical whether a faction is badly
+balanced or has no army at all. A win rate is an outcome, and outcomes do not
+explain themselves. Section 123's lesson was written down and then not applied:
+the right move after slice A's zero was a probe, not a theory about emerging
+late.
+
+With a plan of their own -- leading with the castes, because a side whose whole
+identity is which shape it can grow next has nothing until it can grow one --
+the same six games give three to seven caste advances and Fodder, Soldier,
+Spitter, Elite, Burrower and Tide-caste on the board.
+
+### And they still do not win
+
+216 games, `no plan` against `own plan`, maps paired:
+
+                      orc  hum  hive
+  no plan   tuned      34   20     0
+  no plan   held-out   26   28     0
+  own plan  tuned      36   18     0
+  own plan  held-out   26   28     0
+
+**Zero wins out of 108, again.** Checked against the seed rows rather than the
+summary: the winner is 0 or 1 in every one of 216 games. They now build an army
+and still never convert it.
+
+The fix is balance-neutral, which is the other thing worth knowing: Horde
+against Kingdom moves +3.7 points on the tuned seeds and not at all on held-out.
+
+So the roster was never the problem. **The deficit is time.** They arrive around
+turn 90 to 120 with one Grub against two empires that have had ninety turns of
+growth, and reach one to five Hives where the empires reach six or seven. That
+is a ninety-turn head start and no amount of research order closes it. The
+levers are the arrival window, what they arrive with, or accepting that they are
+pressure rather than a contender -- which contradicts the answer on file, so it
+is Jeremy's call and not mine.
+
+### The three tiles are the only thing that moved the balance
+
+Isolated across the two runs, since Sink and the Queen are provably inert and
+the only other difference is `SPECIALS.hiveTiles`:
+
+  tuned     tiles off 26-28  ->  tiles on 34-20   Horde +14.8 points
+  held-out  tiles off 22-32  ->  tiles on 26-28   Horde  +7.4 points
+
+Both seed sets, same direction, and larger than anything else in this section.
+
+**It is not paired and it cannot be.** Taking specials out of the roll changes
+worldgen, so the two arms play different maps by construction -- the harness
+said so, on 54 of 54 seeds, which is how the first attempt at this comparison
+was caught before being believed. A specials change is measured with more games,
+never with paired ones.
+
+Worth doing before the tiles are called settled. The three were priced against
+what they displace precisely so they would not do this, and they may still be
+doing it.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+  They cannot be swept until it does, and teaching it is its own piece of work.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive, which the bible says
+  they should be and the tech tree cannot express.
+- The brood choice has no dialog; the AI answers it and a human owner gets
+  `pending`.
+
+### The second Grub bought no win, and said where to look next
+
+216 games, maps paired:
+
+                      orc  hum  hive
+  one grub  tuned      30   22     2
+  one grub  held-out   29   25     0
+  two grubs tuned      36   18     0
+  two grubs held-out   33   21     0
+
+**Zero wins out of 108.** The two on the one-Grub tuned row are two games in a
+hundred and eight and the other three rows are zero; that is noise around zero,
+not a result.
+
+It did do something, and it is worth knowing before anybody tunes the two
+empires again: **Horde against Kingdom moved about nine points, on both seed
+sets, towards the Horde** -- 30-22 to 36-18 tuned, 29-25 to 33-21 held-out, with
+the Kingdom's city count falling in both (6.72 to 6.39, 5.98 to 5.67) and the
+Horde's population rising. Both sets, same direction, a supporting column
+moving: by this project's own rule that is believable. A healthier Hive costs
+the Kingdom more than it costs the Horde, presumably because the Kingdom is the
+builder and the one that targets six cities.
+
+Not corrected. Compensating the two empires against a third one that cannot
+fight is baking a correction for a bug into the balance.
+
+### Three fixes had each bought ground and none had bought a win
+
+Which is itself a signal, and the right reading of it was *stop fixing the
+arrival*. Everything so far -- a research plan of their own, siting the arrival
+by what the ground yields, a second founder -- is about how they start. A side
+that holds a fifth of the world and never converts it is not failing at setup.
+
+So: count the war.
+
+### What the probe found, and what it found about the probe
+
+`npm run hiveprobe` now watches whole games off the sweep's own tuned bases and
+attributes every fight. The first run said the Hive attacks **zero times in
+twelve games** while fielding eight Soldier-caste and four Spitter-caste.
+
+That was my counter, not the game. It read the log by index, and `log()` keeps
+only the last four hundred entries -- so once the window saturates, the length
+and a saved index both sit still while entries scroll past underneath, and the
+reader counts nothing from that point on. The Hive arrives around turn 105,
+long after saturation. **`playGame`'s own comment warns about exactly this** --
+"read off the tail, a seed with thirty-seven fights reports none" -- and I wrote
+it again anyway, two hundred lines from where it is written down. Anchored by
+identity rather than index, the same twelve games say:
+
+  side   attacks  won  defences held  caps  lost  cities  pop  units
+  orc      101.5  48.9      5.8  5.8   3.8   2.8     5.5 52.5   31.6
+  human     95.8  57.8     20.1 20.1   4.1   3.5     7.3 50.2   30.9
+  hive       7.9   6.4     52.5 52.5   0.2   1.8     2.8 17.7   16.3
+
+They do not attack. They hold. **Fifty-two defences a game and eight attacks**,
+against the empires' hundred, and 0.2 cities taken. They are a punching bag
+that happens to be good at being punched.
+
+### The bar was set just above everything they are ever offered
+
+A trace inside `actSoldier` (`AI_TRACE`, off by default, read only by the
+probe) counts which branch each side's units leave through. Theirs:
+
+  something next to it they could swing at   29% of their turns
+  best odds when there was                   0.44
+  their bar                                  0.50
+
+I set `caution: 0.5` when writing their personality -- twice the Horde's, on
+the reasoning that glass units should not be thrown away. The reasoning was
+right and the number was one tick too high: it sits above the average fight
+they are offered, so they decline eleven in twelve.
+
+Probed at three bars, twelve games each:
+
+  bar   attacks  won  caps  lost  cities  pop  units  alive  share
+  0.50      7.9  6.4   0.2   1.8     2.8 17.7   16.3  10/12    18%
+  0.35     13.9  9.8   0.6   1.6     3.5 19.1   19.3  11/12    22%
+  0.25     18.2 11.8   0.3   1.2     3.0 17.8   16.3  10/12    19%
+
+**0.35 is the peak of every column at once.** The Horde's own 0.25 attacks more
+often and ends with less of everything, which is what throwing glass units away
+looks like in a table -- so the instinct behind 0.5 was sound and it only
+needed to come down one notch, not all the way. Set to 0.35; sweeping it now.
+
+### And the thing the trace found that is not about the Hivekin at all
+
+The same table, per soldier-turn, across 77,000 of them:
+
+  branch                       orc   human    hive
+  11 walks to a bare city      30%     33%     48%
+  13 marches on somebody       15%     12%      9%
+  06 swings                     3%      2%      1%
+  10 keeps the gold            11%     10%      0%
+  12 goes to a ruin             1%     14%      5%
+  11 *holds* a bare city        0%      0%      0%
+
+Half of every Hivekin soldier-turn, and a third of each empire's, is spent
+walking to one of its own undefended cities. **And nobody ever arrives in the
+sense of staying.** The fortify branch for standing in a bare city has never
+fired once, for any side, in 77,000 turns -- it cannot. `bare` is defined as a
+city with none of our units on it, so a unit standing on one makes it not bare
+and the condition is unreachable by construction.
+
+What happens instead is a treadmill: a unit walks to the empty city, arrives,
+and next turn is sent to the next empty one -- or, if there is no other, marches
+off to the war -- leaving the first empty again. **A city is only ever held by
+somebody passing through it.** That is also the answer to something section
+125's expansion probe found and could not explain: every one of the twenty-two
+Hives they lost had a garrison of nobody.
+
+I have not fixed it, and would not inside this section. The obvious repair is
+"stay put", and the measured warning against exactly that is already written at
+`guardTheGold` twenty lines above: garrisoning every city flipped 36 of 108
+games to the Kingdom, because the side that wins by attacking had its army
+standing at home. Something narrower might be right -- stay while this is the
+only bare city, stay for a few turns, stay if the city is worth more than the
+front -- and all of it is its own measurement on the whole game rather than a
+line changed in a section about a third faction. **Jeremy's call.** The comment
+at the site now says all of this, so the next person to read it does not have to
+find it twice.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive, which the bible says
+  they should be and the tech tree cannot express.
+- The brood choice has no dialog; the AI answers it and a human owner gets
+  `pending`.
+- The three tiles still owe their own unpaired, more-games measurement.
+- **The Kingdom is nine points down against the Horde** with the Hive in the
+  game, and nothing has been done about it on purpose.
+
+### The fight bar moved the mechanism and not the outcome
+
+216 games, maps paired:
+
+                      orc  hum  hive   caps
+  bar 0.50  tuned      36   18     0    5.2
+  bar 0.50  held-out   33   21     0    6.0
+  bar 0.35  tuned      36   18     0    6.1
+  bar 0.35  held-out   28   26     0    6.2
+
+It worked as a bar: captures up on both seed sets and both empires' populations
+down on both, which is a side that now fights doing damage. Empire balance
+unmoved -- tuned identical, held-out five toward the Kingdom, which is inside
+chance on one set. And the Hive wins **0 of 108 for the fourth time**.
+
+Four fixes, four zeros. That pattern was the finding: everything so far was
+about how they *arrive*, and a side holding a fifth of the world with 44
+defences a game held is not losing the war.
+
+### They were never entered in the race that decides these games
+
+Look at how games end -- `cq/dm/pt/po/ob` = 2 conquest, 7 dominance, 7 points,
+**25 portal, 13 object**. Thirty-eight of fifty-four are decided by somebody
+finishing an ending. Dominance needs a 50% share and they hold 22%; points need
+turn 300 and the average game ends on 246. The ending is the only door they
+have.
+
+  side    beakers/turn  advances  got the advance  works standing  finished
+  orc             19.1      29.3            10/12             1.8       6/12
+  human           32.4      26.8             7/12             1.3       4/12
+  hive             9.9      11.8             2/12             0.0       0/12
+
+**Zero works built, in any game, ever.** Ten of the twelve games were won by an
+empire finishing its ending.
+
+### The price was never the gate. The road was, and it is arithmetic
+
+Roads to each side's own ending, summed over prerequisites:
+
+  orc     430 over  7 advances, at 19.1 beakers/turn  =  23 turns of research
+  human   965 over 12 advances, at 32.4 beakers/turn  =  30 turns
+  hive    860 over 11 advances, at  9.9 beakers/turn  =  87 turns
+
+The Kingdom's road is the most expensive in the game and it still finishes,
+because it earns three times what the Hive does. The Hive is asked for twice the
+Horde's road on half its income, and exists for about 140 turns -- so the road
+alone is most of its life before a single caste or work.
+
+Probed, six arms, twelve games each:
+
+  hive ending                        advance  works  finished  wins  advances  units
+  as shipped (road 860, 22nd of 25)     2/12    0.0      0/12  0/12      11.8   19.3
+  road 710: insanity dropped            2/12    0.0      0/12  0/12      11.8   19.3
+  road 610, and asked for 13th          3/12    0.3      0/12  0/12      11.8   19.2
+  that, and works at 60%                3/12    0.3      0/12  0/12      11.8   19.0
+  road 165: off caste-soldier, 5th      7/12    0.8      2/12  2/12      12.8   14.6
+  that, and works at 60%                7/12    1.3      4/12  4/12      12.0   15.3
+
+Two things to read off it.
+
+**The works' price is not a lever at all** while the road is long -- cheapening
+the end of a road they never walk changes nothing, and the first probe of this
+turned the wrong dial entirely (the final advance's own 200, of an 860 road).
+
+**Repricing the road is not a lever either, within reason.** The telling column
+is `advances`: **11.8 in every arm.** Repricing does not buy them research, it
+only changes what they spend it on, and an eleven-advance road is their whole
+game. 860 to 710 to 610 are the same answer wearing different numbers.
+
+### What does work, and what it costs
+
+The road has to fit inside four or five of their twelve advances. Off
+`caste-soldier` at 100 it is **165 beakers over four advances**, all of which
+they research anyway -- and that is the first thing in this section to produce a
+win: 2 of 12 on the road alone, 4 of 12 with the works at 60% as well. **Every
+win is an ending win**, 2 of 2 and 4 of 4, which is the causal chain closing.
+
+The cost is visible and sensible: units fall from 19.3 to about 15, because
+shields that were castes are now works. Cities and population barely move.
+
+Twelve games on tuned bases only, so 4/12 is a direction and not a number. It
+wants 216 and both sets.
+
+**Not applied.** It moves the ending off `caste-princess` and `insanity`, and
+the bible put it there deliberately; it also makes their victory advance
+available around turn 130 rather than never, which is a different game and
+arguably the right one for a side that comes up late and has to race. That is
+Jeremy's call about what the third faction is, not a balance lever.
+
+The alternative with a bigger ceiling is **throughput**: 9.9 beakers a turn
+against 19.1 and 32.4, traceable all the way to 3.5 Hives of 5.5 citizens
+arriving on turn 105. The fiction is sitting there -- one mind, many bodies --
+and beakers off total Hives or total population rather than per-city trade would
+move the number that every other lever bounces off. It is a new mechanic and
+its own slice.
+
+### Still true, and still a placeholder
+
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- **The garrison treadmill**, which is not a Hivekin problem: half of every
+  Hivekin soldier-turn and a third of each empire's goes on walking to one of
+  its own undefended cities, and the branch that would make a unit stay has
+  never fired in 77,000 turns because it cannot.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive.
+- The brood choice has no dialog.
+- The three tiles still owe their own unpaired, more-games measurement.
+- **The Kingdom is nine points down against the Horde** with the Hive in the
+  game, deliberately uncorrected while the Hive is still changing.
+
+### The short road, measured: 0 of 108 to 27 of 108
+
+216 games, maps paired:
+
+  arm         set        orc  hum  hive   cq/dm/pt/po/ob
+  long road   tuned       36   18     0   2/7/7/25/13
+  long road   held-out    28   26     0   6/7/9/13/19
+  short road  tuned       24   14    16   2/5/3/18/10
+  short road  held-out    26   17    11   6/4/9/12/12
+
+**Zero to twenty-five per cent**, on both seed sets, with the ending race
+visibly thinning to make room: portals 25 to 18 and objects 13 to 10 on tuned.
+An equal third would be 36 of 108 and they are at 27, which for a side that
+arrives on turn a hundred against empires six cities deep is about right.
+
+**Every one of those 27 wins is their own ending.** Not inferred -- the five
+printed victory-route numbers sum to 38 of 54 on the short-road tuned row, and
+the sixteen missing games are exactly the Hive's. The report had no `hive`
+column, for the whole of section 125, so the third side's wins could only ever
+have shown up as a hole in the arithmetic. Fixed; it reads `cq/dm/pt/po/ob/hv`
+now.
+
+The causal chain from section 125 is now closed end to end:
+
+  no research plan  -> no castes      -> no army        (fixed, still 0 wins)
+  sited by emptiness -> cities that cannot feed         (fixed, still 0 wins)
+  one founder        -> too little ground               (fixed, still 0 wins)
+  a bar of 0.50      -> declined every fight            (fixed, still 0 wins)
+  an 11-advance road -> never entered the only race     (fixed, 27 wins)
+
+Four of those five were real faults and none of them could have produced a win,
+because none was on the path to one. That is the lesson of the section, and it is
+the same one as [[a-zero-explains-nothing]] at a larger scale: an outcome needs
+the whole chain to the outcome, not the nearest plausible defect.
+
+### What this leaves on the table
+
+**The Kingdom looks down, and that is as strong as it can honestly be put.**
+This said "clearly down, 62/38" off one sweep. Three measurements of what is
+essentially the shipped game disagree by more than the effect:
+
+  short road arm    orc 50  hum 31   62%
+  ladder arm        orc 52  hum 39   57%
+  no-ladder arm     orc 44  hum 36   55%
+
+55 to 62 across three runs is the spread of the instrument at 108 games an arm,
+and the game before the Hivekin ran at 51 to 57. So the third seat *may* have
+tilted it and nothing here shows that it did. **It wants its own paired run with
+the seat on and off** -- which is measurable, because the Hivekin arrive after
+worldgen and switching them off does not change the map. Until then, no
+correction to `targetCities` or the Kingdom's prices: tuning against a number
+this soft is how a real imbalance gets hidden behind a compensating one.
+
+Worth noting what is *not* disturbed: the Hive takes its wins out of both
+empires and inconsistently between seed sets -- tuned costs the Horde twelve
+games and the Kingdom four, held-out costs the Horde two and the Kingdom nine --
+so the third seat is not systematically eating one side.
+
+### Still true, and still a placeholder
+
+- **The counting ladder is committed and unmeasured.** Five castes stack now,
+  two advances at 120 beakers. Expect it in their attack rate rather than their
+  win rate: three Soldier-caste on a tile is 9/6/12 for sixty shields, and a
+  side that declines fights on odds should be bringing more of itself to them.
+- **Sink and Burrow are player-facing only.** The AI has no idea they exist.
+- **The garrison treadmill**, its own measured section after 125 closes, per
+  Jeremy on 2026-10-04.
+- Five turns for the succession, unmeasured.
+- The two Burrower branches are not mutually exclusive.
+- The brood choice has no dialog.
+- The three tiles still owe their own unpaired, more-games measurement.
+
+### The ladder, and an afternoon spent measuring the wrong game
+
+Swept at 216: the counting ladder took the Hivekin from 28 wins in 108 to 17,
+both seed sets moving the same way. Probed at 144 games to find out why, and the
+probe said it was neutral. They disagreed, so one of them was wrong about the
+game rather than about the ladder.
+
+**It was the probe, and it had been wrong all section.** `control()` lived inside
+`sweep.run.test.ts`, so the sweeps played the shipped game and the probes played
+whatever the modules happened to default to. Comparing all 53 levers, one
+differed: `RUINS.aiOdds` ships at **0.4** and every sweep since section 123 has
+measured it at **0.25**. Every probe this section -- arrival packages, the fight
+bar, the roads, both ladder probes -- ran a game where all three sides were
+markedly more cautious about attacking a ruin.
+
+`control()` now lives in `tools/control.ts` and both import it. The check that
+it worked: the two instruments' **no ladder** arms agree where they did not
+before, 25.9% against 27.8%.
+
+### And the effect was never established in the first place
+
+Run the arithmetic on the sweep that started this: 28 of 108 against 17 of 108
+is **1.85 sigma**. Each seed set alone is about 1.3. Both sets agreeing is a
+good filter against map luck and it is *not* a substitute for an effect being
+big enough to see, which is what it was treated as. Section 123's rule in this
+file says believe a shift when both sets agree and a supporting column moves;
+it should also say, and when it clears two sigma.
+
+On the corrected game, 72 games an arm:
+
+  arm        advance on turn  advances  beakers  works  finished  wins
+  no ladder      156 (53/72)       9.6      7.4   1.24        24    20
+  ladder         156 (53/72)       9.6      5.5   1.11        23    19
+
+**No research cost**, and not by luck: `all-is-the-hive` is fourth in their plan
+and the ladder fifth and tenth, so everything up to the ending advance is
+identical by construction. Wins 20 against 19 is nothing. So the ladder is about
+neutral and stays.
+
+### The Worker rung, removed for a reason that turned out not to be the measured one
+
+`makeVariant` multiplies attack, defence and **cost** by the count, leaves
+`move` alone, and terraforming never reads the count: a group's *actions* do not
+scale. Two Workers at fifteen each dig two tiles and stand in two places; Two
+Workers as one unit costs thirty and digs one.
+
+I removed it and claimed it explained the 7.4 to 5.5 beakers gap. **It did not.**
+The re-run came back identical in all eleven columns, which for a deterministic
+simulation can only mean the AI had never built one. Kept out anyway, on the
+argument rather than the measurement: the Hivekin are to be playable, and a
+player's unit card would show doubled attack and defence while saying nothing
+about digging. A test pins the rule rather than the list -- a caste may only
+group if it has an attack to multiply.
+
+### Open
+
+- **Beakers 7.4 to 5.5 with the ladder on, unexplained.** It is the one column
+  that moved, it is the Hive's binding constraint, and the Worker was not it.
+  Worth a probe with cities, population and trade routes in the table.
+- Whether the sweep's -11 reproduces at all, now that both instruments agree on
+  the game. The honest position is that the ladder's cost is unmeasured rather
+  than small.
+
+### The digging, measured properly — and a null worth having
+
+    arm           set        orc  hum  hive
+    no digging    tuned       25   19    10
+    no digging    held-out    22   17    15
+    digging       tuned       23   18    13
+    digging       held-out    23   16    15
+
+25 of 108 against 28, one seed set moving three games and the other none. Half a
+sigma. **No effect on the win rate.**
+
+What makes this a null worth having rather than slice B's is that the mechanism
+was counted before the outcome was believed: 1.08 Burrower-caste owned, 1.8
+sinks and fourteen turns underground a game, against 0.08 / 0.0 / 0.0 before.
+Slice B's two arms agreed because nothing was ever on the board; these two
+agree because two Burrowers in an army of fifteen is a small lever.
+
+It took three passes to get there, and two of the faults were mine: the first
+sweep measured a version where the AI owned Burrowers and never dug, because the
+crossing was never implemented and lying in wait was gated on an advance that
+sits twenty-second in a ten-advance research budget.
+
+**And it hands over the number the section was missing.** Both arms ran on the
+corrected control and `digging` is the shipped configuration, so the Hivekin's
+win rate on the game people actually play is **28 of 108**. The figure quoted
+before the control bug was 27. It did not move — which is luck, not vindication.
+
+### Still open
+
+- **Whether the third seat moved the Horde-Kingdom split.** The one measurement
+  125 still owes: seat on against seat off, paired, which works because the
+  Hivekin arrive after worldgen. It answers the balance question and re-baselines
+  the two empires on a corrected control in the same run.
+- ~~The two Burrower branches are not mutually exclusive.~~ **Settled
+  2026-10-06: both, on purpose.** The bible called them mutually exclusive, the
+  tech tree has no way to say so, and nothing else in the game has ever needed
+  one. Jeremy's reasoning is the part worth keeping: exclusivity here would be
+  guarding a boundary that is not under threat, because both branches are the
+  Burrower-caste being more itself and nothing bleeds between *castes*. Further
+  Down is mobility, Already Waiting is damage, and paying 90 + 240 beakers out
+  of a ten-advance game is the specialisation. The tech tree earns an `excludes`
+  field the first time a caste wants branches that genuinely oppose each other --
+  and then it belongs to everybody, rather than being invented for one pair.
+- Beakers 7.4 to 5.5 with the ladder on, unexplained.
+- The garrison treadmill, its own section.
+- Five turns for the succession, unmeasured; the brood choice has no dialog,
+  which only matters once the Hivekin are playable; the three tiles still owe an
+  unpaired measurement.
+
+### The third seat did not tilt the empires — it narrows them
+
+The last thing section 125 owed, paired, 216 games, both arms on the corrected
+control:
+
+    arm           set        orc  hum  hive   cq/dm/pt/po/ob/hv
+    two sides     tuned       34   20     0   13/6/8/15/12/0
+    two sides     held-out    32   22     0   14/4/6/14/16/0
+    three sides   tuned       23   18    13   2/8/4/17/10/13
+    three sides   held-out    23   16    15   8/6/3/11/11/15
+
+                   Horde  Kingdom  split
+    two sides         66       42    61%
+    three sides       46       34  57.5%
+
+**The Horde's lead exists without the Hivekin and is slightly larger without
+them.** This file said "the Kingdom is now clearly down" off one sweep, then
+"looks down, not shown" after the arithmetic; it is now refuted. The Kingdom does
+*better* with the Hive in the game -- 5.50 cities to 7.02 on tuned, 45.2
+population to 54.6.
+
+The mechanism is in the victory routes: **conquest collapses from 13 to 2**.
+The Horde's edge in the two-sided game is substantially conquest, and a third
+side suppresses it -- nobody finishes the Kingdom while something else is taking
+ground. That is the third seat doing exactly what a third seat should.
+
+The Hive's **28 of 108 reproduced exactly** (13 + 15), on a different arm pair
+from the run that first measured it.
+
+### What this leaves, and it is not this section's
+
+**66-42 is about 2.3 sigma, so the two-sided game really is Horde-favoured.**
+That is a balance problem the Hivekin did not cause and do not fix.
+
+A hypothesis worth one run before anybody tunes anything: the control bug was
+hiding it. At `RUINS.aiOdds` 0.25 all three sides threw armies at ruin
+guardians, which section 123 measured as costing the *Horde* fifteen games;
+correcting it to the shipped 0.4 should help the Horde specifically, and the
+two-sided split now reads 61% where the historical figure was nearer 53%. That
+is consistent, not established. **Measure 0.25 against 0.4 on two sides before
+touching `targetCities` or the Kingdom's prices** -- otherwise the correction
+lands on top of a cause nobody has confirmed, which is how a real imbalance ends
+up hidden behind a compensating one.

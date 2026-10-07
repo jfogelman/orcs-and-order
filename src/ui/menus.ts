@@ -1,5 +1,5 @@
 import { audio } from '../audio/audio';
-import { FACTIONS, FACTION_IDS } from '../model/factions';
+import { FACTIONS, STARTING_FACTIONS } from '../model/factions';
 import { perkName } from '../model/perks';
 import type { PerkDef } from '../model/perks';
 import type { DifficultyId, FactionId, GameState } from '../model/types';
@@ -22,7 +22,7 @@ export function openNewGameMenu(
   current: FactionId,
   onStart: (options: NewGameOptions) => void,
 ): void {
-  const factionCards = FACTION_IDS.map((id) => {
+  const factionCards = STARTING_FACTIONS.map((id) => {
     const f = FACTIONS[id];
     return `
       <label class="choice-card${id === current ? ' selected' : ''}" data-faction="${id}">

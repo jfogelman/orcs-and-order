@@ -1,3 +1,4 @@
+import { talks } from '../model/factions';
 import type { GameState } from '../model/types';
 import { log } from './gamestate';
 
@@ -53,11 +54,28 @@ export interface PeaceTerms {
   gold: number;
 }
 
-/** The two sides of this game that can make peace: never the wilds. */
+/**
+ * The two sides of this game that can make peace: never the wilds, and never
+ * anybody who does not come to a table.
+ *
+ * **The `talks` clause is load-bearing, and was a bug waiting for a third
+ * side.** The peace below is a *single global agreement*, not one per pair --
+ * which was a fair simplification while there were exactly two empires and is
+ * not one any more. Without this, a Horde-Kingdom treaty would have quietly
+ * made the Hivekin peaceful toward both: `atPeace` would have seen two
+ * contenders and a running peace and said yes, and `hostile` would have agreed
+ * that nobody could attack them.
+ *
+ * Section 125's "fought, not talked to" is what makes the cheap fix the correct
+ * one. If a later faction *does* negotiate, this is the line that has to become
+ * a peace per pair rather than a flag.
+ */
 function empires(state: GameState, a: number, b: number): boolean {
   const pa = state.players[a];
   const pb = state.players[b];
-  return !!pa && !!pb && a !== b && !pa.barbarian && !pb.barbarian && pa.alive && pb.alive;
+  if (!pa || !pb || a === b) return false;
+  if (pa.barbarian || pb.barbarian || !pa.alive || !pb.alive) return false;
+  return talks(pa.faction) && talks(pb.faction);
 }
 
 /** The standing record between the sides, created on first use. */
@@ -78,7 +96,19 @@ export function atPeace(state: GameState, a: number, b: number): boolean {
  */
 export function hostile(state: GameState, a: number, b: number): boolean {
   if (a === b) return false;
+  // Section 125: a side that has only just come up out of the ground cannot be
+  // attacked for a turn or two. It arrives as a Grub and two Fodder-caste on
+  // open ground, and anything that happened to be standing nearby would end a
+  // whole faction on the turn it appeared -- which is not an emergence, it is a
+  // spawn kill. Short, and only ever set on the one side that emerges.
+  if (underGrace(state, a) || underGrace(state, b)) return false;
   return !atPeace(state, a, b);
+}
+
+/** Whether this side is still inside the few turns it may not be attacked in. */
+function underGrace(state: GameState, id: number): boolean {
+  const p = state.players[id];
+  return p?.safeUntil !== undefined && state.turn < p.safeUntil;
 }
 
 /** Turns the current peace has left, or 0 at war. */

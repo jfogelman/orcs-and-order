@@ -13,10 +13,20 @@ import {
   startRoad,
 } from './sim/roads';
 import { estimateRoadTurns, roadRouteTo, startRoadTo } from './sim/movement';
+import {
+  burrow,
+  burrowBlocked,
+  burrowTargets,
+  burrows,
+  isSunk,
+  sink,
+  sinkBlocked,
+  surface,
+} from './sim/burrow';
 import { audio } from './audio/audio';
 import type { SfxId } from './audio/audio';
 import { distance, idx } from './engine/grid';
-import { FACTIONS } from './model/factions';
+import { FACTIONS, talks as canTalk } from './model/factions';
 import { TERRAIN, specialAt } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
 import { unitType } from './model/units';
@@ -766,6 +776,8 @@ class App {
 
   /** Whether the next click on the map is where the selected worker's road goes. */
   private roadArmed = false;
+  /** Section 125: picking where a Burrower comes up. */
+  private burrowArmed = false;
   /** How much of the log has already been raised as folly news. Section 111. */
   private follyNewsSeen = 0;
   /** How far into the log the critical-news check has read. Section 124. */
@@ -936,6 +948,77 @@ class App {
     delete unit.roadTo;
     delete unit.irrigateTo;
     this.selectNextIdle();
+  }
+
+  /**
+   * Go to ground where you stand. Section 125.
+   *
+   * Toggles, because coming back up is the other half of the same button and a
+   * player who has sunk something wants the same key to undo it.
+   */
+  private orderSink(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (isSunk(unit)) {
+      surface(this.state, unit);
+      this.playLogCues();
+      this.refreshSidebar();
+    this.refreshOverlays();
+      return;
+    }
+    const blocked = sinkBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    sink(this.state, unit);
+    audio.play('move');
+    this.playLogCues();
+    this.refreshSidebar();
+    this.refreshOverlays();
+    this.selectNextIdle();
+  }
+
+  /** Arm the Burrow, so the next click says where it comes up. */
+  private orderBurrow(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId) return;
+    if (this.burrowArmed) {
+      this.burrowArmed = false;
+      this.refreshSidebar();
+      return;
+    }
+    const blocked = burrowBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    if (burrowTargets(this.state, unit).length === 0) {
+      this.flash('Nowhere to come up within reach.');
+      return;
+    }
+    this.disarm(false);
+    this.burrowArmed = true;
+    this.refreshSidebar();
+    this.refreshOverlays();
+  }
+
+  /** Handle a click while Burrow is armed. Returns whether the click was consumed. */
+  private clickWhileBurrowArmed(x: number, y: number): boolean {
+    if (!this.burrowArmed) return false;
+    this.burrowArmed = false;
+    const unit = this.selected;
+    if (!unit) return true;
+    if (!burrow(this.state, unit, x, y)) {
+      this.flash('It cannot come up there.');
+    } else {
+      audio.play('move');
+      this.playLogCues();
+      this.selectNextIdle();
+    }
+    this.refreshSidebar();
+    this.refreshOverlays();
+    return true;
   }
 
   /** Handle a click while Road To is armed. Returns whether the click was consumed. */
@@ -1405,12 +1488,18 @@ class App {
     // A draw has no side, so it has one picture with both of them in it.
     if (!winner) return `${root}victory/draw.jpg`;
     // The two built endings have one scene each, whoever is looking at it.
-    if (this.state.victory === 'portal' || this.state.victory === 'object') {
-      return `${root}victory/${this.state.victory}.jpg`;
+    if (
+      this.state.victory === 'portal' ||
+      this.state.victory === 'object' ||
+      this.state.victory === 'hive'
+    ) {
+      // The Hive's own screen is filed under the advance that grants it rather
+      // than under the victory kind, as the other two are under theirs.
+      const art = this.state.victory === 'hive' ? 'all-is-the-hive' : this.state.victory;
+      return `${root}victory/${art}.jpg`;
     }
     const kind = this.state.victory === 'points' ? 'points' : 'conquest';
-    const side = winner.faction === 'orc' ? 'orc' : 'human';
-    return `${root}victory/${kind}-${side}.jpg`;
+    return `${root}victory/${kind}-${winner.faction}.jpg`;
   }
 
   /** One line about how it ended, rather than merely that it did. */
@@ -1597,6 +1686,7 @@ class App {
         // arms Road To and then right-clicks has said exactly what they meant --
         // and used to get a plain march, because only the left button was
         // listening. Reported from a real game at turn 31.
+        if (t && this.clickWhileBurrowArmed(t.x, t.y)) return;
         if (t && this.clickWhileRoadArmed(t.x, t.y)) return;
         if (t && this.clickWhileIrrigateArmed(t.x, t.y)) return;
         if (t && this.clickWhileLandingArmed(t.x, t.y)) return;
@@ -1872,6 +1962,7 @@ class App {
   }
 
   private onLeftClick(x: number, y: number): void {
+    if (this.clickWhileBurrowArmed(x, y)) return;
     if (this.clickWhileRoadArmed(x, y)) return;
     if (this.clickWhileIrrigateArmed(x, y)) return;
     if (this.clickWhileLandingArmed(x, y)) return;
@@ -1960,6 +2051,11 @@ class App {
         e.preventDefault();
         this.orderSkip();
         break;
+      case 'g':
+        // Section 125. Shift for the one that asks where, matching Road To.
+        if (e.shiftKey) this.orderBurrow();
+        else this.orderSink();
+        return;
       case 'f':
         this.orderFortify();
         break;
@@ -2043,6 +2139,10 @@ class App {
       case 'escape':
         // Back out of the ability first: escape should undo the most recent
         // thing, not drop the selection out from under it.
+        if (this.burrowArmed) {
+          this.burrowArmed = false;
+          this.refreshSidebar();
+        }
         if (this.roadArmed || this.irrigateArmed || this.landingArmed !== null) {
           this.roadArmed = false;
           this.irrigateArmed = false;
@@ -2132,8 +2232,14 @@ class App {
     el('stat-gold').textContent = `${p.gold}g`;
     // Section 116: the talks, and how long the peace has left while there is one.
     const talks = el<HTMLButtonElement>('btn-talks');
-    const rival = this.state.players.find((o) => o.id !== p.id && !o.barbarian && o.alive);
-    talks.hidden = !PEACE.enabled || !rival;
+    // Section 125: somebody who will actually sit down. The Hivekin hold a
+    // player slot and are a contender in every other respect, but they do not
+    // come to a table, so offering the button against them would open a screen
+    // that has nobody to put in it.
+    const rival = this.state.players.find(
+      (o) => o.id !== p.id && !o.barbarian && o.alive && canTalk(o.faction),
+    );
+    talks.hidden = !PEACE.enabled || !rival || !canTalk(p.faction);
     talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state)}` : 'Talks';
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;
@@ -2410,6 +2516,15 @@ class App {
                 }</button>`
               : ''
           }
+          ${
+            // Section 125: only the caste that has somewhere to go.
+            burrows(unit)
+              ? `<button class="small" data-act="sink">${
+                  isSunk(unit) ? 'Come up (G)' : 'Sink (G)'
+                }</button>` +
+                `<button class="small${this.burrowArmed ? ' armed' : ''}" data-act="burrow">Burrow&hellip; (Shift+G)</button>`
+              : ''
+          }
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
@@ -2461,6 +2576,12 @@ class App {
               break;
             case 'halt':
               this.orderHalt();
+              break;
+            case 'sink':
+              this.orderSink();
+              break;
+            case 'burrow':
+              this.orderBurrow();
               break;
             case 'resupply':
               this.orderResupply();
@@ -2602,6 +2723,10 @@ class App {
 const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
   archer: { effect: 'arrow', sound: 'arrow' },
   ballista: { effect: 'bolt', sound: 'siege' },
+  spitter: { effect: 'spit', sound: 'arrow' },
+  // Artillery, and it arrives like artillery: the Bloat-caste reuses the bolt
+  // on purpose rather than wanting a strip of its own.
+  bloatcaste: { effect: 'bolt', sound: 'siege' },
   goblincatapult: { effect: 'goblin-toss', sound: 'siege' },
   mage: { effect: 'magic', sound: 'magic' },
   // The axethrower used to be here. It is not artillery any more -- it closes
@@ -2634,6 +2759,7 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   draw: 'A draw — the turn limit arrived and the columns matched',
   portal: 'The Demonic Portal — held open long enough for something to come through',
   object: 'The Mysterious Object — somebody pressed the button',
+  hive: "The Second Queen's Shell — there are two of her now, and nobody has reacted",
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;

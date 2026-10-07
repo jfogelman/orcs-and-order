@@ -200,8 +200,17 @@ describe('a dominance victory', () => {
     return state;
   }
 
+  /**
+   * Advance the calendar by `turns`, however many seats it takes to do it.
+   *
+   * It used to count half-turns and assume two of them made a day. Section
+   * 125's third side can emerge part-way through one of these runs, and three
+   * seats to a day meant the hold was a third shorter than the test thought.
+   */
   const run = (state: GameState, turns: number) => {
-    for (let i = 0; i < turns; i++) {
+    const until = state.turn + turns;
+    let guard = 0;
+    while (state.turn < until && state.winner === null && guard++ < turns * 8) {
       beginPlayerTurn(state, state.activePlayer);
       endPlayerTurn(state);
     }
@@ -209,7 +218,7 @@ describe('a dominance victory', () => {
 
   it('is won by holding a commanding share without a break', () => {
     const state = board(12, 4, DOMINANCE.notBefore + 1);
-    run(state, DOMINANCE.turns * 2 + 4);
+    run(state, DOMINANCE.turns + 2);
     expect(state.winner).toBe(0);
   });
 
@@ -233,7 +242,7 @@ describe('a dominance victory', () => {
 
   it('cannot be won by simply settling faster early on', () => {
     const state = board(12, 4, 20);
-    run(state, DOMINANCE.turns * 2 + 4);
+    run(state, DOMINANCE.turns + 2);
     // Winning the opening is not winning. Without this a side that founded
     // four cities to the other two won outright, having never met them.
     expect(state.winner).toBeNull();
@@ -241,7 +250,7 @@ describe('a dominance victory', () => {
 
   it('ignores a share of a map with barely anything on it', () => {
     const state = board(4, 1, DOMINANCE.notBefore + 1);
-    run(state, DOMINANCE.turns * 2 + 4);
+    run(state, DOMINANCE.turns + 2);
     expect(state.winner).toBeNull();
   });
 

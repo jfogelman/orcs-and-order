@@ -29,6 +29,8 @@ import { contenders, log, playerCities, playerUnits, recomputeVisibility } from 
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
 import { claimRuins, sleepRuins, tickRuins } from './ruins';
+import { maybeEmerge, tickSuccession } from './hivekin';
+import { clearAmbush } from './burrow';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
@@ -387,7 +389,15 @@ export function prideDue(state: GameState, playerId: number): boolean {
   return Math.floor(playerScore(state, playerId) / PRIDE.step) > (player.prideTaken ?? 0);
 }
 
-/** Grace period before losing your last city counts as losing the game. */
+/**
+ * Turns a side may hold no city before that counts as losing the game.
+ *
+ * Counted from **when that side started**, not from the calendar. It used to be
+ * a calendar turn, which was the same thing while everybody started on turn one
+ * -- and was not, the moment section 125's third side began arriving around
+ * turn ninety with a Grub and nowhere to put it. They were eliminated on the
+ * first check after emerging, every seed, having never founded anything.
+ */
 const CAPITULATION_TURN = 15;
 
 /**
@@ -490,9 +500,33 @@ export const DOMINANCE = {
   notBefore: 120,
 };
 
+/**
+ * The share of the world one side has to hold, given how many are in the game.
+ *
+ * Three quarters was measured with two contenders, where it means "twice as
+ * much as the only other side". With three it would mean three times as much as
+ * both of them put together, which is not a backstop, it is an ending that
+ * never fires -- and a game that cannot end on dominance decides on points
+ * instead, which section 23 spent a whole section trying to avoid.
+ *
+ * So the figure is held against the *rest of the field* rather than against the
+ * map: whatever `DOMINANCE.share` means when there is one rival, it means the
+ * same thing when there are two. At two contenders this returns 0.75 exactly,
+ * which is what every number in this file was measured at.
+ */
+export function dominanceShare(seats: number): number {
+  const rivals = Math.max(1, seats - 1);
+  // `share` against one rival is a ratio: 0.75 is three times as much as they
+  // have. Hold that ratio against *each* rival and the share of the whole map
+  // falls as the field grows -- 0.75 at two, 0.60 at three, 0.50 at four.
+  const perRival = DOMINANCE.share / (1 - DOMINANCE.share);
+  return perRival / (perRival + rivals);
+}
+
 function checkDominance(state: GameState): void {
   if (isOver(state)) return;
   const total = state.cities.length;
+  const need = dominanceShare(contenders(state).filter((p) => p.alive).length);
   for (const p of contenders(state)) {
     if (!p.alive) {
       delete p.dominantSince;
@@ -502,7 +536,7 @@ function checkDominance(state: GameState): void {
     if (
       state.turn < DOMINANCE.notBefore ||
       total < DOMINANCE.minCities ||
-      share < DOMINANCE.share
+      share < need
     ) {
       // Slipped, so the run starts again from nothing rather than resuming.
       delete p.dominantSince;
@@ -549,7 +583,8 @@ function checkElimination(state: GameState): void {
     if (!p.alive) continue;
     const cities = playerCities(state, p.id).length;
     const units = playerUnits(state, p.id).length;
-    if (cities > 0 || (units > 0 && state.turn <= CAPITULATION_TURN)) continue;
+    const sinceTheyStarted = state.turn - (p.joinedAt ?? 1);
+    if (cities > 0 || (units > 0 && sinceTheyStarted < CAPITULATION_TURN)) continue;
 
     // A power with no cities left is finished, whatever is still wandering
     // around out there. Without this, games never end: a few stray units keep
@@ -726,6 +761,14 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   }
 
   tickUnitStatuses(state, playerId);
+  // Section 125: "already waiting" is true for exactly one turn. Cleared at the
+  // start of its own turn rather than after it swings, because a Burrower that
+  // comes up and does not attack has still given away where it is.
+  clearAmbush(state, playerId);
+  // Section 125: and the Hive finds out whether it still has a Queen. Before
+  // the economy runs, so a seat that lost her this turn makes nothing this
+  // turn rather than one turn late.
+  tickSuccession(state, playerId);
   // Section 121: and then anybody who woke up next to an Ogre Clan Brute is
   // marked afresh. After the tick, so the mark is the one this turn uses.
   intimidateNeighbours(state, playerId);
@@ -771,6 +814,11 @@ export function endPlayerTurn(state: GameState): void {
       state.turn++;
       // Section 116: a peace that has run its term lapses as the calendar turns.
       lapsePeace(state);
+      // Section 125: and the third side comes up, if this is its turn. Here
+      // rather than inside anybody's turn, because it appends to
+      // `state.players` and the loop above walks that array by index -- adding
+      // a seat mid-walk would have skipped somebody's turn or run it twice.
+      maybeEmerge(state);
       // Here, not in `beginPlayerTurn`: that runs once per player, so the
       // dominance countdown said itself six times a turn until it was moved.
       // The calendar advances exactly here and nowhere else.

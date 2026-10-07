@@ -1,6 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { PERSONALITIES } from '../src/ai/ai';
+// Every side, read off the one list of them. Three of these loops said
+// `['orc', 'human']`, written when that was all there was, so the generated
+// reference silently left the Hive out of its own tech tree -- including the
+// road-to-each-ending table that section 125 spent a day arguing about.
+import { FACTION_IDS } from '../src/model/factions';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS, TECHS_BY_ID } from '../src/model/techs';
 import type { TechDef } from '../src/model/techs';
@@ -16,8 +21,12 @@ import { TECH_ESCALATION } from '../src/sim/research';
  *   npx vitest run --config vitest.sweep.config.ts tools/tech-tree.run.test.ts
  */
 
-const SIDE_NAME: Record<FactionId, string> = { orc: 'Horde', human: 'Kingdom' };
-const ENDING: Record<FactionId, string> = { orc: 'somebody-knocked', human: 'do-not-touch' };
+const SIDE_NAME: Record<FactionId, string> = { orc: 'Horde', human: 'Kingdom', hivekin: 'Hive' };
+const ENDING: Record<FactionId, string> = {
+  orc: 'somebody-knocked',
+  human: 'do-not-touch',
+  hivekin: 'all-is-the-hive',
+};
 
 const nameOf = (id: string) => TECHS_BY_ID[id]?.name ?? id;
 const nodeId = (id: string) => id.replace(/[^a-zA-Z0-9]/g, '_');
@@ -111,7 +120,7 @@ it('writes docs/TECH_TREE.md', () => {
   ];
 
   const shared = TECHS.filter((t) => t.faction === 'both');
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     const own = TECHS.filter((t) => t.faction === faction);
     lines.push(
       `- **${SIDE_NAME[faction]}**: ${shared.length + own.length} advances -- ${shared.length} shared, ` +
@@ -131,7 +140,7 @@ it('writes docs/TECH_TREE.md', () => {
     '| Side | Ending advance | Advances on the road | Base cost | Straight run, marked up | Asked for first by the AI list | Their base cost |',
     '|---|---|---|---|---|---|---|',
   );
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     const id = ENDING[faction];
     const path = road(id);
     const base = path.reduce((n, t) => n + t.cost, 0);
@@ -145,7 +154,7 @@ it('writes docs/TECH_TREE.md', () => {
     );
   }
   lines.push('');
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     lines.push(
       `**${SIDE_NAME[faction]}:** ` + road(ENDING[faction]).map((t) => `${t.name} (${t.cost})`).join(' → '),
       '',
@@ -153,7 +162,7 @@ it('writes docs/TECH_TREE.md', () => {
   }
 
   // ----------------------------------------------------------------- diagrams
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     lines.push(`## The ${SIDE_NAME[faction]}'s tree`, '');
     lines.push('Shared advances are pale; the ending advance is gold.', '');
     lines.push(...diagram(faction), '');
@@ -161,7 +170,7 @@ it('writes docs/TECH_TREE.md', () => {
 
   // ------------------------------------------------------------------- tables
   lines.push('## Shared advances', '', ...table(shared), '');
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     lines.push(`## ${SIDE_NAME[faction]} advances`, '', ...table(TECHS.filter((t) => t.faction === faction)), '');
   }
 
@@ -183,7 +192,7 @@ it('writes docs/TECH_TREE.md', () => {
       'exhausted. Advances on the road to its ending are marked.',
     '',
   );
-  for (const faction of ['orc', 'human'] as const) {
+  for (const faction of FACTION_IDS) {
     const onRoad = new Set(road(ENDING[faction]).map((t) => t.id));
     const list = PERSONALITIES[faction].techPriority.filter((x, i, all) => all.indexOf(x) === i);
     lines.push(`**${SIDE_NAME[faction]}**`, '');

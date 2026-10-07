@@ -1,4 +1,5 @@
 import type { GameState, Player } from '../model/types';
+import { talks } from '../model/factions';
 import { unitType } from '../model/units';
 import { raidersAtTheGate } from '../sim/barbarians';
 import {
@@ -107,9 +108,18 @@ export function aiTerms(state: GameState, me: Player, them: Player): PeaceTerms 
   return { from: me.id, to: them.id, gold };
 }
 
-/** The other empire, if there is one. */
+/**
+ * The other empire at the table, if there is one.
+ *
+ * Both of them have to talk. Before section 125 this was the first other living
+ * non-barbarian, which was the only possible answer with two on the map; with
+ * three it would have had the AI open negotiations with a side that does not
+ * hold them, and -- since the peace is a single global agreement -- signed one
+ * that silently covered everybody.
+ */
 function rival(state: GameState, me: Player): Player | undefined {
-  return state.players.find((p) => p.id !== me.id && !p.barbarian && p.alive);
+  if (!talks(me.faction)) return undefined;
+  return state.players.find((p) => p.id !== me.id && !p.barbarian && p.alive && talks(p.faction));
 }
 
 /**

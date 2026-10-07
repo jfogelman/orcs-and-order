@@ -1,3 +1,15 @@
+import {
+  BURROW,
+  burrow,
+  burrowTargets,
+  burrows,
+  isSunk,
+  seenBy,
+  sink,
+  sinkBlocked,
+  surface,
+} from '../sim/burrow';
+import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { hostile } from '../sim/diplomacy';
 import { aiDiplomacy } from './diplomacy';
@@ -282,6 +294,95 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     caution: 0.48,
     stormingParty: 3,
   },
+  /**
+   * Section 125. **Not having one of these was a bug, not an omission.**
+   *
+   * `PERSONALITIES[faction] ?? PERSONALITIES.orc` meant the Hivekin inherited
+   * the Horde's priority list, every entry of which is either an orc advance
+   * they cannot research or a shared one they can. So they worked straight down
+   * the shared spine -- mapmaking, bridges, tree-hugging, walls, happiness,
+   * insanity -- and never researched a single caste. A probe over six games
+   * found them holding exactly one caste advance (the free one), fielding
+   * nothing but Grubs and the Queen, and studying Pyromancy.
+   *
+   * That is the whole of why they won none of 216 games in slice A's
+   * measurement: they had no army, and nothing in the numbers said so, because
+   * "wins: 0" looks the same whatever the reason.
+   *
+   * The list leads with the castes, because a side whose entire identity is
+   * which shape it can grow next has nothing at all until it can grow one.
+   */
+  hivekin: {
+    targetCities: 5,
+    garrisonPerCity: 1,
+    techPriority: [
+      // Something to fight with, before anything else whatsoever.
+      'caste-fodder',
+      'caste-soldier',
+      // Then the way out, fifth of twenty-five, which looks absurd on a
+      // victory advance and is the only position that works. They research
+      // 11.8 advances in a game -- the number does not move whatever this list
+      // says -- so an ending asked for twenty-second is an ending asked for
+      // never, and that is exactly what happened: twice in twelve games, no
+      // works ever built. Asked for here it is 165 beakers behind two advances
+      // they already have, and they finish it in a third of their games.
+      'all-is-the-hive',
+      // Then quantity, which is two advances and 120 beakers for a rung on
+      // every shape they have. Here rather than later because it is the
+      // cheapest fighting strength in their tree: three Soldier-caste on one
+      // tile is 9/6/12 for sixty shields, and a side that declines fights on
+      // odds is a side that should be bringing more of itself to them.
+      'always-this-many',
+      'mapmaking',
+      'bridge-building',
+      'caste-spitter',
+      // Seventh rather than twelfth. They research about ten advances in a
+      // whole game, so a caste asked for twelfth is a caste they often never
+      // grow -- and a Burrower is the only shape that can go under a wall. It
+      // was 0.17 of one a game.
+      'caste-burrower',
+      'assumed-fewer',
+      'tree-hugging',
+      'caste-elite',
+      'not-you-again',
+      'joy-making',
+      'wall-building',
+      'hammers-of-glory',
+      'caste-bloat',
+      'burrower-veteran',
+      'caste-broodlord',
+      'happiness',
+      'caste-princess',
+      'burrower-deep',
+      'burrower-ambush',
+      'caste-warden',
+      'insanity',
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
+    ],
+    /**
+     * How good the odds have to look before a caste will swing.
+     *
+     * **This was the reason they never fought.** Set at 0.5 to begin with --
+     * twice the Horde's, on the reasoning that glass units should not be
+     * thrown away -- and then measured: when something is standing next to a
+     * Hivekin unit, the best odds on offer average **0.44**. So the bar sat
+     * just above everything they were ever offered and they declined eleven
+     * adjacent fights in twelve, attacking eight times a game against the two
+     * empires' hundred.
+     *
+     * Probed over twelve games at three bars, and 0.35 is the peak of every
+     * column at once -- 2.8 Hives to 3.5, eighteen per cent of the world to
+     * twenty-two, survival ten games in twelve to eleven, captures tripled.
+     * Dropping all the way to the Horde's 0.25 attacks more often still (18.2
+     * a game) and ends with *less* of everything, which is what throwing glass
+     * units away looks like in a table. So the original instinct was right and
+     * the number was wrong.
+     */
+    caution: 0.35,
+    stormingParty: 3,
+  },
 };
 
 // -------------------------------------------------------------- evaluation
@@ -299,7 +400,7 @@ export function siteScore(state: GameState, x: number, y: number): number {
 }
 
 /** Rough odds the attacker wins, used to keep the AI from obvious suicide. */
-function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
+export function attackOdds(state: GameState, attacker: Unit, defender: Unit): number {
   const a = unitType(attacker.type);
   const d = unitType(defender.type);
   const terrain = TERRAIN[state.terrain[idx(defender.x, defender.y, state.width)]];
@@ -409,7 +510,7 @@ function nearestEnemyTarget(
     // the war walking at ruins and standing next to them. `seekRuin` is the
     // one route to a ruin, and it is a deliberate errand with its own rules.
     if (isWarden(u)) continue;
-    if (u.owner !== playerId && hostile(state, playerId, u.owner) && player.visible[idx(u.x, u.y, state.width)]) {
+    if (u.owner !== playerId && hostile(state, playerId, u.owner) && seenBy(state, u, playerId)) {
       consider(u.x, u.y, 1.6, 0);
     }
   }
@@ -524,7 +625,7 @@ const FIRST_STRIKE_EDGE = 0.16;
 const RELOAD_COST = 1;
 const RANGED_EDGE = 1.15;
 
-function worth(u: UnitTypeDef, defending: boolean): number {
+export function worth(u: UnitTypeDef, defending: boolean): number {
   const strength = defending ? u.defense : u.attack;
   // Only on the attack: reach does nothing for you when something has already
   // closed and is swinging at you, which is exactly a ranged unit's problem.
@@ -605,7 +706,7 @@ function pickWeighted(
   });
 }
 
-function chooseProduction(
+export function chooseProduction(
   state: GameState,
   city: City,
   personality: AiPersonality,
@@ -657,6 +758,26 @@ function chooseProduction(
   // since ships were taken out of `options` above.
   const ship = shipToBuild(state, city, inYard.units);
   if (ship) return ship;
+
+  // 2b. Section 125: a couple of Burrower-caste, which nothing else will ever
+  // ask for.
+  //
+  // `worth()` ranks a unit on strength, health and price, and all three of a
+  // Burrower's reasons to exist are invisible to it -- it hides, it crosses
+  // what cannot be walked round, and it swings harder coming up out of the
+  // ground. By the numbers it is a Soldier-caste costing three quarters again
+  // as much, so the chooser put it last and built 0.2 a game. Slice B then
+  // measured Sink and Burrow and got **identical numbers on both arms**,
+  // because the mechanic was never once on the board.
+  //
+  // A standing want, like the garrison, and a small one: two. See `BURROW`.
+  if (BURROW.ai && BURROW.enabled) {
+    const diggers = allUnitsOf(state, city.owner).filter((u) => burrows(u)).length;
+    if (diggers < BURROW.aiWants) {
+      const digger = options.units.find((u) => burrows({ type: u.id }));
+      if (digger) return { kind: 'unit', id: digger.id };
+    }
+  }
 
   // 3. Keep the lid on first. A city at its content limit stops growing and
   // produces nothing at all, so a happiness building is worth more than any
@@ -1525,20 +1646,117 @@ function escortDuty(state: GameState, unit: Unit): boolean {
   return moveToward(state, unit, best.x, best.y).kind !== 'blocked';
 }
 
+/**
+ * Which branch of `actSoldier` each side's units actually leave through.
+ *
+ * Off by default and read only by `npm run hiveprobe`. It is here rather than
+ * in the probe because the branches are inside this function and nothing
+ * outside it can see which one a turn went out of -- and that turned out to be
+ * the only question worth asking about section 125's Hivekin.
+ *
+ * It has already paid for itself twice. The probe's own fight counter read the
+ * log by index and so counted nothing once the 400-entry window saturated,
+ * which reported **zero attacks** for a side making eight a game; this said
+ * otherwise in one run. And it found where the turns really go: forty-eight per
+ * cent of every Hivekin soldier-turn is spent walking to one of their own
+ * undefended cities, against nine per cent marching on anybody.
+ *
+ * Keyed `branch|faction`, so the two empires are always the control.
+ */
+export const AI_TRACE: { on: boolean; hits: Record<string, number> } = { on: false, hits: {} };
+function trace(state: GameState, unit: Unit, where: string): void {
+  if (!AI_TRACE.on) return;
+  const faction = state.players[unit.owner]?.faction;
+  if (!faction) return;
+  const key = where + '|' + faction;
+  AI_TRACE.hits[key] = (AI_TRACE.hits[key] ?? 0) + 1;
+}
+
+/**
+ * Go to ground to wait for somebody, when that is worth a turn.
+ *
+ * **This used to require the Ambush advance and therefore never happened.**
+ * `burrower-ambush` sits twenty-second in a research plan that reaches about
+ * ten advances, so gating the behaviour on it gated it on nothing -- measured,
+ * 0.0 sinks a game. The same arithmetic that made their ending road unwalkable,
+ * for the third time in this section.
+ *
+ * It does not need the advance. Going down hides the unit outright: nobody can
+ * see it, nothing marches at it, and it comes up swinging when something walks
+ * into reach. Ambush makes that *better* rather than making it possible, which
+ * is what the advance should have been doing all along.
+ *
+ * Still only with something near enough to arrive, because lying in wait on an
+ * empty map is a Burrower that never fights; and only with nothing to swing at
+ * already, because a fight worth taking standing up should be taken.
+ */
+function lieInWait(state: GameState, unit: Unit): boolean {
+  if (sinkBlocked(state, unit) !== null) return false;
+  if (attackTargets(state, unit).size > 0) return false;
+  const coming = state.units.some(
+    (u) =>
+      u.owner !== unit.owner &&
+      !isWarden(u) &&
+      hostile(state, unit.owner, u.owner) &&
+      seenBy(state, u, unit.owner) &&
+      distance(unit.x, unit.y, u.x, u.y) <= BURROW.aiLieInWait,
+  );
+  return coming && sink(state, unit);
+}
+
+/**
+ * Go *through* what cannot be walked round.
+ *
+ * The half of the Burrower that needs no advance at all -- two tiles from the
+ * moment one exists -- and the half the AI was never taught, so every number
+ * this section took on Sink and Burrow was taken on a side that only ever
+ * walked. A wall, a river, a mountain, somebody's army: the crossing is what is
+ * being bought, which is why it costs the whole turn however far it goes.
+ *
+ * Only when walking cannot do as well. If a step gets as close, step -- that
+ * keeps the turn and leaves the burrow for the thing it is for.
+ */
+function crossUnderground(
+  state: GameState,
+  unit: Unit,
+  target: { x: number; y: number },
+): boolean {
+  const landings = burrowTargets(state, unit);
+  if (landings.length === 0) return false;
+  const away = (x: number, y: number) => distance(x, y, target.x, target.y);
+  let best: [number, number] | null = null;
+  let bestDist = away(unit.x, unit.y);
+  for (const [x, y] of landings) {
+    if (away(x, y) < bestDist) {
+      bestDist = away(x, y);
+      best = [x, y];
+    }
+  }
+  if (!best) return false;
+  let walked = away(unit.x, unit.y);
+  for (const [i] of reachableTiles(state, unit)) {
+    walked = Math.min(walked, away(i % state.width, Math.floor(i / state.width)));
+  }
+  if (walked <= bestDist) return false;
+  return burrow(state, unit, best[0], best[1]);
+}
+
 function actSoldier(
   state: GameState,
   unit: Unit,
   personality: AiPersonality,
   frontier: Array<[number, number]>,
 ): void {
+  trace(state, unit, '00 called');
   // An empty-handed thrower is a quarter of a unit; getting it an axe back is
   // worth more than anything else it could do with the turn.
-  if (restockIfNeeded(state, unit)) return;
+  if (restockIfNeeded(state, unit)) return trace(state, unit, '01 restock');
 
   // Reach first. A unit that can shoot should shoot, and one that cannot shoot
   // from where it stands should go and stand somewhere it can.
-  if (fireIfPossible(state, unit)) return;
+  if (fireIfPossible(state, unit)) return trace(state, unit, '02 fire');
   if (unitType(unit.type).range > 1 && takeAim(state, unit)) {
+    trace(state, unit, '03 aim');
     fireIfPossible(state, unit);
     return;
   }
@@ -1546,7 +1764,28 @@ function actSoldier(
   // Section 114: newly ashore on somebody else's island with the rest of the
   // party still at sea. Hold the beach rather than walking into a town in ones
   // and twos, which is what made invasions land and achieve nothing.
-  if (holdTheBeach(state, unit)) return;
+  if (holdTheBeach(state, unit)) return trace(state, unit, '04 beach');
+
+  // Section 125: the Burrower-caste, which until now the AI did not know it had.
+  //
+  // Deliberately *above* the attack branch, and deliberately not returning when
+  // it surfaces, because the timing is the whole mechanic. `surface` is free;
+  // `sink` and `burrow` each cost the entire turn; and `clearAmbush` wipes the
+  // bonus at the start of its own next turn. So the only sequence that ever
+  // collects the Ambush multiplier is **go down one turn and come up swinging
+  // the next** -- come up here for nothing, then fall through and let the
+  // ordinary attack branch take the better odds.
+  if (BURROW.ai && BURROW.enabled && burrows(unit)) {
+    if (isSunk(unit)) {
+      // Something is standing next to us and we have a whole turn in hand.
+      if (attackTargets(state, unit).size > 0) surface(state, unit, true);
+      // Nothing to hit, so stay down. A sunk Burrower costs nobody a turn, and
+      // being somewhere nobody knows about is the point of it.
+      else return trace(state, unit, '04b stays under');
+    } else if (lieInWait(state, unit)) {
+      return trace(state, unit, '04c goes to ground');
+    }
+  }
 
   // Attack anything adjacent that we can beat.
   const targets = attackTargets(state, unit);
@@ -1568,8 +1807,10 @@ function actSoldier(
     bestTarget !== null &&
     state.units.some((u) => u.x === bestTarget!.x && u.y === bestTarget!.y && isWarden(u));
   const bar = optional ? Math.max(personality.caution, RUINS.aiOdds) : personality.caution;
+  if (bestTarget) trace(state, unit, '05 had a target');
   if (bestTarget && bestTarget.odds >= bar) {
-    tryStep(state, unit, bestTarget.x, bestTarget.y);
+    const r = tryStep(state, unit, bestTarget.x, bestTarget.y);
+    trace(state, unit, '06 swung: ' + r.kind);
     return;
   }
 
@@ -1583,6 +1824,7 @@ function actSoldier(
       distance(unit.x, unit.y, c.x, c.y) === 1,
   );
   if (targetCity) {
+    trace(state, unit, '07 beside a city');
     const besiegers = state.units.filter(
       (u) => u.owner === unit.owner && distance(u.x, u.y, targetCity.x, targetCity.y) === 1,
     ).length;
@@ -1600,7 +1842,7 @@ function actSoldier(
   // ground -- ours is ours, and a road we wrecked at home is a road we dug at
   // home -- and only now, after the attacking branches above, because a turn
   // spent wrecking is a turn not spent fighting.
-  if (AI_TUNING.pillage && onEnemyGround(state, unit) && pillage(state, unit)) return;
+  if (AI_TUNING.pillage && onEnemyGround(state, unit) && pillage(state, unit)) return trace(state, unit, '08 pillage');
 
   // A lone troll standing in a swamp, with a friend to make and the health to
   // spare. Before feeding the guns, because it is the rarer opportunity and it
@@ -1622,7 +1864,7 @@ function actSoldier(
   }
 
   // Somebody has to walk with the settlers.
-  if (escortDuty(state, unit)) return;
+  if (escortDuty(state, unit)) return trace(state, unit, '09 escort');
 
   // Somebody has to mind the gold.
   //
@@ -1646,7 +1888,7 @@ function actSoldier(
     // second one passing through is free to carry on.
     if (here && wantsKeeper(state, here) && garrisonSize(state, here) <= 1) {
       unit.order = 'fortified';
-      return;
+      return trace(state, unit, '10 keeps the gold');
     }
     const wanting = ownCities
       .filter((c) => garrisonSize(state, c) === 0 && wantsKeeper(state, c))
@@ -1657,7 +1899,7 @@ function actSoldier(
     if (wanting && distance(unit.x, unit.y, wanting.x, wanting.y) <= 8) {
       if (routeTo(state, unit, wanting.x, wanting.y)) {
         moveToward(state, unit, wanting.x, wanting.y);
-        return;
+        return trace(state, unit, '10 walks to the gold');
       }
     }
   }
@@ -1682,17 +1924,36 @@ function actSoldier(
   }
 
   // Hold undefended home cities.
+  //
+  // **Nobody ever actually holds one, and this is where the army goes.**
+  // Measured over 77,000 soldier-turns in section 125: thirty per cent of the
+  // Horde's, thirty-three of the Kingdom's and forty-eight of the Hive's leave
+  // through the walk below, and the fortify above has *never once* fired for
+  // any of them -- it cannot. `bare` is a city with none of our units standing
+  // on it, so a unit standing on one makes it not bare, and the condition is
+  // unreachable by construction. What happens instead is a treadmill: a unit
+  // walks to the empty city, arrives, and next turn is sent to the next empty
+  // one (or marches off), leaving the first empty again. A city is only ever
+  // held by somebody passing through it -- which is why section 125's probe
+  // found every lost Hive had a garrison of nobody.
+  //
+  // Not fixed here, deliberately. The obvious repair is "stay put", and the
+  // comment on `guardTheGold` above is the measured warning against exactly
+  // that: garrisoning every city flipped 36 of 108 games to the Kingdom,
+  // because the side that wins by attacking had its army standing at home.
+  // Something narrower might be right, and it is its own measurement rather
+  // than a line changed inside a section about a third faction.
   const bare = ownCities.find(
     (c) => !state.units.some((u) => u.owner === unit.owner && u.x === c.x && u.y === c.y),
   );
   if (bare) {
     if (unit.x === bare.x && unit.y === bare.y) {
       unit.order = 'fortified';
-      return;
+      return trace(state, unit, '11 holds a bare city');
     }
     if (distance(unit.x, unit.y, bare.x, bare.y) <= 8 && routeTo(state, unit, bare.x, bare.y)) {
       moveToward(state, unit, bare.x, bare.y);
-      return;
+      return trace(state, unit, '11 walks to a bare city');
     }
   }
 
@@ -1704,7 +1965,7 @@ function actSoldier(
   // this: a mechanic the AI has no route to is a mechanic that does not happen,
   // and a player who is the only one cracking ruins is playing a different game
   // from the one being measured.
-  if (RUINS.enabled && RUINS.aiSeeks && seekRuin(state, unit)) return;
+  if (RUINS.enabled && RUINS.aiSeeks && seekRuin(state, unit)) return trace(state, unit, '12 ruin');
 
   // March on whatever we know about.
   const target = nearestEnemyTarget(state, unit.owner, unit);
@@ -1715,11 +1976,16 @@ function actSoldier(
     // pathfinder for a tile it treats as impassable, which is why this never
     // worked; arriving next door is enough, because the attack branch at the
     // top of this function takes it from there next turn.
+    trace(state, unit, '13 knows a target');
+    if (BURROW.ai && burrows(unit) && crossUnderground(state, unit, target)) {
+      return trace(state, unit, '13b goes under it');
+    }
     const spot = approachTile(state, unit, target.x, target.y);
     if (spot && (spot.x !== unit.x || spot.y !== unit.y)) {
       moveToward(state, unit, spot.x, spot.y);
-      return;
+      return trace(state, unit, '13 marches');
     }
+    trace(state, unit, '13 no approach tile');
   }
 
   // Nothing known: go and look.
@@ -2018,7 +2284,11 @@ export function runAiTurn(state: GameState, playerId: number): void {
   // stop being at peace with.
   aiDiplomacy(state, playerId);
   manageRates(state, player);
-  const personality = PERSONALITIES[player.faction] ?? PERSONALITIES.orc;
+  // Section 125: the `??` here was the bug. A faction with no entry inherited
+  // the Horde's, which for the Hivekin meant a research plan made entirely of
+  // advances they cannot have.
+  const own = player.faction !== 'hivekin' || HIVEKIN.ownPlans;
+  const personality = (own ? PERSONALITIES[player.faction] : undefined) ?? PERSONALITIES.orc;
 
   chooseResearch(state, player, personality);
   takePromotions(state, player);

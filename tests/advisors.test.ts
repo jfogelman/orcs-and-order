@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { FactionId } from '../src/model/types';
 import {
   ADVISORS,
   advisorConcern,
@@ -150,8 +151,20 @@ describe('who advises whom', () => {
  * applies, and a calm empire already gives the Paladin something else to say.
  */
 describe('who wants the endings', () => {
-  const OURS = { orc: 'portal', human: 'object' } as const;
-  const THEIRS = { orc: 'object', human: 'portal' } as const;
+  // Which ending is this advisor's own, and which is somebody else's. The
+  // Hivekin's `hive` joins both since section 125; "theirs" for them is the
+  // Portal, which is as arbitrary as the other two and only has to be *not*
+  // their own for the lines being checked here to be the right ones.
+  const OURS: Record<FactionId, 'portal' | 'object' | 'hive'> = {
+    orc: 'portal',
+    human: 'object',
+    hivekin: 'hive',
+  };
+  const THEIRS: Record<FactionId, 'portal' | 'object' | 'hive'> = {
+    orc: 'object',
+    human: 'portal',
+    hivekin: 'portal',
+  };
 
   const wakes = (advisor: (typeof ADVISORS)[number], extra: Partial<Situation>) => {
     const base = { ...calm(), faction: advisor.faction };
@@ -160,13 +173,20 @@ describe('who wants the endings', () => {
   };
 
   it('leaves the road to our own ending to the two who want it', () => {
-    const want = ['death-mage', 'death-knight', 'archmage', 'paladin'];
+    // Section 125: the Cultivator and the Heir are the Hive's arcane and faith
+    // seats, so they carry the ending the way the other four do.
+    const want = ['death-mage', 'death-knight', 'archmage', 'paladin', 'cultivator'];
     for (const advisor of ADVISORS) {
       for (const endingRoad of ['researchable', 'buildable', 'building'] as const) {
         const lines = wakes(advisor, { endingRoad });
         expect(lines.length > 0, `${advisor.id} at ${endingRoad}`).toBe(want.includes(advisor.id));
         for (const line of lines) {
-          expect(line).toMatch(/Portal|Object|Knocked|knocking|Do Not Touch/);
+          // Each side's road is named in its own words: the Horde's Portal and
+          // the stones that knock, the Kingdom's Object and its sign, and the
+          // Hive's Shell, its two lesser works and the advance itself.
+          expect(line).toMatch(
+            /Portal|Object|Knocked|knocking|Do Not Touch|All Is The Hive|Molting Chamber|Second Feeding|Shell/,
+          );
           expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
         }
       }
@@ -174,7 +194,9 @@ describe('who wants the endings', () => {
   });
 
   it('has the same two count our ending down', () => {
-    const want = ['death-mage', 'death-knight', 'archmage', 'paladin'];
+    // Section 125: the Cultivator and the Heir are the Hive's arcane and faith
+    // seats, so they carry the ending the way the other four do.
+    const want = ['death-mage', 'death-knight', 'archmage', 'paladin', 'cultivator', 'heir'];
     for (const advisor of ADVISORS) {
       const ending = { turnsLeft: 5, theirs: false, kind: OURS[advisor.faction] };
       const lines = wakes(advisor, { ending });
@@ -184,7 +206,9 @@ describe('who wants the endings', () => {
   });
 
   it("sends the soldiers at the other side's", () => {
-    const want = ['blademaster', 'knight-marshal'];
+    // Section 125: the Bladeguard is the Hive's military seat, and reacts to
+    // somebody else's ending exactly as the other two soldiers do.
+    const want = ['blademaster', 'knight-marshal', 'bladeguard'];
     for (const advisor of ADVISORS) {
       const ending = { turnsLeft: 5, theirs: true, kind: THEIRS[advisor.faction] };
       const lines = wakes(advisor, { ending });
@@ -194,7 +218,9 @@ describe('who wants the endings', () => {
   });
 
   it('has the same soldiers mention the other side beginning work', () => {
-    const want = ['blademaster', 'knight-marshal'];
+    // Section 125: the Bladeguard is the Hive's military seat, and reacts to
+    // somebody else's ending exactly as the other two soldiers do.
+    const want = ['blademaster', 'knight-marshal', 'bladeguard'];
     for (const advisor of ADVISORS) {
       const lines = wakes(advisor, { rivalEnding: THEIRS[advisor.faction] });
       expect(lines.length > 0, advisor.id).toBe(want.includes(advisor.id));

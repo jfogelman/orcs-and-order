@@ -1,3 +1,4 @@
+import type { FactionId } from '../model/types';
 import type { GameState } from '../model/types';
 import { PALACE_TIERS, palaceArt, palaceOf, prideOffer, takePride } from '../model/palace';
 import type { PalaceModuleId } from '../model/palace';
@@ -18,6 +19,13 @@ import { escapeHtml, openModal } from './dom';
  * next turn, which is nagging, or never, which quietly loses the reward. The
  * choice is which, not whether.
  */
+/** How each side puts it when things are going well. */
+const PRIDE_TITLE: Record<FactionId, string> = {
+  orc: 'The camp is doing well',
+  human: 'The realm is doing well',
+  hivekin: 'The Hive is adequate',
+};
+
 export function openPrideOffer(
   state: GameState,
   playerId: number,
@@ -48,7 +56,7 @@ export function openPrideOffer(
     .join('');
 
   openModal({
-    title: faction === 'orc' ? 'The camp is doing well' : 'The realm is doing well',
+    title: PRIDE_TITLE[faction],
     width: 'min(720px, 94vw)',
     sticky: true,
     body: `

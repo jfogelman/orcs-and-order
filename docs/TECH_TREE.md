@@ -7,6 +7,7 @@ Costs are base prices. The real price of an advance is marked up by 3.5% for eve
 
 - **Horde**: 33 advances -- 13 shared, 20 its own.
 - **Kingdom**: 28 advances -- 13 shared, 15 its own.
+- **Hive**: 30 advances -- 13 shared, 17 its own.
 
 ## The road to each ending
 
@@ -14,12 +15,15 @@ Everything a side must learn to reach its section 110 ending advance, in the ord
 
 | Side | Ending advance | Advances on the road | Base cost | Straight run, marked up | Asked for first by the AI list | Their base cost |
 |---|---|---|---|---|---|---|
-| Horde | Somebody Knocked | 7 | 430 | 480 | 18 not on the road | 1297 |
+| Horde | Somebody Knocked | 7 | 430 | 480 | 19 not on the road | 1447 |
 | Kingdom | Do Not Touch That | 12 | 965 | 1199 | 12 not on the road | 921 |
+| Hive | All Is The Hive | 4 | 165 | 174 | 0 not on the road | 0 |
 
 **Horde:** First Orc (0) → The Meaning of Orc (25) → To Be An Orc (45) → Axes (50) → Axes Make You Crazy (80) → The Dead are Messed Up (130) → Somebody Knocked (100)
 
 **Kingdom:** First Human (0) → Mapmaking (25) → See the World (30) → Brotherhood (30) → Tree-Hugging (55) → Join the Army (55) → Joy Making (65) → Rumbling Voice (100) → Happiness (105) → Lordship (150) → Insanity (150) → Do Not Touch That (200)
+
+**Hive:** There Was A Hive (0) → A Shape For This (20) → A Sturdier Shape (45) → All Is The Hive (100)
 
 ## The Horde's tree
 
@@ -169,19 +173,92 @@ flowchart LR
   class do_not_touch ending
 ```
 
+## The Hive's tree
+
+Shared advances are pale; the ending advance is gold.
+
+```mermaid
+flowchart LR
+  mapmaking["Mapmaking<br/>25"]
+  tree_hugging["Tree-Hugging<br/>55"]
+  bridge_building["Bridge Building<br/>45"]
+  wall_building["Wall Building<br/>75"]
+  tower_building["Tower Building<br/>115"]
+  not_you_again["Not You Again!<br/>45"]
+  hammers_of_glory["Hammers of Glory<br/>85"]
+  joy_making["Joy Making<br/>65"]
+  happiness["Happiness<br/>105"]
+  pyromancy["Setting Things Alight<br/>165"]
+  cryomancy["The Cold Shoulder<br/>180"]
+  sky_argument["The Argument With The Sky<br/>70"]
+  insanity["Insanity<br/>150"]
+  first_hivekin["There Was A Hive<br/>0"]
+  caste_fodder["A Shape For This<br/>20"]
+  caste_soldier["A Sturdier Shape<br/>45"]
+  always_this_many["There Were Always This Many<br/>40"]
+  assumed_fewer["You Had Assumed Fewer<br/>80"]
+  caste_spitter["A Shape That Reaches<br/>50"]
+  caste_burrower["The Ground Was Already Hollow<br/>65"]
+  caste_riptide["A Shape That Opens Other Shapes<br/>70"]
+  burrower_veteran["The Last Tile Forgotten<br/>90"]
+  caste_bloat["A Shape That Empties Once<br/>95"]
+  burrower_deep["Further Down<br/>120"]
+  burrower_ambush["Already Waiting<br/>120"]
+  caste_elite["The Best Shape So Far<br/>85"]
+  caste_broodlord["A Shape With Four Arms<br/>130"]
+  caste_warden["A Shape That Dissolves Things<br/>140"]
+  caste_princess["A Shape That Waits<br/>110"]
+  all_is_the_hive["All Is The Hive<br/>100"]
+  mapmaking --> tree_hugging
+  mapmaking --> bridge_building
+  bridge_building --> wall_building
+  wall_building --> tower_building
+  mapmaking --> not_you_again
+  not_you_again --> hammers_of_glory
+  tree_hugging --> joy_making
+  joy_making --> happiness
+  insanity --> pyromancy
+  insanity --> cryomancy
+  pyromancy --> sky_argument
+  cryomancy --> sky_argument
+  happiness --> insanity
+  first_hivekin --> caste_fodder
+  caste_fodder --> caste_soldier
+  caste_soldier --> always_this_many
+  always_this_many --> assumed_fewer
+  caste_fodder --> caste_spitter
+  caste_fodder --> caste_burrower
+  caste_soldier --> caste_riptide
+  caste_burrower --> burrower_veteran
+  caste_spitter --> caste_bloat
+  burrower_veteran --> burrower_deep
+  burrower_veteran --> burrower_ambush
+  caste_soldier --> caste_elite
+  caste_elite --> caste_broodlord
+  caste_elite --> caste_warden
+  hammers_of_glory --> caste_warden
+  caste_elite --> caste_princess
+  happiness --> caste_princess
+  caste_soldier --> all_is_the_hive
+  classDef shared fill:#e8e2d0,stroke:#8a7a55,color:#222
+  classDef ending fill:#f3d36b,stroke:#9a6b00,color:#222,stroke-width:2px
+  class mapmaking,tree_hugging,bridge_building,wall_building,tower_building,not_you_again,hammers_of_glory,joy_making,happiness,pyromancy,cryomancy,sky_argument,insanity shared
+  class all_is_the_hive ending
+```
+
 ## Shared advances
 
 | Advance | Cost | Needs | Units | Structures | Effect | Depth | Flavour |
 |---|---|---|---|---|---|---|---|
-| **Mapmaking** `mapmaking` | 25 | -- | -- | -- | mapmaking | 0 | The world turns out to have a shape. Everyone is a little put out about it. |
+| **Mapmaking** `mapmaking` | 25 | -- | A Raft (Mostly), The Committee Barge, Tide-caste | -- | mapmaking | 0 | The world turns out to have a shape. Everyone is a little put out about it. |
 | **Bridge Building** `bridge-building` | 45 | Mapmaking | -- | Attempted Outpost, Forward Depot | bridges | 1 | Walking around the swamp was, in hindsight, a choice. |
 | **Not You Again!** `not-you-again` | 45 | Mapmaking | -- | Goblin Treasury, Simple Market, The First Ledger | -- | 1 | The same coin keeps turning up. Eventually somebody scratches a number on it and the whole economy follows. |
-| **Tree-Hugging** `tree-hugging` | 55 | Mapmaking | -- | Granary | -- | 1 | If you do not eat the whole forest immediately, there is more forest later. |
+| **Tree-Hugging** `tree-hugging` | 55 | Mapmaking | -- | Granary | terraform | 1 | If you do not eat the whole forest immediately, there is more forest later. |
 | **Joy Making** `joy-making` | 65 | Tree-Hugging | -- | Totem of Managed Feelings, Chapel of Mild Optimism | -- | 2 | Morale is discovered, immediately weaponised, and then regulated. |
 | **Wall Building** `wall-building` | 75 | Bridge Building | -- | Walls, Broken Catapult | -- | 2 | A bridge, but standing up and unwelcoming. The Horde attends the same lecture and comes away with a catapult. |
 | **Hammers of Glory** `hammers-of-glory` | 85 | Not You Again! | -- | The Thinking Rock, Hall of Careful Notes, The Unfinished Cathedral | -- | 2 | It emerges you can build a place specifically for thinking in. The hammers were, in the end, the easy part. |
 | **Happiness** `happiness` | 105 | Joy Making | -- | -- | contentment | 3 | Formal proof that people who are not miserable work slightly harder. |
-| **Tower Building** `tower-building` | 115 | Wall Building | -- | Goblin Vault, Reinforced, Slightly Complicated Market, The Yelling Wall | watchtower | 3 | A wall, but taller and lonelier. |
+| **Tower Building** `tower-building` | 115 | Wall Building | -- | Goblin Vault, Reinforced, Slightly Complicated Market, The Yelling Wall | watchtower, channels | 3 | A wall, but taller and lonelier. |
 | **Insanity** `insanity` | 150 | Happiness | -- | Considerably Larger Totem, Cathedral of Firm Conviction, The Long Peace | berserk | 4 | Happiness, taken one step further than anyone recommended. |
 | **Setting Things Alight** `pyromancy` | 165 | Insanity | -- | -- | pyromancy | 5 | Fire was always available. What is new is doing it to somebody deliberately, from a distance, and then walking away while it continues. |
 | **The Cold Shoulder** `cryomancy` | 180 | Insanity | -- | -- | cryomancy | 5 | Nobody has worked out how to make a thing colder. They have worked out how to make a thing very slow, which for military purposes is the same discovery. |
@@ -192,14 +269,14 @@ flowchart LR
 | Advance | Cost | Needs | Units | Structures | Effect | Depth | Flavour |
 |---|---|---|---|---|---|---|---|
 | **First Orc** `first-orc` | 0 | -- | Peon, Goblin | -- | -- | 0 | There is an orc. This took considerably longer than you would expect. |
-| **Goblin "Smarts"** `goblin-smarts` | 20 | First Orc | Two Goblins, Three Goblins | -- | -- | 1 | The goblins work it out first. Nobody enjoys this. |
+| **Goblin "Smarts"** `goblin-smarts` | 20 | First Orc | Two Goblins, Three Goblins, Goblin Scout | -- | -- | 1 | The goblins work it out first. Nobody enjoys this. |
 | **The Meaning of Orc** `orc-meaning` | 25 | First Orc | Orc | -- | -- | 1 | A long night of reflection concludes that an orc is a thing that hits. |
 | **Let's Orc Together** `orc-together` | 40 | The Meaning of Orc | Two Orcs | -- | -- | 2 | Two orcs can stand in the same place. Nothing is ever the same again. |
 | **"Suicidal" Goblins** `suicidal-goblins` | 45 | Goblin "Smarts" | Five Goblins, Goblin Sapper | -- | -- | 2 | The quotation marks are load-bearing. Nobody has explained them. |
 | **To Be An Orc** `to-be-an-orc` | 45 | The Meaning of Orc | -- | Barracks, Orc Posting, The Loudest Rock | -- | 2 | It emerges that an orc can be trained, which is to say shouted at on purpose. |
 | **Axes** `axes` | 50 | The Meaning of Orc | Troll | -- | -- | 2 | Sharpened on one side. The Horde considers this its finest hour so far. |
 | **Idiots Stick Together** `idiots-stick-together` | 60 | Let's Orc Together | Three Orcs | -- | -- | 3 | Three. The number is three. It comes after the other two. |
-| **Throwing Buddies** `throwing-buddies` | 65 | Axes | Axethrower, Two Axethrowers | -- | -- | 3 | The axe goes away from you. This is the entire discovery. |
+| **Throwing Buddies** `throwing-buddies` | 65 | Axes | Axethrower, Two Axethrowers, The Big Angry Boat | -- | -- | 3 | The axe goes away from you. This is the entire discovery. |
 | **Axes Make You Crazy** `axes-crazy` | 80 | Axes | Two Trolls, Three Trolls | The Bonepit | swampy | 3 | Correlation is established. Causation is declared uninteresting. |
 | **Underground Smarts** `underground-smarts` | 95 | "Suicidal" Goblins | Two Goblin Sappers, Goblin Catapult | The Considerably Bigger Rock | volatile | 3 | Everything is better underground, where nobody can see how it is going. |
 | **The Next Level of Stupid** `next-level-stupid` | 85 | Idiots Stick Together | Four Orcs | -- | -- | 4 | Four orcs. The Horde is officially past what its hands can represent. |
@@ -221,7 +298,7 @@ flowchart LR
 | **See the World** `see-the-world` | 30 | First Human | Outrider | -- | -- | 1 | Someone should go and look. Someone else should write down what they saw. |
 | **Archery** `archery` | 40 | First Human | Archer | -- | -- | 1 | Like Throwing Buddies, except you get to keep the pointy thing. |
 | **Horses Make Me Sneeze** `horses-sneeze` | 50 | First Human | Knight | -- | -- | 1 | The Kingdom presses on regardless, eyes streaming, into the age of cavalry. |
-| **Join the Army** `join-army` | 55 | Brotherhood | Three Footmen | Barracks, Soldier Posting | -- | 2 | See the world. Meet interesting people. Stand extremely close to them. |
+| **Join the Army** `join-army` | 55 | Brotherhood | Three Footmen, The Strongly Worded Frigate | Barracks, Soldier Posting | -- | 2 | See the world. Meet interesting people. Stand extremely close to them. |
 | **Pointed Ears Anyone?** `pointed-ears` | 65 | Archery | Two Archers | -- | -- | 2 | An enquiry is opened into who exactly has been helping with the archery. |
 | **Let us Ride!** `let-us-ride` | 85 | Horses Make Me Sneeze | Two Knights | -- | -- | 2 | Two knights, riding abreast, at considerable expense to everyone. |
 | **Bunches of Footmen** `bunches-footmen` | 88 | Join the Army | Five Footmen | -- | -- | 3 | The official term is "bunches". The Royal Academy fought this and lost. |
@@ -232,11 +309,33 @@ flowchart LR
 | **Lordship** `lordship` | 150 | Rumbling Voice | Two Mages, Two Paladins | The Parade Ground, The Learned Committee | -- | 4 | The rumbling voice is given a hat, a title, and a great deal of land. |
 | **Do Not Touch That** `do-not-touch` | 200 | Lordship, Insanity | -- | The Committee Chamber, A Very Good Pedestal, The Mysterious Object | ending | 5 | A committee has been formed to establish what it does. So far it has agreed on the wording of the sign. |
 
+## Hive advances
+
+| Advance | Cost | Needs | Units | Structures | Effect | Depth | Flavour |
+|---|---|---|---|---|---|---|---|
+| **There Was A Hive** `first-hivekin` | 0 | -- | Grub, Worker | -- | -- | 0 | There was a hive. This took considerably less deliberation than usual. |
+| **A Shape For This** `caste-fodder` | 20 | There Was A Hive | Fodder-caste | -- | -- | 1 | A shape existed for this. It has been made. |
+| **A Sturdier Shape** `caste-soldier` | 45 | A Shape For This | Soldier-caste | -- | -- | 2 | The last shape held. A better one was owed regardless. |
+| **A Shape That Reaches** `caste-spitter` | 50 | A Shape For This | Spitter-caste | -- | -- | 2 | Distance was the only thing missing. It no longer is. |
+| **The Ground Was Already Hollow** `caste-burrower` | 65 | A Shape For This | Burrower-caste | -- | -- | 2 | The ground was already hollow. This was noticed. |
+| **There Were Always This Many** `always-this-many` | 40 | A Sturdier Shape | Two Fodder-caste, Three Fodder-caste, Two Soldier-caste, Two Workers | -- | -- | 3 | The Hive has not grown. The Hive has been counted, which is a different thing, and it would prefer the counting to stop. |
+| **A Shape That Opens Other Shapes** `caste-riptide` | 70 | A Sturdier Shape | Riptide-caste | -- | -- | 3 | The sea was previously unclaimed. This has been corrected. |
+| **The Best Shape So Far** `caste-elite` | 85 | A Sturdier Shape | Elite-caste | -- | -- | 3 | Better shapes remain possible. This one will do for now. |
+| **The Last Tile Forgotten** `burrower-veteran` | 90 | The Ground Was Already Hollow | -- | -- | quiet-sinking | 3 | Where it was is no longer known. This was arranged on purpose. |
+| **A Shape That Empties Once** `caste-bloat` | 95 | A Shape That Reaches | Bloat-caste | -- | -- | 3 | Distance solved the reaching problem. Walls remained. This solves that too. |
+| **All Is The Hive** `all-is-the-hive` | 100 | A Sturdier Shape | -- | The Molting Chamber, The Second Feeding, The Second Queen's Shell | ending | 3 | Two queens should not have been possible. Two queens were possible. All is the Hive and the Hive are all, and if they were capable of joy, they would be reasonably pleased about this. Not excessively. It is, after all, only the one world. |
+| **You Had Assumed Fewer** `assumed-fewer` | 80 | There Were Always This Many | Five Fodder-caste, Three Soldier-caste, Two Spitter-caste, Two Elite-caste | -- | -- | 4 | No additional shapes were made for this. You were simply looking at some of them. |
+| **A Shape That Waits** `caste-princess` | 110 | The Best Shape So Far, Happiness | Princess-caste | The Old Queen's Shell | -- | 4 | She was always going to be needed eventually. Eventually has not arrived. She waits regardless. |
+| **Further Down** `burrower-deep` | 120 | The Last Tile Forgotten | -- | The Undercity | deep-burrowing | 4 | Two tiles became three. The ground did not object. |
+| **Already Waiting** `burrower-ambush` | 120 | The Last Tile Forgotten | -- | -- | ambush-burrowing | 4 | It was there first. It simply waited to be noticed. |
+| **A Shape With Four Arms** `caste-broodlord` | 130 | The Best Shape So Far | Broodlord-caste | The Broodwarmth | -- | 4 | Two arms were doing the work of four. This has been corrected. |
+| **A Shape That Dissolves Things** `caste-warden` | 140 | The Best Shape So Far, Hammers of Glory | Warden-caste | -- | -- | 4 | Something was needed against what does not have a shape to begin with. |
+
 ## Dead ends
 
 Advances nothing else depends on.
 
-- **Shared:** Tower Building, Hammers of Glory, The Argument With The Sky
+- **Shared:** Tower Building, The Argument With The Sky
 - **Horde:** Underground Smarts, And Stupidity for All, Improvements to the Club, Full of Fire, Somebody Knocked
 - **Kingdom:** 10 Heads are Better than One, Arrows to Glory, We'll Run You Through!, Do Not Touch That
 
@@ -263,14 +362,14 @@ Each personality works down its `techPriority` list (`src/ai/ai.ts`), taking the
 15. Wall Building (75)
 16. The Next Level of Stupid (85)
 17. Happiness (105)
-18. Axes Make You Crazy (80) — *on the road to its ending*
-19. Beyond Stupid (105)
-20. My Little Friend (95)
-21. Improvements to the Club (150)
-22. Not Just Stupid Anymore (132)
-23. The Dead are Messed Up (130) — *on the road to its ending*
-24. Somebody Knocked (100) — *on the road to its ending*
-25. Insanity (150)
+18. Insanity (150)
+19. Axes Make You Crazy (80) — *on the road to its ending*
+20. Beyond Stupid (105)
+21. My Little Friend (95)
+22. Improvements to the Club (150)
+23. Not Just Stupid Anymore (132)
+24. The Dead are Messed Up (130) — *on the road to its ending*
+25. Somebody Knocked (100) — *on the road to its ending*
 26. And Stupidity for All (168)
 27. Full of Fire (185)
 28. Setting Things Alight (165)
@@ -304,3 +403,33 @@ Each personality works down its `techPriority` list (`src/ai/ai.ts`), taking the
 23. Setting Things Alight (165)
 24. The Cold Shoulder (180)
 25. The Argument With The Sky (70)
+
+**Hive**
+
+1. A Shape For This (20) — *on the road to its ending*
+2. A Sturdier Shape (45) — *on the road to its ending*
+3. All Is The Hive (100) — *on the road to its ending*
+4. There Were Always This Many (40)
+5. Mapmaking (25)
+6. Bridge Building (45)
+7. A Shape That Reaches (50)
+8. You Had Assumed Fewer (80)
+9. Tree-Hugging (55)
+10. The Best Shape So Far (85)
+11. Not You Again! (45)
+12. The Ground Was Already Hollow (65)
+13. Joy Making (65)
+14. Wall Building (75)
+15. Hammers of Glory (85)
+16. A Shape That Empties Once (95)
+17. The Last Tile Forgotten (90)
+18. A Shape With Four Arms (130)
+19. Happiness (105)
+20. A Shape That Waits (110)
+21. Further Down (120)
+22. Already Waiting (120)
+23. A Shape That Dissolves Things (140)
+24. Insanity (150)
+25. Setting Things Alight (165)
+26. The Cold Shoulder (180)
+27. The Argument With The Sky (70)

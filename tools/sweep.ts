@@ -12,6 +12,8 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
+import { HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
 import { TRADE, tradeGold, tradeLinks } from '../src/sim/trade';
@@ -92,6 +94,9 @@ export const LEVERS: Record<string, object> = {
   INTIMIDATE,
   LEGION,
   RUINS,
+  HIVEKIN,
+  BURROW,
+  QUEEN,
   PREY,
   PEACE,
   DIPLOMACY_AI,
@@ -224,7 +229,13 @@ export function halfTurnsFor(state: GameState): number {
   // turn 220 and every one of those games came back with no winner. Budget for
   // the seat whether or not it has been taken yet.
   const mayWake = RUINS.enabled && !state.players.some((p) => p.barbarian);
-  const seats = state.players.length + (mayWake ? 1 : 0);
+  // Section 125 is the same trap a third time, and this one was caught by the
+  // measurement rather than before it: six of 108 three-sided games stopped at
+  // turn 294 to 299 with nobody having won, because the Hivekin take a seat of
+  // their own around turn a hundred and the budget was counted without them.
+  // An unfinished game is not a draw -- it is a game missing from every column.
+  const mayEmerge = HIVEKIN.enabled && !state.players.some((p) => p.faction === 'hivekin');
+  const seats = state.players.length + (mayWake ? 1 : 0) + (mayEmerge ? 1 : 0);
   return (state.settings.maxTurns + TURN_SLACK) * seats;
 }
 
@@ -425,8 +436,13 @@ export interface SweepOptions {
  *
  * `runSweep` prints what it actually took against this number, so it can be
  * recalibrated from real output rather than guessed at again.
+ *
+ * Recalibrated to 15 for section 125, off two 216-game runs that came in at
+ * 13.4 and 15.7 seconds a game. Same reason as before, one seat further on:
+ * three sides take more turns each than two, and almost every game now runs to
+ * the limit. At 8 this told Jeremy to expect 29 minutes for a run that took 57.
  */
-export const SECONDS_PER_GAME = 8;
+export const SECONDS_PER_GAME = 15;
 
 export function estimate(games: number): string {
   const mins = (games * SECONDS_PER_GAME) / 60;
@@ -548,6 +564,16 @@ export interface Summary {
   games: number;
   orcWins: number;
   humanWins: number;
+  /**
+   * Games won by section 125's third side, and the turn they arrived on.
+   *
+   * A column of its own rather than folded into anybody else's, because the
+   * question this section has to answer is not "did the Hivekin win" -- it is
+   * **whether the Horde against the Kingdom still reads the same with a third
+   * side on the map**, which is the stated balance target. That needs their
+   * wins taken out of the other two columns rather than hidden in them.
+   */
+  hiveWins: number;
   draws: number;
   /**
    * Games the loop gave up on before anybody won or the limit came. Should
@@ -560,7 +586,16 @@ export interface Summary {
   techs: [number, number];
   combats: number;
   captures: number;
-  /** Games by how they ended: conquest, dominance, points, draw, unfinished. */
+  /**
+   * Games by how they ended: conquest, dominance, points, and each side's own
+   * ending.
+   *
+   * The `hive` column was missing for the whole of section 125, so the twenty-
+   * seven games the Hivekin won off their own ending appeared only as a
+   * discrepancy: the five printed numbers summed to 38 of 54 and the sixteen
+   * missing games were the ones that mattered most. A report that cannot name
+   * the third side's ending cannot show the third side winning.
+   */
   routes: Record<string, number>;
   /** Mean cities raided per game, orc and human. */
   sacks: [number, number];
@@ -580,6 +615,9 @@ export function summarise(results: ArmResult[]): Summary[] {
     games: r.outcomes.length,
     orcWins: r.outcomes.filter((o) => o.winner === 0).length,
     humanWins: r.outcomes.filter((o) => o.winner === 1).length,
+    // By seat, not by index: the Hivekin take whatever slot is free when they
+    // emerge, which is 2 in a quiet game and 3 in one with raiders in it.
+    hiveWins: r.outcomes.filter((o) => o.winner !== null && o.winner > 1).length,
     draws: r.outcomes.filter((o) => o.victory === 'draw').length,
     unfinished: r.outcomes.filter((o) => o.victory === null).length,
     turns: mean(r.outcomes.map((o) => o.turns)),
@@ -614,9 +652,9 @@ export function report(results: ArmResult[]): string {
   const rows = summarise(results);
   const pad = (s: string | number, n: number) => String(s).padStart(n);
   const head =
-    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}` +
+    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}${pad('hive', 6)}` +
     `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob', 16)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
+    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob/hv', 19)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -624,6 +662,7 @@ export function report(results: ArmResult[]): string {
       pad(r.games, 6) +
       pad(r.orcWins, 5) +
       pad(r.humanWins, 5) +
+      pad(r.hiveWins, 6) +
       pad(r.draws, 5) +
       pad(r.unfinished, 6) +
       pad(r.turns.toFixed(0), 7) +
@@ -634,7 +673,7 @@ export function report(results: ArmResult[]): string {
       pad(r.captures.toFixed(1), 6) +
       pad(
         `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
-          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}`,
+          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}/${r.routes.hive ?? 0}`,
         16,
       ) +
       pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +

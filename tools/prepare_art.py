@@ -72,6 +72,12 @@ CREATURES = [
     "mage", "paladin",
     # Ships, a carrier and a warship a side.
     "raft", "warboat", "barge", "frigate",
+    # Section 125: the Hivekin's castes. Filed in their own folder with their
+    # attack strips and weakened sheets beside them rather than in `unit
+    # effects/` and `unit states/`; `FACTION_FOLDER_ALIASES` is the translation.
+    "grub", "worker", "fodder", "soldier", "elite", "spitter", "burrower",
+    "broodlord", "princess", "warden", "queen",
+    "tidecaste", "riptidecaste", "bloatcaste",
 ]
 
 # The wilds, drawn in `art_src/barbarians/` and named for the creature rather
@@ -121,8 +127,25 @@ SPECIALS = [
     "desert_2",   # The Only Cover For Miles
 ]
 
+# Section 125: the Hivekin's three, which are named for what they are rather
+# than for the slot they occupy. Ordinary specials with ordinary yields -- the
+# flavour is theirs, the machinery is everybody's.
+HIVEKIN_SPECIALS = {
+    "grass_3": "broodmoss",
+    "hills_2": "chitin-vein",
+    "mountains_2": "marrow-salt",
+}
+
 # Settlement art, in three size tiers per faction.
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
+
+# The Hivekin's three are named for what they are rather than for the size they
+# stand in for, so they need the translation the other two do not.
+HIVEKIN_CITIES = {
+    "hivekin_1": "hive-tier1",
+    "hivekin_4": "hive-tier2",
+    "hivekin_8": "hive-tier3",
+}
 
 # Badges a settlement wears on the map, keyed by the state they mean rather
 # than by the filename they arrived under. Drawn as small markers in a corner
@@ -181,6 +204,11 @@ TECH_ICONS = [
     "somebody-knocked", "do-not-touch",
     # The one advance the follies needed of their own, section 111.
     "sky-argument",
+    # Section 125: the Hivekin's fork. Named by tech id in the drop already.
+    "first-hivekin", "caste-fodder", "caste-soldier", "caste-spitter",
+    "caste-burrower", "burrower-veteran", "burrower-deep", "burrower-ambush",
+    "caste-elite", "caste-broodlord", "caste-warden", "caste-princess",
+    "caste-riptide", "caste-bloat", "all-is-the-hive",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -200,6 +228,11 @@ BUILDING_ICONS = [
     "firstLedger", "yellingWall", "longPeaceMonument", "skyArgumentSpire",
     "loudestRock", "bonepit", "bargainStone", "longMarchRoad",
     "unfinishedCathedral", "rumblingArchive", "longVigilShrine", "learnedCommittee",
+    # Section 125: the Hivekin's ending, their three follies, and the nodule a
+    # spare Princess turns into.
+    "moltingChamber", "secondFeeding", "secondQueenShell",
+    "oldQueensShell", "broodwarmth", "undercity",
+    "princess-bonus",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the
@@ -224,6 +257,12 @@ ADVISOR_PORTRAITS = {
     "death-mage": "death mage",
     "death-knight": "death knight",
     "ogre-quartermaster": "ogre quartermaster",
+    "bladeguard": "the bladeguard",
+    "tender": "the tender",
+    "voice": "the voice",
+    "cultivator": "the cultivator",
+    "heir": "the heir",
+    "harvester": "the harvester",
 }
 
 # Section 46's talking cycles, one per advisor, in `advisors/Talking Cycles/`.
@@ -242,6 +281,12 @@ ADVISOR_TALKING = {
     "death-mage": "death mage talking",
     "death-knight": "death knight talking",
     "ogre-quartermaster": "ogre talking",
+    "bladeguard": "the bladeguard talking",
+    "tender": "the tender talking",
+    "voice": "the voice talking",
+    "cultivator": "the cultivator talking",
+    "heir": "the heir talking",
+    "harvester": "the harvester talking",
 }
 
 # Big enough to read a face at, small enough that twelve of them are not a
@@ -596,16 +641,104 @@ def normalise_stem(stem: str) -> tuple[str, str]:
     return base, variant
 
 
+def faction_roots() -> list[Path]:
+    """
+    Every `art_src/factions/<name>/` folder, if any.
+
+    Section 125: the third faction arrived as one folder with the whole set
+    inside it -- units, advisors, buildings, palace, the lot -- rather than
+    filed limb by limb into the flat folders the first two use. That is the
+    better way round for a drop that arrives all at once, so the pipeline reads
+    both rather than asking anybody to shuffle files about.
+    """
+    root = SRC / "factions"
+    if not root.is_dir():
+        return []
+    return sorted(p for p in root.iterdir() if p.is_dir())
+
+
+# Where the flat layout and a faction folder disagree about filing.
+#
+# The first two factions were filed limb by limb -- a creature's portrait in
+# `units/`, its attack strip in `unit effects/`, its weakened sheet in
+# `unit states/` -- because they arrived a few pieces at a time over months. A
+# faction that arrives in one drop sensibly keeps a creature's three pictures
+# together. Neither is wrong, so this is the translation rather than a tidy-up.
+FACTION_FOLDER_ALIASES: dict[str, list[str]] = {
+    "unit effects": ["units"],
+    "unit states": ["units"],
+    "tech": ["advances"],
+    "advisors/Talking Cycles": ["advisors"],
+    # Citizen sheets are filed with the settlements they live in, which is a
+    # historical accident rather than a decision, so a faction folder may put
+    # them where anybody would look for them instead.
+    "cities": ["cities", "citizens"],
+    # Section 125 slice B, when the Hivekin's three terrain resources become
+    # ordinary specials. The art is already filed; nothing asks for it yet.
+    "specials": ["terrain"],
+}
+
+
+def source_dirs(folder: Path) -> list[Path]:
+    """
+    Where a given kind of art may be filed: the flat folder, then each faction's.
+
+    `folder` is always somewhere under `art_src`, so its path relative to that
+    is the name to look for inside each faction -- `art_src/palace` also finds
+    `art_src/factions/hivekin/palace` -- except where the two layouts disagree,
+    which `FACTION_FOLDER_ALIASES` translates.
+    """
+    out = [folder] if folder.is_dir() else []
+    try:
+        rel = folder.relative_to(SRC)
+    except ValueError:
+        return out
+    inside = FACTION_FOLDER_ALIASES.get(rel.as_posix(), [rel.as_posix()])
+    for root in faction_roots():
+        for name in inside:
+            candidate = root / name
+            if candidate.is_dir():
+                out.append(candidate)
+    return out
+
+
+def iter_sources(folder: Path) -> list[Path]:
+    """Every image filed under this kind of art, across all of its folders."""
+    found: list[Path] = []
+    for directory in source_dirs(folder):
+        found.extend(p for p in directory.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
+    return sorted(found, key=lambda p: p.name.lower())
+
+
+def has_source(folder: Path) -> bool:
+    """Whether anything at all is filed under this kind of art."""
+    return len(source_dirs(folder)) > 0
+
+
 def find_source(folder: Path, name: str) -> Path | None:
     """
     The newest file depicting `name`, ignoring any re-roll tag on it.
 
     Used to match by exact filename, which meant a re-rolled "troll magenta"
     sitting beside "troll" was simply never found and the old cut-out stayed.
+
+    Searches the faction folders as well as the flat one, and **the newest copy
+    wins across all of them** -- the same rule a re-roll already relied on, now
+    applied between folders rather than only within one.
     """
     best: Path | None = None
-    for path in folder.iterdir():
-        if path.suffix.lower() not in IMAGE_SUFFIXES:
+    # A name carrying its own parenthetical asks for that exact file. Two
+    # orientations of the Hivekin's chassis were dropped together, sixteen
+    # seconds apart, and "the newest wins" quietly picked one -- re-saving the
+    # other would have mirrored the whole capital with nothing in the repo
+    # recording that a choice had ever been made. Naming it is that record.
+    exact = "(" in name
+    for path in iter_sources(folder):
+        if exact:
+            if path.stem.lower() != name.lower():
+                continue
+            if best is None or path.stat().st_mtime > best.stat().st_mtime:
+                best = path
             continue
         base, variant = normalise_stem(path.stem)
         if variant or base != name.lower():
@@ -717,7 +850,7 @@ def process_ruins(force: bool) -> tuple[int, list[str], list[str]]:
     """
     src = SRC / "ruins"
     out = OUT / "ruins"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, [], []
     out.mkdir(parents=True, exist_ok=True)
     done = 0
@@ -934,7 +1067,7 @@ def process_improvements(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "terrain" / "improvements"
     out = OUT / "terrain" / "improvements"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
     count = 0
@@ -989,7 +1122,7 @@ def process_roads(
     # art the game is using.
     src = src or (SRC / "terrain" / "roads")
     target = target or (OUT / "terrain" / "roads.png")
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
 
     pieces: dict[str, Image.Image] = {}
@@ -1235,7 +1368,7 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "effects"
     out = OUT / "effects"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
 
@@ -1244,7 +1377,7 @@ def process_effects(force: bool) -> tuple[int, list[str]]:
     # already says it -- so drop it, and let the better version of a duplicate
     # win rather than whichever happened to sort last.
     best: dict[str, tuple[int, Path, int, int]] = {}
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         name = re.sub(r"\s*\([^)]*\)", "", path.stem).strip().lower()
@@ -1299,7 +1432,7 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
     """
     src = SRC / "unit states"
     out = OUT / "units"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, [], []
     out.mkdir(parents=True, exist_ok=True)
 
@@ -1314,7 +1447,7 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
     # creature, and the wilds are fetched by name because their folders hold
     # more creatures than the game has units.
     sources: list[tuple[Path, str | None, str | None]] = [
-        (p, None, None) for p in sorted(src.iterdir()) if p.suffix.lower() in IMAGE_SUFFIXES
+        (p, None, None) for p in iter_sources(src) if p.suffix.lower() in IMAGE_SUFFIXES
     ]
     for word, kind_of in STATE_KINDS.items():
         sources.extend(
@@ -1331,7 +1464,13 @@ def process_unit_states(force: bool) -> tuple[int, list[str], list[str]]:
             words = base.split()
             kind = STATE_KINDS.get(words[-1]) if words else None
             if kind is None:
-                unknown.append(f"{path.name}: no idea which state '{base}' is")
+                # A file in the dedicated folder that names no state is a
+                # mistake worth reporting. A file in a *shared* folder is just
+                # somebody else's: a faction keeps a creature's portrait, its
+                # attack strip and its weakened sheet together, so this scan
+                # walks past two of the three every time and should not say so.
+                if path.parent.name.lower() == "unit states":
+                    unknown.append(f"{path.name}: no idea which state '{base}' is")
                 continue
             name = re.sub(r"[^a-z0-9]+", "-", " ".join(words[:-1])).strip("-")
             # Drafted before parsed: a creature the wilds have drawn but no rule
@@ -1393,13 +1532,13 @@ def process_city_effects(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "city effects"
     out = OUT / "effects"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
 
     done = 0
     problems: list[str] = []
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
@@ -1444,13 +1583,13 @@ def process_promotions(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "promotions"
     out = OUT / "promotions"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
 
     done = 0
     problems: list[str] = []
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
@@ -1483,20 +1622,24 @@ def process_citizens(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "cities"
     out = OUT / "citizens"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
 
     best: dict[str, tuple[Path, Image.Image]] = {}
     problems: list[str] = []
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
         words = base.split()
-        if "citizens" not in words:
-            continue
-        words = [w for w in words if w != "citizens"]
+        # Filed among the settlements, a sheet says so in its name. Filed in a
+        # folder called `citizens`, it has already said so by being there, and
+        # the whole stem is the sort's name.
+        if path.parent.name.lower() != "citizens":
+            if "citizens" not in words:
+                continue
+            words = [w for w in words if w != "citizens"]
         female = "female" in words
         words = [w for w in words if w != "female"]
         if not words:
@@ -1746,11 +1889,11 @@ def wild_drafts() -> set[str]:
     sheet for a unit that does not exist.
     """
     src = SRC / "barbarians"
-    if not src.is_dir():
+    if not has_source(src):
         return set()
     names: set[str] = set()
     states = "|".join(STATE_KINDS)
-    for path in src.iterdir():
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
@@ -1811,10 +1954,10 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     carries the lunge.
     """
     src = SRC / "unit effects"
-    if not src.is_dir():
+    if not has_source(src):
         src = SRC / "unit_effects"
     out = OUT / "units"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, [], []
     out.mkdir(parents=True, exist_ok=True)
 
@@ -1831,7 +1974,7 @@ def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     # are named for the unit and fetched by name. `None` means "work the name
     # out from the filename", which is the ordinary case.
     sources: list[tuple[Path, str | None]] = [
-        (p, None) for p in sorted(src.iterdir()) if p.suffix.lower() in IMAGE_SUFFIXES
+        (p, None) for p in iter_sources(src) if p.suffix.lower() in IMAGE_SUFFIXES
     ]
     sources.extend(wild_sheets("attack", "barbarians", "unit effects"))
 
@@ -1948,7 +2091,7 @@ def process_status(force: bool) -> tuple[int, list[str]]:
     """
     src = SRC / "status"
     out = OUT / "status"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, []
     out.mkdir(parents=True, exist_ok=True)
 
@@ -1957,7 +2100,7 @@ def process_status(force: bool) -> tuple[int, list[str]]:
     # whichever sorted last win in silence.
     best: dict[str, Path] = {}
     problems: list[str] = []
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
@@ -2134,7 +2277,7 @@ def process_talking(force: bool) -> tuple[int, list[str], list[str]]:
     """
     src = SRC / "advisors" / "Talking Cycles"
     out = OUT / "advisors"
-    if not src.is_dir():
+    if not has_source(src):
         return 0, list(ADVISOR_TALKING), []
     out.mkdir(parents=True, exist_ok=True)
     done = 0
@@ -2194,12 +2337,12 @@ def process_victory(
     """
     src = SRC / folder
     out = OUT / folder
-    if not src.is_dir():
+    if not has_source(src):
         return 0, list(expected)
     out.mkdir(parents=True, exist_ok=True)
 
     best: dict[str, Path] = {}
-    for path in sorted(src.iterdir()):
+    for path in iter_sources(src):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         base, _ = normalise_stem(path.stem)
@@ -2247,11 +2390,11 @@ def process_audio() -> tuple[int, int, int]:
     after = 0
     for folder, quality, mono in (("music", "7", False), ("sfx", "8", True)):
         src = SRC / folder
-        if not src.exists():
+        if not has_source(src):
             continue
         out = OUT / folder
         out.mkdir(parents=True, exist_ok=True)
-        for path in sorted(src.iterdir()):
+        for path in iter_sources(src):
             if path.suffix.lower() not in {".mp3", ".ogg", ".wav", ".m4a"}:
                 continue
             target = out / f"{path.stem}.mp3"
@@ -2343,6 +2486,28 @@ PALACE: dict[str, str] = {
     "orc-banners-1": "single torn banner",
     "orc-banners-2": "chained banner set",
     "orc-banners-3": "massive blackened war-banners",
+    # Section 125. Named for the tier rather than for the module, in the
+    # Hivekin's own register: a shape is called what it is.
+    # The flipped one, deliberately: it puts the tunnel mouth left of centre,
+    # where the Horde's door (x 37) and the Kingdom's (x 38) both are, so the
+    # chassis points below follow the convention the other two established
+    # rather than needing a mirrored set of their own.
+    "hivekin-base": "base chassis (flipped horizontal)",
+    "hivekin-tower-1": "low vent",
+    "hivekin-tower-2": "watch spire",
+    "hivekin-tower-3": "high spire",
+    "hivekin-gate-1": "open tunnel",
+    "hivekin-gate-2": "chitin valve",
+    "hivekin-gate-3": "sealed valve",
+    "hivekin-wing-1": "brood annex",
+    "hivekin-wing-2": "brood hall",
+    "hivekin-wing-3": "royal gallery",
+    "hivekin-grounds-1": "packed earth",
+    "hivekin-grounds-2": "scoured apron",
+    "hivekin-grounds-3": "tended brood-beds",
+    "hivekin-banners-1": "pheromone stalk",
+    "hivekin-banners-2": "paired stalks",
+    "hivekin-banners-3": "crowned stalks",
 }
 
 
@@ -2494,7 +2659,7 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
     """
     src = SRC / "palace"
     out = OUT / "palace"
-    if not src.exists():
+    if not has_source(src):
         return 0, list(PALACE), []
     out.mkdir(parents=True, exist_ok=True)
     done = 0
@@ -2599,13 +2764,19 @@ def main() -> int:
     failed_units.extend(failed_wilds)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
+    hives, missing_hives, failed_hives = process_aliased(
+        "cities", HIVEKIN_CITIES, force, UNIT_SIZE
+    )
+    cities += hives
+    missing_cities.extend(missing_hives)
+    failed_cities.extend(failed_hives)
     # Section 102's posts are drawn in code until somebody draws them, so the
     # folder is allowed not to exist yet. `ART_PROMPTS.md` has the two prompts.
     posts, missing_posts, failed_posts = 0, ["orc", "human"], []
     if (SRC / "posts").exists():
         print("Garrison posts:")
         posts, missing_posts, failed_posts = process_aliased(
-            "posts", {"orc": "orc", "human": "human"}, force, ICON_SIZE
+            "posts", {"orc": "orc", "human": "human", "hivekin": "hivekin"}, force, ICON_SIZE
         )
     print("Capital parts:")
     palace, missing_palace, failed_palace = process_palace(force)
@@ -2664,6 +2835,12 @@ def main() -> int:
     specials, missing_specials, failed_specials = process_cutouts(
         "specials", SPECIALS, force, size=SPECIAL_SIZE, quiet_missing=True
     )
+    hk_specials, missing_hk, failed_hk = process_aliased(
+        "specials", HIVEKIN_SPECIALS, force, SPECIAL_SIZE
+    )
+    specials += hk_specials
+    missing_specials.extend(missing_hk)
+    failed_specials.extend(failed_hk)
     icons += specials
     missing_icons.extend(missing_specials)
     failed_icons.extend(failed_specials)

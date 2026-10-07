@@ -5,7 +5,7 @@ import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
-import { FACTIONS, otherFaction } from '../model/factions';
+import { FACTIONS, rivalFactions } from '../model/factions';
 import { unitType } from '../model/units';
 import type {
   City,
@@ -256,6 +256,19 @@ export function makePlayer(
   };
 }
 
+/**
+ * The side that starts opposite this one.
+ *
+ * Was `otherFaction`, which could only ever be a coin flip. With three sides it
+ * has to say which of them, and the answer is the other *empire* -- the one that
+ * will sit down at a table, settle at turn one and be measured against you. A
+ * faction that arrives mid-game is never somebody's opening rival.
+ */
+function startingRival(playerFaction: FactionId): FactionId {
+  const rivals = rivalFactions(playerFaction);
+  return rivals.find((f) => FACTIONS[f].startsOnMap) ?? rivals[0];
+}
+
 export function createGame(opts: NewGameOptions = {}): GameState {
   const settings: GameSettings = {
     width: opts.width ?? 64,
@@ -286,7 +299,10 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     ruins: placeRuins(seed, settings.width, settings.height, world.terrain, world.starts),
     players: [
       makePlayer(0, playerFaction, 'human', tileCount),
-      makePlayer(1, otherFaction(playerFaction), 'ai', tileCount),
+      // The two empires that start on the map are the two that talk to each
+      // other. Section 125's third side is not here at turn one and is not
+      // meant to be: it emerges, with its own seat, somewhere around turn 100.
+      makePlayer(1, startingRival(playerFaction), 'ai', tileCount),
     ],
     units: [],
     cities: [],

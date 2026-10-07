@@ -54,11 +54,19 @@ export const JOB_VERB: Record<Job, string> = { irrigate: 'Irrigate', mine: 'Mine
  * forest is stamped flat or managed away; a swamp is somebody falling in again,
  * or a committee of three with one pump.
  */
+/**
+ * One word for the same job, in each side's own voice. The Hivekin name a job
+ * for the state the ground ends up in, never for what happened while doing it.
+ */
+function pick(faction: FactionId, orc: string, human: string, hive: string): string {
+  return faction === 'orc' ? orc : faction === 'human' ? human : hive;
+}
+
 export function jobName(job: Job, faction: FactionId, terrain?: TerrainId): string {
-  if (job === 'irrigate') return faction === 'orc' ? 'A Ditch Somebody Fell In' : 'Tidy Furrows';
-  if (job === 'mine') return faction === 'orc' ? 'The Big Hole' : 'A Respectable Mine';
-  if (terrain === 'swamp') return faction === 'orc' ? 'Somebody Fell In Again' : 'Reclaiming the Bog';
-  return faction === 'orc' ? 'Stomping It Flat' : 'Managed Woodland Reduction';
+  if (job === 'irrigate') return pick(faction, 'A Ditch Somebody Fell In', 'Tidy Furrows', 'A Channel');
+  if (job === 'mine') return pick(faction, 'The Big Hole', 'A Respectable Mine', 'An Opened Seam');
+  if (terrain === 'swamp') return pick(faction, 'Somebody Fell In Again', 'Reclaiming the Bog', 'Drained');
+  return pick(faction, 'Stomping It Flat', 'Managed Woodland Reduction', 'Cleared');
 }
 
 /** Worker-turns for this job on this ground, or null if it cannot be done there. */

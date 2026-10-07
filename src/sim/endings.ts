@@ -1,6 +1,6 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
-import type { City, GameState, ProductionItem } from '../model/types';
+import type { City, FactionId, GameState, ProductionItem } from '../model/types';
 import { contenders, log, playerCities } from './gamestate';
 
 /**
@@ -38,7 +38,56 @@ export const ALT_VICTORY = {
   objectTurns: 15,
 };
 
-export type EndingKind = 'portal' | 'object';
+export type EndingKind = 'portal' | 'object' | 'hive';
+
+/**
+ * The ending this side is building towards, if it has one.
+ *
+ * Read off the buildings rather than branched on the faction. Three `=== 'orc'`
+ * branches used to answer this question, each of them meaning "orc, else the
+ * other one", and each of them would have quietly told the Hivekin they were
+ * building a Mysterious Object.
+ */
+/**
+ * What everybody is told the first time a work goes into production.
+ *
+ * A table rather than the two-branch `if` this was, which said "orc, else the
+ * Kingdom's committee" and would have announced a Mysterious Object the first
+ * time a Hive laid a foundation.
+ */
+const BEGUN: Record<EndingKind, { yours: string; theirs: (name: string) => string }> = {
+  portal: {
+    yours:
+      'Work has begun towards a Demonic Portal, and somebody shouted about it, so everybody ' +
+      'knows. Two works in any city, then the Portal itself in a city holding one of them.',
+    theirs: (name) =>
+      `${name} has begun work towards a Demonic Portal. Two lesser works come first, and ` +
+      'the Portal will stand in a city holding one of them.',
+  },
+  object: {
+    yours:
+      'A committee has begun work towards the Mysterious Object. Everybody has been told it ' +
+      'is coming. Nobody has been told what it does.',
+    theirs: (name) =>
+      `${name} has formed a committee about an object. Two lesser works come first, it will ` +
+      'stand in a city holding one of them, and nobody there will say what it does.',
+  },
+  hive: {
+    yours:
+      'Work has begun towards a second Queen. Nobody in the Hive has remarked on it. Two ' +
+      'works in any Hive, then the Shell itself in a Hive holding one of them.',
+    theirs: (name) =>
+      `${name} has begun growing a second Queen. Two lesser works come first, and the Shell ` +
+      'will stand in a Hive holding one of them. They do not appear to think this is unusual.',
+  },
+};
+
+export function endingFor(faction: FactionId): EndingKind | null {
+  for (const b of Object.values(BUILDINGS)) {
+    if (b.faction === faction && b.victory) return b.victory;
+  }
+  return null;
+}
 
 /** Whether a building is one of the works towards an ending. */
 export function isEndingPiece(b: BuildingDef | undefined): boolean {
@@ -255,27 +304,8 @@ export function checkEndings(state: GameState): void {
       );
       if (starting) {
         p.endingBegunAt = state.turn;
-        if (p.faction === 'orc') {
-          tellEverybody(
-            state,
-            p.id,
-            'Work has begun towards a Demonic Portal, and somebody shouted about it, so everybody ' +
-              'knows. Two works in any city, then the Portal itself in a city holding one of them.',
-            `${p.name} has begun work towards a Demonic Portal. Two lesser works come first, and ` +
-              'the Portal will stand in a city holding one of them.',
-            [starting.x, starting.y],
-          );
-        } else {
-          tellEverybody(
-            state,
-            p.id,
-            'A committee has begun work towards the Mysterious Object. Everybody has been told it ' +
-              'is coming. Nobody has been told what it does.',
-            `${p.name} has formed a committee about an object. Two lesser works come first, it will ` +
-              'stand in a city holding one of them, and nobody there will say what it does.',
-            [starting.x, starting.y],
-          );
-        }
+        const begun = BEGUN[endingFor(p.faction) ?? 'portal'];
+        tellEverybody(state, p.id, begun.yours, begun.theirs(p.name), [starting.x, starting.y]);
       }
     }
 
