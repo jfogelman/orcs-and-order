@@ -601,7 +601,23 @@ class App {
       // animation played faithfully off the edge of the screen -- which is
       // why attacks looked like they simply were not animated.
       window.setTimeout(() => {
-        if (this.state.units.includes(unit) && unit.moves <= 0) this.selectNextIdle();
+        // Staying put in one of our own settlements is its own answer.
+        //
+        // A unit that has just walked into a city of ours and has no order is a
+        // unit about to be told to hold it -- that is what walking in *was*. So
+        // focus stays, and `F` is one key away. Everywhere else the cycle moves
+        // on as it always has, because being carried to the next unit is the
+        // point of the cycle.
+        //
+        // Without this the garrison you walked out to make room, still holding
+        // a movement point, is what the cycle jumps to -- and the unit you were
+        // in the middle of a plan about is gone from the panel.
+        const held = cityAt(this.state, unit.x, unit.y);
+        const settling =
+          held?.owner === this.viewerId && awaitingDecision(this.state, this.viewerId, unit);
+        if (this.state.units.includes(unit) && unit.moves <= 0 && !settling) {
+          this.selectNextIdle();
+        }
         this.promptPerkIfOwed();
       }, ATTACK_HOLD_MS);
     }
