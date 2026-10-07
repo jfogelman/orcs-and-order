@@ -830,6 +830,25 @@ export function endPlayerTurn(state: GameState): void {
   beginPlayerTurn(state, state.activePlayer);
 }
 
+/**
+ * Whether this unit still has a decision owed, which is not the same as having
+ * a move left.
+ *
+ * `idleUnits` asks for `moves > 0`, because it answers "is there anything left
+ * to *move*". Fortify, Sentry and Skip all still apply to a unit that has spent
+ * its last point -- so a freshly built unit walked into the city whose garrison
+ * you just walked out still wants an answer, and the interface used to drop it
+ * the instant it arrived. Reported from a real game at turn 44.
+ */
+export function awaitingDecision(
+  state: GameState,
+  playerId: number,
+  unit: Unit | null | undefined,
+): boolean {
+  if (!unit) return false;
+  return state.units.includes(unit) && unit.owner === playerId && unit.order === 'none';
+}
+
 /** Units that still have moves and no standing order — the "anything left?" check. */
 export function idleUnits(state: GameState, playerId: number) {
   return state.units.filter(

@@ -211,6 +211,25 @@ export function ruinAt(state: GameState, x: number, y: number): Ruin | undefined
   return state.ruins?.find((r) => r.x === x && r.y === y);
 }
 
+/**
+ * Which of the four things a tile's ruin is, for anything that has to say so.
+ *
+ * All four are visible on the map; none of them is what is *inside*, which
+ * stays sealed until somebody opens it. A ruin whose contents can be read
+ * before the fight is a shop.
+ */
+export function ruinState(
+  state: GameState,
+  x: number,
+  y: number,
+): 'emptied' | 'held' | 'awake' | 'undisturbed' | null {
+  const ruin = ruinAt(state, x, y);
+  if (!ruin) return null;
+  if (ruin.takenOn !== undefined) return 'emptied';
+  if (state.units.some((u) => u.x === x && u.y === y && isWarden(u))) return 'held';
+  return ruin.wokeOn !== undefined ? 'awake' : 'undisturbed';
+}
+
 /** Ruins still holding something. */
 export function standingRuins(state: GameState): Ruin[] {
   return (state.ruins ?? []).filter((r) => r.takenOn === undefined);
