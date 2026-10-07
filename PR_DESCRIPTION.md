@@ -159,10 +159,13 @@ and is imported by the sweeps, the probes and the seed scanner alike.
   each empire's goes on walking to one of its own undefended cities, and the
   branch that would make a unit *stay* has never fired in 77,000 turns because
   it cannot. Shared code, its own section.
-- Five turns for the succession is unmeasured; the two Burrower branches are not
-  mutually exclusive, which the bible says they should be and the tech tree
-  cannot express; the brood choice has no dialog yet; the three Hivekin specials
-  still owe an unpaired measurement; and whether the third seat moved the
-  Horde-Kingdom balance at all is not established either way.
+- Five turns for the succession is unmeasured; the brood choice has no dialog
+  yet, which only matters once the Hivekin are playable; the three Hivekin
+  specials still owe an unpaired measurement; and whether the third seat moved
+  the Horde-Kingdom balance at all is not established either way.
+- The Burrower's two branches are both researchable, which is a decision rather
+  than an omission: the bible called them mutually exclusive, and exclusivity
+  there would guard a boundary nothing is crossing, since both branches are the
+  same caste being more itself.
 
 1041 tests.

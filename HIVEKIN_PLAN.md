@@ -147,6 +147,20 @@ ready to paste, plus two advances the second draft added:
 | `caste-bloat` | 95 | caste-spitter | Bloat-caste |
 | `burrower-deep` | 120 | burrower-veteran | Burrow range 3, + The Undercity |
 | `burrower-ambush` | 120 | burrower-veteran | First-strike on emerge |
+
+**Deep and Ambush are both researchable, and that is the decision rather than
+the omission it looked like.** The bible calls them "two mutually exclusive
+specializations"; the tech tree has no way to say that, and nothing else in the
+game has ever needed one. Jeremy's answer of 2026-10-06: allow both, because
+exclusivity here would be guarding a line that is not under threat — both
+branches sit inside the Burrower-caste's own idea, and nothing bleeds between
+*castes*. Further Down is mobility and Already Waiting is damage; a Hive that
+pays 90 + 240 beakers out of the ten advances it gets in a game has specialised
+by paying, which is the sacrifice the exclusivity was there to create.
+
+Reconsider only if a later caste wants branches that really are opposed. That is
+when the tech tree earns an `excludes` field, and it would then be available to
+everybody rather than invented for one pair.
 | `caste-elite` | 85 | caste-soldier | Elite-caste |
 | `caste-broodlord` | 130 | caste-elite | Broodlord-caste, + The Broodwarmth |
 | `caste-warden` | 140 | caste-elite, hammers-of-glory | Warden-caste |
@@ -472,7 +486,11 @@ Still outstanding on this, and both are in `DESIGN_QUEUE.md`:
 - **Citizen weights.** Four kinds are specified (see `ART_PROMPTS.md`); the
   weights default to 4 / 4 / 2 / 1 unless Jeremy says otherwise.
 - **Upgrade lines for the other castes.** Only the Burrower's is specified. The
-  rest want the same linear-plus-two-branch treatment eventually.
+  rest want the same linear-plus-two-branch treatment eventually — and when they
+  arrive, the question of whether two branches may be taken together is worth
+  asking per caste rather than globally. It was answered "both" for the
+  Burrower's on the grounds that its two branches do not compete with anything
+  outside itself.
 - **Biomass as a fifth resource** was floated and the bible assumes it away, in
   favour of the ordinary shields/gold/beakers/happiness four. Taken as settled
   unless Jeremy revisits it.

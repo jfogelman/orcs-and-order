@@ -781,6 +781,13 @@ export const TECHS: TechDef[] = [
     flavor: 'Distance solved the reaching problem. Walls remained. This solves that too.',
   },
   {
+    // Deep and Ambush hang off the same advance and **both may be taken**. The
+    // bible called them mutually exclusive; nothing in this tree can say that,
+    // and Jeremy's answer of 2026-10-06 was that it should not have to here --
+    // the exclusivity would be guarding a boundary that is not under threat,
+    // since both branches are the Burrower-caste being more itself and nothing
+    // bleeds between castes. One is mobility, the other damage, and paying 90
+    // plus 240 beakers out of a ten-advance game is the specialisation.
     id: 'burrower-deep',
     name: 'Further Down',
     faction: 'hivekin',

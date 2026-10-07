@@ -11010,9 +11010,16 @@ before the control bug was 27. It did not move — which is luck, not vindicatio
   125 still owes: seat on against seat off, paired, which works because the
   Hivekin arrive after worldgen. It answers the balance question and re-baselines
   the two empires on a corrected control in the same run.
-- **The two Burrower branches are not mutually exclusive.** The bible says they
-  should be; the tech tree cannot express it; a player can take both. A decision,
-  not a measurement.
+- ~~The two Burrower branches are not mutually exclusive.~~ **Settled
+  2026-10-06: both, on purpose.** The bible called them mutually exclusive, the
+  tech tree has no way to say so, and nothing else in the game has ever needed
+  one. Jeremy's reasoning is the part worth keeping: exclusivity here would be
+  guarding a boundary that is not under threat, because both branches are the
+  Burrower-caste being more itself and nothing bleeds between *castes*. Further
+  Down is mobility, Already Waiting is damage, and paying 90 + 240 beakers out
+  of a ten-advance game is the specialisation. The tech tree earns an `excludes`
+  field the first time a caste wants branches that genuinely oppose each other --
+  and then it belongs to everybody, rather than being invented for one pair.
 - Beakers 7.4 to 5.5 with the ladder on, unexplained.
 - The garrison treadmill, its own section.
 - Five turns for the succession, unmeasured; the brood choice has no dialog,
