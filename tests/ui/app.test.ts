@@ -3,6 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createGame, spawnUnit } from '../../src/sim/gamestate';
 import { foundCity } from '../../src/sim/city';
 import { FACTIONS } from '../../src/model/factions';
+import { UNIT_TYPES } from '../../src/model/units';
 import { beginPlayerTurn } from '../../src/sim/turn';
 import type { GameState, Unit } from '../../src/model/types';
 
@@ -207,20 +208,45 @@ describe('walking into a ruin', () => {
     expect(notice, 'and says which').toMatch(/Sentinel|Guardian|Keeper/);
   });
 
-  it('never says what the prize is', () => {
+  it('describes what ruins hold without saying what this one holds', () => {
+    // The dialog names the kinds on purpose -- a sealed box nobody will
+    // describe at all is a box nobody opens -- so the property that matters is
+    // that it reads *identically* whatever is actually in there.
+    const read = (prize: 'gold' | 'advance') => {
+      const { state, scout } = withRuin();
+      state.ruins![0].prize = prize;
+      app.adopt(state);
+      beginPlayerTurn(state, 0);
+      app.select(scout);
+      app.actOn(10, 8);
+      const dialog = document.querySelector('.modal');
+      expect(dialog, 'there is a dialog to read').not.toBeNull();
+      const text = dialog!.textContent!.replace(/\s+/g, ' ').trim();
+      document.getElementById('modal-root')!.innerHTML = '';
+      return text;
+    };
+
+    const onGold = read('gold');
+    const onAdvance = read('advance');
+    expect(onGold, 'it says what ruins hold').toMatch(/gold/);
+    expect(onGold, 'all four kinds').toMatch(/advance/);
+    expect(onAdvance, 'and does not change with the contents').toBe(onGold);
+  });
+
+  it('offers the guardian to look up rather than only naming it', () => {
     const { state, scout } = withRuin();
     app.adopt(state);
     beginPlayerTurn(state, 0);
     app.select(scout);
 
     app.actOn(10, 8);
-    const dialog = document.querySelector('.modal');
-    // Asserted before the contents, or this passes for the wrong reason: no
-    // dialog at all also fails to mention the prize.
-    expect(dialog, 'there is a dialog to read').not.toBeNull();
-    expect(state.ruins![0].prize, 'the record knows').toBe('gold');
-    expect(dialog!.textContent!.toLowerCase(), 'the dialog does not').not.toContain('gold');
+
+    const link = document.querySelector<HTMLElement>('.modal [data-pedia]');
+    expect(link, 'a way through to the Orcpedia').not.toBeNull();
+    // It points at a real unit, not a label: the entry has to open on something.
+    expect(UNIT_TYPES[link!.dataset.pedia!], link!.dataset.pedia).toBeTruthy();
   });
+
 });
 
 describe('the hovered tile', () => {

@@ -731,24 +731,46 @@ class App {
    * which is a thing the player could work out from the last ruin they opened.
    */
   private askAboutGoingIn(unit: Unit, x: number, y: number): void {
-    const likely = unitType(expectedGuard(this.state));
+    const likely = expectedGuard(this.state);
+    // What a ruin can hold, in the order it tends to hold it. The weights are
+    // the ones the roll uses, so this cannot drift into a promise the game does
+    // not keep -- and it names the *kinds*, never which one is in this ruin.
+    const spoils = Object.entries(RUINS.prizes)
+      .sort((a, b) => b[1] - a[1])
+      .map(([kind]) => PRIZE_NAMES[kind as keyof typeof PRIZE_NAMES] ?? kind);
     openModal({
       title: 'A ruin, undisturbed',
       width: 'min(460px, 92vw)',
       body: `
         <div class="panel-body">
-          <p class="flavor">Old, standing, and holding something. Walking in
-          wakes it, and whatever is in there has been waiting for exactly this.
-          It takes the rest of the turn either way.</p>
-          <div class="stat-row"><span class="label">Usually standing up</span><span class="value">${escapeHtml(likely.name)}</span></div>
+          <p class="flavor">The world is old, and ruins are scattered
+          throughout. If you dare to disturb them, old guardians awaken, but
+          defeating them reveals untold riches. It takes the rest of the turn if
+          you choose to explore it.</p>
+          <div class="stat-row">
+            <span class="label">The likeliest guardian</span>
+            <span class="value"><a href="#" class="pedia-link" data-pedia="${escapeHtml(likely)}"
+              title="Look it up in the Orcpedia">${escapeHtml(unitType(likely).name)}</a></span>
+          </div>
           <div class="stat-row"><span class="label">Going in</span><span class="value">${escapeHtml(unitType(unit.type).name)}</span></div>
-          <p class="flavor">What is inside is not known until it is opened.</p>
+          <div class="stat-row"><span class="label">What ruins hold</span><span class="value">${escapeHtml(spoils.join(', '))}</span></div>
+          <p class="flavor">Commonest first, and which of them is in <em>this</em>
+          one is nobody's business until it is open.</p>
         </div>
         <div class="modal-actions">
           <button class="small" data-act="ruin-stay">Leave it</button>
           <button class="small primary" data-act="ruin-enter">Go in</button>
         </div>`,
       onMount: (root, close) => {
+        // The guardian's own card, which is where its numbers live. Leaves the
+        // question open behind it -- looking something up is not an answer.
+        root.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            close();
+            openPedia(this.state, this.state.players[this.viewerId], link.dataset.pedia);
+          });
+        });
         root.querySelector('[data-act="ruin-stay"]')?.addEventListener('click', () => close());
         root.querySelector('[data-act="ruin-enter"]')?.addEventListener('click', () => {
           close();
@@ -2957,6 +2979,21 @@ const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined
  * How long to leave a unit alone after it attacks, before jumping the
  * selection onward. Slightly longer than the swing itself.
  */
+/**
+ * The four things a ruin can hold, in the player's words rather than the
+ * record's.
+ *
+ * Said positively and in the open: a ruin is a sealed box, and a sealed box
+ * nobody will describe at all is a box nobody opens. What stays secret is which
+ * of these is in *this* one.
+ */
+const PRIZE_NAMES = {
+  gold: 'gold',
+  promotion: 'a promotion',
+  unit: 'something that joins you',
+  advance: 'an advance',
+} as const;
+
 const ATTACK_HOLD_MS = 420;
 
 /** What each rank is called in the readout. Index 0 is never shown. */
