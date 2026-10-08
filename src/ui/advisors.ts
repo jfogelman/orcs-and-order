@@ -3,7 +3,7 @@ import { takeTurns } from './talking';
 import type { FactionId, GameState } from '../model/types';
 import { unitType } from '../model/units';
 import {
-  ROLE_NAMES,
+  ROLE_TITLES,
   type Crisis,
   type Situation,
   advisorLine,
@@ -405,7 +405,7 @@ export function openAdvisors(
       }
       <div class="advisor-who">
         <span class="advisor-name">${escapeHtml(a.name)}</span>
-        <span class="advisor-role muted">${escapeHtml(ROLE_NAMES[a.role])}</span>
+        <span class="advisor-role muted">(${escapeHtml(ROLE_TITLES[a.role])})</span>
         <span class="advisor-blurb muted">${escapeHtml(a.blurb)}</span>
       </div>
       <div class="advisor-line" data-line="${escapeHtml(advisorLine(a, situation, concern))}"${
@@ -508,6 +508,7 @@ export function openAdvisors(
               <img class="advisor-reply-face" src="${portraitPath(o.advisor.id)}" alt="" />
               <div>
                 <span class="advisor-name">${escapeHtml(o.advisor.name)}</span>
+                <span class="advisor-role muted">(${escapeHtml(ROLE_TITLES[o.advisor.role])})</span>
                 <div>${escapeHtml(o.says)}</div>
               </div>
             </div>`,
