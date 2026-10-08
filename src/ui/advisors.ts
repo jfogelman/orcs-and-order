@@ -24,7 +24,7 @@ import { connectedByRoad } from '../sim/roads';
 import { goldBuildingIn, tradeLinks } from '../sim/trade';
 import { hasFlag } from '../sim/rules';
 import { TERRAFORM, tileBlocked } from '../sim/terraform';
-import { ashamed, betrayals, peaceLeft } from '../sim/diplomacy';
+import { ashamed, betrayals, peaceLeft, talksWith } from '../sim/diplomacy';
 import { idx } from '../engine/grid';
 import { CLOCK_WARNINGS, DOMINANCE, playerScore, turnsLeft } from '../sim/turn';
 import { raidersActive, raidersAtTheGate, raidersSeen } from '../sim/barbarians';
@@ -291,7 +291,10 @@ export function situationOf(state: GameState, playerId: number): Situation {
     terraformKnown,
     idleWorkers,
     landToWork,
-    peaceLeft: peaceLeft(state),
+    peaceLeft: talksWith(state, playerId).reduce(
+      (n: number, id: number) => Math.max(n, peaceLeft(state, playerId, id)),
+      0,
+    ),
     ashamed: ashamed(state, playerId),
     theyBroke: state.players.some(
       (p) => p.id !== playerId && !p.barbarian && betrayals(state, p.id) > 0,

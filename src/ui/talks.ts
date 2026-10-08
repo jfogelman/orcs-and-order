@@ -207,7 +207,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
     const weWant = wantPeace(state, me, them);
     const theyWant = wantPeace(state, them, me);
     const status = peace
-      ? `<strong>At peace</strong> with ${escapeHtml(them.name)} &mdash; ${peaceLeft(state)} turns left.`
+      ? `<strong>At peace</strong> with ${escapeHtml(them.name)} &mdash; ${peaceLeft(state, me.id, them.id)} turns left.`
       : `<strong>At war</strong> with ${escapeHtml(them.name)}.`;
     const notes = [
       ashamed(state, me.id)

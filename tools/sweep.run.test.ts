@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { PEACE } from '../src/sim/diplomacy';
 
 /**
  * The question this sweep is currently asking.
@@ -42,37 +42,34 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 125, the last thing it owes: did the third seat move the two
-  // empires, and what is the game actually balanced at now?
+  // Section 135 slice 1: relations kept per pair of sides rather than as one
+  // flag for the whole game.
   //
-  // One run answers both. The Horde-against-Kingdom split in the three-sided
-  // arm is the stated balance target; the two-sided arm is what that split was
-  // before the Hivekin existed, measured on the same maps and on a control that
-  // finally matches the shipped game.
+  // **This arm pair is supposed to come back identical.** The slice changes
+  // where the answer is kept and nothing about what the answer is, so the only
+  // honest check is a paired run that finds no difference -- and two arms
+  // reading the same numbers is, for once, exactly the result wanted rather
+  // than an instrument reading zero. The distinction is that the mechanism was
+  // counted first: six tests say a treaty between two sides now leaves a third
+  // out of it, which the old shape could not express at all.
   //
-  // **Pairable, which a worldgen lever would not be.** The Hivekin arrive long
-  // after the map is made, and their three specials are a separate lever left on
-  // in both arms, so the two arms play the same world. The harness checks the
-  // map signature and will say so if that is ever wrong -- which is how section
-  // 94's confident, meaningless result got caught.
-  //
-  // What this cannot do is tell the two apart from the correction to
-  // `RUINS.aiOdds`: everything before 2026-10-05 was measured at 0.25 against
-  // the 0.4 that ships. Both arms here are at 0.4, so this *is* the new
-  // baseline rather than a comparison against the old numbers.
+  // `PEACE.enabled` off against on is the lever that moves, because there is no
+  // "old shape" lever to compare against -- the old shape is gone. A diplomacy
+  // that still swings the game the way it did before the rewrite is a rewrite
+  // that kept its promises.
   return [
     {
-      label: 'two sides',
+      label: 'no treaties',
       apply: () => {
         control();
-        HIVEKIN.enabled = false;
+        PEACE.enabled = false;
       },
     },
     {
-      label: 'three sides',
+      label: 'treaties',
       apply: () => {
         control();
-        HIVEKIN.enabled = true;
+        PEACE.enabled = true;
       },
     },
   ];

@@ -2509,7 +2509,7 @@ class App {
       (o) => o.id !== p.id && !o.barbarian && o.alive && canTalk(o.faction),
     );
     talks.hidden = !PEACE.enabled || !rival || !canTalk(p.faction);
-    talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state)}` : 'Talks';
+    talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state, p.id, rival.id)}` : 'Talks';
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;
     // The turns are on the chip and not only behind the advances screen: doing

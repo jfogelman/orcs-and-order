@@ -83,10 +83,53 @@ function relations(state: GameState) {
   return (state.diplomacy ??= {});
 }
 
+/**
+ * The two ids that make a pair, smaller first.
+ *
+ * One spelling per pair and no ordered relationships: "the Horde is at peace
+ * with the Kingdom" and the reverse are the same sentence, and a record that
+ * could hold both would eventually hold two different answers.
+ */
+export function pairKey(a: number, b: number): string {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
+/** What stands between these two, created on first use. */
+function between(state: GameState, a: number, b: number) {
+  const pairs = (relations(state).pairs ??= {});
+  return (pairs[pairKey(a, b)] ??= {});
+}
+
+/** Read-only: what stands between these two, or nothing if they have no history. */
+function peek(state: GameState, a: number, b: number) {
+  return state.diplomacy?.pairs?.[pairKey(a, b)];
+}
+
+/**
+ * A save written before relations were per-pair.
+ *
+ * The old single peace belonged to whichever two sides could talk, which in
+ * every such save is the two empires -- the Hivekin could not sign anything and
+ * the wilds were never party to it. Moved to that pair rather than dropped, so
+ * a game loaded mid-treaty is still mid-treaty.
+ */
+export function migrateRelations(state: GameState): void {
+  const rel = state.diplomacy;
+  if (!rel || (!rel.peace && rel.lastClash === undefined)) return;
+  const talkers = state.players.filter((p) => !p.barbarian && talks(p.faction));
+  if (talkers.length >= 2) {
+    const pair = between(state, talkers[0].id, talkers[1].id);
+    if (rel.peace) pair.peace = rel.peace;
+    if (rel.lastClash !== undefined) pair.lastClash = rel.lastClash;
+  }
+  delete rel.peace;
+  delete rel.lastClash;
+}
+
 /** Whether these two are at peace right now. */
 export function atPeace(state: GameState, a: number, b: number): boolean {
   if (!PEACE.enabled || !empires(state, a, b)) return false;
-  const peace = state.diplomacy?.peace;
+  const peace = peek(state, a, b)?.peace;
   return !!peace && state.turn < peace.until;
 }
 
@@ -111,9 +154,27 @@ function underGrace(state: GameState, id: number): boolean {
   return p?.safeUntil !== undefined && state.turn < p.safeUntil;
 }
 
-/** Turns the current peace has left, or 0 at war. */
-export function peaceLeft(state: GameState): number {
-  const peace = state.diplomacy?.peace;
+/**
+ * Everybody this side could in principle sign something with.
+ *
+ * The one place "who are my rivals" and "who negotiates" are asked together,
+ * so a caller that wants a pair does not have to rediscover the `talks()` rule
+ * for itself.
+ */
+export function talksWith(state: GameState, playerId: number): number[] {
+  return state.players
+    .filter((p) => p.id !== playerId && empires(state, playerId, p.id))
+    .map((p) => p.id);
+}
+
+/** When this pair's peace was made, or nothing if they have none. */
+export function peaceSince(state: GameState, a: number, b: number): number | undefined {
+  return peek(state, a, b)?.peace?.since;
+}
+
+/** Turns this pair's peace has left, or 0 at war. */
+export function peaceLeft(state: GameState, a: number, b: number): number {
+  const peace = peek(state, a, b)?.peace;
   if (!PEACE.enabled || !peace) return 0;
   return Math.max(0, peace.until - state.turn);
 }
@@ -153,9 +214,9 @@ export function signPeace(state: GameState, terms: PeaceTerms): boolean {
   state.players[payee].gold += gold;
 
   const renewing = atPeace(state, terms.from, terms.to);
-  const rel = relations(state);
-  rel.peace = {
-    since: renewing ? (rel.peace?.since ?? state.turn) : state.turn,
+  const pair = between(state, terms.from, terms.to);
+  pair.peace = {
+    since: renewing ? (pair.peace?.since ?? state.turn) : state.turn,
     until: state.turn + PEACE.term,
   };
   const a = state.players[terms.from].name;
@@ -173,12 +234,18 @@ export function signPeace(state: GameState, terms: PeaceTerms): boolean {
  * Go back on it. The peace ends at once, the breaker's cities are restless for
  * a few turns, and the other side remembers -- a second offer will cost more.
  */
-export function breakPeace(state: GameState, breaker: number): boolean {
+export function breakPeace(state: GameState, breaker: number, other?: number): boolean {
   const rel = state.diplomacy;
-  if (!rel?.peace) return false;
-  const other = state.players.find((p) => p.id !== breaker && !p.barbarian && p.alive);
-  if (!other || !atPeace(state, breaker, other.id)) return false;
-  delete rel.peace;
+  if (!rel) return false;
+  // Named, or the only side it has a peace with. Picking "whoever else is
+  // alive" was right while there were two empires and would tear up the wrong
+  // treaty the moment there are two to choose from.
+  const victim =
+    other ??
+    state.players.find((p) => p.id !== breaker && !p.barbarian && p.alive && atPeace(state, breaker, p.id))
+      ?.id;
+  if (victim === undefined || !atPeace(state, breaker, victim)) return false;
+  delete between(state, breaker, victim).peace;
   (rel.distrust ??= {})[breaker] = betrayals(state, breaker) + 1;
   (rel.shameUntil ??= {})[breaker] = state.turn + PEACE.shameTurns;
   const who = state.players[breaker].name;
@@ -196,7 +263,7 @@ export function breakPeace(state: GameState, breaker: number): boolean {
     state,
     `${who} tears up the peace. They will want watching, and they will not be believed twice.`,
     'bad',
-    other.id,
+    victim,
     'city-lost',
     undefined,
     undefined,
@@ -213,12 +280,12 @@ export function breakPeace(state: GameState, breaker: number): boolean {
  */
 export function noteClash(state: GameState, a: number, b: number): void {
   if (!empires(state, a, b)) return;
-  relations(state).lastClash = state.turn;
+  between(state, a, b).lastClash = state.turn;
 }
 
-/** Whether the two empires have fought in the last few turns. */
-export function atWarLately(state: GameState): boolean {
-  const last = state.diplomacy?.lastClash;
+/** Whether these two have fought in the last few turns. */
+export function atWarLately(state: GameState, a: number, b: number): boolean {
+  const last = peek(state, a, b)?.lastClash;
   return last !== undefined && state.turn - last <= PEACE.warMemory;
 }
 
@@ -230,11 +297,23 @@ export const BROKEN = 'peace-broken';
  * is to blame for a lapse, so it costs nothing.
  */
 export function lapsePeace(state: GameState): void {
-  const peace = state.diplomacy?.peace;
-  if (!peace || state.turn < peace.until) return;
-  delete state.diplomacy!.peace;
-  for (const p of state.players) {
-    if (p.barbarian || !p.alive) continue;
-    log(state, `The peace has run its term and lapsed. Nobody renewed it.`, 'bad', p.id);
+  const pairs = state.diplomacy?.pairs;
+  if (!pairs) return;
+  for (const [key, pair] of Object.entries(pairs)) {
+    if (!pair.peace || state.turn < pair.peace.until) continue;
+    delete pair.peace;
+    // Told to the two it was between, and to nobody else: a treaty lapsing
+    // across the map is not news to a side that was never party to it.
+    for (const id of key.split(':').map(Number)) {
+      const p = state.players[id];
+      if (!p || p.barbarian || !p.alive) continue;
+      const them = state.players[key.split(':').map(Number).find((x) => x !== id) ?? id];
+      log(
+        state,
+        `The peace with ${them?.name ?? 'them'} has run its term and lapsed. Nobody renewed it.`,
+        'bad',
+        id,
+      );
+    }
   }
 }
