@@ -28,6 +28,28 @@ export const ROLE_NAMES: Record<AdvisorRole, string> = {
 };
 
 /**
+ * What to call each of them to their face.
+ *
+ * `ROLE_NAMES` is the *subject* -- the word for the area, used where something
+ * is being filed under it. This is the **post**, and it is what belongs beside
+ * a person's name: six titles that look like titles rather than six category
+ * labels. A council of "Blademaster / MILITARY" reads as a database; a council
+ * of "Blademaster (War Advisor)" reads as a room with people in it, and tells a
+ * new player which of the six to listen to about what.
+ *
+ * War rather than Military, because that is the thing he advises about and the
+ * word this game uses everywhere else for it.
+ */
+export const ROLE_TITLES: Record<AdvisorRole, string> = {
+  military: 'War Advisor',
+  faith: 'Faith Advisor',
+  domestic: 'Domestic Advisor',
+  trade: 'Trade Advisor',
+  diplomacy: 'Diplomacy Advisor',
+  arcane: 'Arcane Advisor',
+};
+
+/**
  * A snapshot of an empire, in the terms advisors care about.
  *
  * Gathered once and handed to all six, so nobody re-walks the city list, and
