@@ -35,24 +35,73 @@ relations: Record<PairKey, {
 `state.diplomacy` — `distrust`, `shameUntil`, `lastClash` — moves in here and
 stops being per-player.
 
+## Jeremy's answers, 2026-10-07
+
+All four, and the first one changes the shape of it.
+
+**The Hivekin talk.** "Alien to orcs and humans, not silent" -- and they already
+have the advisor for it: the Voice, whose whole joke is mimicking humanoid
+emotion at something that does not have any. So `talks()` becomes true for them
+and the bible's "fought, not talked to" is retired.
+
+What makes them alien is not silence, it is **what moves their number**. The
+same scale, weighted by what the Hive actually cares about:
+
+| | empires | the Hive |
+|---|---|---|
+| units lost | -12 a fight | **about nothing** |
+| a city taken | -25 | **-45 for a Hive** |
+| being hemmed in | -- | **-2 a turn with no room to found** |
+| much the stronger | -- | **matters, both ways** |
+
+A side that does not mind losing units but minds losing ground, and reads the
+balance of power before anything else. That falls straight out of "uncaring
+about units except from a hive survival perspective", and it means their mood is
+legible without a word of special-case prose.
+
+**And they do not attack what will destroy them.** This is not `caution`, which
+is one unit weighing one fight at one-in-three odds. This is the Hive declining
+a *war*: strength against strength across the whole board, and no opening of
+hostilities it cannot survive. Expansion is the goal; being wiped out is not a
+price it will pay for ground.
+
+**Peace can be sued for at War, with a price that moves.** No hard floor --
+instead the existing "wanting" score in `DIPLOMACY_AI` gains three terms, all of
+which make a long bad war easier to end than a short winning one: how long the
+war has run, what it has cost in units and cities, and the balance of power. The
+loser asks sooner; the winner holds out.
+
+**The number is shown, on a -50 to +50 scale**, with the name as its band.
+
+**Meeting reveals, both ways.** Whoever walks into whom, both sides learn where
+the other is. Fair, and it makes scouting a thing you do *to* somebody rather
+than a thing you get away with.
+
 ## The names are derived, never stored
 
 **Store the causes, show the label.** A stored mood is a mood nobody can
 explain, and the first question a player asks is "why are they angry". One
 function, and it reads top to bottom:
 
-| shown | when |
-|---|---|
-| **War** | fighting, or a peace broken within `warMemory` |
-| **Angered** | standing below −40 |
-| **Tense** | standing below −15, or they have broken a peace with us before |
-| **Concerned** | standing below −15 *and* we are much the stronger — fear, not anger |
-| **Uneasy** | no treaty, standing near nothing: the default of two sides that have met and done nothing about it |
-| **Peace** | a treaty running |
-| **Joyful** | a treaty running, standing above +40 |
+A plain ladder on one number from -50 to +50, with **War** the only thing that
+overrides it:
 
-Seven names, one number, no state machine. The label is a *view*; the AI reads
-`standing` and the treaty, never the word.
+| shown | standing |
+|---|---|
+| **War** | *fighting now, or a peace broken within `warMemory`* |
+| **Angered** | -50 to -30 |
+| **Tense** | -29 to -15 |
+| **Concerned** | -14 to -5 |
+| **Uneasy** | -4 to +9 |
+| **Peace** | +10 to +34 |
+| **Joyful** | +35 to +50 |
+
+Seven names, one number, no state machine. A signed treaty is a **separate
+fact** shown beside the mood -- "Tense, truce 12 turns left" -- rather than a
+word in the ladder, because the two really are different things: a side can be
+furious and bound, or friendly and unbound.
+
+The player sees `Tense (-22)`. The AI reads the number and never the word.
 
 ## What moves the number
 
@@ -129,14 +178,42 @@ here.
    it. Measured separately, because it is the half that could quietly end wars
    altogether.
 
+## Spies, sketched -- their own section, not this one
+
+Asked for as a next step, and worth noting now because **the hard part is
+already built**. Section 125 taught this game that a unit can be on the board
+and not visible: `seenBy` is the single place that question is answered, and the
+Burrower-caste proved the concept in anger. A spy is a Burrower that gathers
+instead of fighting.
+
+Roughly, and to be argued about later:
+
+- **A unit that is not seen while it is still.** Sits in or beside a rival's
+  city and reports what it can see of it: what is being built, what garrisons
+  it, how far along an ending is.
+- **Upgrades along the Burrower's shape**, one linear then two branches. Read a
+  city; read the standing itself, which is the one thing diplomacy cannot
+  otherwise tell you -- *their* view of *you*; and one rung that acts rather
+  than watches.
+- **Acting has a price in standing**, which is what ties this to diplomacy
+  rather than making it a separate toy: being caught is a swing against you and
+  a betrayal on the record, weighed by the AI the way breaking a peace is.
+
+What it must not become is a second combat system. One unit, three upgrades,
+and everything it does is *information* except the last rung.
+
 ## Open questions for Jeremy
 
-- **Do the Hivekin stay silent?** They are "fought, not talked to" by the
-  bible, and the plan above keeps that while still giving them a first-contact
-  message. If they are to be playable, is their Talks screen simply empty?
-- **Can a player sue for peace with a side at War, or only at Tense and above?**
-  A floor makes wars finish; no floor makes them cheap to end.
-- **Should standing be visible as a number, or only as the name?** The name is
-  friendlier and the number is honest.
-- **Does meeting somebody reveal where they are?** First contact implies a
-  sighting, and that is a real intelligence gift.
+All four answered above. What is left is narrower, and most of it can wait
+until slice 1 is standing up:
+
+- **Does the Hive's own standing mean anything to the Hive?** It will talk and
+  it will hold a treaty, but "Joyful" is a word about a thing with no feelings.
+  The Voice mimicking an emotion it does not have is the joke; whether the Hive
+  *acts* on the mood or merely reports it is a real mechanical choice, and
+  "reports it, acts on the arithmetic" is the funnier and the simpler.
+- **How long is a war before it counts as long?** The tiring term needs a shape,
+  and twenty turns is a guess rather than a measurement.
+- **Does breaking a truce with one side cost standing with everybody?** It
+  should, a little -- nobody likes a side that breaks its word, and it gives
+  `betrayals` something to do beyond the pair that suffered it.
