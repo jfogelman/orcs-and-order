@@ -148,6 +148,64 @@ describe('a unit that has just spent its last move', () => {
   });
 });
 
+describe('giving a unit its orders', () => {
+  /**
+   * Every standing order hands the cycle on -- Sentry, Skip and Mend always
+   * did, and Fortify did not, so the order a player gives most often was the
+   * one that left them pressing Next afterwards.
+   */
+  function twoIdle(): { state: GameState; a: Unit; b: Unit } {
+    const state = board();
+    foundCity(state, spawnUnit(state, 0, 'peon', 4, 4));
+    const a = spawnUnit(state, 0, 'goblin', 8, 8);
+    const b = spawnUnit(state, 0, 'goblin', 14, 8);
+    return { state, a, b };
+  }
+
+  it('moves on when a unit digs in', () => {
+    const { state, a, b } = twoIdle();
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+    app.select(a);
+
+    app.orderFortify();
+
+    expect(a.order, 'it is dug in').toBe('fortified');
+    expect(app.selected?.id, 'and the cycle moved on').toBe(b.id);
+  });
+
+  it('stays put when a unit gets up again, because you are about to move it', () => {
+    const { state, a } = twoIdle();
+    a.order = 'fortified';
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+    app.select(a);
+
+    app.orderFortify();
+
+    expect(a.order, 'awake').toBe('none');
+    expect(app.selected?.id, 'and still in hand').toBe(a.id);
+  });
+
+  it('lets go of the last one once it has been sent somewhere', () => {
+    // The whole turn is spent: one unit, told to march. Nothing is left to
+    // decide, so nothing should still be selected and waiting to be dismissed.
+    const state = board();
+    foundCity(state, spawnUnit(state, 0, 'peon', 4, 4));
+    const lone = spawnUnit(state, 0, 'goblin', 8, 8);
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+    app.select(lone);
+
+    vi.useFakeTimers();
+    app.actOn(20, 12);
+    letTheHoldFinish();
+
+    expect(lone.goto, 'it is marching').not.toBeNull();
+    expect(app.selected, 'and the panel has let go').toBeFalsy();
+  });
+});
+
 describe('walking into a ruin', () => {
   /**
    * The first version of this asked before attacking the *guard*, which is

@@ -806,6 +806,20 @@ class App {
     );
   }
 
+  /**
+   * Dig in, or get up again -- and move on only when it was the first.
+   *
+   * Every other standing order carries the cycle forward: Sentry, Skip and
+   * Mend all hand over to the next unit, because giving a unit its orders is
+   * finishing with it. Fortify did not, so the one order a player gives most
+   * often was the one that left them pressing Next afterwards.
+   *
+   * The reason it was left out is real, though, and it is why this is not
+   * simply another `selectNextIdle()`: **F is a toggle.** Pressing it on a
+   * dug-in unit wakes it, and a unit you have just woken is one you are about
+   * to move -- so moving the camera off it would be exactly wrong. The press
+   * that digs in moves on; the press that gets up stays put.
+   */
   private orderFortify(): void {
     const unit = this.selected;
     if (!unit) return;
@@ -813,13 +827,15 @@ class App {
       this.flash('A ship cannot dig in. Sentry keeps it at anchor.');
       return;
     }
-    unit.order = unit.order === 'fortified' ? 'none' : 'fortified';
+    const diggingIn = unit.order !== 'fortified';
+    unit.order = diggingIn ? 'fortified' : 'none';
     unit.goto = null;
     delete unit.roadTo;
     // Waking by hand ends a mending watch too: you have decided it is well
     // enough, which is your call to make.
     delete unit.mending;
-    this.refreshSidebar();
+    if (diggingIn) this.selectNextIdle();
+    else this.refreshSidebar();
   }
 
   /**

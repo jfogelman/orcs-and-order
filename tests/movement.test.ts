@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { awaitingDecision, idleUnits } from '../src/sim/turn';
+import type { Unit } from '../src/model/types';
 
 
 /**
@@ -38,5 +39,54 @@ describe('a unit that has finished moving', () => {
     mine.order = 'none';
     state.units.splice(state.units.indexOf(mine), 1);
     expect(awaitingDecision(state, 0, mine), 'off the board').toBe(false);
+  });
+});
+
+/**
+ * Section 132: the two questions have to stay the same question.
+ *
+ * `idleUnits` is "anything left to move" and `awaitingDecision` is "anything
+ * left to decide". The only difference between them is a movement point --
+ * which is why the second is now written in terms of the first rather than
+ * beside it. Written out twice, they drifted: a unit marching under a `goto`
+ * was decided to one and undecided to the other, so after ordering the last
+ * unit somewhere the selection stayed on it and the player had to press Next
+ * for a turn that was already over.
+ */
+describe('a unit under a standing order', () => {
+  const orders: Array<[string, (u: Unit) => void]> = [
+    ['marching', (u) => (u.goto = { x: 9, y: 9 })],
+    ['laying a road', (u) => (u.roadTo = { x: 9, y: 9 })],
+    ['irrigating to', (u) => (u.irrigateTo = { x: 9, y: 9 })],
+    ['on auto work', (u) => (u.autoWork = true)],
+    ['exploring', (u) => (u.exploring = true)],
+    ['fortified', (u) => (u.order = 'fortified')],
+    ['on sentry', (u) => (u.order = 'sentry')],
+    ['skipped', (u) => (u.order = 'skip')],
+  ];
+
+  for (const [what, give] of orders) {
+    it(`owes nothing more while it is ${what}`, () => {
+      const state = createGame({ seed: 11, width: 20, height: 14, barbarians: false });
+      state.units.length = 0;
+      const u = spawnUnit(state, 0, 'peon', 5, 5);
+      expect(awaitingDecision(state, 0, u), 'undecided to begin with').toBe(true);
+
+      give(u);
+
+      expect(awaitingDecision(state, 0, u), `${what}: decided`).toBe(false);
+      expect(idleUnits(state, 0).some((x) => x.id === u.id), `${what}: not waiting`).toBe(false);
+    });
+  }
+
+  it('is the same question as idleUnits, give or take a movement point', () => {
+    const state = createGame({ seed: 11, width: 20, height: 14, barbarians: false });
+    state.units.length = 0;
+    const u = spawnUnit(state, 0, 'peon', 5, 5);
+
+    expect(idleUnits(state, 0).map((x) => x.id)).toEqual([u.id]);
+    u.moves = 0;
+    expect(idleUnits(state, 0), 'nothing left to move').toHaveLength(0);
+    expect(awaitingDecision(state, 0, u), 'something left to decide').toBe(true);
   });
 });
