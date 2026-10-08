@@ -317,8 +317,28 @@ export class MapRenderer {
       const s = cam.tileToScreen(ruin.x, ruin.y);
       const art = this.ruinArt.get(state.terrain[i]);
       const emptied = ruin.takenOn !== undefined;
+      // Awake, unfinished, and somewhere this player can see: the one state
+      // that means "this fight is still running".
+      const lit = !emptied && ruin.wokeOn !== undefined && viewer.visible[i];
       ctx.save();
       if (emptied) ctx.globalAlpha = 0.45;
+      // Light first, so the ruin sits *in* its glow rather than on top of a
+      // ring. The overlay frames below are a small thing at tile size and a
+      // woken ruin was reading as an undisturbed one across the map; this is
+      // what carries at a glance and from the minimap's distance.
+      if (lit) {
+        const pulse = 0.55 + 0.45 * Math.sin(this.clock * 2.4);
+        const cx = s.x + size / 2;
+        const cy = s.y + size / 2;
+        const glow = ctx.createRadialGradient(cx, cy, size * 0.08, cx, cy, size * 0.68);
+        // The same cold blue the fallback ring has always used: this is
+        // something old waking up, not a fire.
+        glow.addColorStop(0, `rgba(122, 188, 255, ${(0.5 * pulse).toFixed(3)})`);
+        glow.addColorStop(0.55, `rgba(122, 188, 255, ${(0.22 * pulse).toFixed(3)})`);
+        glow.addColorStop(1, 'rgba(122, 188, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(s.x - size * 0.35, s.y - size * 0.35, size * 1.7, size * 1.7);
+      }
       if (art) {
         ctx.drawImage(art, s.x, s.y, size, size);
       } else {
@@ -334,7 +354,7 @@ export class MapRenderer {
       }
       // Awake and unfinished: the overlay says so, and it is the only thing on
       // the map that means "this fight is still running".
-      if (!emptied && ruin.wokeOn !== undefined && viewer.visible[i]) {
+      if (lit) {
         const awake = this.ruinArt.get('awake');
         if (awake) {
           const frames = Math.max(1, Math.round(awake.naturalWidth / awake.naturalHeight));
