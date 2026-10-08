@@ -6,7 +6,8 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { PEACE } from '../src/sim/diplomacy';
+import { PEACE, STANDING } from '../src/sim/diplomacy';
+import { CONTACT } from '../src/sim/contact';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
@@ -99,6 +100,11 @@ export const LEVERS: Record<string, object> = {
   QUEEN,
   PREY,
   PEACE,
+  // Section 135. Both of them, because an arm that moved one and not the other
+  // would otherwise be invisible to the identity check below -- which is what
+  // happened the first time slice 3's arms were run, and the guard caught it.
+  STANDING,
+  CONTACT,
   DIPLOMACY_AI,
   ATTRITION,
   BEAKERS_PER_TRADE,
