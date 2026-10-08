@@ -5,7 +5,7 @@ import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { resumeExplore } from './explore';
 import { recordTurn } from './history';
-import { lapsePeace } from './diplomacy';
+import { forgetSlowly, lapsePeace } from './diplomacy';
 import { refreshCargo } from './ships';
 import { unitType } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
@@ -814,6 +814,10 @@ export function endPlayerTurn(state: GameState): void {
       state.turn++;
       // Section 116: a peace that has run its term lapses as the calendar turns.
       lapsePeace(state);
+      // Section 135: and a grudge nobody is feeding creeps back toward
+      // nothing. Here with the calendar, so it is once a turn rather than once
+      // per side.
+      forgetSlowly(state);
       // Section 125: and the third side comes up, if this is its turn. Here
       // rather than inside anybody's turn, because it appends to
       // `state.players` and the loop above walks that array by index -- adding

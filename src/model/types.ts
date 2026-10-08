@@ -770,7 +770,18 @@ export interface GameState {
      * `empires()` carries the note saying so. A Horde-Kingdom treaty would
      * otherwise have quietly made the Hivekin peaceful toward both.
      */
-    pairs?: Record<string, { peace?: { since: number; until: number }; lastClash?: number }>;
+    pairs?: Record<
+      string,
+      {
+        peace?: { since: number; until: number };
+        lastClash?: number;
+        /**
+         * Where they stand, -50 to +50, absent meaning nothing either way.
+         * The *name* for it is derived and never stored: see `mood()`.
+         */
+        standing?: number;
+      }
+    >;
     /**
      * The old single peace, read only when loading a save made before pairs
      * existed. Nothing writes it any more; `migrateRelations` empties it.

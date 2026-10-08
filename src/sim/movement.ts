@@ -35,7 +35,7 @@ import {
 } from './roads';
 import { claimBounty, lastWords } from './wilds';
 import { RUINS, disturb, isWarden, ruinAt } from './ruins';
-import { hostile } from './diplomacy';
+import { hostile, noteCityTaken } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
 
@@ -435,6 +435,10 @@ function captureCity(state: GameState, unit: Unit, city: City): boolean {
     return false;
   }
 
+  // Section 135: a city changing hands is the thing two sides really remember.
+  // Before the owner changes, so the side it is being taken *from* is still on
+  // the record.
+  noteCityTaken(state, unit.owner, city.owner);
   city.owner = unit.owner;
   city.disorder = false;
   city.workedTiles = [];

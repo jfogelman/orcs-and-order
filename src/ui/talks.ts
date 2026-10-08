@@ -10,6 +10,8 @@ import {
   peaceLeft,
   signPeace,
   type PeaceTerms,
+  moodName,
+  standing,
 } from '../sim/diplomacy';
 import { talks } from '../model/factions';
 import { portraitPath } from './advisors';
@@ -206,9 +208,17 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
     const peace = atPeace(state, me.id, them.id);
     const weWant = wantPeace(state, me, them);
     const theyWant = wantPeace(state, them, me);
-    const status = peace
-      ? `<strong>At peace</strong> with ${escapeHtml(them.name)} &mdash; ${peaceLeft(state, me.id, them.id)} turns left.`
-      : `<strong>At war</strong> with ${escapeHtml(them.name)}.`;
+    // Section 135: the mood and the treaty are two different facts, and the
+    // screen says both. A side can be furious and bound, or friendly and
+    // unbound, and one word for the pair of them could only ever lie about one.
+    const where = standing(state, me.id, them.id);
+    const sign = where > 0 ? '+' : '';
+    const truce = peace
+      ? ` &mdash; truce, ${peaceLeft(state, me.id, them.id)} turns left`
+      : '';
+    const status =
+      `<strong>${escapeHtml(moodName(state, me.id, them.id))}</strong> ` +
+      `<span class="muted">(${sign}${where})</span> with ${escapeHtml(them.name)}${truce}.`;
     const notes = [
       ashamed(state, me.id)
         ? 'Your own people are still restless over the last peace you broke.'
