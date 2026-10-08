@@ -846,21 +846,28 @@ export function awaitingDecision(
   unit: Unit | null | undefined,
 ): boolean {
   if (!unit) return false;
-  return state.units.includes(unit) && unit.owner === playerId && unit.order === 'none';
+  if (!state.units.includes(unit) || unit.owner !== playerId) return false;
+  return (
+    unit.order === 'none' &&
+    !unit.goto &&
+    !unit.roadTo &&
+    // A worker on Irrigate To or Auto work has its orders, even on a turn it waits.
+    !unit.irrigateTo &&
+    !unit.autoWork &&
+    !unit.exploring
+  );
 }
 
-/** Units that still have moves and no standing order — the "anything left?" check. */
+/**
+ * Units that still have moves and no standing order — the "anything left?" check.
+ *
+ * Defined as `awaitingDecision` plus a movement point, and **deliberately not
+ * written out a second time**: the first version of this pair listed the five
+ * standing orders here and checked only `order` over there, so a unit marching
+ * under a `goto` was idle to one and undecided to the other. It kept the
+ * selection on a unit that had just been sent somewhere, and the player had to
+ * press Next for a turn that was already finished. Reported from a real game.
+ */
 export function idleUnits(state: GameState, playerId: number) {
-  return state.units.filter(
-    (u) =>
-      u.owner === playerId &&
-      u.moves > 0 &&
-      u.order === 'none' &&
-      !u.goto &&
-      !u.roadTo &&
-      // A worker on Irrigate To or Auto work has its orders, even on a turn it waits.
-      !u.irrigateTo &&
-      !u.autoWork &&
-      !u.exploring,
-  );
+  return state.units.filter((u) => u.moves > 0 && awaitingDecision(state, playerId, u));
 }
