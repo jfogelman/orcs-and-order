@@ -1822,11 +1822,10 @@ Either side can break a peace, so this one must not blame anybody in particular.
 
 ### `emergence` -- the dialog that says the Hive has been met
 
-Section 135. **Needed, not yet drawn**; until it exists the meeting dialog shows
-the two envoys and nothing is missing. The other two scenes in this folder are
-both the same table in the same field, and that is exactly what this one must
-not be: the Hivekin do not come to a table, and the joke is that somebody is
-trying to hold a diplomatic occasion at a hole.
+Section 135. **Drawn and wired (2026-10-08.)** The other two scenes in this
+folder are both the same table in the same field, and that is exactly what this
+one must not be: the Hivekin do not come to a table, and the joke is that
+somebody is trying to hold a diplomatic occasion at a hole. Kept for a re-roll:
 
 > The same muddy field as the other diplomacy scenes, but no table. A wide raw
 > hole has opened in the ground, earth heaped around its rim, and pale chitinous

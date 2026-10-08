@@ -2144,7 +2144,9 @@ def process_status(force: bool) -> tuple[int, list[str]]:
 
 
 # Section 116's banners: the talks, and the talks going badly.
-DIPLOMACY_SCENES = ("talks", "peace-broken")
+# Section 135: and the one shown when the Hive is met, which is deliberately
+# not a table in a field.
+DIPLOMACY_SCENES = ("talks", "peace-broken", "emergence")
 
 VICTORY_SCREENS = (
     "conquest-orc",

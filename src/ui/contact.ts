@@ -24,13 +24,12 @@ const scene = (id: string) => `${base.endsWith('/') ? base : `${base}/`}diplomac
 /**
  * The art for a meeting, by how it went.
  *
- * A missing file is removed on its own `error`, which is the established rule
- * for these scenes: the dialog falls back to the two envoys, who are already
- * drawn, and nothing looks broken. That is why `emergence` can be named here
- * before it is drawn -- and why it has to be, rather than borrowing `talks`: a
- * hole opening in the ground is not two delegations at a table in a field, and
- * the banquet over the top of the Voice reads as the game not having noticed
- * what it is looking at.
+ * `emergence` is its own scene rather than a borrow of `talks`, because a hole
+ * opening in the ground is not two delegations at a table in a field, and the
+ * banquet over the top of the Voice reads as the game not having noticed what
+ * it is looking at. A missing file is still removed on its own `error`, which
+ * is the established rule for these scenes: the dialog falls back to the two
+ * envoys, who are already drawn, and nothing looks broken.
  */
 function picture(opening: Opening | undefined): string {
   if (opening === 'statement') return scene('emergence');
