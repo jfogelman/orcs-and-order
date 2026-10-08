@@ -780,6 +780,24 @@ export interface GameState {
          * The *name* for it is derived and never stored: see `mood()`.
          */
         standing?: number;
+        /**
+         * The turn these two first laid eyes on each other, absent meaning
+         * they never have. Section 135 slice 3, and the first time this game
+         * can tell "at war with" apart from "has not met".
+         */
+        met?: number;
+        /**
+         * What each of them said at that meeting, by speaker id -- a greeting,
+         * a border warning, a demand for tribute, a declaration, or the Hive's
+         * statement. See `sim/contact.ts`.
+         *
+         * **Per speaker and not one summary for the pair.** The first draft
+         * kept the harder of the two, which made the dialog announcing a
+         * meeting put the player's *own* declaration in the other side's mouth
+         * -- a title reading "They Declare War" over an envoy asking politely
+         * for tribute. Who said what is two facts, so it is two entries.
+         */
+        openings?: Record<number, string>;
       }
     >;
     /**

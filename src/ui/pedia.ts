@@ -18,7 +18,7 @@ import { COWED } from '../sim/status';
 import { HIVEKIN, QUEEN } from '../sim/hivekin';
 import { BURROW } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
-import { PEACE } from '../sim/diplomacy';
+import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
@@ -870,7 +870,33 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       </div>
       <div class="pedia-pane" data-pane="diplomacy" hidden>
         <p class="flavor">
-          There is one other empire, so a peace is simply an agreement to stop. It is worth
+          <strong>Meeting somebody.</strong> The first time anything of yours can see
+          anything of theirs, the two of you have met, and you hear from them. They send
+          a greeting, or mention where their border is, or ask to be paid, or declare war
+          &mdash; the Horde leans to the last two and the Kingdom to the first two, and
+          what the board looks like at the time decides the rest. <strong>War is still a
+          perfectly ordinary opening</strong>; it is simply announced now rather than
+          assumed. Whatever is said, <strong>the meeting reveals both ways</strong>: each
+          of you comes away knowing roughly where the other's nearest town is. Scouting
+          is a thing you do to somebody, not a thing you get away with.
+        </p>
+        <p class="flavor">
+          <strong>Where you stand</strong> with every side you have met is one number,
+          ${STANDING.worst} to +${STANDING.best}, with a name for the band it is in:
+          ${MOODS.map((m) => m.name).join(', ')} &mdash; and <em>War</em>, which overrides
+          all of them while you are actually fighting. Fighting costs
+          ${Math.abs(STANDING.fight)}, taking a town of theirs costs
+          ${Math.abs(STANDING.cityTaken)}, signing a peace is worth +${STANDING.signed} and
+          keeping one to its end another +${STANDING.kept}; going back on one costs
+          ${Math.abs(STANDING.broken)}. A grudge nobody is feeding creeps back toward
+          nothing at ${STANDING.forgets} a turn, and never past it: time forgets a grudge,
+          it does not manufacture a friendship. The number and the name are both on the
+          talks screen, so a side being angry always has a reason you could have watched
+          happen.
+        </p>
+        <p class="flavor">
+          <strong>A peace</strong> is simply an agreement to stop, and only the other
+          empire holds one &mdash; the Hive is fought, not talked to. It is worth
           having because the game can be won without a war &mdash; the ending works,
           dominance, the turn limit &mdash; and a peace is time to build. Whoever is ahead
           on works likes peace; whoever is ahead on armies likes war.

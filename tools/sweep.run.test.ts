@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { PEACE } from '../src/sim/diplomacy';
+import { CONTACT } from '../src/sim/contact';
 
 /**
  * The question this sweep is currently asking.
@@ -42,34 +42,38 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 135 slice 1: relations kept per pair of sides rather than as one
-  // flag for the whole game.
+  // Section 135 slice 3: meeting somebody.
   //
-  // **This arm pair is supposed to come back identical.** The slice changes
-  // where the answer is kept and nothing about what the answer is, so the only
-  // honest check is a paired run that finds no difference -- and two arms
-  // reading the same numbers is, for once, exactly the result wanted rather
-  // than an instrument reading zero. The distinction is that the mechanism was
-  // counted first: six tests say a treaty between two sides now leaves a third
-  // out of it, which the old shape could not express at all.
+  // **The reveal is what is being measured.** The messages and the standing
+  // are flavour and bookkeeping -- nothing in the rules reads `standing` yet,
+  // and a declaration changes a name on a screen. What changes the game is
+  // that a meeting writes the other side's nearest town into both sides'
+  // `explored`, and `nearestEnemyTarget` refuses to consider a tile the AI has
+  // not explored. Before this, an empire that never scouted its way to a
+  // rival's land had literally nothing to march at; now the war has somewhere
+  // to go from the first sighting.
   //
-  // `PEACE.enabled` off against on is the lever that moves, because there is no
-  // "old shape" lever to compare against -- the old shape is gone. A diplomacy
-  // that still swings the game the way it did before the rewrite is a rewrite
-  // that kept its promises.
+  // So this one is expected to move, and the direction is a prediction worth
+  // writing down before the numbers come back: more fights, more captures,
+  // more conquest endings, shorter games. If it comes back flat, the reveal is
+  // not reaching the AI and the mechanism needs counting before anything here
+  // is believed.
+  //
+  // Off is exactly today's game: `noteMeeting` returns false, nothing is
+  // recorded, nothing is revealed and nobody says anything.
   return [
     {
-      label: 'no treaties',
+      label: 'no contact',
       apply: () => {
         control();
-        PEACE.enabled = false;
+        CONTACT.enabled = false;
       },
     },
     {
-      label: 'treaties',
+      label: 'contact',
       apply: () => {
         control();
-        PEACE.enabled = true;
+        CONTACT.enabled = true;
       },
     },
   ];

@@ -156,14 +156,21 @@ export function pairKey(a: number, b: number): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
 }
 
-/** What stands between these two, created on first use. */
-function between(state: GameState, a: number, b: number) {
+/**
+ * What stands between these two, created on first use.
+ *
+ * Exported for `sim/contact.ts`, which writes the meeting itself. Nothing
+ * outside this file and that one should be reaching in here: everything else
+ * wants a question answered (`atPeace`, `standing`, `haveMet`) rather than the
+ * record to write on.
+ */
+export function between(state: GameState, a: number, b: number) {
   const pairs = (relations(state).pairs ??= {});
   return (pairs[pairKey(a, b)] ??= {});
 }
 
 /** Read-only: what stands between these two, or nothing if they have no history. */
-function peek(state: GameState, a: number, b: number) {
+export function peek(state: GameState, a: number, b: number) {
   return state.diplomacy?.pairs?.[pairKey(a, b)];
 }
 

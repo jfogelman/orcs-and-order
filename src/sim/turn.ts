@@ -5,6 +5,7 @@ import { advanceImproveWork } from './terraform';
 import { resumeAutoWork, resumeIrrigateOrders } from './autowork';
 import { resumeExplore } from './explore';
 import { recordTurn } from './history';
+import { checkContacts } from './contact';
 import { forgetSlowly, lapsePeace } from './diplomacy';
 import { refreshCargo } from './ships';
 import { unitType } from '../model/units';
@@ -796,6 +797,12 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // After visibility and not before: a sighting is a fact about what this
   // player can see this turn, so it has to be asked of the map as it now is.
   reportSightings(state, playerId);
+  // Section 135 slice 3: and anybody we can see who we have never seen before
+  // has now been met. Beside the sighting report and for the same reason -- it
+  // is a question about the map as it now is -- and it catches the meetings
+  // that no move caused: a side that emerged in the night, a town founded
+  // within sight of somebody, a unit built in a border city.
+  checkContacts(state, playerId);
   checkElimination(state);
 }
 

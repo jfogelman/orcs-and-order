@@ -14,6 +14,7 @@ import {
   standing,
 } from '../sim/diplomacy';
 import { talks } from '../model/factions';
+import { type Opening, metOn, openingBy } from '../sim/contact';
 import { portraitPath } from './advisors';
 import { takeTurns } from './talking';
 import { confirmAction, escapeHtml, openModal } from './dom';
@@ -55,6 +56,24 @@ const VOICES: Partial<
     war: { id: 'knight-marshal', name: 'Knight-Marshal' },
   },
 };
+
+/** How the relationship opened, for the note on the Talks screen. */
+function startedWith(opening: Opening | undefined): string {
+  switch (opening) {
+    case 'greeting':
+      return 'They opened with a greeting.';
+    case 'border':
+      return 'They opened by telling you where their land stops.';
+    case 'tribute':
+      return 'They opened by asking to be paid.';
+    case 'declaration':
+      return 'They opened by declaring war.';
+    case 'statement':
+      return 'They opened with whatever that was.';
+    default:
+      return 'Nobody said anything when you met.';
+  }
+}
 
 /** What the peace advisor says, from how the war is going for us. */
 function forPeace(faction: FactionId, peace: boolean, weWant: number): string {
@@ -220,6 +239,12 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
       `<strong>${escapeHtml(moodName(state, me.id, them.id))}</strong> ` +
       `<span class="muted">(${sign}${where})</span> with ${escapeHtml(them.name)}${truce}.`;
     const notes = [
+      // Section 135: how this started. A pair that opened with a declaration
+      // is a different relationship from one that opened with a gift basket,
+      // and three hundred turns later the number alone cannot say which.
+      metOn(state, me.id, them.id) !== undefined
+        ? `${startedWith(openingBy(state, me.id, them.id, them.id))} You met on turn ${metOn(state, me.id, them.id)}.`
+        : '',
       ashamed(state, me.id)
         ? 'Your own people are still restless over the last peace you broke.'
         : '',

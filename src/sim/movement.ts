@@ -35,6 +35,7 @@ import {
 } from './roads';
 import { claimBounty, lastWords } from './wilds';
 import { RUINS, disturb, isWarden, ruinAt } from './ruins';
+import { checkContacts } from './contact';
 import { hostile, noteCityTaken } from './diplomacy';
 import { BUILDINGS } from '../model/buildings';
 import { isFolly } from './follyEffects';
@@ -852,6 +853,11 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // Somewhere with a forge, and somebody to complain to about losing an axe.
   if (city && city.owner === unit.owner) rearm(state, unit, 'is handed a new axe');
   recomputeVisibility(state, unit.owner);
+  // Section 135 slice 3: walking over a hill and finding somebody there is the
+  // ordinary way two sides meet, so it is asked here, immediately after the
+  // sight lines moved. `beginPlayerTurn` asks again for the meetings no move
+  // caused; both are idempotent on the pair.
+  checkContacts(state, unit.owner);
 
   if (capturing && city) {
     const held = captureCity(state, unit, city);
