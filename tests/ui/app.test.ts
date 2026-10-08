@@ -27,6 +27,9 @@ interface App {
   actOn(x: number, y: number): void;
   orderFortify(): void;
   renderOnce(dt?: number): void;
+  endTurn(): void;
+  playLogCues(): void;
+  camera: { x: number; y: number; centerOnTile(x: number, y: number): void };
   refreshSidebar(): void;
   overlay: { hover: { x: number; y: number } | null };
 }
@@ -305,6 +308,78 @@ describe('walking into a ruin', () => {
     expect(UNIT_TYPES[link!.dataset.pedia!], link!.dataset.pedia).toBeTruthy();
   });
 
+});
+
+describe('a turn beginning', () => {
+  /**
+   * Two complaints about the camera, both the same underneath: the view stayed
+   * where the player had dragged it while the thing worth looking at happened
+   * somewhere else.
+   */
+  it('goes somewhere deliberate even when nothing is waiting for orders', () => {
+    const state = board();
+    const seat = foundCity(state, spawnUnit(state, 0, 'peon', 5, 5))!;
+    const u = spawnUnit(state, 0, 'goblin', 6, 5);
+    u.order = 'fortified';
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+    // The player wanders off to look at somebody else's border.
+    app.camera.centerOnTile(21, 14);
+    const away = { x: app.camera.x, y: app.camera.y };
+
+    app.endTurn();
+
+    const landed = { x: app.camera.x, y: app.camera.y };
+    expect(landed, 'the view moved').not.toEqual(away);
+    // Where it should have landed, worked out independently rather than by
+    // asking the camera where it already is -- the first version of this
+    // compared the camera to itself and would have passed on anything.
+    app.camera.centerOnTile(seat.x, seat.y);
+    expect(landed, 'on the seat of government').toEqual({ x: app.camera.x, y: app.camera.y });
+  });
+
+  it('turns to look before the fighting is animated, not after', () => {
+    const state = board();
+    foundCity(state, spawnUnit(state, 0, 'peon', 5, 5));
+    const mine = spawnUnit(state, 0, 'goblin', 18, 12);
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+    app.camera.centerOnTile(2, 2);
+
+    // An enemy kills something of ours in the corner we are not looking at.
+    // Everything already in the log is old news, as `adopt` now agrees.
+    (app as unknown as { soundedLogEntries: number }).soundedLogEntries = state.log.length;
+    state.log.push({
+      turn: state.turn,
+      player: 1,
+      text: 'Footman defeats Goblin after 3 rounds.',
+      kind: 'combat',
+      at: [mine.x, mine.y],
+    });
+
+    // Where the camera was each time an effect was spawned. If the view is
+    // still at the corner when the explosion goes off, the player watched
+    // nothing: the animation played off screen and the camera showed up late.
+    const spawnedAt: Array<{ x: number; y: number }> = [];
+    const effects = (app as unknown as { effects: { spawn: (...a: unknown[]) => unknown } }).effects;
+    const real = effects.spawn.bind(effects);
+    effects.spawn = (...args: unknown[]) => {
+      spawnedAt.push({ x: app.camera.x, y: app.camera.y });
+      return real(...args);
+    };
+    try {
+      app.playLogCues();
+    } finally {
+      effects.spawn = real;
+    }
+
+    expect(spawnedAt.length, 'something was animated').toBeGreaterThan(0);
+    app.camera.centerOnTile(mine.x, mine.y);
+    const onTheFight = { x: app.camera.x, y: app.camera.y };
+    for (const at of spawnedAt) {
+      expect(at, 'the camera was already there').toEqual(onTheFight);
+    }
+  });
 });
 
 describe('the hovered tile', () => {
