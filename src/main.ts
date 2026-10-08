@@ -218,6 +218,34 @@ class App {
     if (own.length > 0) this.camera.centerOnTile(own[0].x, own[0].y);
   }
 
+  /**
+   * Put the view where the new turn is, which is not always where the last one
+   * left it.
+   *
+   * `selectNextIdle` already carries the camera to whatever it puts in your
+   * hand, so the ordinary turn looks after itself. The gap is the turn that
+   * hands you *nothing* -- every unit fortified, or every unit still marching
+   * -- and the view then stayed wherever you had last dragged it. Scroll across
+   * the map to look at somebody else's border, end the turn, and the new one
+   * opens on their border.
+   *
+   * So: whatever is in hand, else the seat of government, else anything of ours
+   * at all. The point is that a turn begins somewhere deliberate.
+   */
+  private lookAtTheNewTurn(): void {
+    const held = this.selected;
+    if (held && this.state.units.includes(held)) {
+      this.camera.centerOnTile(held.x, held.y);
+      return;
+    }
+    const seat = capitalOf(this.state, this.viewerId);
+    if (seat) {
+      this.camera.centerOnTile(seat.x, seat.y);
+      return;
+    }
+    this.centerOnHome();
+  }
+
   private startGame(options: NewGameOptions): void {
     closeModal();
     this.adopt(createGame(options));
@@ -241,6 +269,11 @@ class App {
     this.peaceNewsSeen = state.log.length;
     this.follyNewsSeen = state.log.length;
     this.criticalSeen = state.log.length;
+    // The same rule, and it was missing from the one that makes noise. Loading
+    // a save whose log is longer than this counter would have drained every
+    // entry between the two at once -- hundreds of sounds on one frame, and an
+    // explosion over every tile something once died on.
+    this.soundedLogEntries = state.log.length;
     this.raidersAtTheGate.clear();
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
@@ -1291,6 +1324,16 @@ class App {
       (x, y) => this.onScreen(x, y),
       (x, y) => this.hasSeen(x, y),
     );
+    // **Turn and look, and then let it play.** The choice above is made against
+    // where the camera was when the batch started, which is why it is computed
+    // first -- but the *move* belongs here, before a single animation is
+    // spawned. It used to happen after the loop, so every swing and every
+    // explosion was started while the view was still wherever the player had
+    // left it, and the camera arrived to show the aftermath: a unit already
+    // dead, a fight already over. The thing worth watching had happened off
+    // screen every time.
+    if (look) this.camera.centerOnTile(look[0], look[1]);
+
     for (const entry of entries) {
       // Sound is addressed: you hear about your own empire.
       const addressed = entry.player === null || entry.player === this.viewerId;
@@ -1342,9 +1385,6 @@ class App {
       this.effects.spawn(effect, ex, ey, { delay: shown * EFFECT_STAGGER });
       shown++;
     }
-    // Moved after the loop rather than during it, so the choice is made
-    // against where the camera actually was when the batch started.
-    if (look) this.camera.centerOnTile(look[0], look[1]);
   }
 
   /** Whether a tile is inside the part of the map currently being drawn. */
@@ -1394,6 +1434,10 @@ class App {
     this.select(null);
     this.endTurnArmed = false;
     this.selectNextIdle();
+    // After the selection, because what it chose is the best answer to where
+    // the new turn is -- and before the prompts, so a dialog opens over the
+    // right piece of map rather than the one you wandered off to.
+    this.lookAtTheNewTurn();
     this.refreshHud();
     this.playLogCues();
     // A drawn game is over too, and has an ending to show.
