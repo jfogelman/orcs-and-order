@@ -126,7 +126,50 @@ incentive, because it pays for contentment in a currency that is not score.
 
 **Counting your own units**, as above.
 
-**Attacking, or being attacked**, which blows either tier instantly.
+**Being attacked**, which blows either tier instantly. Not attacking — see
+below, spies do not.
+
+## A spy never swings
+
+Decided: *"spies shouldn't attack, uncovered by defending only — they can only
+use spy actions."*
+
+This closes the "second combat system" door from the other side, and it is the
+right call for a reason beyond the art bill: a spy that can start a fight is a
+spy that gets used as a bad soldier, and every time somebody reaches for one
+that way the feature is being spent on the thing it was built to avoid.
+
+**Mechanically it is nearly free, because `attack: 0` is already the gate this
+codebase uses everywhere.** `attackTargets` in `sim/movement.ts` returns an
+empty set for a unit with no attack; `ai.ts` screens on `attack <= 0` in four
+separate places before it will send a unit at anything. So a spy with `attack:
+0` already cannot swing, cannot take a city, and will not be picked up by any
+of the AI's war code. No new rule is needed — one number does it.
+
+Four things follow, and the third is a bug waiting to happen.
+
+**"Uncovered by attacking" is simply gone**, and the rule reads better for it:
+a disguise breaks when somebody touches you, and never because of something you
+chose to do with a weapon. The only violent way to lose a spy is to have one
+found and then killed, which is two decisions by the other side rather than one
+mistake by you.
+
+**No attack strips — six fewer files.** The twelve hurt and nearly-dead sheets
+in `art_src/unit states/` are still needed, since a found spy is a spy about to
+have an ordinary bad day.
+
+**`strength()` has to skip them.** In `ai/diplomacy.ts` it sums
+`attack + defense` over everything that is not a settler, so six spies sitting
+in cities would read as an army. That matters more since slice 3b than it would
+have before: the Hive's whole table position is *"would I survive this war"*,
+and a Hive that counts its spies as soldiers answers that question wrong in the
+direction most likely to get it killed. Skip anything with no attack, the way
+settlers are skipped.
+
+**And the experience problem stops being optional.** A unit that cannot fight
+can *never* earn experience from fighting, so the spy-action XP below is not a
+nicety that makes promotion pleasant — it is the only source there is, and
+without it the promotion half of the brief does not exist.
 
 ## The dice, and what improves them
 
@@ -174,6 +217,11 @@ entries, named per side as the existing ones are:
 - **Sees Further** — eyeline for searching. The counter-spy's perk.
 - **Nothing To Report** — the "noticed" roll drops sharply. The survivor.
 - **Thorough** — the action roll improves. The professional.
+
+The existing perks need screening the other way: `bloodied` *(hits appreciably
+harder)* is worth nothing to a unit that cannot hit, and offering it would be a
+promotion spent on a number that is never read. `PERKS` already has the `only`
+field for exactly this.
 
 ## What a spy can do, and what gates it
 
@@ -336,11 +384,8 @@ fantasy strategy look. Save as `art_src/units/<id>.<ext>`.
 Every creature in this game also carries hurt and nearly-dead sheets in
 `art_src/unit states/`, and anything that swings carries an attack strip in
 `art_src/unit effects/`. A spy that can be attacked — which is the whole of
-what happens when its disguise breaks — needs the state sheets. Whether it
-needs attack strips is a design question with an art price attached: a spy that
-cannot attack at all saves six strips and makes "uncovered by attacking" into
-"uncovered by *defending*", which is a smaller and arguably better rule. Worth
-deciding before anybody draws anything.
+what happens when its disguise breaks — needs the state sheets. It does **not** need attack strips, because it
+does not attack — see *A spy never swings* above. Twelve files, not eighteen.
 
 ### Orc spies
 
