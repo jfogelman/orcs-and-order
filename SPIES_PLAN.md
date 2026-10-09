@@ -480,18 +480,26 @@ pipeline expects an attack strip for every creature. Spies do not attack, so
 there will never be one, and the four lines under *Art unusable* are the
 pipeline noticing a thing that is true on purpose.
 
-### One flaw worth a re-roll
+### The re-roll, and the trap that hid it
 
-`uncovered` frame 4 carries **57 unkeyed pink pixels** — a dusty rose smear
-along the ground, values around `(216,159,173)`. That is the documented hazard
-in reverse: the warning says no magenta, hot pink or violet in the effect
-because it *will* be keyed out, and this shade is far enough from `#FF00FF`
-that it was not, so instead of vanishing it stayed. On screen it reads as a
-pink smudge appearing under the unit as the effect fades.
+`uncovered` first came through with a dusty rose smear along the ground in
+frame 4 — 57 pixels at about `(216,159,173)`. Redrawn with pale grey dust, and
+clean now: **zero** on all four frames.
 
-The other three frames are clean. For a re-roll, add to the prompt: **no pink,
-rose or mauve anywhere in the effect, including the dust — the dust is pale
-grey.**
+What is worth recording is why the fix appeared not to take. The re-roll was
+dropped in beside the original, which had been renamed `uncovered (haze).jpg`,
+and the pipeline reads a parenthetical as a **re-roll tag** — `nameForm` strips
+`(...)` to get the id, on the reasoning that "the same picture, generated
+again" must collapse onto the base name. So both files claimed
+`effects/uncovered.png`, and the old one won. Forcing a rebuild changed
+nothing, because forcing a rebuild rebuilt the same wrong source.
+
+**So an old roll kept next to its replacement is not inert.** It is a second
+candidate for the same output, and which one wins is a directory-walk order
+nobody chose. The old one is in `art_src/unused/` now, which is what that
+folder is for. The `(variant)` convention is the exception and it is explicit:
+`VARIANTS` lists the notes that mean "a genuinely different picture of the same
+creature", and anything not in that list is treated as a re-roll.
 
 **A disguised spy needs no art of its own while it is disguised** — it is drawn
 as whatever it is pretending to be, and both an ordinary unit of yours and an

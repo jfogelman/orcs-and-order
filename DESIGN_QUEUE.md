@@ -11253,3 +11253,21 @@ seventeenth for every caste anybody adds.
 The fix is in the faction-folder walk: a name ending in a state word
 (`weakened`, and whatever else `unit states/` recognises -- there is a table of
 them around line 1428) is a state sheet and is never a creature id of its own.
+
+## An old roll kept beside its replacement silently wins
+
+Cost an hour in section 136 and will cost it again. `nameForm` in
+`prepare_art.py` strips a parenthetical from a filename to get the id, because
+a re-roll tag means "the same picture, generated again" and must collapse onto
+the base name. `VARIANTS` is the explicit exception list for notes that mean a
+genuinely different picture.
+
+So `uncovered (haze).jpg` and `uncovered.jpg` sitting in the same folder are
+**two candidates for one output**, and which wins is directory-walk order. The
+replacement was dropped in, the old one renamed rather than moved, and every
+rebuild -- including `--force` -- confidently regenerated the wrong source.
+Nothing warned, because from the pipeline's point of view nothing was wrong.
+
+Cheap fix worth making: when two source files collapse to the same id and
+neither carries a known `VARIANTS` note, say so. One line of output would have
+turned an hour into ten seconds. `art_src/unused/` is where the loser belongs.
