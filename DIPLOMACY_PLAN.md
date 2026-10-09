@@ -199,11 +199,47 @@ and the four-to-five-game swings between the empires are inside chance at this
 sample size. That is diplomacy doing exactly its job: it dampens the war without
 reshaping the ladder. **The rewrite kept its promises.**
 
-Slice 3's lever is `CONTACT.enabled`, and the prediction is written into
+Slice 3's lever is `CONTACT.enabled`, and the prediction was written into
 `sweep.run.test.ts` before the run: more fights, more captures, more conquest
-endings, shorter games, because the reveal hands the AI a target it would
-otherwise never have explored. **If it comes back flat, the reveal is not
-reaching the AI** and the mechanism needs counting before anything is believed.
+endings, shorter games.
+
+**The prediction failed.** Paired over 108 seeds: fights -0.46 (t = -0.59),
+captures +0.10 (t = +0.21), turns -1.44 (t = -0.39), conquest endings 10 against
+9. Writing the prediction down first is the only reason this is a failure rather
+than a story about a half-fight a game.
+
+The next step was the one the plan had already committed to -- count the
+mechanism before believing or disbelieving anything. `CONTACT.trace` counts how
+many tiles a meeting *newly* explores, and over 18 games **0% of meetings told
+nobody anything, at 35-39 fresh tiles each**. So the reveal is not failing to
+reach; the premise behind it was simply wrong, and that goes to DESIGN_QUEUE as
+a question about the AI rather than about diplomacy.
+
+**The one number that moved does not survive its own mechanism check.** The
+Hivekin won 28 of 108 with contact off and 19 with it on -- paired, 13 seeds
+lost against 4 gained, McNemar z = 2.18. Three reasons it is not banked: one
+seed set carries it (tuned 8/1, held-out 5/3, the latter nothing on its own); no
+second column in the table moves with it; and it is one of three winners
+compared, so 2.18 is worth less than 2.18 on a named number.
+
+Then the obvious mechanism was tested directly, because losing is a coin flip
+and *cities* are a number. Hive cities, same seeds, contact on against off:
+
+```
+             t150          t200          end
+tuned     10.00 / 12.67  12.00 / 11.11  4.56 / 3.56
+held-out  10.67 / 12.00  10.11 / 11.56  2.33 / 2.89
+```
+
+Only turn 150 agrees across the sets, and by the end the two sets point opposite
+ways -- with the Hive ending **larger** on the tuned set, which is the very set
+that lost it eight wins. "Being found costs the Hive ground" is refuted rather
+than merely unsupported, so the win drop stays unexplained and unbelieved.
+
+**What slice 3 ships as, then: a feature with no measured balance cost.** Which
+is the outcome worth having. The meeting, the mood and the reveal are all real
+and all visible, and the 216-game bill this section was warned would cost came
+back saying the game underneath is unchanged.
 
 ## Slices
 

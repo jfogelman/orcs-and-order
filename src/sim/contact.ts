@@ -72,7 +72,31 @@ export const CONTACT = {
    * does not help.
    */
   alienCost: -10,
+  /**
+   * Off. When set, every meeting is appended to `MEETINGS` with how much the
+   * reveal actually told each side.
+   *
+   * Here because slice 3's sweep came back flat on every column the reveal was
+   * supposed to move -- fights, captures, turns, conquest endings -- and a
+   * lever that measures as nothing is either a lever that does nothing or a
+   * lever that is not reaching the thing it was aimed at. The one honest way
+   * to tell those apart is to count how many tiles a meeting *newly* explores,
+   * which nothing else in the game records.
+   */
+  trace: false,
 };
+
+/** One meeting, recorded only while `CONTACT.trace` is on. */
+export interface Meeting {
+  turn: number;
+  a: number;
+  b: number;
+  /** Tiles each side learned that it did not already know, by player id. */
+  fresh: Record<number, number>;
+}
+
+/** Meetings seen since this was last emptied. Only written while tracing. */
+export const MEETINGS: Meeting[] = [];
 
 /** What each of the four openings is worth to the pair that just met. */
 export const OPENINGS = {
@@ -294,9 +318,11 @@ export function openingTitle(opening: Opening): string {
  * answer that keeps it fair.
  */
 function revealEachOther(state: GameState, a: number, b: number): void {
+  const fresh: Record<number, number> = {};
   const show = (viewer: number, owner: number) => {
     const p = state.players[viewer];
     if (!p) return;
+    fresh[viewer] = 0;
     const theirs = state.cities.filter((c) => c.owner === owner);
     if (theirs.length === 0) return;
     const nearest = theirs.reduce((best, c) => {
@@ -315,12 +341,15 @@ function revealEachOther(state: GameState, a: number, b: number): void {
         const x = nearest.x + dx;
         const y = nearest.y + dy;
         if (x < 0 || y < 0 || x >= state.width || y >= state.height) continue;
-        p.explored[idx(x, y, state.width)] = 1;
+        const i = idx(x, y, state.width);
+        if (!p.explored[i]) fresh[viewer]++;
+        p.explored[i] = 1;
       }
     }
   };
   show(a, b);
   show(b, a);
+  if (CONTACT.trace) MEETINGS.push({ turn: state.turn, a, b, fresh });
 }
 
 /**
