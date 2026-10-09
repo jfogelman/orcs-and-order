@@ -68,6 +68,13 @@ export const control = () => {
   // the harness putting the levers back. The arms below are about the bar they
   // swing at, and an arm that silently depends on a default it does not state
   // is the shape of mistake this file's own rule is against.
+  // **Set, not assumed.** This was missing, and section 136's hive-seat probe
+  // found it the hard way: an arm that turned emergence off leaked into every
+  // arm after it, including one that was supposed to be today's game, and two
+  // rows of the table came back byte-identical for what should have been two
+  // different measurements. Section 59's rule is "every arm sets every knob",
+  // and `control()` is where the knobs nobody is asking about get set.
+  HIVEKIN.enabled = true;
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
   NAVAL.enabled = true;
