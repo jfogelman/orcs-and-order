@@ -11232,3 +11232,24 @@ The open question that decides whether it is a contest or a freebie is whether
 a side can search its *own* spies for traitors. If it can, a turn is
 recoverable; if not, turning is strictly better than killing and nobody will
 ever kill anybody again.
+
+## A weakened sheet in a faction folder builds a junk attack strip
+
+Found while putting section 136's spy art through the pipeline, and it is
+**pre-existing** -- every Hivekin caste has had one shipping in `public/` since
+section 125.
+
+`public/units/` currently holds sixteen files named `<id>-weakened_attack.png`:
+bloatcaste, broodlord, burrower, elite, fodder, grub, princess, queen,
+riptidecaste, soldier, spitter, tidecaste, warden, worker, and now the two Hive
+spies. Each one is a `<id> weakened.jpg` from `art_src/factions/<f>/units/`
+being read twice -- correctly as that creature's hurt sheet, and again as the
+attack strip of a creature called `<id>-weakened`, which does not exist.
+
+Nothing asks for these files, so nothing is visibly broken. What it costs is
+sixteen files of committed junk in `public/`, and a pipeline that will invent a
+seventeenth for every caste anybody adds.
+
+The fix is in the faction-folder walk: a name ending in a state word
+(`weakened`, and whatever else `unit states/` recognises -- there is a table of
+them around line 1428) is a state sheet and is never a creature id of its own.

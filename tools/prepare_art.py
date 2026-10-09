@@ -78,6 +78,14 @@ CREATURES = [
     "grub", "worker", "fodder", "soldier", "elite", "spitter", "burrower",
     "broodlord", "princess", "warden", "queen",
     "tidecaste", "riptidecaste", "bloatcaste",
+    # Section 136's spies, two a side. They are here before the units exist in
+    # `units.ts`, deliberately: this list is hand-maintained rather than read
+    # off the game, so art that is drawn and not listed is art that silently
+    # does nothing -- which is exactly how section 125's three Hivekin specials
+    # drew the fallback diamond for a fortnight. Processed and banked, waiting
+    # for the rules.
+    "skulker", "nobody", "factor", "intelligencer",
+    "mimic", "hollow",
 ]
 
 # The wilds, drawn in `art_src/barbarians/` and named for the creature rather
@@ -198,6 +206,9 @@ TECH_ICONS = [
     "see-the-world", "archery", "pointed-ears", "arrows-glory",
     "horses-sneeze", "let-us-ride", "run-you-through", "rumbling-voice",
     "lordship",
+    # Section 136: the five spy advances, on the shared spine.
+    "someone-elses-business", "asking-around", "a-word-in-the-wrong-ear",
+    "nobody-in-particular", "everyone-has-a-price",
     # The two magic advances off Insanity, from DESIGN_QUEUE section 11.
     "pyromancy", "cryomancy",
     # The two endings, from DESIGN_QUEUE section 110.

@@ -341,22 +341,52 @@ What changes is one field, `turnedBy`, and a hook where a spy action resolves
 that pays the mirror of it to whoever that is. The whole feature is a field and
 a hook, which is the test for whether an idea belongs in this game.
 
-Four things to settle before anybody builds it:
+All four settled, 2026-10-09, and two of the answers are better than the
+questions.
 
-- **Can a side search its own spies?** If a counter-spy can sweep its own
-  eyeline for traitors, a turned agent is recoverable and the thing becomes a
-  genuine contest. If not, a turn is permanent and strictly good, which is
-  thinner. The first is better and costs one more roll.
-- **What stops turning from dominating killing?** The leak has to actually
-  hurt, which means the advances and gold it takes are really gone. If the
-  mirror is strictly profitable nobody ever kills anybody again, and a mechanic
-  with one right answer is a mechanic with no decision in it.
-- **Does the owner ever suspect?** A spy that reports beautifully and is
-  followed every time by an identical loss on your own side is a pattern a
-  *player* will notice within three turns, and should. Whether the AI gets a
-  suspicion roll or simply eats it is a fairness question with a real answer.
-- **Can it be turned back?** Delightful, and a rabbit hole. Probably yes, once,
-  with no third pass.
+**Yes, a side can search its own.** *"A side can search for traitors with their
+own spy on another spy."* So a turn is recoverable, and counter-espionage is
+the same action pointed inward — no new verb, just a legal target it did not
+have before. That is what makes this a contest rather than a one-way ratchet.
+
+**The leak hurts, but an advance is copied and not taken.** *"You can't 'steal'
+a tech exactly, you merely copy it."* Which is both correct and better,
+because it changes what the damage *is*: the victim loses nothing they can
+count. What they lose is the lead — the twenty turns they spent getting there
+first, handed over for nothing. A loss you cannot see in your own column and
+can only see in somebody else's is a far more uncomfortable thing to be told
+about, and it is exactly the right register for this feature.
+
+Which puts the weight of the real, countable damage on **gold**, and each side
+has its own word for taking it:
+
+| | the Horde | the Kingdom | the Hive |
+|---|---|---|---|
+| what just happened to your treasury | **borrowed permanently** | **misappropriated** | **liquidated** |
+
+Three words for one subtraction, and nobody says the fourth one. The log line
+should use the *victim's* term, because being robbed in your own bureaucratic
+dialect is funnier than being robbed in somebody else's.
+
+**Yes, the owner can suspect.** So the pattern is noticeable from the other
+chair, and a player who watches their spy report beautifully and then loses the
+same thing a turn later is *supposed* to work it out.
+
+**And the triple agent exists, and ends the cycle.** *"Yes a triple agent is
+possible, which halts the steal by reporting that they failed and must escape
+and try again. End of the possible turning cycle."*
+
+This is the best mechanical answer in the file, because it solves the infinite
+regress **in fiction** rather than with a rule that says "no more". A triple
+agent does not flip the benefit back a third time — it **stops the exchange**,
+and the way it stops it is by filing a perfectly ordinary failure report: the
+job went wrong, I am compromised, I am getting out and will try again. Nobody
+is told they have been out-thought. The handler simply believes their spy had
+an unlucky week.
+
+So the ladder is three rungs and terminates by itself: **theirs → yours
+(double) → theirs again (triple, and the leak closes)**. No fourth pass, no
+bookkeeping to cap, and the end state is the quietest possible one.
 
 It slots onto `everyone-has-a-price`, which already buys turning an ordinary
 unit — the difference being that an ordinary unit changes sides visibly and a
@@ -422,7 +452,46 @@ All four of the first round answered and folded in. What is left is narrower:
   next step from "their AI will not target it", and it is also the single
   biggest jump in power in the whole feature.
 
-## Art
+## Art — drawn and through the pipeline (2026-10-09)
+
+**All of it is in**: six sprites, six hurt sheets, five advance icons and the
+`uncovered` strip, processed into `public/` and waiting for the rules.
+
+Three notes from putting it through, all of them things that would otherwise
+have been found much later.
+
+**`CREATURES` and `TECH_ICONS` in `prepare_art.py` are hand-maintained lists,
+not read off the game.** So art for an id nothing lists is silently skipped —
+no error, no mention, nothing. That is precisely how section 125's three
+Hivekin specials drew the fallback diamond for a fortnight. The eleven new ids
+are registered there now, ahead of the units and advances existing in the code,
+so the art is banked rather than quietly doing nothing.
+
+**The weakened sheets were filed in the wrong folder and were doing nothing.**
+`art_src/units/` holds portraits; `art_src/unit states/` holds the hurt sheets,
+for every faction that was built limb by limb — and only a faction folder under
+`art_src/factions/<f>/` may keep a creature's three pictures together, which is
+what `FACTION_FOLDER_ALIASES` is for. The Hive pair were correctly filed and
+processed; the other four were beside their portraits and were skipped in
+silence. Moved, and they process.
+
+**"No animation for skulker" is correct and will keep being reported.** The
+pipeline expects an attack strip for every creature. Spies do not attack, so
+there will never be one, and the four lines under *Art unusable* are the
+pipeline noticing a thing that is true on purpose.
+
+### One flaw worth a re-roll
+
+`uncovered` frame 4 carries **57 unkeyed pink pixels** — a dusty rose smear
+along the ground, values around `(216,159,173)`. That is the documented hazard
+in reverse: the warning says no magenta, hot pink or violet in the effect
+because it *will* be keyed out, and this shade is far enough from `#FF00FF`
+that it was not, so instead of vanishing it stayed. On screen it reads as a
+pink smudge appearing under the unit as the effect fades.
+
+The other three frames are clean. For a re-roll, add to the prompt: **no pink,
+rose or mauve anywhere in the effect, including the dust — the dust is pale
+grey.**
 
 **A disguised spy needs no art of its own while it is disguised** — it is drawn
 as whatever it is pretending to be, and both an ordinary unit of yours and an
