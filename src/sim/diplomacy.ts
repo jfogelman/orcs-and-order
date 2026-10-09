@@ -39,6 +39,15 @@ export const PEACE = {
   offerCooldown: 12,
   /** Turns since the two empires last fought that still count as a war on. */
   warMemory: 15,
+  /**
+   * Turns a war has to have run before it counts as a long one.
+   *
+   * Jeremy, asked for a shape rather than a guess: *"Give our general 300 end
+   * state, I'd put 20 as a little low, but let's say 25 is 'long'."* So a
+   * twelfth of the game, and a war at this length is tiring whoever is in it
+   * regardless of how it is going.
+   */
+  longWar: 25,
 };
 
 /**
@@ -82,6 +91,17 @@ export const STANDING = {
   kept: 10,
   /** Going back on it. */
   broken: -45,
+  /**
+   * What going back on it costs with everybody *else*.
+   *
+   * Jeremy: *"Yes, although we haven't implemented a 'reputation' yet...
+   * breaking a truce affects how trustworthy you are and how likely you are to
+   * be attacked without warning in the future."* Small, because it is not
+   * their treaty and not their business -- but not nothing, because nobody
+   * likes a side that breaks its word, and it gives `betrayals` something to
+   * do beyond the pair that actually suffered it.
+   */
+  brokenElsewhere: -10,
   /**
    * Drift back toward indifference, per turn, for a pair with no treaty.
    *
@@ -254,6 +274,31 @@ export function moodName(state: GameState, a: number, b: number): string {
 export function noteFight(state: GameState, a: number, b: number, loser: number): void {
   const hive = state.players[loser]?.faction === 'hivekin';
   adjustStanding(state, a, b, hive ? STANDING.hiveFight : STANDING.fight);
+  // Section 135 slice 4: and what it cost, which is one of the three things a
+  // peace is supposed to scale on. Counted per side, because a war going badly
+  // for one of them is exactly the situation where one wants out and the other
+  // does not.
+  if (!bothReal(state, a, b)) return;
+  const pair = between(state, a, b);
+  (pair.lost ??= {})[loser] = (pair.lost[loser] ?? 0) + 1;
+}
+
+/**
+ * How long this pair's current war has run, or 0 if they are not in one.
+ *
+ * Asked of `warSince` rather than `lastClash`: the latter is the most recent
+ * shot fired and answers "are they still at it", which is a different
+ * question from "how long has this gone on".
+ */
+export function warLength(state: GameState, a: number, b: number): number {
+  const since = peek(state, a, b)?.warSince;
+  if (since === undefined || !atWarLately(state, a, b)) return 0;
+  return Math.max(0, state.turn - since);
+}
+
+/** Units this side has lost in the war it is in with that one. */
+export function lossesIn(state: GameState, a: number, b: number, who: number): number {
+  return peek(state, a, b)?.lost?.[who] ?? 0;
 }
 
 /** A city changing hands, which is the thing sides really remember. */
@@ -369,6 +414,10 @@ export function signPeace(state: GameState, terms: PeaceTerms): boolean {
     since: renewing ? (pair.peace?.since ?? state.turn) : state.turn,
     until: state.turn + PEACE.term,
   };
+  // The war is over, so its clock and its dead stop counting. The next one is
+  // its own war and is argued about on its own terms.
+  delete pair.warSince;
+  delete pair.lost;
   adjustStanding(state, terms.from, terms.to, STANDING.signed);
   const a = state.players[terms.from].name;
   const b = state.players[terms.to].name;
@@ -398,6 +447,14 @@ export function breakPeace(state: GameState, breaker: number, other?: number): b
   if (victim === undefined || !atPeace(state, breaker, victim)) return false;
   delete between(state, breaker, victim).peace;
   adjustStanding(state, breaker, victim, STANDING.broken);
+  // Section 135 slice 4: and a smaller cost with everybody who was watching.
+  // Not their treaty, so not the full price -- but nobody likes a side that
+  // breaks its word, and a reputation that only the victim holds is not a
+  // reputation.
+  for (const p of state.players) {
+    if (p.id === breaker || p.id === victim) continue;
+    adjustStanding(state, breaker, p.id, STANDING.brokenElsewhere);
+  }
   (rel.distrust ??= {})[breaker] = betrayals(state, breaker) + 1;
   (rel.shameUntil ??= {})[breaker] = state.turn + PEACE.shameTurns;
   const who = state.players[breaker].name;
@@ -432,7 +489,15 @@ export function breakPeace(state: GameState, breaker: number, other?: number): b
  */
 export function noteClash(state: GameState, a: number, b: number): void {
   if (!empires(state, a, b)) return;
-  between(state, a, b).lastClash = state.turn;
+  const pair = between(state, a, b);
+  // Section 135 slice 4: the first shot of a *new* war starts its clock. Asked
+  // before `lastClash` moves, or the test below would always be false -- the
+  // war that has just become current would look like one already running.
+  if (!atWarLately(state, a, b)) {
+    pair.warSince = state.turn;
+    delete pair.lost;
+  }
+  pair.lastClash = state.turn;
 }
 
 /** Whether these two have fought in the last few turns. */

@@ -798,6 +798,24 @@ export interface GameState {
          * for tribute. Who said what is two facts, so it is two entries.
          */
         openings?: Record<number, string>;
+        /**
+         * The turn the war these two are in now began, absent if they are not
+         * in one. Section 135 slice 4.
+         *
+         * Separate from `lastClash`, which is the most *recent* shot fired:
+         * one answers "are they still fighting" and this one answers "how long
+         * has this gone on", and a war is easier to end the longer it has run.
+         * Cleared when a peace is signed, so the next war is its own war.
+         */
+        warSince?: number;
+        /**
+         * Units each side has lost in the war they are in now, by player id.
+         *
+         * What the war has *cost*, which is the second of the three things
+         * Jeremy asked peace to scale on. Cleared with `warSince`: a side does
+         * not carry the last war's dead into the next one's arithmetic.
+         */
+        lost?: Record<number, number>;
       }
     >;
     /**
