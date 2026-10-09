@@ -195,14 +195,19 @@ Roughly in unlock order:
   otherwise tell you. Section 135 made that a number; this is what makes
   knowing it worth a unit.
 - **Foment discontent.** *"Spies can foment discontent too although this gets
-  absorbed into the city — same as sabotage. But this is noted that it happens
-  by the faction, they just don't know who did it."* The effect lands on the
-  city the way any unhappiness does, and the victim is told **that** it
-  happened and **which side** did it, never which unit. That distinction is the
-  whole mechanic: they know they have a problem, they do not know where he is
-  standing.
-- **Sabotage**, the same shape — absorbed into the city, attributed to the
-  faction and not the unit.
+  absorbed into the city — same as sabotage."* The effect lands on the city the
+  way any unhappiness does, and the victim is told **that** it happened and
+  **nothing else**: not which unit, and **not which side**. Somebody is doing
+  this to you and you do not know who.
+
+  That is the whole mechanic, and it is sharper than the first draft had it.
+  A victim who knows which empire is at work can act — close a border, weigh
+  the standing, declare. A victim who knows only that their city is turning on
+  them has a problem with no address. **The name is the prize for catching
+  somebody**, and the only way to get it, which is what makes the search worth
+  a unit's whole turn and what makes being caught the real price.
+- **Sabotage**, the same shape — absorbed into the city, and anonymous until
+  somebody is caught.
 - **Turn somebody**, late and expensive. *"A 'turn' enemy option later too,
   including a 'delay' to betray at a later time (using random chance + gold to
   recruit, failure is reported back)."* Gold buys a roll; success buys a unit
@@ -211,6 +216,49 @@ Roughly in unlock order:
   rather than a tax. The delayed betrayal is the best idea in the brief and
   deserves its own slice — a unit that is secretly yours, sitting in their
   line, is the whole fantasy of the thing.
+
+## Yes, we need new advances — five of them
+
+Asked directly, and the answer is not the comfortable one. **There is nothing
+in the tree this can hang off.** The shared spine is thirteen advances and all
+thirteen are about land, walls, weather or mood: Mapmaking, Tree-Hugging,
+Bridge Building, Wall Building, Tower Building, Not You Again!, Hammers of
+Glory, Joy Making, Happiness, the three magics, Insanity. The faction ladders
+are units and counting jokes. Not one advance in the game is about *knowing
+things*, which is the gap spies live in.
+
+**On the shared spine, not three ladders.** All three factions build spies, so
+three parallel chains would be fifteen advances and fifteen icons to draw for
+one feature. The shared spine is exactly where "everybody eventually works this
+out" lives, and the flavour is already carried by the units themselves — a
+Skulker and an Intelligencer learning the same advance and doing visibly
+different things with it *is* the joke.
+
+Five, in the order they unlock, named in the spine's register:
+
+| id | name | unlocks |
+|---|---|---|
+| `someone-elses-business` | **Someone Else's Business** | the low spy, and reading a city |
+| `asking-around` | **Asking Around** | searching — the counter-spy's whole job |
+| `a-word-in-the-wrong-ear` | **A Word In The Wrong Ear** | fomenting discontent, and sabotage |
+| `nobody-in-particular` | **Nobody In Particular** | the high spy, and reading the standing |
+| `everyone-has-a-price` | **Everyone Has A Price** | turning somebody, and the delayed betrayal |
+
+Two things that fall out of the ordering and are worth stating.
+
+**Searching unlocks second, before anything offensive.** A tree where the
+first thing anybody learns is how to hurt a city is a tree where the first
+hundred turns of spycraft are unanswerable. Putting the counter second means
+the defence is available before the attack exists, which is the same reason
+Wall Building sits where it does.
+
+**Reading the standing is gated behind the high spy**, not sold separately. It
+is the one thing diplomacy genuinely cannot tell you, and it should cost the
+expensive unit.
+
+**Art bill: five advance icons.** ART_PROMPTS currently says "Advance icons —
+all 44 done", so this is the first thing to put that number up. Prompts want
+writing alongside the five.
 
 ## The advisors are how any of this reaches you
 
@@ -229,7 +277,10 @@ thinnest of the six.
 ## The tie to diplomacy, which is what stops it being a toy
 
 **Being caught costs standing**, weighed the way breaking a peace is, and
-recorded as a betrayal. That is the whole reason this belongs after section 135
+recorded as a betrayal — and being caught is also the *only* moment a victim
+learns whose spy it was. Everything a spy does before that is anonymous, so the
+whole diplomatic cost of the feature is paid at the instant of capture and not
+before. That is the whole reason this belongs after section 135
 rather than before it: `STANDING` and `betrayals` already exist, `wantPeace`
 already reads betrayals, and a spy caught in a city you are at peace with
 should be something the other side holds against you for a long time.
@@ -302,6 +353,21 @@ fantasy strategy look. Save as `art_src/units/<id>.<ext>`.
 
 ### And one effect strip
 
-`uncovered` — what plays on the tile when a spy is found. Dropped cloth and
-scattering paper, no blood: being caught is an embarrassment, not a fight, and
-the sprite under it is about to be an ordinary unit having an ordinary bad day.
+Yes, the standard format: **a horizontal strip of exactly 4 frames**, each
+frame square, on a plain solid magenta `#FF00FF` background, saved as
+`art_src/effects/uncovered.png`. Four is the house default rather than a hard
+rule — the pipeline slices any whole multiple of the frame height — and the
+standing warning applies: **no magenta, hot pink or violet in the effect
+itself**, since that is the key colour.
+
+> pixel art visual effect animation, a horizontal strip of exactly 4 frames left
+> to right showing the effect starting, growing, peaking and fading, each frame
+> square and the same size, plain solid magenta background (#FF00FF) behind every
+> frame, mid-1990s fantasy strategy game style, bright saturated colours, thick
+> readable shapes, no characters, no text, no frame borders or dividing lines, no
+> background scenery.
+
+`uncovered` — a dark hood and cloak dropping away and crumpling, with pale
+sheets of paper bursting outward and fluttering down around it. No blood and no
+impact flash: being caught is an embarrassment, not a fight, and the sprite
+under it is about to be an ordinary unit having an ordinary bad day.
