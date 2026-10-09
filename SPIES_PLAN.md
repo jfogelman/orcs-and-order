@@ -332,6 +332,16 @@ real saving and worth designing around.
 House style as every other unit: full frame, no background, the usual mid-1990s
 fantasy strategy look. Save as `art_src/units/<id>.<ext>`.
 
+**And the bill is larger than six sprites, which is worth saying out loud.**
+Every creature in this game also carries hurt and nearly-dead sheets in
+`art_src/unit states/`, and anything that swings carries an attack strip in
+`art_src/unit effects/`. A spy that can be attacked — which is the whole of
+what happens when its disguise breaks — needs the state sheets. Whether it
+needs attack strips is a design question with an art price attached: a spy that
+cannot attack at all saves six strips and makes "uncovered by attacking" into
+"uncovered by *defending*", which is a smaller and arguably better rule. Worth
+deciding before anybody draws anything.
+
 ### Orc spies
 
 | id | Prompt subject |
@@ -369,7 +379,30 @@ itself**, since that is the key colour.
 > readable shapes, no characters, no text, no frame borders or dividing lines, no
 > background scenery.
 
-`uncovered` — a dark hood and cloak dropping away and crumpling, with pale
-sheets of paper bursting outward and fluttering down around it. No blood and no
-impact flash: being caught is an embarrassment, not a fight, and the sprite
-under it is about to be an ordinary unit having an ordinary bad day.
+**It is an overlay, and the prompt must not mention what is underneath.** The
+first draft of this described a hood and cloak dropping away and then said what
+the sprite beneath was doing, which is two mistakes in one sentence. A
+generator told about a cloak falling draws the person it fell off, and the
+effects preamble above says *no characters* for exactly this reason. Worse, a
+strip tied to a particular garment is a strip that reads wrong over five of the
+six spies — a Factor wears a brown travelling coat and a Hollow-caste wears
+nothing at all — and the only way out of that is six strips, which is six times
+the generation for one event.
+
+So: **one strip, no figure, nothing wearing anything.** It plays over whichever
+sprite is standing there, the way `clash` and `demolish` already do, and the
+unit underneath is simply revealed by the rules in the same instant.
+
+The project already draws this line and it is worth naming, because it is the
+test for anything else this feature wants: `art_src/unit states/` holds
+**nineteen** sheets, hurt and nearly-dead *per creature*, while
+`art_src/effects/` holds **ten** strips shared by everybody. Anything that
+depends on who it is happening to goes in the first folder and is paid for per
+unit; anything that is the same event wherever it lands goes in the second and
+is paid for once. Being uncovered is the same event wherever it lands.
+
+`uncovered` — pale sheets of paper bursting outward from the centre and
+fluttering down, a few torn scraps of drab grey cloth tumbling among them, and
+a small puff of pale dust at the base. No figure, no hood, no body, nothing
+wearing anything. No blood and no impact flash: being caught is an
+embarrassment, not a fight.
