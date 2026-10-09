@@ -310,6 +310,59 @@ person, since the whole subject is somebody you cannot see: a keyhole with an
 eye behind it, a shuttered lantern, a note pushed into stonework, an empty
 hood, and a coin in an open palm.
 
+## Queued: the double agent
+
+Jeremy, and it is the best idea in the file: *"a spy can 'turn' another spy
+into a double agent that lets you steal a tech in return if the double agent
+steals from you, or lets you get a city info, garrison count, or gold
+'borrowed'."*
+
+**What this does is turn catching a spy from an outcome into a decision**, and
+that is worth more than the ability itself. Up to here, a found spy is a found
+spy: it is revealed, it is an ordinary unit, somebody kills it, the end. One
+roll and no choice. With this, a search that succeeds asks a question:
+
+- **Kill it.** Clean. The leak stops. You learn whose it was, which is the only
+  way to learn that, and the standing hit lands on them.
+- **Turn it.** The leak does not stop — *that is the price* — but it now runs
+  both ways.
+
+The rule writes itself in one line: **whatever it takes from you, you take from
+them.** It steals an advance, you steal an advance. It reads one of your
+cities, you read one of theirs. It borrows gold — Jeremy's word, and the Horde
+would absolutely call it that — and the same sum arrives from their treasury.
+A controlled leak, paid for in real losses, which is exactly the shape of the
+thing in every story about it.
+
+**The implementation seam is small and it is the interesting part.** The unit's
+`owner` stays theirs. They see it, they give it orders, it carries them out and
+it succeeds — nothing about its behaviour changes, because nothing *should*.
+What changes is one field, `turnedBy`, and a hook where a spy action resolves
+that pays the mirror of it to whoever that is. The whole feature is a field and
+a hook, which is the test for whether an idea belongs in this game.
+
+Four things to settle before anybody builds it:
+
+- **Can a side search its own spies?** If a counter-spy can sweep its own
+  eyeline for traitors, a turned agent is recoverable and the thing becomes a
+  genuine contest. If not, a turn is permanent and strictly good, which is
+  thinner. The first is better and costs one more roll.
+- **What stops turning from dominating killing?** The leak has to actually
+  hurt, which means the advances and gold it takes are really gone. If the
+  mirror is strictly profitable nobody ever kills anybody again, and a mechanic
+  with one right answer is a mechanic with no decision in it.
+- **Does the owner ever suspect?** A spy that reports beautifully and is
+  followed every time by an identical loss on your own side is a pattern a
+  *player* will notice within three turns, and should. Whether the AI gets a
+  suspicion roll or simply eats it is a fairness question with a real answer.
+- **Can it be turned back?** Delightful, and a rabbit hole. Probably yes, once,
+  with no third pass.
+
+It slots onto `everyone-has-a-price`, which already buys turning an ordinary
+unit — the difference being that an ordinary unit changes sides visibly and a
+spy must not change sides at all. Possibly its own sixth advance if the pair
+turns out to be too much for one.
+
 ## The advisors are how any of this reaches you
 
 *"Would prioritize from the advisors POV if anything happens."*

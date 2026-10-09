@@ -11208,3 +11208,27 @@ not to attack for the Hive, and whether `PERSONALITIES.hivekin.caution` at 0.35
 or the Burrower branch added in section 125 is swallowing every attack. One
 honest caution about the number above: "units lost" counts every disappearance,
 including upkeep and starvation, so 24-31 a game is not 24-31 killed.
+
+## The double agent (spies, queued)
+
+Jeremy's, and recorded here as well as in `SPIES_PLAN.md` because it is the one
+part of the spy design that changes a rule the rest of the game already has: a
+spy can **turn another spy** rather than killing it, and the turned agent keeps
+serving its original owner while paying you the mirror of whatever it takes.
+
+It steals an advance, you steal an advance. It reads a city, you read one. It
+borrows gold, the same sum arrives from their treasury.
+
+The value is not the ability, it is that **catching a spy stops being an
+outcome and becomes a decision** -- kill it and the leak stops and you learn
+whose it was, or turn it and keep being robbed in order to rob back. Up to that
+point a successful search is one roll and no choice.
+
+Seam: the unit's `owner` stays theirs and its behaviour does not change at all;
+one `turnedBy` field, and a hook where a spy action resolves. A field and a
+hook is the test for whether an idea belongs in this game, and this passes it.
+
+The open question that decides whether it is a contest or a freebie is whether
+a side can search its *own* spies for traitors. If it can, a turn is
+recoverable; if not, turning is strictly better than killing and nobody will
+ever kill anybody again.
