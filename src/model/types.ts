@@ -809,8 +809,16 @@ export interface GameState {
     distrust?: Record<number, number>;
     /** The turn each side's cities stop being ashamed of it, by player id. */
     shameUntil?: Record<number, number>;
-    /** The turn each AI last made an offer of its own, by player id. */
-    lastOffer?: Record<number, number>;
+    /**
+     * The turn an AI last made an offer of its own, by **pair** -- same
+     * `"0:2"` spelling as `pairs`.
+     *
+     * Per player until section 135 slice 3b, which was another two-empire
+     * assumption: with two sides to ask, one cooldown meant opening talks with
+     * the Horde silenced you toward the Hive for a dozen turns, and which of
+     * them you had actually spoken to was unrecoverable.
+     */
+    lastOffer?: Record<string, number>;
     /** An offer waiting for the human to answer, made by the AI. */
     pending?: { from: number; to: number; gold: number };
     /** The old single clash record, migrated into `pairs` on load. */

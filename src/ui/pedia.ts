@@ -881,6 +881,16 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           is a thing you do to somebody, not a thing you get away with.
         </p>
         <p class="flavor">
+          <strong>The Hive talks, and wants different things.</strong> It has no
+          disposition to be warm or cold, it does not hold your broken promises against
+          you, and it reads one thing before anything else: whether it would survive the
+          war. Much the weaker it will take almost any peace; much the stronger it is only
+          mildly interested in carrying on, because a war it is winning is still a war it
+          is spending itself on. Short of room to grow, it wants ground, and ground is
+          what somebody else is standing on. The Voice will relay all of this while
+          attempting an expression.
+        </p>
+        <p class="flavor">
           <strong>Where you stand</strong> with every side you have met is one number,
           ${STANDING.worst} to +${STANDING.best}, with a name for the band it is in:
           ${MOODS.map((m) => m.name).join(', ')} &mdash; and <em>War</em>, which overrides
@@ -895,8 +905,9 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           happen.
         </p>
         <p class="flavor">
-          <strong>A peace</strong> is simply an agreement to stop, and only the other
-          empire holds one &mdash; the Hive is fought, not talked to. It is worth
+          <strong>A peace</strong> is an agreement to stop, and you may hold one with each
+          side separately &mdash; the Hive included, which will sign and will keep to it
+          for exactly as long as the arithmetic says. It is worth
           having because the game can be won without a war &mdash; the ending works,
           dominance, the turn limit &mdash; and a peace is time to build. Whoever is ahead
           on works likes peace; whoever is ahead on armies likes war.

@@ -11165,3 +11165,109 @@ count of how far a unit assigned a target actually travels is the cheap way in.
 One thing not to repeat: the empires meet on turn 52-67 and the Hive is met
 around 134. A reveal that arrives at turn 60 is information handed to an AI with
 nothing to march *with*, which may be the whole of it.
+
+## The Hive never swings (section 135 slice 3b)
+
+Slice 3b gave the Hivekin a table and was measured flat: **80 of 108 seeds
+byte-identical**, the Hive's win count unchanged on every single seed (6/13
+against 6/13), and `fights` moving by exactly **+0.000** -- 2217 against 2217,
+differing in not one seed, while captures, cities, population and turns all
+moved in twenty-odd.
+
+A treaty stops fighting, so a fight count that does not move by one is a treaty
+binding nothing. The probe (`npm run hivetalk`) walked the chain and found it
+completes: the Hive can talk, has fought lately, wants peace past the asking
+bar, makes offers, and **signs** -- in one of six games on the tuned seeds and
+three of six held-out, around turn 151-169, for the full twenty-turn term.
+
+Then the count that explains it. Combats are logged against `attacker.owner`,
+so counting them per player answers "who swings":
+
+```
+tuned     14.8 fights a game, swung by [p0 2.7, p1 8.5, p2 3.7]
+held-out  19.8 fights a game, swung by [p0 5.7, p1 11.0, p2 3.2]
+```
+
+p0 is the Horde, p1 the Kingdom, p2 the wilds. **The Hive is p3, and it does
+not appear at all.** Zero swings across twelve games. Meanwhile it loses 24-31
+units a game.
+
+So the Hive is a side that is attacked and never attacks, and a way to stop a
+war is worth very little to somebody who was never prosecuting one. That is why
+slice 3b measures as a no-op, and it is a finding about the Hive's *war* rather
+than about its diplomacy -- the same shape as section 125's "wins: 0 looks the
+same whatever the reason".
+
+It also sits beside the other flat result above. Two levers aimed at the war --
+slice 3's reveal and slice 3b's table -- both measured as nothing, and the
+reason is looking less like either lever and more like there not being much of
+a war to move.
+
+**Worth chasing**, and `AI_TRACE` is the way in: find where `actSoldier` decides
+not to attack for the Hive, and whether `PERSONALITIES.hivekin.caution` at 0.35
+or the Burrower branch added in section 125 is swallowing every attack. One
+honest caution about the number above: "units lost" counts every disappearance,
+including upkeep and starvation, so 24-31 a game is not 24-31 killed.
+
+## The double agent (spies, queued)
+
+Jeremy's, and recorded here as well as in `SPIES_PLAN.md` because it is the one
+part of the spy design that changes a rule the rest of the game already has: a
+spy can **turn another spy** rather than killing it, and the turned agent keeps
+serving its original owner while paying you the mirror of whatever it takes.
+
+It steals an advance, you steal an advance. It reads a city, you read one. It
+borrows gold, the same sum arrives from their treasury.
+
+The value is not the ability, it is that **catching a spy stops being an
+outcome and becomes a decision** -- kill it and the leak stops and you learn
+whose it was, or turn it and keep being robbed in order to rob back. Up to that
+point a successful search is one roll and no choice.
+
+Seam: the unit's `owner` stays theirs and its behaviour does not change at all;
+one `turnedBy` field, and a hook where a spy action resolves. A field and a
+hook is the test for whether an idea belongs in this game, and this passes it.
+
+The open question that decides whether it is a contest or a freebie is whether
+a side can search its *own* spies for traitors. If it can, a turn is
+recoverable; if not, turning is strictly better than killing and nobody will
+ever kill anybody again.
+
+## A weakened sheet in a faction folder builds a junk attack strip
+
+Found while putting section 136's spy art through the pipeline, and it is
+**pre-existing** -- every Hivekin caste has had one shipping in `public/` since
+section 125.
+
+`public/units/` currently holds sixteen files named `<id>-weakened_attack.png`:
+bloatcaste, broodlord, burrower, elite, fodder, grub, princess, queen,
+riptidecaste, soldier, spitter, tidecaste, warden, worker, and now the two Hive
+spies. Each one is a `<id> weakened.jpg` from `art_src/factions/<f>/units/`
+being read twice -- correctly as that creature's hurt sheet, and again as the
+attack strip of a creature called `<id>-weakened`, which does not exist.
+
+Nothing asks for these files, so nothing is visibly broken. What it costs is
+sixteen files of committed junk in `public/`, and a pipeline that will invent a
+seventeenth for every caste anybody adds.
+
+The fix is in the faction-folder walk: a name ending in a state word
+(`weakened`, and whatever else `unit states/` recognises -- there is a table of
+them around line 1428) is a state sheet and is never a creature id of its own.
+
+## An old roll kept beside its replacement silently wins
+
+Cost an hour in section 136 and will cost it again. `nameForm` in
+`prepare_art.py` strips a parenthetical from a filename to get the id, because
+a re-roll tag means "the same picture, generated again" and must collapse onto
+the base name. `VARIANTS` is the explicit exception list for notes that mean a
+genuinely different picture.
+
+So `uncovered (haze).jpg` and `uncovered.jpg` sitting in the same folder are
+**two candidates for one output**, and which wins is directory-walk order. The
+replacement was dropped in, the old one renamed rather than moved, and every
+rebuild -- including `--force` -- confidently regenerated the wrong source.
+Nothing warned, because from the pipeline's point of view nothing was wrong.
+
+Cheap fix worth making: when two source files collapse to the same id and
+neither carries a known `VARIANTS` note, say so. One line of output would have
+turned an hour into ten seconds. `art_src/unused/` is where the loser belongs.

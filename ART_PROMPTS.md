@@ -382,7 +382,7 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Unit sprites | 17 | done |
 | City sprites | 6 | done |
 | Terrain sets | 8 | done |
-| Advance icons | 44 | done |
+| Advance icons | 44 + 5 | 44 done, the five spy advances to draw |
 | Building icons | 10 | done |
 | Sound and music | 33 + 3 | done |
 | Effect animations | 10 | done and wired |
@@ -417,7 +417,7 @@ recipe to follow when any of it is re-rolled.
 
 ---
 
-## Advance icons — all 44 done
+## Advance icons — 44 done, 5 to draw
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -512,6 +512,40 @@ the counting ladder, stamped from three heads by `COMPOSED_ICONS`.
 | `run-you-through` | a couched lance angled across the frame |
 | `rumbling-voice` | an open mouth with concentric sound rings coming out |
 | `lordship` | an ornate crown with a single blue gem |
+
+### The five spy advances — to draw
+
+Section 136. Nothing in the tree could gate spycraft — the shared spine is all
+land, walls, weather and mood, and the faction ladders are units and counting
+jokes — so five new advances arrive with it, and they sit on the **shared
+spine**: every side builds spies, and three parallel chains would have been
+fifteen icons for one feature.
+
+They have to read as a set and as a *sequence*, the way the economy row does.
+Each one is a single object and **none of them is a person**, because the whole
+subject is somebody you cannot see.
+
+| id | Advance | Icon subject |
+|---|---|---|
+| `someone-elses-business` | Someone Else's Business | a plain iron keyhole plate seen face-on, a single yellow eye visible through the opening |
+| `asking-around` | Asking Around | an iron hand-lantern held up by its ring, shutter open on one side, throwing a narrow pale cone of light to the right |
+| `a-word-in-the-wrong-ear` | A Word In The Wrong Ear | a small folded paper note pushed halfway into a narrow crack between two grey stone blocks |
+| `nobody-in-particular` | Nobody In Particular | an empty dark hood standing upright and facing forward, the inside flat solid black and completely vacant |
+| `everyone-has-a-price` | Everyone Has A Price | an open upturned palm, fingers slightly curled, with one gold coin resting in it |
+
+Three collisions to steer around, since the tree already has forty-four of
+these and the near misses are all in this neighbourhood:
+
+- **`nobody-in-particular` must not glow.** `dead-messed-up` is a cracked skull
+  with a violet glow in the sockets and the Death Knight wears a hood with a
+  violet glow inside it. The whole point of this one is that there is nothing
+  in there at all — no eyes, no light, no face. Flat black.
+- **`everyone-has-a-price` is a hand, not a coin.** `not-you-again` is already
+  a single gold coin face-on. The subject here is the giving, so the palm fills
+  the frame and the coin is small.
+- **`asking-around` is a lantern, not an ear.** `pointed-ears` is a single
+  pointed ear seen side on and `rumbling-voice` is a mouth with sound rings;
+  a third head-part icon in the same tree would be unreadable at 48px.
 
 ---
 

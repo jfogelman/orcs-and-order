@@ -8,6 +8,7 @@ import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
+import { NEGOTIATION } from '../src/model/factions';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
@@ -105,6 +106,7 @@ export const LEVERS: Record<string, object> = {
   // happened the first time slice 3's arms were run, and the guard caught it.
   STANDING,
   CONTACT,
+  NEGOTIATION,
   DIPLOMACY_AI,
   ATTRITION,
   BEAKERS_PER_TRADE,

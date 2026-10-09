@@ -25,10 +25,12 @@ import {
   noteFight,
   noteCityTaken,
   forgetSlowly,
+  talksWith,
 } from '../src/sim/diplomacy';
-import { aiAccepts, aiDiplomacy } from '../src/ai/diplomacy';
+import { DIPLOMACY_AI, HIVE_TABLE, aiAccepts, aiDiplomacy, wantPeace } from '../src/ai/diplomacy';
 import { deserialize, serialize } from '../src/persist/save';
 import type { GameState } from '../src/model/types';
+import { FACTIONS } from '../src/model/factions';
 
 function board(): GameState {
   const state = createGame({ seed: 12, width: 30, height: 20 });
@@ -38,6 +40,23 @@ function board(): GameState {
   state.turn = 50;
   for (const p of state.players) p.visible.fill(1);
   return state;
+}
+
+/** A third side on the board, which since slice 3b also comes to the table. */
+function withHive(state: GameState): number {
+  const id = state.players.length;
+  state.players.push({
+    ...state.players[1],
+    id,
+    faction: 'hivekin',
+    name: FACTIONS.hivekin.civName,
+    leader: FACTIONS.hivekin.leader,
+    alive: true,
+    techs: ['first-hivekin'],
+    explored: new Array(state.width * state.height).fill(1),
+    visible: new Array(state.width * state.height).fill(1),
+  });
+  return id;
 }
 
 describe('a peace (section 116)', () => {
@@ -146,7 +165,28 @@ describe('the AI at the table', () => {
     noteClash(state, 0, 1);
     expect(atWarLately(state, 0, 1)).toBe(true);
     aiDiplomacy(state, 0);
-    expect(state.diplomacy?.lastOffer?.[0]).toBe(state.turn);
+    // Keyed by the pair since slice 3b, not by the side doing the asking: with
+    // two sides to ask, one cooldown per player meant opening talks with one
+    // of them silenced this AI toward the other for a dozen turns.
+    expect(state.diplomacy?.lastOffer?.[pairKey(0, 1)]).toBe(state.turn);
+  });
+
+  it('asks each side it can sign with, rather than whichever one came first', () => {
+    const state = board();
+    for (const p of state.players) p.controller = 'ai';
+    const hive = withHive(state);
+    // Outnumbered by both, and freshly at war with both.
+    spawnUnit(state, 0, 'goblin', 3, 3);
+    for (let i = 0; i < 6; i++) spawnUnit(state, 1, 'knight', 20 + (i % 3), 5);
+    for (let i = 0; i < 6; i++) spawnUnit(state, hive, 'soldier', 20 + (i % 3), 15);
+    noteClash(state, 0, 1);
+    noteClash(state, 0, hive);
+
+    aiDiplomacy(state, 0);
+    // Both, in one morning. `rival()` returned a single side until slice 3b,
+    // so the one it did not pick was never spoken to at all.
+    expect(state.diplomacy?.lastOffer?.[pairKey(0, 1)]).toBe(state.turn);
+    expect(state.diplomacy?.lastOffer?.[pairKey(0, hive)]).toBe(state.turn);
   });
 
   it('puts its offer to a human rather than answering for them', () => {
@@ -338,5 +378,84 @@ describe('where two sides stand', () => {
     const held = standing(state, 0, 1);
     forgetSlowly(state);
     expect(standing(state, 0, 1)).toBe(held);
+  });
+});
+
+/**
+ * Section 135 slice 3b. The Hive sits down, and wants different things.
+ *
+ * Jeremy: *"the Hive's standing means something to the hive mechanically, in
+ * that survival trumps all else, and expansion means survival too."* So these
+ * pin the shape of the sum rather than its numbers -- the weights will move
+ * when somebody measures them, and none of the assertions below should have to
+ * move with them.
+ */
+describe('the Hive at the table (section 135)', () => {
+  /** A Hive and an empire with nothing between them but armies. */
+  function table(ours: number, theirs: number) {
+    const state = board();
+    const hive = withHive(state);
+    state.players[hive].faction = 'hivekin';
+    // Enough Hives that it is not short of ground, so `cramped` is out of the
+    // way and these measure the thing they say they measure.
+    for (let i = 0; i < 6; i++) foundCity(state, spawnUnit(state, hive, 'grub', 2 + i * 3, 2));
+    foundCity(state, spawnUnit(state, 1, 'peasant', 2, 18));
+    for (let i = 0; i < ours; i++) spawnUnit(state, hive, 'soldier', 20 + (i % 5), 8);
+    for (let i = 0; i < theirs; i++) spawnUnit(state, 1, 'knight', 20 + (i % 5), 12);
+    return { state, hive };
+  }
+
+  it('signs things at all, which it could not before', () => {
+    const state = board();
+    const hive = withHive(state);
+    expect(talksWith(state, 0)).toContain(hive);
+    expect(signPeace(state, { from: 0, to: hive, gold: 0 })).toBe(true);
+    expect(atPeace(state, 0, hive)).toBe(true);
+    expect(hostile(state, 0, hive)).toBe(false);
+    // And still not on anybody else's behalf, which is slice 1's guarantee
+    // now doing real work rather than being protected by `talks()`.
+    expect(atPeace(state, 1, hive)).toBe(false);
+  });
+
+  it('takes almost anything when it would not survive the war', () => {
+    const { state, hive } = table(1, 12);
+    const want = wantPeace(state, state.players[hive], state.players[1]);
+    expect(want).toBeGreaterThan(DIPLOMACY_AI.asks);
+    // Harder than an empire in the same position: *"they won't attack if they
+    // know they will be destroyed as that counters survival."*
+    const theirs = wantPeace(state, state.players[1], state.players[hive]);
+    expect(want).toBeGreaterThan(Math.abs(theirs));
+  });
+
+  it('is only mildly interested in a war it is winning', () => {
+    const { state, hive } = table(12, 1);
+    const want = wantPeace(state, state.players[hive], state.players[1]);
+    expect(want).toBeLessThan(0);
+    // Survival is not appetite. An empire this far ahead is far keener to
+    // press on than the Hive is.
+    const theirs = wantPeace(state, state.players[1], state.players[hive]);
+    expect(want).toBeGreaterThan(Math.min(theirs, -HIVE_TABLE.sated - 0.0001));
+    expect(want).toBeGreaterThanOrEqual(-HIVE_TABLE.sated);
+  });
+
+  it('does not hold a broken promise against anybody', () => {
+    const { state, hive } = table(6, 6);
+    const before = wantPeace(state, state.players[hive], state.players[1]);
+    (state.diplomacy ??= {}).distrust = { 1: 3 };
+    expect(betrayals(state, 1)).toBe(3);
+    // An empire would knock the offer down for this. The Hive gains nothing by
+    // remembering it: a side that reneged last century is exactly as strong as
+    // it is now, and strength is the question.
+    expect(wantPeace(state, state.players[hive], state.players[1])).toBe(before);
+  });
+
+  it('wants ground while it is short of Hives', () => {
+    const { state, hive } = table(6, 6);
+    const roomy = wantPeace(state, state.players[hive], state.players[1]);
+    // Take all but one away: now it needs somewhere to grow, and ground is
+    // what somebody else is standing on.
+    const keep = state.cities.find((c) => c.owner === hive)!;
+    state.cities = state.cities.filter((c) => c.owner !== hive || c === keep);
+    expect(wantPeace(state, state.players[hive], state.players[1])).toBeLessThan(roomy);
   });
 });
