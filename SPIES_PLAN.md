@@ -256,9 +256,11 @@ Wall Building sits where it does.
 is the one thing diplomacy genuinely cannot tell you, and it should cost the
 expensive unit.
 
-**Art bill: five advance icons.** ART_PROMPTS currently says "Advance icons —
-all 44 done", so this is the first thing to put that number up. Prompts want
-writing alongside the five.
+**Art bill: five advance icons**, prompts written and waiting in ART_PROMPTS
+under *The five spy advances*. They read as a sequence and none of them is a
+person, since the whole subject is somebody you cannot see: a keyhole with an
+eye behind it, a shuttered lantern, a note pushed into stonework, an empty
+hood, and a coin in an open palm.
 
 ## The advisors are how any of this reaches you
 
