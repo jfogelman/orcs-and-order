@@ -262,6 +262,17 @@ back saying the game underneath is unchanged.
    it. Measured separately, because it is the half that could quietly end wars
    altogether.
 
+## Spies -- now `SPIES_PLAN.md`
+
+The sketch that was here has grown into its own plan, on Jeremy's brief of
+2026-10-08: two tiers a side, the low one disguised as an enemy unit and the
+high one not drawn at all, both uncovered by an enemy spy searching its eyeline
+or by attacking or being attacked, every action rolled and improved by
+experience and promotions.
+
+The paragraphs below are the original sketch, kept because the argument for
+*why here* is still the argument:
+
 ## Spies, sketched -- their own section, not this one
 
 Asked for as a next step, and worth noting now because **the hard part is
@@ -286,18 +297,32 @@ Roughly, and to be argued about later:
 What it must not become is a second combat system. One unit, three upgrades,
 and everything it does is *information* except the last rung.
 
-## Open questions for Jeremy
+## The narrower questions, answered 2026-10-08
 
-All four answered above. What is left is narrower, and most of it can wait
-until slice 1 is standing up:
+- **Does the Hive's own standing mean anything to the Hive?** *"Mechanically,
+  in that survival trumps all else, and expansion means survival too (they
+  don't have the capacity to understand running out of resources exactly in a
+  holistic sense, but they can grasp things like farming and so on to avoid
+  starvation). The Voice mimics emotion in an alien manner."* Built as
+  `hiveWants` in slice 3b: the balance of power weighted hard, room to grow,
+  and no lean, no distrust and no raiders term at all.
+- **How long is a war before it counts as long?** *"Give our general 300 end
+  state, I'd put 20 as a little low, but let's say 25 is 'long'."* **Not yet
+  built** -- it belongs with slice 4, where `wantPeace` gains the war-length
+  and losses terms that answer 2 asked for and that are still missing.
+- **Does breaking a truce cost standing with everybody?** *"Yes, although we
+  haven't implemented a 'reputation' yet. Something good to queue. For now,
+  yes, breaking a truce affects how trustworthy you are and how likely you are
+  to be attacked without warning in the future."* **Not yet built.** The
+  trust half already exists globally -- `betrayals` is keyed per player and
+  `wantPeace` reads it -- so what is missing is the *standing* half, a smaller
+  hit to every third party when a treaty is torn up. Reputation as its own
+  thing is queued, and `SPIES_PLAN.md` argues it is spies that make it worth
+  having rather than a second scoreboard.
 
-- **Does the Hive's own standing mean anything to the Hive?** It will talk and
-  it will hold a treaty, but "Joyful" is a word about a thing with no feelings.
-  The Voice mimicking an emotion it does not have is the joke; whether the Hive
-  *acts* on the mood or merely reports it is a real mechanical choice, and
-  "reports it, acts on the arithmetic" is the funnier and the simpler.
-- **How long is a war before it counts as long?** The tiring term needs a shape,
-  and twenty turns is a guess rather than a measurement.
-- **Does breaking a truce with one side cost standing with everybody?** It
-  should, a little -- nobody likes a side that breaks its word, and it gives
-  `betrayals` something to do beyond the pair that suffered it.
+## Older open questions
+
+All four of the originals answered above. What is left is narrower, and most of
+it can wait until slice 1 is standing up:
+
+All three are answered above, and two of the three are still to build.
