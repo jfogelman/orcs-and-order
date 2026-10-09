@@ -32,8 +32,11 @@ const PER_BASE = Number(process.env.SWEEP_PER_BASE ?? 6);
  *   contenders, and the game as it actually ships.
  * - **two sides**: the Horde against the Kingdom with emergence off. The
  *   like-for-like baseline, where an even game is 50%.
- * - **hive**: the Hive against the Horde from turn one. Also two contenders,
- *   so **this is the one to read against `two sides`**.
+ * - **hive**: a Hive player, which since section 136 means **both empires from
+ *   turn one** -- three contenders, the same as today's game. So this is now
+ *   read against `today` rather than `two sides`, and `two sides` is kept only
+ *   because it is what the earlier numbers in HIVEKIN_PLAN were measured
+ *   against and a table nobody can line up is a table nobody trusts.
  *
  * Fifty per cent against `two sides` means enable it. Far below means their
  * kit does not work from a standing start and the opening needs designing.
@@ -64,7 +67,10 @@ describe('a Hive that starts on the map', () => {
 
           for (const seed of set.seeds) {
             control();
-            FACTIONS.hivekin.startsOnMap = arm === 'hive';
+            // Section 136 split `playable` from this, so the probe no longer
+            // has to lie about the world to ask the question: a Hive player
+            // faces both empires and `startsOnMap` stays false throughout.
+            FACTIONS.hivekin.startsOnMap = false;
             NEW_GAME.playerFaction = arm === 'hive' ? 'hivekin' : undefined;
             // The baseline arm is today's game with the third side taken out,
             // so seat 0 is one of two rather than one of three. **Assigned

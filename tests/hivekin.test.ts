@@ -428,14 +428,36 @@ describe('three sides, counted', () => {
     }
   });
 
-  it('is not offered as a side to play, having no opening of its own', () => {
-    // Out of scope for this slice and deliberately so: emergence exists to
-    // leave the measured opening alone, and a Hivekin opening would be a new
-    // one that nobody has measured. The picker reads the field rather than
-    // guessing from `talks`, because a later faction could emerge and
-    // negotiate, or start on the map and refuse to.
-    expect(STARTING_FACTIONS).toEqual(['orc', 'human']);
+  /**
+   * Section 136 reversed this, and the reason it stood so long is worth
+   * keeping: `startsOnMap` was answering two questions at once -- does this
+   * side exist before somebody digs it up, and does the menu offer it -- and
+   * reading the second off the first made "can I play them" look like a design
+   * problem rather than a line of code. It needed neither an opening of their
+   * own nor a replacement third side: seat 0 is on the map because it is seat
+   * 0, and a Hive player simply faces both empires.
+   */
+  it('is offered as a side to play, while still not starting on the map', () => {
+    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin']);
+    // Still false, and that still means what it always meant: in a game
+    // somebody else is playing, the Hive is not there until it emerges.
     expect(FACTIONS.hivekin.startsOnMap).toBe(false);
+    expect(FACTIONS.hivekin.playable).toBe(true);
+  });
+
+  it('gives a Hive player both empires, so everybody faces two rivals', () => {
+    const theirs = createGame({ seed: 7, width: 30, height: 20, playerFaction: 'hivekin' });
+    expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc', 'human']);
+    // And an empire's game is untouched: one rival at turn one, and the third
+    // side still arrives out of the ground later.
+    const ours = createGame({ seed: 7, width: 30, height: 20 });
+    expect(ours.players.map((p) => p.faction)).toEqual(['orc', 'human']);
+  });
+
+  it('starts a Hive player with the same forces as anybody else', () => {
+    const theirs = createGame({ seed: 7, width: 30, height: 20, playerFaction: 'hivekin' });
+    const counts = theirs.players.map((p) => playerUnits(theirs, p.id).length);
+    expect(new Set(counts).size, `each side opened with ${counts.join('/')}`).toBe(1);
   });
 
   it('does not put the Hivekin on the map at turn one', () => {
