@@ -12,9 +12,9 @@ import {
   type PeaceTerms,
   moodName,
   standing,
+  talksWith,
 } from '../sim/diplomacy';
-import { talks } from '../model/factions';
-import { type Opening, metOn, openingBy } from '../sim/contact';
+import { type Opening, haveMet, metOn, openingBy } from '../sim/contact';
 import { portraitPath } from './advisors';
 import { takeTurns } from './talking';
 import { confirmAction, escapeHtml, openModal } from './dom';
@@ -37,12 +37,15 @@ type Voice = { id: string; name: string };
 /**
  * Who speaks for peace, and who against, on each side that has a table.
  *
- * **Partial on purpose.** Section 125's Hivekin are fought, not talked to --
- * the Queen does not negotiate and the advisor who speaks for her does not
- * soften it -- so they have no seat here at all. A total record would mean
- * writing two advisors' worth of lines that nothing can ever reach, and the
- * missing key is what makes `talks()` in `model/factions.ts` load-bearing
- * rather than decorative.
+ * **Total since section 135 slice 3b**, where it was partial before: the
+ * Hivekin were fought and not talked to, so they had no seat here and the
+ * missing key was what made `talks()` load-bearing rather than decorative. It
+ * is still typed `Partial`, because a later faction may arrive before its
+ * advisors are written and an empty screen is a better failure than a crash.
+ *
+ * The Voice is the joke the whole slice rests on -- a diplomat sent to mimic
+ * an emotion the thing she speaks for does not have -- so every Hive line
+ * below is written at slightly the wrong angle to the sentence it is imitating.
  */
 const VOICES: Partial<
   Record<FactionId, { peace: Voice; war: Voice }>
@@ -54,6 +57,10 @@ const VOICES: Partial<
   human: {
     peace: { id: 'herald', name: 'Herald' },
     war: { id: 'knight-marshal', name: 'Knight-Marshal' },
+  },
+  hivekin: {
+    peace: { id: 'voice', name: 'The Voice' },
+    war: { id: 'bladeguard', name: 'The Bladeguard' },
   },
 };
 
@@ -77,6 +84,12 @@ function startedWith(opening: Opening | undefined): string {
 
 /** What the peace advisor says, from how the war is going for us. */
 function forPeace(faction: FactionId, peace: boolean, weWant: number): string {
+  if (faction === 'hivekin') {
+    if (peace) return 'The agreement holds. Nothing is being spent. The Hive approves of nothing being spent.';
+    return weWant > 0
+      ? 'They are larger. A Hive that is destroyed expands no further. End it, and grow.'
+      : 'We may stop. We may continue. I am asked to present this to you as a choice.';
+  }
   if (faction === 'orc') {
     if (peace) return 'Da peace holds. Heads stay on. I like it when heads stay on, boss.';
     return weWant > 0
@@ -91,6 +104,12 @@ function forPeace(faction: FactionId, peace: boolean, weWant: number): string {
 
 /** What the war advisor says back. */
 function forWar(faction: FactionId, peace: boolean, weWant: number): string {
+  if (faction === 'hivekin') {
+    if (peace) return 'We are not growing. Everything that is not growing is waiting to be eaten.';
+    return weWant > 0
+      ? 'They are larger today. Today is not the only day, and we have more of them than they do.'
+      : 'There is ground, and they are standing on it. That is the whole of the argument.';
+  }
   if (faction === 'orc') {
     if (peace) return 'Peace. We sit here. Dey build dat thing. Den we lose. Tear it up, boss.';
     return weWant > 0
@@ -117,6 +136,13 @@ function forWar(faction: FactionId, peace: boolean, weWant: number): string {
  * other side speaks for itself, and it should be worth reading for that alone.
  */
 function theirWord(faction: FactionId, peace: boolean, theyWant: number): string {
+  if (faction === 'hivekin') {
+    if (peace) return 'The agreement holds. I am to tell you the Queen is delighted. I have not told the Queen.';
+    if (theyWant >= 0.35) return 'We are receptive. I have been instructed to appear eager. Is this eager. I can do more.';
+    if (theyWant >= 0) return 'The Hive will consider it. I am told to smile at this point in the sentence.';
+    if (theyWant >= -0.5) return 'The Hive does not require this. I have been asked to sound regretful, and I am sounding it.';
+    return 'No. I was going to soften that, and then calculated that softening it changes nothing.';
+  }
   if (faction === 'orc') {
     if (peace) return 'Da treaty is on da wall in da big tent. Nobody has eaten it yet. Dat is respect.';
     if (theyWant >= 0.35) return 'We is listening, elf. Say a number. Say it slow, we is not good wif numbers.';
@@ -141,6 +167,11 @@ function mood(want: number): string {
 
 /** What an answer sounds like, in the answering side's own voice. */
 function answerLine(them: Player, yes: boolean): string {
+  if (them.faction === 'hivekin') {
+    return yes
+      ? 'The Voice nods, several times, at very slightly the wrong speed. That is a yes.'
+      : 'The Voice says she is "so terribly sorry" in a tone nobody has ever used for that sentence.';
+  }
   if (them.faction === 'human') {
     return yes
       ? 'The committee has considered the proposal and, after four pages of minutes, agrees.'
@@ -163,6 +194,14 @@ function answerLine(them: Player, yes: boolean): string {
 function counsel(state: GameState, me: Player, them: Player, terms: PeaceTerms): string {
   const worth = wantPeace(state, me, them) + terms.gold / 100;
   const owed = betrayals(state, them.id) > 0;
+  if (me.faction === 'hivekin') {
+    // No line here mentions their word, because the Hive does not weigh it --
+    // see `hiveWants`, which has no distrust term at all.
+    if (worth >= 0.5) return 'Accept. We survive this way. The Hive has no other preference.';
+    if (worth >= 0) return 'Acceptable. Nothing is lost that was growing.';
+    if (worth >= -0.5) return 'Unnecessary. They need this and we do not. I am told that is leverage.';
+    return 'Refuse. They are smaller than they were. We are not.';
+  }
   if (me.faction === 'orc') {
     if (worth >= 0.5) {
       return owed
@@ -183,22 +222,24 @@ function counsel(state: GameState, me: Player, them: Player, terms: PeaceTerms):
   return 'Decline. They are asking because they must, which is precisely the moment one does not agree.';
 }
 
-/** The one other empire the talks are with. */
 /**
- * The side across the table, if there is one.
+ * Everybody across the table. Section 135 slice 3b.
  *
- * **Both** of them have to be a side that talks. Before section 125 this took
- * the first other living non-barbarian, which was the only possible answer when
- * there were two; with three on the map it would have sat the Hivekin down at a
- * table they do not attend, and -- because the peace in `sim/diplomacy.ts` is a
- * single global agreement rather than one per pair -- signed one on their behalf.
+ * **This returned one side**, which was the only possible answer when there
+ * were two empires and became a coin flip the moment the Hive learned to sign
+ * things -- the side it did not pick could never be talked to at all.
+ *
+ * `talksWith` is the one place the rule lives, and it has always asked whether
+ * *both* of them come to a table. Met-ness is asked here and not there: the
+ * sim may perfectly well have a standing with somebody you have not seen, and
+ * what a *screen* must not do is offer you a treaty with a side you have never
+ * laid eyes on.
  */
-function rivalOf(state: GameState, viewerId: number): Player | undefined {
-  const me = state.players[viewerId];
-  if (!me || !talks(me.faction)) return undefined;
-  return state.players.find(
-    (p) => p.id !== viewerId && !p.barbarian && p.alive && talks(p.faction),
-  );
+function rivalsOf(state: GameState, viewerId: number): Player[] {
+  return talksWith(state, viewerId)
+    .filter((id) => haveMet(state, viewerId, id))
+    .map((id) => state.players[id])
+    .filter((p) => VOICES[p.faction]);
 }
 
 /** The offers on the table, as buttons: [label, gold]. Positive gold we pay. */
@@ -215,13 +256,34 @@ function offers(me: Player, peace: boolean): Array<[string, number]> {
 
 export function openTalks(state: GameState, viewerId: number, onChange: () => void): void {
   const me = state.players[viewerId];
-  const them = rivalOf(state, viewerId);
-  if (!me || !them) return;
-  // Resolved once, here, so the screen cannot be opened for a side that has
-  // nobody to speak at it. `rivalOf` has already established both sides talk.
+  const sides = me ? rivalsOf(state, viewerId) : [];
+  if (!me || sides.length === 0) return;
   const voices = VOICES[me.faction];
-  const theirVoices = VOICES[them.faction];
-  if (!voices || !theirVoices) return;
+  if (!voices) return;
+
+  // Which chair is being looked at. Mutable because the tabs change it in
+  // place and everything below reads it fresh -- the alternative is rebuilding
+  // the dialog per side, which loses the advisors mid-sentence.
+  let them = sides[0];
+  let theirVoices = VOICES[them.faction]!;
+
+  /**
+   * One tab a side, when there is more than one.
+   *
+   * The mood goes on the tab rather than inside, because the first question
+   * with three sides on the board is not "what will they take" but "which of
+   * these two is the problem".
+   */
+  const tabs = (): string => {
+    if (sides.length < 2) return '';
+    return `<div class="button-row talks-sides">${sides
+      .map(
+        (p) =>
+          `<button class="small${p.id === them.id ? ' primary' : ''}" data-side="${p.id}">` +
+          `${escapeHtml(p.name)} &mdash; ${escapeHtml(moodName(state, me.id, p.id))}</button>`,
+      )
+      .join('')}</div>`;
+  };
 
   const render = (said = ''): string => {
     const peace = atPeace(state, me.id, them.id);
@@ -267,7 +329,12 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         <div class="advisor-line">${escapeHtml(line)}</div>
       </div>`;
     return `
-      <img class="victory-art talks-art" src="${scene('talks')}" alt="" />
+      <img class="victory-art talks-art" src="${
+        // The banquet is two delegations at a table, and one of the sides at
+        // this table does not attend tables. Same rule as the meeting dialog.
+        them.faction === 'hivekin' ? scene('emergence') : scene('talks')
+      }" alt="" />
+      ${tabs()}
       <div class="panel-body">
         <p style="font-size:15px">${status}</p>
         <p class="flavor">${escapeHtml(mood(theyWant))}</p>
@@ -318,6 +385,19 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
       const wire = () => {
         holder.querySelector<HTMLImageElement>('.talks-art')?.addEventListener('error', (e) =>
           (e.target as HTMLElement).remove(),
+        );
+        // Changing chairs. The dialog is not rebuilt -- `them` moves and the
+        // body is redrawn around it -- so the advisors keep their places and
+        // nobody is interrupted mid-sentence by a modal replacing itself.
+        holder.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) =>
+          b.addEventListener('click', () => {
+            const picked = sides.find((p) => p.id === Number(b.dataset.side));
+            if (!picked || picked.id === them.id) return;
+            them = picked;
+            theirVoices = VOICES[them.faction]!;
+            holder.innerHTML = render();
+            wire();
+          }),
         );
         holder.querySelectorAll<HTMLButtonElement>('[data-gold]').forEach((b) =>
           b.addEventListener('click', () => {

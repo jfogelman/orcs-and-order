@@ -27,6 +27,7 @@ import { HIVEKIN } from '../src/sim/hivekin';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
+import { NEGOTIATION } from '../src/model/factions';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -109,6 +110,9 @@ export const control = () => {
   // them rather than whatever the previous arm left behind.
   STANDING.enabled = true;
   CONTACT.enabled = true;
+  // Slice 3b: and the Hive comes to the table, which is the shipped game from
+  // here on.
+  NEGOTIATION.hivekin = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have

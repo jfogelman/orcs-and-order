@@ -184,14 +184,29 @@ export function rivalFactions(id: FactionId): FactionId[] {
 }
 
 /**
- * Whether this side sits down at a table at all.
+ * Whether this side sits down at a table at all. Section 135 slice 3b.
  *
- * Section 125: the Hivekin are fought, not talked to. The Queen does not
- * negotiate and neither does the advisor who speaks for her, which is a joke
- * first and a mercy to `sim/diplomacy.ts` second -- the peace there is a single
- * global agreement rather than one per pair, and a third contender would
- * otherwise have been quietly included in somebody else's treaty.
+ * **It used to be "everybody but the Hivekin", and that was two things at
+ * once.** Section 125 wrote it as a joke -- the Queen does not negotiate and
+ * the advisor who speaks for her does not soften it -- but it was also load
+ * bearing, because the peace in `sim/diplomacy.ts` was a single global
+ * agreement and a third contender would have been quietly included in somebody
+ * else's treaty. Slice 1 made relations per pair, which removed the second
+ * reason entirely.
+ *
+ * Jeremy, asked directly whether the Hive should be silent: *"No definitely
+ * not, they're alien to orcs/humans not silent. They have their odd diplomacy
+ * advisor that tries to mimic humanoid emotion after all."* So they talk, and
+ * what makes them alien is **what they want out of it** rather than whether
+ * they turn up -- see the Hive branch of `wantPeace`, which reads the balance
+ * of power and nothing else, because survival trumps everything and it does
+ * not hold grudges it could recompute instead.
  */
+export const NEGOTIATION = {
+  /** The switch, for sweeps. Off is the game before the Hive had a table. */
+  hivekin: true,
+};
+
 export function talks(id: FactionId): boolean {
-  return id !== 'hivekin';
+  return id === 'hivekin' ? NEGOTIATION.hivekin : true;
 }

@@ -1,4 +1,3 @@
-import { talks } from '../model/factions';
 import type { GameState } from '../model/types';
 import { idx } from '../engine/grid';
 import { log } from './gamestate';
@@ -225,8 +224,13 @@ export function startingStanding(state: GameState, a: number, b: number): number
   const big = Math.max(mine, theirs);
   const small = Math.min(mine, theirs);
   if (big >= 2 && big >= small * 1.5) n += CONTACT.strongerCost;
+  // **Asked of the faction, not of `talks()`.** This read "a side that does
+  // not come to a table" until slice 3b gave the Hive one, which would have
+  // made them an ordinary neighbour the moment they learned to speak. Being
+  // alien and being silent were never the same fact; they were the same flag,
+  // and that was a proxy waiting to be wrong.
   for (const id of [a, b]) {
-    if (!talks(state.players[id]?.faction ?? 'orc')) {
+    if (state.players[id]?.faction === 'hivekin') {
       n += CONTACT.alienCost;
       break;
     }
@@ -247,7 +251,10 @@ export function startingStanding(state: GameState, a: number, b: number): number
  */
 export function openingFor(state: GameState, speaker: number, other: number): Opening {
   const p = state.players[speaker];
-  if (!p || !talks(p.faction)) return 'statement';
+  // The Hive is not on this ladder whether or not it will sign things. It has
+  // no opening *position*, which is a different fact from having no table --
+  // see the note in `startingStanding` about keying this off `talks()`.
+  if (!p || p.faction === 'hivekin') return 'statement';
   // The same lean the table already uses, so a side is not warm here and cold
   // there. Negative leans toward the hard end, which is the Horde.
   const lean = LEAN[p.faction] ?? 0;

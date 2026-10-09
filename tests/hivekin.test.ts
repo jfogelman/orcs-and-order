@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { City, GameState } from '../src/model/types';
 import {
+  NEGOTIATION,
   FACTIONS,
   FACTION_IDS,
   STARTING_FACTIONS,
@@ -259,11 +260,25 @@ describe('the people in the Hives', () => {
   });
 });
 
-describe('a side that does not come to the table', () => {
-  it('says so in one place, and the rest of the game reads it', () => {
+describe('a side that does come to the table, and is still not like you', () => {
+  /**
+   * Section 135 slice 3b reversed section 125's answer, on Jeremy's: *"No
+   * definitely not, they're alien to orcs/humans not silent."* What the Hive
+   * wants out of a table is what makes it alien, not whether it turns up.
+   */
+  it('talks, and says so behind a lever so a sweep can take it away again', () => {
     expect(talks('orc')).toBe(true);
     expect(talks('human')).toBe(true);
-    expect(talks('hivekin')).toBe(false);
+    expect(talks('hivekin')).toBe(true);
+    NEGOTIATION.hivekin = false;
+    try {
+      expect(talks('hivekin')).toBe(false);
+      // And only theirs. A lever that silenced everybody would measure
+      // something else entirely.
+      expect(talks('orc')).toBe(true);
+    } finally {
+      NEGOTIATION.hivekin = true;
+    }
   });
 
   it('is not quietly included in somebody else’s peace', () => {
@@ -285,10 +300,14 @@ describe('a side that does not come to the table', () => {
     expect(hostile(state, 1, hive)).toBe(true);
   });
 
-  it('leaves exactly one rival for each side that does talk', () => {
+  it('leaves every side two rivals it could in principle sign with', () => {
     expect(rivalFactions('orc')).toEqual(['human', 'hivekin']);
-    expect(rivalFactions('orc').filter(talks)).toEqual(['human']);
-    expect(rivalFactions('human').filter(talks)).toEqual(['orc']);
+    // Two, where this said one until slice 3b -- which is exactly why
+    // `rival()` picking "the first other talker" had to stop being a function
+    // that returns one side.
+    expect(rivalFactions('orc').filter(talks)).toEqual(['human', 'hivekin']);
+    expect(rivalFactions('human').filter(talks)).toEqual(['orc', 'hivekin']);
+    expect(rivalFactions('hivekin').filter(talks)).toEqual(['orc', 'human']);
   });
 });
 

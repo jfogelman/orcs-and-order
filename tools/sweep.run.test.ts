@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { CONTACT } from '../src/sim/contact';
+import { NEGOTIATION } from '../src/model/factions';
 
 /**
  * The question this sweep is currently asking.
@@ -42,38 +42,36 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 135 slice 3: meeting somebody.
+  // Section 135 slice 3b: the Hivekin at the table.
   //
-  // **The reveal is what is being measured.** The messages and the standing
-  // are flavour and bookkeeping -- nothing in the rules reads `standing` yet,
-  // and a declaration changes a name on a screen. What changes the game is
-  // that a meeting writes the other side's nearest town into both sides'
-  // `explored`, and `nearestEnemyTarget` refuses to consider a tile the AI has
-  // not explored. Before this, an empire that never scouted its way to a
-  // rival's land had literally nothing to march at; now the war has somewhere
-  // to go from the first sighting.
+  // Off is section 125's answer -- fought, not talked to -- and on is Jeremy's:
+  // *"No definitely not, they're alien to orcs/humans not silent."*
   //
-  // So this one is expected to move, and the direction is a prediction worth
-  // writing down before the numbers come back: more fights, more captures,
-  // more conquest endings, shorter games. If it comes back flat, the reveal is
-  // not reaching the AI and the mechanism needs counting before anything here
-  // is believed.
+  // **This one has a reason to move that slice 3's did not.** Slice 3 handed
+  // the AI a target and was measured flat, and the probe showed the reveal
+  // landing, so the premise was simply wrong. This changes a rule the AI
+  // already reads every turn: a third side can now be at peace, which takes it
+  // off the board as a target for as long as the treaty runs. The prediction,
+  // written before the run: **fewer fights, longer games, and the Hive doing
+  // better** -- it is the side that spends most of the game outnumbered two to
+  // one, and the one with most to gain from being able to stop.
   //
-  // Off is exactly today's game: `noteMeeting` returns false, nothing is
-  // recorded, nothing is revealed and nobody says anything.
+  // If the Hive does *worse*, the likely cause is `HIVE_TABLE.breaks` at -0.9
+  // letting it hold treaties through a window it should have spent expanding,
+  // and that is a number to move rather than a feature to drop.
   return [
     {
-      label: 'no contact',
+      label: 'hive silent',
       apply: () => {
         control();
-        CONTACT.enabled = false;
+        NEGOTIATION.hivekin = false;
       },
     },
     {
-      label: 'contact',
+      label: 'hive talks',
       apply: () => {
         control();
-        CONTACT.enabled = true;
+        NEGOTIATION.hivekin = true;
       },
     },
   ];
