@@ -143,7 +143,20 @@ function garrison(state: GameState, city: City): Unit {
 // reveals a town and an AI that can see a town marches at it. 55 was already
 // in the list and qualifies, so this is a move to the front rather than a
 // hunt -- which is the whole reason the list is an ordering and not a set.
-const LATE_SEEDS = [55, 5, 22, 38, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
+//
+// **Rehunted 2026-10-09 for section 135 slice 4, where all sixteen ran out.**
+// Not one of them reached turn 269 with both empires standing, which is itself
+// a measurement rather than an inconvenience: slice 4 took conquest endings
+// from nine games in 216 to fourteen, so decisive games got commoner and games
+// with both empires still up at the limit got rarer. `tools/lateseed.run.test`
+// scanned all sixty and found **three**: a 5% hit rate, down from the 7% at
+// the last reorder. The three go in front; the old list stays behind them,
+// because a seed that stopped qualifying may qualify again and the cost of
+// keeping it is one line.
+const LATE_SEEDS = [
+  16, 25, 40,
+  55, 5, 22, 38, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404,
+];
 
 function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   const want = [200, 269, 299];
