@@ -561,11 +561,38 @@ yourself** rather than any number you are playing against -- and it only works
 because the ending is priced off arrival. Without that, an early Hive would
 simply be a free win, which is precisely what the 94% above was.
 
-### Still open
+### And they are in the picker
 
-**They are still not in the picker.** `startsOnMap` is false. What the
-measurement says is that the price was the blocker and the price is now right;
-what it does not say is what the *game* should be. A playable Hive is a
-two-contender game, because `hivekinArrived` is true from turn one and nothing
-emerges. Either that is the Hivekin game, or something else has to come out of
-the ground, and that is a new faction's worth of design rather than a flag.
+The paragraph that stood here said a playable Hive forces a two-contender game,
+so either that is the Hivekin game or something else has to come out of the
+ground -- "a new faction's worth of design rather than a flag". That was wrong,
+and checking it took thirty seconds: `generateWorld(seed, settings, 2)` has
+always taken a player count, and the two was how many seats there were rather
+than a constraint.
+
+**Seat 0 is on the map because it is seat 0.** The rivals are whoever would
+ordinarily start, which for a Hive is both empires. Three contenders either
+way, no new faction, and an empire's game untouched by construction.
+
+`startsOnMap` was answering two questions -- does this side exist before
+somebody digs it up, and does the menu offer it -- and reading the second off
+the first is what made this look like a design problem. Split into
+`startsOnMap` and `playable`.
+
+Measured in the shape that now exists, three contenders on both sides of the
+comparison:
+
+```
+today  (empire seat)   7/18 (39%)  238 turns      7/18 (39%)  218 turns
+hive   (Hive seat)     6/18 (33%)  215 turns      7/18 (39%)  210 turns
+```
+
+Thirty-six per cent pooled against thirty-nine, where an even share of three is
+thirty-three. The held-out set is exact. **The Hivekin are a playable side at
+the same strength as an empire**, and the repricing anchored on an empire's
+thousand shields turned out to be right for the three-sided game as well as the
+two-sided one it was measured in -- which was the open risk and is now closed.
+
+They hold fewer towns doing it: 4.2 and 3.6 against an empire seat's 6.1 and
+5.2. Fewer, smaller, and just as likely to win, which is the whole of what the
+Hive was supposed to be.
