@@ -11,7 +11,7 @@ import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
-import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
+import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
 import { HIVEKIN, QUEEN } from '../src/sim/hivekin';
@@ -65,8 +65,23 @@ import { AUTO_TILES } from '../src/sim/city';
  * Off by default, so every earlier number in this file and the balance band in
  * `tests/balance.test.ts` still describe the game they were taken from.
  */
-export const NEW_GAME: { barbarians: boolean; difficulty: DifficultyId; world: 'continent' | 'archipelago' } = {
+export const NEW_GAME: {
+  barbarians: boolean;
+  difficulty: DifficultyId;
+  world: 'continent' | 'archipelago';
+  /**
+   * Which side seat 0 is created as. Undefined is the Horde, which is what
+   * `createGame` defaults to and what every measurement in this project has
+   * been taken with.
+   *
+   * Here so a probe can ask "what if the person at the keyboard were somebody
+   * else" without building its own runner -- which is the thing
+   * `probe-and-sweep-same-game` exists to stop.
+   */
+  playerFaction?: FactionId;
+} = {
   barbarians: false,
+  playerFaction: undefined,
   // Ships: the archipelago is its own world, measured as an arm of its own.
   world: 'continent',
   // Section 113. Seat 0 is created as the player's and handed to the AI, so it
@@ -301,6 +316,7 @@ export function playGame(
     barbarians: NEW_GAME.barbarians,
     difficulty: NEW_GAME.difficulty,
     world: NEW_GAME.world,
+    playerFaction: NEW_GAME.playerFaction,
   });
   const map = mapSignature(state);
   state.players[0].controller = 'ai';

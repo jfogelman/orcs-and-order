@@ -60,6 +60,10 @@ export const control = () => {
   NEW_GAME.barbarians = false;
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
+  // Seat 0 is the Horde, which is what every measurement in this project has
+  // been taken with. A probe that wants somebody else sets it after calling
+  // this, and says so.
+  NEW_GAME.playerFaction = undefined;
   // Section 125: what the Hive arrives with, named here rather than left to
   // the harness putting the levers back. The arms below are about the bar they
   // swing at, and an arm that silently depends on a default it does not state
