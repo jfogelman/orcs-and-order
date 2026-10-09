@@ -14,6 +14,17 @@ import {
   noteClash,
   peaceLeft,
   signPeace,
+  peaceSince,
+  pairKey,
+  migrateRelations,
+  lapsePeace,
+  standing,
+  adjustStanding,
+  moodName,
+  STANDING,
+  noteFight,
+  noteCityTaken,
+  forgetSlowly,
 } from '../src/sim/diplomacy';
 import { aiAccepts, aiDiplomacy } from '../src/ai/diplomacy';
 import { deserialize, serialize } from '../src/persist/save';
@@ -66,7 +77,7 @@ describe('a peace (section 116)', () => {
     foundCity(state, spawnUnit(state, 0, 'peon', 4, 4));
     foundCity(state, spawnUnit(state, 1, 'peasant', 25, 15));
     signPeace(state, { from: 0, to: 1, gold: 0 });
-    expect(peaceLeft(state)).toBe(PEACE.term);
+    expect(peaceLeft(state, 0, 1)).toBe(PEACE.term);
     for (let i = 0; i < PEACE.term * state.players.length + 2; i++) endPlayerTurn(state);
     expect(atPeace(state, 0, 1)).toBe(false);
     expect(state.log.some((l) => l.text.includes('lapsed'))).toBe(true);
@@ -77,8 +88,8 @@ describe('a peace (section 116)', () => {
     signPeace(state, { from: 0, to: 1, gold: 0 });
     state.turn += 15;
     signPeace(state, { from: 1, to: 0, gold: 0 });
-    expect(state.diplomacy?.peace?.since).toBe(50);
-    expect(peaceLeft(state)).toBe(PEACE.term);
+    expect(peaceSince(state, 0, 1), 'when it began is kept').toBe(50);
+    expect(peaceLeft(state, 0, 1)).toBe(PEACE.term);
   });
 
   it('moves the gold, in either direction, and not beyond what somebody has', () => {
@@ -133,7 +144,7 @@ describe('the AI at the table', () => {
     expect(atPeace(state, 0, 1)).toBe(false);
     // Once they have fought, it asks, and the stronger side answers.
     noteClash(state, 0, 1);
-    expect(atWarLately(state)).toBe(true);
+    expect(atWarLately(state, 0, 1)).toBe(true);
     aiDiplomacy(state, 0);
     expect(state.diplomacy?.lastOffer?.[0]).toBe(state.turn);
   });
@@ -156,5 +167,176 @@ describe('the AI at the table', () => {
     breakPeace(state, 1);
     const loaded = deserialize(serialize(state));
     expect(loaded.diplomacy).toEqual(state.diplomacy);
+  });
+});
+
+/**
+ * Section 135, slice 1: one record per pair of sides.
+ *
+ * `state.diplomacy.peace` was one flag for the whole game. That was a fair
+ * simplification with two empires and section 125 caught it being a lie the
+ * moment a third side arrived -- `empires()` carries the note. Nothing here
+ * changes what the game *does*; it changes where the answer is kept, and these
+ * tests exist to say that the two are not the same thing.
+ */
+describe('relations, one record per pair', () => {
+  function threeSided(): GameState {
+    const state = board();
+    // A third side that talks, so there are two pairs to tell apart.
+    state.players.push({
+      ...state.players[1],
+      id: 2,
+      faction: 'orc',
+      name: 'The Other Horde',
+      alive: true,
+    });
+    return state;
+  }
+
+  it('spells a pair one way round only', () => {
+    expect(pairKey(2, 0)).toBe(pairKey(0, 2));
+    expect(pairKey(0, 2)).toBe('0:2');
+  });
+
+  it('keeps one pair out of another pair’s treaty', () => {
+    const state = threeSided();
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+
+    expect(atPeace(state, 0, 1), 'the pair that signed').toBe(true);
+    expect(atPeace(state, 0, 2), 'a pair that did not').toBe(false);
+    expect(atPeace(state, 1, 2), 'nor this one').toBe(false);
+    // The whole point: the third side is still fair game to both signatories.
+    expect(hostile(state, 0, 2) && hostile(state, 1, 2)).toBe(true);
+  });
+
+  it('tears up only the treaty it was told to', () => {
+    const state = threeSided();
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    signPeace(state, { from: 0, to: 2, gold: 0 });
+
+    expect(breakPeace(state, 0, 2)).toBe(true);
+
+    expect(atPeace(state, 0, 2), 'the one broken').toBe(false);
+    expect(atPeace(state, 0, 1), 'the one left alone').toBe(true);
+  });
+
+  it('remembers a fight between the two who had it, and nobody else', () => {
+    const state = threeSided();
+    noteClash(state, 0, 2);
+    expect(atWarLately(state, 0, 2)).toBe(true);
+    expect(atWarLately(state, 0, 1), 'not our quarrel').toBe(false);
+  });
+
+  it('lapses one treaty without touching another', () => {
+    const state = threeSided();
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    state.turn += 5;
+    signPeace(state, { from: 0, to: 2, gold: 0 });
+
+    state.turn += PEACE.term - 4;   // the first has run out, the second has not
+    lapsePeace(state);
+
+    expect(atPeace(state, 0, 1), 'the older one lapsed').toBe(false);
+    expect(atPeace(state, 0, 2), 'the newer one holds').toBe(true);
+  });
+
+  it('carries an old save mid-treaty onto the pair it was between', () => {
+    const state = threeSided();
+    // A save from before pairs existed: one peace, no pairs at all.
+    state.diplomacy = { peace: { since: state.turn, until: state.turn + 10 }, lastClash: state.turn };
+
+    migrateRelations(state);
+
+    expect(atPeace(state, 0, 1), 'still mid-treaty').toBe(true);
+    expect(atWarLately(state, 0, 1), 'and still remembers the war').toBe(true);
+    expect(state.diplomacy?.peace, 'the old field is emptied').toBeUndefined();
+  });
+});
+
+/**
+ * Section 135, slice 2: the number, and the seven names for it.
+ *
+ * A window onto slice 1 rather than a rule: the standing accrues and is shown,
+ * and nothing in the game reads it yet. That is deliberate -- a slice that
+ * changes no behaviour can be measured by finding no difference, which is the
+ * only way to tell a rewrite that kept its promises from one that did not.
+ */
+describe('where two sides stand', () => {
+  it('starts at nothing and stays on the scale', () => {
+    const state = board();
+    expect(standing(state, 0, 1), 'nothing either way').toBe(0);
+
+    adjustStanding(state, 0, 1, -1000);
+    expect(standing(state, 0, 1), 'floored').toBe(STANDING.worst);
+    adjustStanding(state, 0, 1, 1000);
+    expect(standing(state, 0, 1), 'and capped').toBe(STANDING.best);
+  });
+
+  it('reads the same from either side, because it is one relationship', () => {
+    const state = board();
+    adjustStanding(state, 1, 0, -20);
+    expect(standing(state, 0, 1)).toBe(standing(state, 1, 0));
+  });
+
+  it('names every rung of the ladder', () => {
+    const state = board();
+    const at = (n: number) => {
+      state.diplomacy = { pairs: { [pairKey(0, 1)]: { standing: n } } };
+      return moodName(state, 0, 1);
+    };
+    expect(at(-50)).toBe('Angered');
+    expect(at(-29)).toBe('Tense');
+    expect(at(-14)).toBe('Concerned');
+    expect(at(0)).toBe('Uneasy');
+    expect(at(10)).toBe('Peace');
+    expect(at(50)).toBe('Joyful');
+  });
+
+  it('calls it War while they are shooting, whatever they otherwise think', () => {
+    const state = board();
+    adjustStanding(state, 0, 1, 40);
+    expect(moodName(state, 0, 1), 'friendly, until').toBe('Joyful');
+
+    noteClash(state, 0, 1);
+
+    expect(moodName(state, 0, 1), 'they started shooting').toBe('War');
+    // And a treaty puts the word back, because that is what a treaty is for.
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    expect(moodName(state, 0, 1)).not.toBe('War');
+  });
+
+  it('sours when a city is taken, and barely when the Hive loses a unit', () => {
+    const state = board();
+    state.players[1].faction = 'hivekin';
+    const before = standing(state, 0, 1);
+
+    noteFight(state, 0, 1, 1);
+    const afterHiveLoss = standing(state, 0, 1);
+    expect(before - afterHiveLoss, 'the Hive does not take it personally')
+      .toBeLessThan(Math.abs(STANDING.fight));
+
+    noteCityTaken(state, 0, 1);
+    expect(standing(state, 0, 1), 'a Hive is another matter')
+      .toBe(afterHiveLoss + STANDING.hiveTaken);
+  });
+
+  it('forgets a grudge slowly, and never invents a friendship', () => {
+    const state = board();
+    adjustStanding(state, 0, 1, -20);
+    forgetSlowly(state);
+    expect(standing(state, 0, 1)).toBe(-20 + STANDING.forgets);
+
+    // All the way back, and no further.
+    for (let n = 0; n < 100; n++) forgetSlowly(state);
+    expect(standing(state, 0, 1), 'indifference, not affection').toBe(0);
+  });
+
+  it('leaves a pair under treaty alone, because time is not healing that', () => {
+    const state = board();
+    adjustStanding(state, 0, 1, -20);
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    const held = standing(state, 0, 1);
+    forgetSlowly(state);
+    expect(standing(state, 0, 1)).toBe(held);
   });
 });

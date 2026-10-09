@@ -1,6 +1,7 @@
 import type { GameState, Player } from '../model/types';
 import { SAVE_VERSION } from '../sim/gamestate';
 import { returnRaiderHeldCities } from '../sim/barbarians';
+import { migrateRelations } from '../sim/diplomacy';
 
 /**
  * Saving and loading.
@@ -123,6 +124,10 @@ export function deserialize(text: string): GameState {
   // city with it. Repaired on the way in, so the rule holds for games already
   // underway and not only for new ones.
   returnRaiderHeldCities(state);
+  // Section 135: a save from before relations were kept per pair carries one
+  // peace for the whole game. Moved onto the pair it was really between, so a
+  // game loaded mid-treaty is still mid-treaty.
+  migrateRelations(state);
   return state;
 }
 

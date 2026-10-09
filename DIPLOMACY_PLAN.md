@@ -122,25 +122,38 @@ The drift toward 0 matters: without it, one bad century is permanent, and a
 player who has not seen that side for eighty turns is still being punished for
 a border skirmish.
 
-## First contact
+## First contact — **built, slice 3**
 
-When two sides can see each other for the first time, the one being met
-**says one thing**, chosen by simple rules — not a tree:
+When two sides can see each other for the first time, **both of them say one
+thing**, chosen by simple rules — not a tree:
 
-- **The Hivekin** make a statement rather than an opening position. They do not
-  negotiate (`talks()` is false for them and should stay false): what you get is
-  the fact of them, and `standing` starts wherever the rules put it. This is the
-  one that most needs saying out loud, because a third side appearing out of the
-  ground with no word at all is exactly the complaint.
+- **The Hivekin** make a statement rather than an opening position: what you get
+  is the fact of them, and the Voice calls it "a warm welcome". This is the one
+  that most needs saying out loud, because a third side appearing out of the
+  ground with no word at all is exactly the complaint. (`talks()` is still false
+  for them. Flipping it is its own slice — see **3b** below.)
 - **An empire** picks from four, on its personality and the board: a greeting, a
   warning about a border, a demand for tribute, or a declaration. The Horde
-  leans to the last two and the Kingdom to the first two, which is the `lean`
-  table that already exists in `DIPLOMACY_AI`.
+  leans to the last two and the Kingdom to the first two.
 
 Starting standing comes off the same simple facts: how close their nearest city
 is, whether either has an ending under way, who is ahead. **War is still a
 legitimate opening** — Jeremy's point is that it should be *announced* rather
-than assumed.
+than assumed, and a declaration calls `noteClash`, so the pair reads **War**
+from the sentence rather than from the first casualty.
+
+Two things changed from the draft above, both while building it:
+
+**Both sides speak, not just the one being met.** "The one being met" needs the
+game to know who walked into whom, and a sighting does not carry that: two units
+can walk into each other on the same turn, and a side can be met by a *town*
+that did not move. Both speaking is simpler, symmetric, and fair the way the
+reveal is. A human side says nothing, having no personality to say it with.
+
+**The lean is its own constant.** `DIPLOMACY_AI.lean` is in points of *wanting
+peace*; this one is in points of *standing*. Same shape, same sign, separate
+number — a shared constant in two units is a constant that will eventually be
+rescaled for one of them and quietly break the other.
 
 ## What it has to change in play, or it is decoration
 
@@ -165,6 +178,69 @@ Cheapest honest answer: a `RELATIONS.enabled` lever, off being exactly today's
 game, and one paired sweep on against off. The same shape as every other section
 here.
 
+**What the sweeps actually said.**
+
+Slice 1 and 2 were measured with `PEACE.enabled` off against on, because there
+is no "old shape" lever to compare against — the old shape is gone, and a
+diplomacy that still swings the game the way it did before the rewrite is a
+rewrite that kept its promises. Over 216 games:
+
+```
+arm            set        orc  hum  hive  turns  fights  caps  conquest
+no treaties    tuned       21   21    12    232      26   6.6         4
+no treaties    held-out    21   18    15    219      26   5.5         7
+treaties       tuned       23   18    13    242      20   6.0         2
+treaties       held-out    23   16    15    222      22   5.2         8
+```
+
+Fights fall on both seed sets (26→20, 26→22) and games run longer on both
+(232→242, 219→222); who wins barely moves — the Hive is 27/108 against 28/108,
+and the four-to-five-game swings between the empires are inside chance at this
+sample size. That is diplomacy doing exactly its job: it dampens the war without
+reshaping the ladder. **The rewrite kept its promises.**
+
+Slice 3's lever is `CONTACT.enabled`, and the prediction was written into
+`sweep.run.test.ts` before the run: more fights, more captures, more conquest
+endings, shorter games.
+
+**The prediction failed.** Paired over 108 seeds: fights -0.46 (t = -0.59),
+captures +0.10 (t = +0.21), turns -1.44 (t = -0.39), conquest endings 10 against
+9. Writing the prediction down first is the only reason this is a failure rather
+than a story about a half-fight a game.
+
+The next step was the one the plan had already committed to -- count the
+mechanism before believing or disbelieving anything. `CONTACT.trace` counts how
+many tiles a meeting *newly* explores, and over 18 games **0% of meetings told
+nobody anything, at 35-39 fresh tiles each**. So the reveal is not failing to
+reach; the premise behind it was simply wrong, and that goes to DESIGN_QUEUE as
+a question about the AI rather than about diplomacy.
+
+**The one number that moved does not survive its own mechanism check.** The
+Hivekin won 28 of 108 with contact off and 19 with it on -- paired, 13 seeds
+lost against 4 gained, McNemar z = 2.18. Three reasons it is not banked: one
+seed set carries it (tuned 8/1, held-out 5/3, the latter nothing on its own); no
+second column in the table moves with it; and it is one of three winners
+compared, so 2.18 is worth less than 2.18 on a named number.
+
+Then the obvious mechanism was tested directly, because losing is a coin flip
+and *cities* are a number. Hive cities, same seeds, contact on against off:
+
+```
+             t150          t200          end
+tuned     10.00 / 12.67  12.00 / 11.11  4.56 / 3.56
+held-out  10.67 / 12.00  10.11 / 11.56  2.33 / 2.89
+```
+
+Only turn 150 agrees across the sets, and by the end the two sets point opposite
+ways -- with the Hive ending **larger** on the tuned set, which is the very set
+that lost it eight wins. "Being found costs the Hive ground" is refuted rather
+than merely unsupported, so the win drop stays unexplained and unbelieved.
+
+**What slice 3 ships as, then: a feature with no measured balance cost.** Which
+is the outcome worth having. The meeting, the mood and the reveal are all real
+and all visible, and the 216-game bill this section was warned would cost came
+back saying the game underneath is unchanged.
+
 ## Slices
 
 1. **Per-pair relations.** The bookkeeping above, `hostile()` and `atPeace()`
@@ -173,7 +249,15 @@ here.
 2. **The names.** Derived label, the Talks table, the advisor line. No rules
    change at all; it is a window onto slice 1.
 3. **First contact.** The message, the opening stance, the starting standing.
-   This is the one that moves balance, and it gets the sweep.
+   This is the one that moves balance, and it gets the sweep. **Built.**
+3b. **The Hivekin at the table.** `talks()` true for them, and the AI's table
+   loop widened from one rival to everybody it can sign with — `rival()` in
+   `ai/diplomacy.ts` still picks the first other talker, which was the only
+   possible answer with two empires and would pick arbitrarily with three; and
+   `lastOffer` is keyed per player, so asking one side would block asking the
+   other. **Kept out of slice 3 deliberately.** It is a second lever on the same
+   sweep, and two balance movers in one paired run means neither gets
+   attributed. Jeremy's answer retires "fought, not talked to"; this is where.
 4. **Standing in the AI's decisions.** Targets weighed by it, offers floored by
    it. Measured separately, because it is the half that could quietly end wars
    altogether.

@@ -1,5 +1,5 @@
 import { distance, idx } from '../engine/grid';
-import { noteClash } from './diplomacy';
+import { noteClash, noteFight } from './diplomacy';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
@@ -594,6 +594,10 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
   // Section 116: a war is something that has actually been fought.
   noteClash(state, attacker.owner, defender.owner);
+  // Section 135: and it sours what stands between them. Charged to whoever is
+  // about to lose somebody -- which is the attacker unless it wins, and that
+  // is known below rather than here, so the call is made at the end.
+  const souredBy = (loser: number) => noteFight(state, attacker.owner, defender.owner, loser);
   if (canExecute(attacker, defender)) {
     const executed = withRng(state, (rng) => rng.chance(unitType(attacker.type).executeChance));
     if (executed) {
@@ -691,6 +695,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     // outside this RNG block, so the message lands in the right order.
     const promoted = false;
     void winner;
+    souredBy(attackerWon ? defender.owner : attacker.owner);
     return { attackerWon, promoted };
   });
 

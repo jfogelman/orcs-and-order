@@ -11130,3 +11130,38 @@ is one key away. Everywhere else the cycle moves on as it always has.
 
 - `src/ui/` has a dozen modules and this covers the two that had bugs in them.
   The harness is the point; the coverage will follow whatever breaks next.
+
+## A target was not what the war was short of (section 135)
+
+Slice 3's reveal was argued for mechanically and specifically:
+`nearestEnemyTarget` refuses to consider a tile the AI has not explored, so an
+empire that never scouted its way to a rival's land has nothing to march at --
+hand it a town on first sight and the war has somewhere to go.
+
+**The argument was wrong, and it is wrong in an interesting place.** Paired over
+108 seeds, `CONTACT.enabled` off against on:
+
+| | mean change | t |
+|---|---|---|
+| fights | -0.46 | -0.59 |
+| captures | +0.10 | +0.21 |
+| turns | -1.44 | -0.39 |
+
+Conquest endings 10 against 9. Nothing.
+
+The first thing to rule out was the lever not reaching, so `CONTACT.trace`
+counts how many tiles a meeting *newly* explores -- a number nothing else in the
+game keeps. Over 18 games: **0% of meetings told nobody anything, at 35-39 fresh
+tiles a meeting.** The reveal lands, on ground the AI had genuinely never
+walked. So the flat result is honest and the premise is what failed.
+
+Which leaves the open question, and it is about the AI rather than about
+diplomacy: **what is the war actually short of, if not somewhere to go?**
+Section 55 found `nearestEnemyTarget` returning a target 31,576 times and moving
+a unit on none of them, because it asked for a route *to* an occupied tile. That
+was fixed. Something else is now the binding constraint, and `AI_TRACE` plus a
+count of how far a unit assigned a target actually travels is the cheap way in.
+
+One thing not to repeat: the empires meet on turn 52-67 and the Hive is met
+around 134. A reveal that arrives at turn 60 is information handed to an AI with
+nothing to march *with*, which may be the whole of it.

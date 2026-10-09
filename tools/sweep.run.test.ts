@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { CONTACT } from '../src/sim/contact';
 
 /**
  * The question this sweep is currently asking.
@@ -42,37 +42,38 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 125, the last thing it owes: did the third seat move the two
-  // empires, and what is the game actually balanced at now?
+  // Section 135 slice 3: meeting somebody.
   //
-  // One run answers both. The Horde-against-Kingdom split in the three-sided
-  // arm is the stated balance target; the two-sided arm is what that split was
-  // before the Hivekin existed, measured on the same maps and on a control that
-  // finally matches the shipped game.
+  // **The reveal is what is being measured.** The messages and the standing
+  // are flavour and bookkeeping -- nothing in the rules reads `standing` yet,
+  // and a declaration changes a name on a screen. What changes the game is
+  // that a meeting writes the other side's nearest town into both sides'
+  // `explored`, and `nearestEnemyTarget` refuses to consider a tile the AI has
+  // not explored. Before this, an empire that never scouted its way to a
+  // rival's land had literally nothing to march at; now the war has somewhere
+  // to go from the first sighting.
   //
-  // **Pairable, which a worldgen lever would not be.** The Hivekin arrive long
-  // after the map is made, and their three specials are a separate lever left on
-  // in both arms, so the two arms play the same world. The harness checks the
-  // map signature and will say so if that is ever wrong -- which is how section
-  // 94's confident, meaningless result got caught.
+  // So this one is expected to move, and the direction is a prediction worth
+  // writing down before the numbers come back: more fights, more captures,
+  // more conquest endings, shorter games. If it comes back flat, the reveal is
+  // not reaching the AI and the mechanism needs counting before anything here
+  // is believed.
   //
-  // What this cannot do is tell the two apart from the correction to
-  // `RUINS.aiOdds`: everything before 2026-10-05 was measured at 0.25 against
-  // the 0.4 that ships. Both arms here are at 0.4, so this *is* the new
-  // baseline rather than a comparison against the old numbers.
+  // Off is exactly today's game: `noteMeeting` returns false, nothing is
+  // recorded, nothing is revealed and nobody says anything.
   return [
     {
-      label: 'two sides',
+      label: 'no contact',
       apply: () => {
         control();
-        HIVEKIN.enabled = false;
+        CONTACT.enabled = false;
       },
     },
     {
-      label: 'three sides',
+      label: 'contact',
       apply: () => {
         control();
-        HIVEKIN.enabled = true;
+        CONTACT.enabled = true;
       },
     },
   ];

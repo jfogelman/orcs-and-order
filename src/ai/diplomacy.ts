@@ -9,6 +9,7 @@ import {
   betrayals,
   breakPeace,
   peaceLeft,
+  peaceSince,
   signPeace,
   type PeaceTerms,
 } from '../sim/diplomacy';
@@ -143,18 +144,18 @@ export function aiDiplomacy(state: GameState, playerId: number): void {
   const rel = (state.diplomacy ??= {});
 
   if (atPeace(state, me.id, them.id)) {
-    const held = state.turn - (rel.peace?.since ?? state.turn);
+    const held = state.turn - (peaceSince(state, me.id, them.id) ?? state.turn);
     if (held >= PEACE.settle && want <= (DIPLOMACY_AI.breaks[me.faction] ?? -0.6)) {
-      breakPeace(state, me.id);
+      breakPeace(state, me.id, them.id);
       return;
     }
-    if (peaceLeft(state) <= 2 && want >= 0) propose(state, aiTerms(state, me, them));
+    if (peaceLeft(state, me.id, them.id) <= 2 && want >= 0) propose(state, aiTerms(state, me, them));
     return;
   }
 
   // Peace ends a war, so there has to have been one lately. Asked of the fighting,
   // not of the calendar: two sides that have never met have nothing to settle.
-  if (!atWarLately(state)) return;
+  if (!atWarLately(state, me.id, them.id)) return;
   const last = rel.lastOffer?.[me.id] ?? -Infinity;
   if (want < DIPLOMACY_AI.asks || state.turn - last < PEACE.offerCooldown) return;
   (rel.lastOffer ??= {})[me.id] = state.turn;

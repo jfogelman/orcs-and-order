@@ -137,7 +137,13 @@ function garrison(state: GameState, city: City): Unit {
 // The scan has to play the same game this test does, which is the shipped one.
 // An earlier pass of it found three *different* seeds because the shared
 // `control()` still forced `RUINS.aiOdds` to 0.25; see the note on that lever.
-const LATE_SEEDS = [5, 22, 38, 55, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
+//
+// Reordered again 2026-10-08, this time for section 135's first contact: 5, 22
+// and 38 all now lose one of the two empires before 299, because a meeting
+// reveals a town and an AI that can see a town marches at it. 55 was already
+// in the list and qualifies, so this is a move to the front rather than a
+// hunt -- which is the whole reason the list is an ordering and not a set.
+const LATE_SEEDS = [55, 5, 22, 38, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404];
 
 function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   const want = [200, 269, 299];
@@ -155,6 +161,15 @@ function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
     // cost of underestimating is a test that fails a month later for a reason
     // nobody remembers.
     playGame(seed, (300 + 10) * 4, (state) => {
+      // Both of the original empires still standing is the condition every one
+      // of the LATE scenarios asserts, so it is the condition the *search* has
+      // to ask for. It did not, and the scenarios were quietly relying on the
+      // first seed that reached turn 299 also happening to have both empires
+      // on it -- which section 135's first contact stopped being true, because
+      // a meeting now reveals a town and an AI with a target marches at it.
+      // Asked here rather than relaxed there: a late board missing one of the
+      // two empires is not the board these fixtures are for.
+      if (!state.players[0].alive || !state.players[1].alive) return;
       for (const turn of want) {
         if (state.turn >= turn && !found.has(turn)) {
           const snap = structuredClone(state);

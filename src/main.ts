@@ -82,6 +82,8 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
+import { openFirstContact } from './ui/contact';
+import { metSides } from './sim/contact';
 import type { Job } from './sim/terraform';
 
 /** The key each of section 112's jobs answers to, with Shift, on a worker. */
@@ -274,6 +276,12 @@ class App {
     // entry between the two at once -- hundreds of sounds on one frame, and an
     // explosion over every tile something once died on.
     this.soundedLogEntries = state.log.length;
+    // And the same rule for the introductions: a save is loaded with everybody
+    // in it already introduced, because they were -- the record says the
+    // meeting happened and the player was there when it did. Seeded from the
+    // record rather than from the log, which is what makes it survive a log
+    // that has rolled past four hundred entries.
+    this.metShown = new Set(metSides(state, this.viewerId));
     this.raidersAtTheGate.clear();
     // A new or loaded game starts from a clean slate musically.
     this.calmAgainOnTurn = -1;
@@ -1494,6 +1502,14 @@ class App {
     this.promptFollyNews();
     if (isModalOpen()) return chain();
 
+    // Section 135: somebody you had never seen before. Ahead of the peace
+    // news and the offers, because meeting a side is the thing that makes an
+    // offer from it make sense at all -- and because a declaration of war
+    // delivered after the dialog asking you to sign one reads as the game
+    // having lost track of the order things happened in.
+    this.promptFirstContact();
+    if (isModalOpen()) return chain();
+
     // Section 116: a peace broken since you last looked, then an offer the
     // other side has made. Broken first, since an offer after it is read in its
     // light.
@@ -1557,6 +1573,32 @@ class App {
    * each shared folly in the whole game, so somebody else starting one changes
    * what your cities should be building.
    */
+  /** Sides already introduced on screen, so each meeting is said once. */
+  private metShown = new Set<number>();
+
+  /**
+   * Section 135: somebody out there you had not met.
+   *
+   * Asked of the record rather than the log, which is the difference between
+   * this and `promptPeaceNews`: a meeting is a lasting fact about a pair, so
+   * the question "is this side new to us" does not depend on a log that has
+   * rolled past four hundred entries. `adopt` seeds the set from the same
+   * record, so loading a save does not re-introduce everybody. One dialog per
+   * turn, and the
+   * next one waits for the one on screen to go -- meeting two sides on the
+   * same turn is rare and stacking two modals is never right.
+   */
+  private promptFirstContact(): void {
+    if (isOver(this.state)) return;
+    const fresh = metSides(this.state, this.viewerId).filter((id) => !this.metShown.has(id));
+    const who = fresh[0];
+    if (who === undefined) return;
+    this.metShown.add(who);
+    audio.play('discovery');
+    openFirstContact(this.state, this.viewerId, who);
+    if (fresh.length > 1) afterModalCloses(() => this.promptFirstContact());
+  }
+
   /** How far through the log the peace news has been read. */
   private peaceNewsSeen = 0;
 
@@ -2509,7 +2551,7 @@ class App {
       (o) => o.id !== p.id && !o.barbarian && o.alive && canTalk(o.faction),
     );
     talks.hidden = !PEACE.enabled || !rival || !canTalk(p.faction);
-    talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state)}` : 'Talks';
+    talks.textContent = rival && atPeace(this.state, p.id, rival.id) ? `Peace · ${peaceLeft(this.state, p.id, rival.id)}` : 'Talks';
 
     const research = p.researching ? TECHS_BY_ID[p.researching] : null;
     // The turns are on the chip and not only behind the advances screen: doing

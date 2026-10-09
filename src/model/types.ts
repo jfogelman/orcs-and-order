@@ -760,7 +760,50 @@ export interface GameState {
    * diplomacy, which is a war that nobody has ever tried to end.
    */
   diplomacy?: {
-    /** The peace, while there is one: when it was made and when it lapses. */
+    /**
+     * What stands between each pair of sides, keyed `"0:2"` with the smaller id
+     * first so there is only one spelling of a pair.
+     *
+     * Section 135. Everything here used to be one record for the whole game,
+     * which was a fair simplification while there were exactly two empires and
+     * stopped being one the moment section 125 put a third side on the board --
+     * `empires()` carries the note saying so. A Horde-Kingdom treaty would
+     * otherwise have quietly made the Hivekin peaceful toward both.
+     */
+    pairs?: Record<
+      string,
+      {
+        peace?: { since: number; until: number };
+        lastClash?: number;
+        /**
+         * Where they stand, -50 to +50, absent meaning nothing either way.
+         * The *name* for it is derived and never stored: see `mood()`.
+         */
+        standing?: number;
+        /**
+         * The turn these two first laid eyes on each other, absent meaning
+         * they never have. Section 135 slice 3, and the first time this game
+         * can tell "at war with" apart from "has not met".
+         */
+        met?: number;
+        /**
+         * What each of them said at that meeting, by speaker id -- a greeting,
+         * a border warning, a demand for tribute, a declaration, or the Hive's
+         * statement. See `sim/contact.ts`.
+         *
+         * **Per speaker and not one summary for the pair.** The first draft
+         * kept the harder of the two, which made the dialog announcing a
+         * meeting put the player's *own* declaration in the other side's mouth
+         * -- a title reading "They Declare War" over an envoy asking politely
+         * for tribute. Who said what is two facts, so it is two entries.
+         */
+        openings?: Record<number, string>;
+      }
+    >;
+    /**
+     * The old single peace, read only when loading a save made before pairs
+     * existed. Nothing writes it any more; `migrateRelations` empties it.
+     */
     peace?: { since: number; until: number };
     /** Times each side has broken a peace, by player id. */
     distrust?: Record<number, number>;
@@ -770,7 +813,7 @@ export interface GameState {
     lastOffer?: Record<number, number>;
     /** An offer waiting for the human to answer, made by the AI. */
     pending?: { from: number; to: number; gold: number };
-    /** The turn the two empires last fought, so a peace ends a war. */
+    /** The old single clash record, migrated into `pairs` on load. */
     lastClash?: number;
   };
   winner: number | null;

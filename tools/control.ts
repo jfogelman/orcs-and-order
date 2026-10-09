@@ -25,7 +25,8 @@ import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVEKIN } from '../src/sim/hivekin';
 import { PREY } from '../src/sim/barbarians';
-import { PEACE } from '../src/sim/diplomacy';
+import { PEACE, STANDING } from '../src/sim/diplomacy';
+import { CONTACT } from '../src/sim/contact';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -103,6 +104,11 @@ export const control = () => {
   PREY.works = 3;
   PREY.mob = 3;
   PEACE.enabled = true;
+  // Section 135: the standing between each pair, and meeting somebody. Pinned
+  // here as the shipped game so an arm that is not asking about them inherits
+  // them rather than whatever the previous arm left behind.
+  STANDING.enabled = true;
+  CONTACT.enabled = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have
