@@ -259,8 +259,69 @@ back saying the game underneath is unchanged.
    sweep, and two balance movers in one paired run means neither gets
    attributed. Jeremy's answer retires "fought, not talked to"; this is where.
 4. **Standing in the AI's decisions.** Targets weighed by it, offers floored by
-   it. Measured separately, because it is the half that could quietly end wars
-   altogether.
+   it, and how the war has *gone* folded into wanting it over. **Built, and the
+   first thing in this arc that measured.** See below.
+
+## Slice 4, measured: two levers that actually move
+
+A 2x2 over 432 games, because `readsStanding` and `weighsTheWar` are
+independent and folding them into one arm would have meant neither got
+attributed. Predictions written into `sweep.run.test.ts` before the run.
+
+**Both held, and both replicate.** Fights a game, paired over 108 seeds, each
+main effect measured twice -- once with the other lever off and once with it on:
+
+| | effect on fights | t, the two comparisons |
+|---|---|---|
+| `readsStanding` | **+2.84** | +3.57, +4.39 |
+| `weighsTheWar` | **-3.44** | -5.04, -3.67 |
+
+Four independent t-values past 3, in the two predicted directions: a floor
+below Angered means the sides that hate each other most are the ones that can
+no longer stop, and a side that counts its own dead asks sooner. After three
+levers in a row that measured as nothing, this is what a lever that works looks
+like.
+
+Turns and captures moved in the predicted directions and **not** significantly
+(turns t = +1.44 / +0.08 for `weighsTheWar`), so neither is banked.
+
+**And the game got rounder.** Pooled winners over 108 games an arm:
+
+```
+neither    orc 52   hum 37   hive 19
+standing   orc 44   hum 37   hive 27
+war        orc 43   hum 43   hive 22
+both       orc 45   hum 35   hive 28
+```
+
+42/32/26 with both on, against 48/34/18 with neither. The Hive's gain is
+`readsStanding`: paired, 11 gained against 3 lost (z = +2.14) with the other
+lever off, and 12 against 6 (z = +1.41) with it on -- replicated in direction,
+one comparison past two sigma. `weighsTheWar` does nothing for it (z = +0.90,
++0.38). The Horde's long-standing lead narrows at the same time, which is the
+section 125 leftover moving for the first time.
+
+**The fear this slice was flagged with did not happen.** "It could quietly end
+wars altogether" -- `weighsTheWar` alone would cut fighting by a sixth, but the
+two levers very nearly cancel: 20.0 fights a game with both on against 20.5
+with neither. Shipping both is close to fight-neutral and markedly more even.
+
+### The one objection, and it is about a test rather than the game
+
+`tests/production.test.ts` asserts the AI fields a mean of three kinds of
+fighter over six fixed seeds. Slice 4 reads 2.67 and fails it.
+
+The effect is real and small. Over **twelve** seeds: main 2.92, slice 4 2.67 --
+a quarter of a kind, with three seeds dropping by one and none gaining.
+
+But the bar is not a property of the game. **Main scores 2.92 over those twelve
+seeds**, which is to say main fails its own test as soon as the sample widens;
+it passes on six because those six happen to average exactly 3.0. So widening
+the seed set is not available as a fix -- it would fail on main -- and lowering
+the bar to fit a change is fitting the test to the answer.
+
+That is a decision about a balance tripwire rather than about this slice, and
+it is left open rather than quietly resolved.
 
 ## Spies -- now `SPIES_PLAN.md`
 
