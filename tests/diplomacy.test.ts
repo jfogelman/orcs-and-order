@@ -26,8 +26,18 @@ import {
   noteCityTaken,
   forgetSlowly,
   talksWith,
+  warLength,
+  lossesIn,
 } from '../src/sim/diplomacy';
-import { DIPLOMACY_AI, HIVE_TABLE, aiAccepts, aiDiplomacy, wantPeace } from '../src/ai/diplomacy';
+import {
+  DIPLOMACY_AI,
+  HIVE_TABLE,
+  aiAccepts,
+  aiDiplomacy,
+  wantPeace,
+  willTalkTo,
+} from '../src/ai/diplomacy';
+import { nearestEnemyTarget } from '../src/ai/ai';
 import { deserialize, serialize } from '../src/persist/save';
 import type { GameState } from '../src/model/types';
 import { FACTIONS } from '../src/model/factions';
@@ -457,5 +467,166 @@ describe('the Hive at the table (section 135)', () => {
     const keep = state.cities.find((c) => c.owner === hive)!;
     state.cities = state.cities.filter((c) => c.owner !== hive || c === keep);
     expect(wantPeace(state, state.players[hive], state.players[1])).toBeLessThan(roomy);
+  });
+});
+
+/**
+ * Section 135 slice 4: the number finally gets read.
+ *
+ * Until here `standing` accrued, the Talks screen showed it, and not one rule
+ * in the game consulted it. Two things read it now -- who the AI walks at, and
+ * whether it will come to the table at all -- and separately the AI weighs how
+ * the war has *gone* as well as how it stands.
+ */
+describe('standing in the AI’s decisions (section 135)', () => {
+  /** Two sides at war, with somewhere to live so nobody is eliminated. */
+  function atWar() {
+    const state = board();
+    foundCity(state, spawnUnit(state, 0, 'peon', 4, 4));
+    foundCity(state, spawnUnit(state, 1, 'peasant', 25, 15));
+    for (let i = 0; i < 5; i++) spawnUnit(state, 0, 'orc', 6 + i, 6);
+    for (let i = 0; i < 5; i++) spawnUnit(state, 1, 'footman', 20 + i, 13);
+    noteClash(state, 0, 1);
+    return state;
+  }
+
+  it('starts a war clock on the first shot, and not on the next one', () => {
+    const state = board();
+    expect(warLength(state, 0, 1)).toBe(0);
+    noteClash(state, 0, 1);
+    expect(warLength(state, 0, 1)).toBe(0);
+    state.turn += 10;
+    // Still the same war, so the clock reads from the first shot.
+    noteClash(state, 0, 1);
+    expect(warLength(state, 0, 1)).toBe(10);
+  });
+
+  it('starts a new clock when a war has gone quiet and begun again', () => {
+    const state = board();
+    noteClash(state, 0, 1);
+    state.turn += PEACE.warMemory + 5;
+    expect(atWarLately(state, 0, 1)).toBe(false);
+    noteClash(state, 0, 1);
+    expect(warLength(state, 0, 1)).toBe(0);
+  });
+
+  it('counts what the war has cost each side, and forgets it on a peace', () => {
+    const state = atWar();
+    noteFight(state, 0, 1, 1);
+    noteFight(state, 0, 1, 1);
+    noteFight(state, 0, 1, 0);
+    expect(lossesIn(state, 0, 1, 1)).toBe(2);
+    expect(lossesIn(state, 0, 1, 0)).toBe(1);
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    // The next war is its own war, argued about on its own terms.
+    expect(lossesIn(state, 0, 1, 1)).toBe(0);
+    expect(warLength(state, 0, 1)).toBe(0);
+  });
+
+  it('wants a long war over more than a short one', () => {
+    const state = atWar();
+    const fresh = wantPeace(state, state.players[0], state.players[1]);
+    // Kept current with a shot every few turns, or it lapses: a war nobody has
+    // fought for `warMemory` turns is over, and the clock stops with it. The
+    // first draft of this test simply advanced the calendar and measured a war
+    // that had quietly ended.
+    for (let i = 0; i < 5; i++) {
+      state.turn += PEACE.longWar / 5;
+      noteClash(state, 0, 1);
+    }
+    expect(warLength(state, 0, 1)).toBe(PEACE.longWar);
+    const tired = wantPeace(state, state.players[0], state.players[1]);
+    expect(tired).toBeGreaterThan(fresh);
+    expect(tired - fresh).toBeCloseTo(DIPLOMACY_AI.tiring, 5);
+  });
+
+  it('wants a costly war over more than a cheap one, counting only its own dead', () => {
+    const state = atWar();
+    // Each side measured against *itself* before and after. Comparing the two
+    // sides' numbers directly is what the first draft did, and it compared the
+    // Horde's lean against the Kingdom's rather than the dead against nothing.
+    const hordeBefore = wantPeace(state, state.players[0], state.players[1]);
+    const kingdomBefore = wantPeace(state, state.players[1], state.players[0]);
+    for (let i = 0; i < 5; i++) noteFight(state, 0, 1, 0);
+
+    const hordeAfter = wantPeace(state, state.players[0], state.players[1]);
+    expect(hordeAfter - hordeBefore).toBeCloseTo(5 * DIPLOMACY_AI.bleeding, 5);
+    // And from the other chair those same five deaths are somebody else's,
+    // which is the asymmetry that makes a one-sided war end.
+    expect(wantPeace(state, state.players[1], state.players[0])).toBe(kingdomBefore);
+  });
+
+  it('leaves all of that alone with the lever off', () => {
+    const state = atWar();
+    DIPLOMACY_AI.weighsTheWar = false;
+    try {
+      const fresh = wantPeace(state, state.players[0], state.players[1]);
+      state.turn += PEACE.longWar * 2;
+      for (let i = 0; i < 10; i++) noteFight(state, 0, 1, 0);
+      expect(wantPeace(state, state.players[0], state.players[1])).toBe(fresh);
+    } finally {
+      DIPLOMACY_AI.weighsTheWar = true;
+    }
+  });
+
+  it('will not come to the table with a side it is Angered at', () => {
+    const state = atWar();
+    expect(willTalkTo(state, 0, 1)).toBe(true);
+    adjustStanding(state, 0, 1, STANDING.worst);
+    expect(moodName(state, 0, 1)).toBe('War');
+    expect(standing(state, 0, 1)).toBeLessThanOrEqual(DIPLOMACY_AI.refuses);
+    expect(willTalkTo(state, 0, 1)).toBe(false);
+    // And no amount of gold moves it, which is what a floor means.
+    state.players[1].gold = 500;
+    expect(aiAccepts(state, { from: 1, to: 0, gold: 400 })).toBe(false);
+  });
+
+  it('still tears up a treaty with a side it will not talk to', () => {
+    const state = atWar();
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    adjustStanding(state, 0, 1, STANDING.worst);
+    expect(willTalkTo(state, 0, 1)).toBe(false);
+    // Refusing to talk is not refusing to act, and a side that hates you is
+    // exactly the side that goes back on its word.
+    expect(breakPeace(state, 0, 1)).toBe(true);
+  });
+
+  it('walks at a side it hates before one it merely dislikes', () => {
+    const state = board();
+    for (const p of state.players) p.explored.fill(1);
+    const hive = withHive(state);
+    const ours = spawnUnit(state, 0, 'orc', 15, 10);
+    // Two enemy towns exactly as far away in opposite directions.
+    foundCity(state, spawnUnit(state, 1, 'peasant', 5, 10));
+    foundCity(state, spawnUnit(state, hive, 'grub', 25, 10));
+    state.units = state.units.filter((u) => u === ours || u.owner === 0);
+
+    // Level standing: the tie is broken by whatever the scan finds first.
+    const even = nearestEnemyTarget(state, 0, ours);
+    expect(even).not.toBeNull();
+
+    // Now hate one of them.
+    adjustStanding(state, 0, hive, STANDING.worst);
+    const hated = nearestEnemyTarget(state, 0, ours);
+    expect(hated).toEqual({ x: 25, y: 10 });
+
+    // And with the lever off, the grudge is invisible again.
+    DIPLOMACY_AI.readsStanding = false;
+    try {
+      expect(nearestEnemyTarget(state, 0, ours)).toEqual(even);
+    } finally {
+      DIPLOMACY_AI.readsStanding = true;
+    }
+  });
+
+  it('costs the breaker standing with everybody who was watching', () => {
+    const state = atWar();
+    const hive = withHive(state);
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    const watchedBefore = standing(state, 0, hive);
+    breakPeace(state, 0, 1);
+    // The victim pays full price; the onlooker a smaller one.
+    expect(standing(state, 0, hive)).toBe(watchedBefore + STANDING.brokenElsewhere);
+    expect(STANDING.brokenElsewhere).toBeGreaterThan(STANDING.broken);
   });
 });

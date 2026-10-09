@@ -11,8 +11,8 @@ import {
 } from '../sim/burrow';
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
-import { hostile } from '../sim/diplomacy';
-import { aiDiplomacy } from './diplomacy';
+import { STANDING, hostile, standing } from '../sim/diplomacy';
+import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
   acrossTheWater,
@@ -465,7 +465,29 @@ const GUARD_REFERENCE = 12;
  * at the midpoint, so the AI is neither drawn to nor warned off a defence it
  * has no business knowing about.
  */
-function nearestEnemyTarget(
+/**
+ * How much more attractive a target is for being somebody we hate.
+ *
+ * Section 135 slice 4, and the first rule in the game to read `standing` at
+ * all. A multiplier on the effective distance, so **below one is nearer**: at
+ * the bottom of the scale a city is worth walking `grudgePull` as far for, and
+ * at the top of it the number is 1 and nothing changes.
+ *
+ * Only ever makes a hated side *more* attractive and never a liked one less.
+ * Sides at peace are already out of this list entirely -- `hostile` drops them
+ * before we get here -- so the alternative would be an AI that declines to
+ * fight a war it is in, which is a different and much larger decision than
+ * choosing which of two enemies to walk at.
+ */
+function grudge(state: GameState, playerId: number, owner: number): number {
+  if (!DIPLOMACY_AI.readsStanding) return 1;
+  const where = standing(state, playerId, owner);
+  if (where >= 0) return 1;
+  const hate = Math.min(1, where / STANDING.worst);
+  return 1 - hate * (1 - DIPLOMACY_AI.grudgePull);
+}
+
+export function nearestEnemyTarget(
   state: GameState,
   playerId: number,
   from: Unit,
@@ -497,7 +519,8 @@ function nearestEnemyTarget(
     const begun =
       state.players[c.owner]?.endingBegunAt !== undefined &&
       (hasEndingPiece(c) || capitalOf(state, c.owner)?.id === c.id);
-    consider(c.x, c.y, endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1, hardness);
+    const pull = endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1;
+    consider(c.x, c.y, pull * grudge(state, playerId, c.owner), hardness);
   }
   for (const u of state.units) {
     // Section 123: a thing standing in a ruin is furniture, not an enemy army.
@@ -511,7 +534,7 @@ function nearestEnemyTarget(
     // one route to a ruin, and it is a deliberate errand with its own rules.
     if (isWarden(u)) continue;
     if (u.owner !== playerId && hostile(state, playerId, u.owner) && seenBy(state, u, playerId)) {
-      consider(u.x, u.y, 1.6, 0);
+      consider(u.x, u.y, 1.6 * grudge(state, playerId, u.owner), 0);
     }
   }
   return best;

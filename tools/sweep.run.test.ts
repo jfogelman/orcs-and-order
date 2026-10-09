@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { NEGOTIATION } from '../src/model/factions';
+import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 
 /**
  * The question this sweep is currently asking.
@@ -42,38 +42,39 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 135 slice 3b: the Hivekin at the table.
+  // Section 135 slice 4, and it is **two levers at once**, so a 2x2 rather
+  // than a pair. They are independent and both are supposed to move the game,
+  // and folding them into one arm would mean neither gets attributed.
   //
-  // Off is section 125's answer -- fought, not talked to -- and on is Jeremy's:
-  // *"No definitely not, they're alien to orcs/humans not silent."*
+  // - `readsStanding`: the AI walks at a side it hates before one it merely
+  //   dislikes, and will not come to the table at all below Angered.
+  // - `weighsTheWar`: how long this one has run and what it has cost, which is
+  //   the half of Jeremy's answer 2 that was never built.
   //
-  // **This one has a reason to move that slice 3's did not.** Slice 3 handed
-  // the AI a target and was measured flat, and the probe showed the reveal
-  // landing, so the premise was simply wrong. This changes a rule the AI
-  // already reads every turn: a third side can now be at peace, which takes it
-  // off the board as a target for as long as the treaty runs. The prediction,
-  // written before the run: **fewer fights, longer games, and the Hive doing
-  // better** -- it is the side that spends most of the game outnumbered two to
-  // one, and the one with most to gain from being able to stop.
+  // **This is the slice the plan warned could quietly end wars altogether**,
+  // and `tests/production.test.ts` is already saying something: the AI fields
+  // 2.67 kinds of fighter against a bar of 3, where main sits at exactly 3.0.
+  // Each lever costs that on its own, and one seed's army fell from thirteen
+  // units to four. So the prediction, written before the run: **fewer fights
+  // and longer games from `weighsTheWar`**, and from `readsStanding` the
+  // opposite -- more fights, because a floor below Angered means the sides that
+  // hate each other most are the ones that can no longer stop.
   //
-  // If the Hive does *worse*, the likely cause is `HIVE_TABLE.breaks` at -0.9
-  // letting it hold treaties through a window it should have spent expanding,
-  // and that is a number to move rather than a feature to drop.
+  // If both arms come back flat, that is the third lever in a row aimed at
+  // this war that does nothing, and the question stops being about diplomacy.
+  const arm = (label: string, standing: boolean, war: boolean): Arm => ({
+    label,
+    apply: () => {
+      control();
+      DIPLOMACY_AI.readsStanding = standing;
+      DIPLOMACY_AI.weighsTheWar = war;
+    },
+  });
   return [
-    {
-      label: 'hive silent',
-      apply: () => {
-        control();
-        NEGOTIATION.hivekin = false;
-      },
-    },
-    {
-      label: 'hive talks',
-      apply: () => {
-        control();
-        NEGOTIATION.hivekin = true;
-      },
-    },
+    arm('neither', false, false),
+    arm('standing', true, false),
+    arm('war', false, true),
+    arm('both', true, true),
   ];
 };
 

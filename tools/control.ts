@@ -28,6 +28,7 @@ import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
+import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
 import { TERRAFORM } from '../src/sim/terraform';
@@ -113,6 +114,9 @@ export const control = () => {
   // Slice 3b: and the Hive comes to the table, which is the shipped game from
   // here on.
   NEGOTIATION.hivekin = true;
+  // Slice 4: and the AI reads the number and weighs how the war has gone.
+  DIPLOMACY_AI.readsStanding = true;
+  DIPLOMACY_AI.weighsTheWar = true;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have

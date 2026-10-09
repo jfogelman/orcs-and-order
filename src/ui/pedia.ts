@@ -913,6 +913,21 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           on works likes peace; whoever is ahead on armies likes war.
         </p>
         <p class="flavor">
+          <strong>They remember, and it shows in where their armies go.</strong> A side
+          you have ground down to <em>Angered</em> will not come to the table at all &mdash;
+          no offer, no counter-offer, and no sum of gold that changes it &mdash; and while
+          you are down there its armies will walk past a nearer enemy to get to you.
+          Climbing back out is a matter of time: a grudge nobody is feeding creeps
+          toward nothing on its own.
+        </p>
+        <p class="flavor">
+          <strong>A long war is easier to end than a short one.</strong> Both sides tire
+          of a war that has run ${PEACE.longWar} turns, and each counts its own dead and
+          not the other side's &mdash; so the side that is losing asks first, and the side
+          that is winning holds out. Signing wipes both clocks: the next war is argued
+          about on its own terms.
+        </p>
+        <p class="flavor">
           <strong>The talks</strong> are on the top bar. Offer peace for nothing, pay them
           gold to take it, or demand gold of them as the price of stopping. They answer at
           once, and you can see beforehand how keen they seem. They will also come to you:
@@ -935,6 +950,8 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           while at peace is refused rather than starting a war by accident. The side that
           breaks it has cities a citizen less patient for ${PEACE.shameTurns} turns, and
           the other side remembers: every broken peace makes the next one harder to get.
+          <strong>So does everybody else</strong>, a little &mdash; it was not their
+          treaty, but nobody likes a side that breaks its word.
         </p>
       </div>
       <div class="pedia-pane" data-pane="controls" hidden>
