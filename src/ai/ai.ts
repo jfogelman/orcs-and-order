@@ -67,6 +67,7 @@ import { resupply, resupplyBlocked } from '../sim/combat';
 import {
   attackTargets,
   moveToward,
+  wentSomewhere,
   reachableTiles,
   routeTo,
   startRoadTo,
@@ -1500,7 +1501,7 @@ function restockIfNeeded(state: GameState, unit: Unit): boolean {
     distance(unit.x, unit.y, b.x, b.y) < distance(unit.x, unit.y, a.x, a.y) ? b : a,
   );
   if (distance(unit.x, unit.y, nearest.x, nearest.y) > RESTOCK_RANGE) return false;
-  return moveToward(state, unit, nearest.x, nearest.y).kind !== 'blocked';
+  return wentSomewhere(moveToward(state, unit, nearest.x, nearest.y));
 }
 
 /**
@@ -1569,8 +1570,7 @@ function takeAim(state: GameState, unit: Unit): boolean {
     }
   }
   if (bestIdx === null) return false;
-  const outcome = moveToward(state, unit, bestIdx % w, Math.floor(bestIdx / w));
-  return outcome.kind !== 'blocked';
+  return wentSomewhere(moveToward(state, unit, bestIdx % w, Math.floor(bestIdx / w)));
 }
 
 /**
@@ -1666,7 +1666,7 @@ function escortDuty(state: GameState, unit: Unit): boolean {
   // can still be pulled into a fight next to it -- burning the turn here froze
   // guards in place and thinned the army enough to show up in the variety test.
   if (bestDist <= 1) return true;
-  return moveToward(state, unit, best.x, best.y).kind !== 'blocked';
+  return wentSomewhere(moveToward(state, unit, best.x, best.y));
 }
 
 /**

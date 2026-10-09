@@ -528,7 +528,17 @@ class App {
       const here = this.selected;
       // Keep a unit of ours that is still standing and still undecided; drop
       // anything else, so a dead or foreign selection does not linger.
-      if (!awaitingDecision(this.state, this.viewerId, here)) this.select(null);
+      if (!awaitingDecision(this.state, this.viewerId, here)) {
+        this.select(null);
+        return;
+      }
+      // **Keeping it still has to redraw it.** Reported from play, section 136:
+      // the last unit to move went on showing the movement it had before the
+      // move, every time and whatever the faction. Every other path through
+      // here ends in `select`, which refreshes; this one returned early, so the
+      // panel kept whatever it was showing when the unit still had a point to
+      // spend. Nothing was wrong with the unit -- only with the picture of it.
+      this.refreshSidebar();
       return;
     }
     const current = this.selected;
@@ -625,6 +635,11 @@ class App {
       // what made the resettlement rule read as a broken attack.
       if (attacking) this.renderer.animator.cancel(unit.id);
       this.flash(outcome.reason);
+    } else if (outcome.kind === 'queued') {
+      // Section 136: it had nothing left to walk with, and the march is
+      // written down for next turn. Said out loud, because the alternative is
+      // a right-click that appears to do nothing at all.
+      this.flash('Marching orders set. It will set off next turn.');
     } else if (outcome.kind === 'moved') {
       audio.play('move');
     } else if (outcome.kind === 'combat') {

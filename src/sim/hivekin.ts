@@ -368,7 +368,14 @@ export function placeQueen(state: GameState, city: City): void {
   // The first Hive only. A second Queen is the *ending*, not a second city.
   if (playerCities(state, owner.id).length !== 1) return;
   if (state.units.some((u) => u.owner === owner.id && u.type === 'queen')) return;
-  spawnUnit(state, owner.id, 'queen', city.x, city.y);
+  const queen = spawnUnit(state, owner.id, 'queen', city.x, city.y);
+  // Section 136, reported from play: she was drawn standing on the tile like
+  // something that had just walked there and might walk off again. She is
+  // immobile by rule -- `isQueen` is checked everywhere movement is -- so the
+  // one order that says "this is where I am" is the one she should have from
+  // the moment she exists. It is also what stops her asking for orders in the
+  // idle cycle every turn for the rest of the game.
+  queen.order = 'fortified';
   // Remembered on the player rather than derived from "the oldest city", so a
   // seat that is lost and a capital that moves are two different events.
   owner.queenSeat = city.id;

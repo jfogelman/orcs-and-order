@@ -190,10 +190,20 @@ describe('the roster', () => {
 });
 
 describe('the tree', () => {
-  it('starts them with a founder and a gatherer, and no Queen', () => {
+  it('starts them with a founder, a gatherer and a fighter, and no Queen', () => {
     const first = TECHS_BY_ID['first-hivekin'];
     expect(first.cost).toBe(0);
-    expect(first.units).toEqual(['grub', 'worker']);
+    // Section 136, from the first game anybody played as them: turn one
+    // offered a Grub the city could not afford and nothing else, because the
+    // Hive alone began unable to build a unit that could hold a tile. The
+    // other two have always opened with a settler *and* a fighter.
+    expect(first.units).toEqual(['grub', 'worker', 'fodder']);
+    for (const other of ['first-orc', 'first-human']) {
+      const def = TECHS_BY_ID[other];
+      expect(def.units.some((u) => UNIT_TYPES[u]?.settler), `${other} settler`).toBe(true);
+      expect(def.units.some((u) => (UNIT_TYPES[u]?.attack ?? 0) > 0), `${other} fighter`).toBe(true);
+    }
+    expect(first.units.some((u) => (UNIT_TYPES[u]?.attack ?? 0) > 0)).toBe(true);
     expect(FACTIONS.hivekin.startTech).toBe('first-hivekin');
     expect(FACTIONS.hivekin.settlerUnit).toBe('grub');
   });
