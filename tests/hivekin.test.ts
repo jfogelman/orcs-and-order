@@ -9,6 +9,8 @@ import {
   talks,
 } from '../src/model/factions';
 import { CREATURES, CROWD_THRESHOLD, UNIT_TYPES, unitType, unitTypeId } from '../src/model/units';
+import { HIVE_ENDING } from '../src/sim/hivekin';
+import { DIFFICULTIES } from '../src/sim/difficulty';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS, TECHS_BY_ID } from '../src/model/techs';
 import { ADVISORS } from '../src/model/advisors';
@@ -467,8 +469,14 @@ describe('what the book says about them', () => {
    * The Hivekin pane used to open on "She does not move", with no antecedent
    * for "she" anywhere above it but a flavour blurb -- and nothing to say that
    * a Hive is their word for a city, a caste their word for a unit, that they
-   * are not on the map when the game begins, or that they cannot be talked to.
+   * are not on the map when the game begins, or how they behave at a table.
    * Every rule in the block assumes those four things.
+   *
+   * The fourth used to be "they cannot be talked to", asserted here as *"no
+   * peace to be made"*. Section 135 slice 3b reversed that and this assertion
+   * was not updated with it, so the book went on saying nobody negotiates with
+   * the Hive for as long as it took the next change to trip over it. Pinning a
+   * rule in the book is only worth doing if the pin moves when the rule does.
    */
   it('says who everybody is before it says what they do', () => {
     const intro = HIVE_RULES.slice(0, HIVE_RULES.indexOf('She does not move'));
@@ -479,8 +487,12 @@ describe('what the book says about them', () => {
     expect(intro).toMatch(/not on the map when the game starts/i);
     expect(intro).toMatch(new RegExp(`${HIVEKIN.from}`));
     expect(intro).toMatch(new RegExp(`${HIVEKIN.until}`));
-    // And the rule an empire player will otherwise learn by trying it.
-    expect(intro).toMatch(/no peace to be made/i);
+    // And the rule an empire player will otherwise learn by trying it: they
+    // do come to the table, and a treaty with them binds that pair alone.
+    expect(intro).toMatch(/will talk/i);
+    expect(intro).toMatch(/signed for itself/i);
+    // Section 136: and that when they arrive is the level's business.
+    expect(intro).toMatch(/level you chose/i);
   });
 
   it('never prints a number it failed to look up', () => {
@@ -497,5 +509,117 @@ describe('what the book says about them', () => {
     // The same block is shown in the Hivekin player's own pane and in the pane
     // about them, so it stays in the third person throughout.
     expect(HIVE_RULES).not.toMatch(/\byour Hive\b|\byou are the\b|\byour Queen\b/i);
+  });
+});
+
+/**
+ * Section 136: the ending is priced by how long the Hive has had to pay.
+ *
+ * The three works cost six hundred shields against the other endings'
+ * thousand, and `buildings.ts` says why -- the Hive pays out of 3.5 towns
+ * where an empire pays out of six. That is right for a side that does not
+ * exist until turn ninety and wrong for one that has been there all along: a
+ * turn-one Hive measured 83% against a 64% baseline, winning in 141 turns
+ * against 230, with ten of thirteen wins on this very ending.
+ */
+describe('what the Hive pays for its ending (section 136)', () => {
+  function hiveCity(joined: number | undefined) {
+    const state = board();
+    const hive = withHive(state);
+    state.players[hive].joinedAt = joined;
+    const city = foundCity(state, spawnUnit(state, hive, 'grub', 10, 10))!;
+    return { state, city };
+  }
+
+  const works = ['moltingChamber', 'secondFeeding', 'secondQueenShell'] as const;
+
+  it('charges a Hive that emerged on time exactly what it always did', () => {
+    const { state, city } = hiveCity(HIVEKIN.from);
+    for (const id of works) {
+      expect(productionCostIn(state, city, { kind: 'building', id })).toBe(BUILDINGS[id].cost);
+    }
+  });
+
+  it('charges a Hive that has been there since turn one an empire’s price', () => {
+    const { state, city } = hiveCity(1);
+    const total = works.reduce(
+      (t, id) => t + productionCostIn(state, city, { kind: 'building', id }),
+      0,
+    );
+    const shipped = works.reduce((t, id) => t + BUILDINGS[id].cost, 0);
+    expect(shipped).toBe(600);
+    // The other two endings cost a thousand, and a Hive with the whole game is
+    // what an empire is. Both anchors are facts rather than guesses.
+    expect(total).toBe(1000);
+  });
+
+  it('treats a seat that was never given an arrival as having started', () => {
+    const { state, city } = hiveCity(undefined);
+    expect(productionCostIn(state, city, { kind: 'building', id: 'secondQueenShell' })).toBe(
+      productionCostIn(hiveCity(1).state, hiveCity(1).city, {
+        kind: 'building',
+        id: 'secondQueenShell',
+      }),
+    );
+  });
+
+  it('charges something in between for a Hive that turned up in between', () => {
+    const early = hiveCity(1);
+    const mid = hiveCity(Math.round(HIVEKIN.from / 2));
+    const late = hiveCity(HIVEKIN.from);
+    const price = (c: ReturnType<typeof hiveCity>) =>
+      productionCostIn(c.state, c.city, { kind: 'building', id: 'secondQueenShell' });
+    expect(price(mid)).toBeGreaterThan(price(late));
+    expect(price(mid)).toBeLessThan(price(early));
+  });
+
+  it('leaves everything at the shipped price with the lever off', () => {
+    HIVE_ENDING.scaled = false;
+    try {
+      const { state, city } = hiveCity(1);
+      for (const id of works) {
+        expect(productionCostIn(state, city, { kind: 'building', id })).toBe(BUILDINGS[id].cost);
+      }
+    } finally {
+      HIVE_ENDING.scaled = true;
+    }
+  });
+
+  it('does not touch anybody else’s buildings', () => {
+    const state = board();
+    const hive = withHive(state);
+    state.players[hive].joinedAt = 1;
+    const city = foundCity(state, spawnUnit(state, hive, 'grub', 10, 10))!;
+    expect(productionCostIn(state, city, { kind: 'building', id: 'barracks' })).toBe(
+      BUILDINGS.barracks.cost,
+    );
+  });
+});
+
+/**
+ * Section 136: and when they turn up is a difficulty dial.
+ *
+ * Jeremy: "a staggered arrival depending on game difficulty (later is easier,
+ * same time is harder)." A third contender appearing is the largest single
+ * thing that can happen to a game, so *when* changes how much of it you get to
+ * yourself -- without changing any number you are playing against.
+ */
+describe('when the Hive turns up, by level (section 136)', () => {
+  it('is unchanged at Normal, which every earlier measurement used', () => {
+    expect(DIFFICULTIES.find((d) => d.id === 'normal')!.hiveArrives).toBe(0);
+  });
+
+  it('runs later the easier the game is, and earlier the harder', () => {
+    const order = ['easiest', 'easy', 'normal', 'hard', 'hardest'] as const;
+    const shifts = order.map((id) => DIFFICULTIES.find((d) => d.id === id)!.hiveArrives);
+    for (let i = 1; i < shifts.length; i++) {
+      expect(shifts[i], `${order[i]} against ${order[i - 1]}`).toBeLessThan(shifts[i - 1]);
+    }
+  });
+
+  it('never asks for a turn before the first one', () => {
+    for (const d of DIFFICULTIES) {
+      expect(HIVEKIN.from + d.hiveArrives, d.id).toBeGreaterThan(-HIVEKIN.until);
+    }
   });
 });

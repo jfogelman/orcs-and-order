@@ -410,17 +410,27 @@ export const HIVE_RULES = `
   <p>They are not on the map when the game starts. Somewhere around turn
   ${HIVEKIN.from} to ${HIVEKIN.until} the ground opens on ground nobody had
   claimed, and a third side is simply there, with no explanation offered and
-  none apparently required. Their cities are <strong>Hives</strong> and their
+  none apparently required. <strong>When depends on the level you chose</strong>
+  &mdash; later on an easy game, which is more of the map to yourself before
+  anybody else wants it, and earlier on a hard one. Their cities are <strong>Hives</strong> and their
   units are <strong>castes</strong> &mdash; one shape per job, grown rather than
   recruited &mdash; and there is exactly one <strong>Queen</strong>, who is the
   reason any of it works.</p>
-  <p><strong>Nobody negotiates with them.</strong> There is no peace to be made
-  with the Hive and none to be broken: the two empires can sign with each other,
-  and whatever either of them has agreed, the Hive is still at war with both.
-  It is not hostility so much as a difference of opinion about whether the
-  conversation is happening. For the first ${HIVEKIN.grace} turns after they
-  come up they cannot be attacked at all, which is the only courtesy in the
-  arrangement and runs in their favour.</p>
+  <p><strong>They will talk, and they want different things.</strong> The Voice
+  speaks for the Queen and attempts, throughout, an expression. They hold no
+  grudges, take no view of anybody who has broken their word, and read one thing
+  before anything else: whether they would survive the war. Much the weaker,
+  they will take almost any peace; much the stronger, they are only mildly
+  interested in carrying on. A treaty with them covers them and you and nobody
+  else &mdash; whatever the other empire has signed, it has signed for itself.
+  For the first ${HIVEKIN.grace} turns after they come up they cannot be
+  attacked at all, which is the only courtesy in the arrangement and runs in
+  their favour.</p>
+  <p><strong>Their ending is priced by how long they have had.</strong> The
+  three works cost less than either empire's ending, because a Hive pays for
+  them out of fewer and smaller towns. The earlier they arrive, the more of the
+  game they have to pay with, and the more the works cost &mdash; a Hive that
+  had been there from the first turn would pay exactly what an empire pays.</p>
   <p><strong>She does not move.</strong> The Queen sits in the first Hive and never
   leaves it. That Hive <em>makes nothing at all</em> while she is not in it &mdash;
   production there is a thing she is doing, not a thing it is doing.</p>

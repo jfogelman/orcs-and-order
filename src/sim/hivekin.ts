@@ -1,6 +1,7 @@
 import { FACTIONS } from '../model/factions';
 import type { BroodBonus, City, GameState, Player, Unit } from '../model/types';
 import { TERRAIN } from '../model/terrain';
+import { difficultyOf } from './difficulty';
 import { contenders, log, makePlayer, playerCities, spawnUnit } from './gamestate';
 import { ensureWilds } from './barbarians';
 import { tileYield } from './city';
@@ -86,6 +87,58 @@ export const HIVEKIN = {
   ownPlans: true,
 };
 
+/**
+ * What the Hive's ending costs, by how long it has had to pay for it.
+ *
+ * Section 136. The three works price at six hundred shields against the other
+ * two endings' thousand, and `buildings.ts` says exactly why: *"the thing it is
+ * paid out of: 3.5 Hives of 5.5 citizens, where an empire pays out of six
+ * cities of eight."* That is a correct price for the side section 125 built --
+ * one that does not exist until turn ninety and is three and a half towns deep
+ * when the game ends.
+ *
+ * It is the wrong price for a Hive that has been there since turn one.
+ * Measured: a turn-one Hive wins 83% of its games against a 64% baseline for
+ * the same seat, finishing in 141 turns against 230, and ten of thirteen wins
+ * are this ending. It is not that their kit is too strong. It is that they are
+ * walking a road priced for a third of a game with a whole one in hand.
+ *
+ * So the price is not a constant any more, it is a **lerp between the two
+ * cases**, and the anchors are both facts rather than guesses: a Hive that has
+ * the whole game pays what an empire pays, and a Hive that arrives when
+ * section 125 said it arrives pays what section 125 measured. Everything
+ * between is interpolated, which is what makes a staggered arrival possible at
+ * all -- a Hive that turns up on turn forty should not pay either price.
+ */
+export const HIVE_ENDING = {
+  /** The switch, for sweeps. Off is section 125's flat six hundred. */
+  scaled: true,
+  /**
+   * What the works cost a Hive present from turn one, as a multiple of the
+   * shipped price. 1000/600: an empire's ending, because that is what a side
+   * with a whole game and an empire's worth of towns is.
+   */
+  early: 1000 / 600,
+};
+
+/**
+ * The multiplier on a Hive ending work for this side, from when it arrived.
+ *
+ * One at `HIVEKIN.from` and later, which is every game section 125 measured,
+ * so that arm is unchanged by construction.
+ */
+export function hiveEndingScale(state: GameState, ownerId: number): number {
+  if (!HIVE_ENDING.scaled) return 1;
+  const p = state.players[ownerId];
+  if (!p || p.faction !== 'hivekin') return 1;
+  // Absent means it was there when the map was made -- seat 0 in a game
+  // somebody chose to play as the Hive, where nothing ever set it.
+  const joined = p.joinedAt ?? 1;
+  const span = Math.max(1, HIVEKIN.from - 1);
+  const earliness = Math.max(0, Math.min(1, 1 - (joined - 1) / span));
+  return 1 + (HIVE_ENDING.early - 1) * earliness;
+}
+
 /** The Hivekin seat, once it exists. */
 export function hivekinOf(state: GameState): Player | null {
   return state.players.find((p) => p.faction === 'hivekin' && !p.barbarian) ?? null;
@@ -124,7 +177,14 @@ function arrivalTurn(state: GameState): number {
     for (let i = 0; i < 4; i++) {
       h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
     }
-    state.hivekinAt = HIVEKIN.from + (h % span);
+    // Section 136: and the level shifts the whole window. Later on an easy
+    // game is more of the map to yourself before the third side exists;
+    // earlier on a hard one is less. Clamped at turn one, which is as early as
+    // anything can be, and the ending they are walking toward is priced from
+    // the same number -- see `hiveEndingScale`, without which an early arrival
+    // would simply be a free win.
+    const shift = difficultyOf(state.settings).hiveArrives;
+    state.hivekinAt = Math.max(1, HIVEKIN.from + (h % span) + shift);
   }
   return state.hivekinAt;
 }

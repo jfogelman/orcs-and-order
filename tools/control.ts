@@ -23,7 +23,7 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { HIVE_ENDING, HIVEKIN } from '../src/sim/hivekin';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
@@ -75,6 +75,10 @@ export const control = () => {
   // different measurements. Section 59's rule is "every arm sets every knob",
   // and `control()` is where the knobs nobody is asking about get set.
   HIVEKIN.enabled = true;
+  // Section 136: the ending priced by when they arrived. On is the shipped
+  // game; off is section 125's flat six hundred, which is identical for every
+  // Hive that emerges in its own window and differs only for an early one.
+  HIVE_ENDING.scaled = true;
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
   NAVAL.enabled = true;

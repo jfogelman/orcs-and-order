@@ -504,3 +504,68 @@ Harmless, noted so a later reader is not confused: the summary tech table omits
 `caste-riptide` and `caste-bloat`, and the "Not yet covered" note at the end
 still says `oldQueensShell` is not attached to an advance, which the Follies
 section above it has since fixed.
+
+
+## Section 136: priced for the time they have had
+
+Section 125 priced the Hive's ending at six hundred shields against the other
+two endings' thousand, for a stated and correct reason: *"the thing it is paid
+out of: 3.5 Hives of 5.5 citizens, where an empire pays out of six cities of
+eight."* That is the right price for a side that does not exist until turn
+ninety.
+
+It is the wrong price for one that has been there all along, and the question
+of making the Hivekin playable is exactly that question. Measured first, over
+108 games, three arms -- today's three-sided game, a two-sided baseline with
+emergence off, and a Hive in seat 0 from turn one:
+
+```
+                  before repricing        after
+today        7/18 (39%)  238 turns   7/18 (39%)  238 turns
+two sides   11/18 (61%)  235 turns  11/18 (61%)  235 turns
+hive        13/18 (72%)  152 turns  11/18 (61%)  186 turns
+---
+today        7/18 (39%)  218 turns   7/18 (39%)  218 turns
+two sides   12/18 (67%)  224 turns  12/18 (67%)  224 turns
+hive        17/18 (94%)  130 turns  11/18 (61%)  185 turns
+```
+
+Read `hive` against `two sides`: both are two contenders, and seat 0's
+empirical share there is 64% rather than the 50% one would assume, because that
+seat keeps the player's side of the difficulty. A turn-one Hive took **83%**
+and finished in 141 turns. After the repricing it takes **61%** against that
+64% -- three points under, which is as close to "the same side as anybody else"
+as a number gets.
+
+**The anchors were both facts, which is why it landed first time.** A Hive that
+arrives when section 125 says it arrives pays what section 125 measured; a Hive
+with the whole game pays what an empire pays. The price interpolates on
+`joinedAt` between those two, so every game ever measured is unchanged by
+construction and the new case is anchored to the other endings rather than to a
+guess.
+
+The endings column is the other half of it. Before: ten of thirteen wins and
+thirteen of seventeen were the Hive's own ending, at 130-152 turns. After:
+eight of eleven and seven of eleven, at 185-186, mixed with conquest, points
+and -- in one arm -- five portals. They still finish about forty turns faster
+than two empires do, which is what being a Hive is for.
+
+### And a staggered arrival, which this makes possible
+
+`DifficultyDef.hiveArrives` shifts the whole window: +60 on A Picnic, +30 on A
+Skirmish, zero on A War, -25 on A Crusade, -60 on Doom. Jeremy: *"later is
+easier, same time is harder."*
+
+It is a good dial because it changes **how much of the game you get to
+yourself** rather than any number you are playing against -- and it only works
+because the ending is priced off arrival. Without that, an early Hive would
+simply be a free win, which is precisely what the 94% above was.
+
+### Still open
+
+**They are still not in the picker.** `startsOnMap` is false. What the
+measurement says is that the price was the blocker and the price is now right;
+what it does not say is what the *game* should be. A playable Hive is a
+two-contender game, because `hivekinArrived` is true from turn one and nothing
+emerges. Either that is the Hivekin game, or something else has to come out of
+the ground, and that is a new faction's worth of design rather than a flag.

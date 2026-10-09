@@ -1,4 +1,4 @@
-import { broodBonus, placeQueen, queenless } from './hivekin';
+import { broodBonus, hiveEndingScale, placeQueen, queenless } from './hivekin';
 import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
@@ -632,6 +632,13 @@ function baseCostIn(state: GameState, city: City, item: ProductionItem): number 
   if (item.kind === 'unit') {
     const off = cityFollyBonus(city, (b) => b.unitDiscount);
     return off > 0 ? Math.max(1, Math.round(base * (1 - off))) : base;
+  }
+  // Section 136: a Hive ending work costs what the Hive has had time to pay.
+  // Before the `suppliesArmy` test, because these are not depots and the two
+  // adjustments have nothing to do with each other.
+  const def = item.kind === 'building' ? BUILDINGS[item.id] : undefined;
+  if (def && (def.endingPart === 'hive' || def.victory === 'hive')) {
+    return Math.round(base * hiveEndingScale(state, city.owner));
   }
   if (item.kind !== 'building' || !BUILDINGS[item.id]?.suppliesArmy) return base;
   const seat = capitalOf(state, city.owner);
