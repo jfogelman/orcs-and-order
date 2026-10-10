@@ -526,9 +526,22 @@ class App {
     const idle = idleUnits(this.state, this.viewerId);
     if (idle.length === 0) {
       const here = this.selected;
-      // Keep a unit of ours that is still standing and still undecided; drop
-      // anything else, so a dead or foreign selection does not linger.
-      if (!awaitingDecision(this.state, this.viewerId, here)) {
+      // **Narrowed in section 136, to the case it was written for.** Holding
+      // the last unit was right for a garrison swap -- walk a fresh unit into
+      // the settlement you have just emptied and it wants Fortify, which an
+      // empty panel cannot offer. It was wrong everywhere else: a unit that
+      // spent its last point in open country also satisfied this, so the turn
+      // ended with somebody still lit up and the board still looking as though
+      // it wanted something. Reported twice.
+      //
+      // So the keep is now exactly the `settling` condition `actOn` already
+      // uses: ours, undecided, and standing in one of our own settlements.
+      // Anywhere else the selection clears, which is what makes End Turn the
+      // only thing left to do.
+      const held = here ? cityAt(this.state, here.x, here.y) : null;
+      const settling =
+        held?.owner === this.viewerId && awaitingDecision(this.state, this.viewerId, here);
+      if (!settling) {
         this.select(null);
         return;
       }

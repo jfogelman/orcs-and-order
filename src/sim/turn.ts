@@ -256,6 +256,18 @@ function runEconomy(state: GameState, player: Player): void {
     const income = cityIncome(state, city, player);
     goldIncome += income.gold;
     beakerIncome += income.beakers;
+    // **Study, which was being thrown away.** `processCity` empties the shield
+    // box for a standing choice and hands back what it was worth; Coin adds
+    // itself to the treasury on the spot, and this did not. So a city set to
+    // Study spent its production every turn and the beakers went nowhere --
+    // reported from a game where two Hives sat on Study from turn two and the
+    // player had **nought** at turn ten while both empires had finished an
+    // advance.
+    //
+    // The field was declared, typed and commented ("Production turned straight
+    // into research this turn") and simply never read. Nothing failed; there
+    // was nothing to fail.
+    beakerIncome += events.beakers;
     upkeep += buildingUpkeep(state, city);
 
     if (events.grew) {
