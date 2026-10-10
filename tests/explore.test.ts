@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { idx } from '../src/engine/grid';
 import { createGame, recomputeAllVisibility, spawnUnit } from '../src/sim/gamestate';
 import { canExplore, resumeExplore, startExplore } from '../src/sim/explore';
+import { ruinState } from '../src/sim/ruins';
 import type { GameState } from '../src/model/types';
 
 /** A flat map, all of it dark but a strip at the west edge. */
@@ -12,6 +13,18 @@ function darkWorld(): GameState {
   state.terrain.fill('grass');
   state.players[0].explored.fill(0);
   state.players[0].visible.fill(0);
+  return state;
+}
+
+/**
+ * The same, narrowed to a single walkable row. The only way east is through
+ * every tile of it, which is what makes "the ruin is in its path" true rather
+ * than likely.
+ */
+function corridor(): GameState {
+  const state = darkWorld();
+  state.terrain.fill('deep');
+  for (let x = 0; x < state.width; x++) state.terrain[idx(x, 6, state.width)] = 'grass';
   return state;
 }
 
@@ -51,6 +64,49 @@ describe('explore (section 15)', () => {
     expect(state.players[0].visible[idx(14, 6, state.width)]).toBe(1);
     expect(state.units.filter((u) => u.owner === 1)).toHaveLength(1);
     expect(state.log.at(-1)?.text).toMatch(/halts/);
+  });
+
+  /**
+   * Section 136, reported from play: an explorer walked into undisturbed ruins
+   * and woke whatever was in them.
+   *
+   * Section 123 made walking in *the* moment the risk is taken -- it wakes the
+   * guardian, spends the rest of the turn, and cannot be undone by walking out
+   * again -- which is why the interface asks the player first. An explorer
+   * that strolls in has taken that decision on their behalf, and the Orcpedia
+   * promises the opposite in as many words.
+   */
+  it('halts at an unopened ruin rather than walking into it', () => {
+    // A one-tile corridor, so "in its path" is a fact rather than a hope: on
+    // open ground the route to the nearest dark edge need not pass through any
+    // particular tile, and the first draft of this test placed a ruin the
+    // explorer simply walked around.
+    const state = corridor();
+    const unit = spawnUnit(state, 0, 'outrider', 1, 6);
+    state.ruins = [{ x: 6, y: 6, prize: 'gold' }];
+    recomputeAllVisibility(state);
+    unit.moves = 90;
+
+    startExplore(state, unit);
+    expect(unit.exploring, 'it should have stopped').toBeUndefined();
+    expect(unit.moves, 'stopped on sight, not because it ran out').toBeGreaterThan(0);
+    // Short of the ruin, and the ruin still shut.
+    expect([unit.x, unit.y]).not.toEqual([6, 6]);
+    expect(ruinState(state, 6, 6)).toBe('undisturbed');
+    expect(state.log.at(-1)?.text).toMatch(/halts/);
+  });
+
+  it('walks over a ruin somebody has already emptied', () => {
+    const state = corridor();
+    const unit = spawnUnit(state, 0, 'outrider', 1, 6);
+    // Opened and cleared: there is nothing left in it to be careful of, so
+    // stopping would be a nuisance rather than a mercy.
+    state.ruins = [{ x: 6, y: 6, prize: 'gold', takenOn: 1 }];
+    recomputeAllVisibility(state);
+    unit.moves = 90;
+
+    startExplore(state, unit);
+    expect(unit.x, 'it should have carried on past').toBeGreaterThan(6);
   });
 
   it('stops when there is nothing left to see', () => {

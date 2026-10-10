@@ -4,6 +4,7 @@ import { unitType } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import { log, unitAt } from './gamestate';
 import { routeTo, tryStep, visibleEnemies } from './movement';
+import { ruinState } from './ruins';
 
 /**
  * Explore -- section 15's auto-scout.
@@ -108,6 +109,24 @@ export function advanceExplore(state: GameState, unit: Unit): void {
     const ahead = unitAt(state, route[1][0], route[1][1]);
     if (ahead && ahead.owner !== unit.owner) {
       stop(state, unit, 'halts: something is in the way.');
+      return;
+    }
+    // **Nor does it go into things.** Section 136, reported from play: an
+    // explorer walked into undisturbed ruins and woke whatever was in them,
+    // unattended and without being asked.
+    //
+    // Section 123 made walking in the moment the risk is taken -- it wakes the
+    // guardian, spends the rest of the turn, and cannot be undone by walking
+    // out again -- which is why the interface asks the player first. An
+    // explorer that strolls in has taken that decision on their behalf, and
+    // the Orcpedia already promises the opposite: *"it halts the moment it
+    // sees something new ... so it is never walked unattended into a fight."*
+    //
+    // Halting rather than routing around it, like every other thing this loop
+    // notices: the point is to hand the choice back, and a ruin somebody might
+    // want to crack is exactly the sort of thing worth stopping for.
+    if (ruinState(state, route[1][0], route[1][1]) === 'undisturbed') {
+      stop(state, unit, 'halts: something old stands in the way, and has not been opened.');
       return;
     }
     const enemiesBefore = visibleEnemies(state, unit.owner);
