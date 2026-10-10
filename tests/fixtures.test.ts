@@ -153,9 +153,22 @@ function garrison(state: GameState, city: City): Unit {
 // the last reorder. The three go in front; the old list stays behind them,
 // because a seed that stopped qualifying may qualify again and the cost of
 // keeping it is one line.
+//
+// **Rehunted again the same day**, after the Hive learned to build a
+// Fodder-caste on the turn it emerges. Sixteen, 25 and 40 had been found that
+// morning and all three were gone by the evening; a scan of the first sixty
+// seeds found **none at all**, so the scan was widened to three hundred and
+// found six. Three in sixty was a 5% hit rate; six in three hundred is 2%.
+//
+// That number is the point rather than the inconvenience. A seed with both
+// empires still standing at turn 299 is a seed where nothing was decided, and
+// they are getting rarer every time the game gets sharper. When this list next
+// empties, widen the scan again before concluding anything -- and if a scan of
+// three hundred comes back empty, the fixture's premise has gone rather than
+// its luck.
 const LATE_SEEDS = [
-  16, 25, 40,
-  55, 5, 22, 38, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404,
+  71, 75, 110, 118, 131, 173,
+  16, 25, 40, 55, 5, 22, 38, 32, 19, 37, 45, 50, 52, 58, 77, 99, 123, 202, 404,
 ];
 
 function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
