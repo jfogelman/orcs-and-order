@@ -596,3 +596,53 @@ two-sided one it was measured in -- which was the open risk and is now closed.
 They hold fewer towns doing it: 4.2 and 3.6 against an empire seat's 6.1 and
 5.2. Fewer, smaller, and just as likely to win, which is the whole of what the
 Hive was supposed to be.
+
+
+## Fodder on turn one: measured, and it costs nothing
+
+The Hive alone began unable to build anything that could hold a tile --
+`first-orc` opens with a peon *and* a goblin, `first-human` with a peasant and
+a footman, `first-hivekin` with a settler and a labourer. Fixed in section 136,
+and then swept, because the side it mostly helps is the **emergent** one: it
+can field a fighter the turn it comes out of the ground rather than researching
+twenty beakers first.
+
+Paired over 108 seeds, 216 games:
+
+```
+          researched -> at once    gained/lost     z
+  orc          46   ->   50          15 / 11     +0.78
+  hum          36   ->   35          10 / 11     -0.22
+  hive         26   ->   23           6 /  9     -0.77
+  turns        +2.39   t = +0.93
+  fights       -0.03   t = -1.75
+  caps         -0.48   t = -1.02
+```
+
+**The prediction failed in both directions.** It said the Hive would win more
+and games would end sooner; the Hive won three fewer and games ran two turns
+longer, neither significantly. Ninety-eight of 108 seeds play out differently,
+so the lever is real -- it changes games without changing who wins them.
+
+Which is the best outcome a fairness fix can have, and it ships.
+
+### What I got wrong on the way, which is the part worth keeping
+
+I attributed a collapse in the late-game fixture's seed hit rate to this
+change, and said so twice. The evidence was:
+
+- three usable seeds in sixty before, **none** in sixty after. Fisher's exact
+  on 3/60 against 0/60 is **p = 0.24**.
+- then a five-seed follow-up: none qualified with the change, one without.
+  That is **p = 1.0**. It is not evidence of anything at all.
+
+Both numbers were available at the time and neither was computed. A rare event
+-- "both empires still standing at turn 299" runs at 2-5% -- is exactly the
+kind of count where a drop from three to zero is ordinary variance, and I
+treated it as a mechanism. The 216-game sweep says the change does not move
+outcomes, so the seed collapse was noise, a different change on the branch, or
+the long slow drift that has been shortening games for twenty sections.
+
+The rule this earns: **an attribution needs the same bar as a finding.** Saying
+"X caused Y" off five games is the same mistake as believing a five-game swing,
+and this project has a memory about the second one already.
