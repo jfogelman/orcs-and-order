@@ -24,6 +24,7 @@ import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN } from '../src/sim/hivekin';
+import { TECHS_BY_ID } from '../src/model/techs';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
@@ -79,6 +80,11 @@ export const control = () => {
   // game; off is section 125's flat six hundred, which is identical for every
   // Hive that emerges in its own window and differs only for an early one.
   HIVE_ENDING.scaled = true;
+  // Section 136: and the Hive opens able to build a fighter, as both empires
+  // always have. Pinned here so an arm that is not asking about it inherits
+  // the shipped game rather than whatever the previous arm left behind.
+  (TECHS_BY_ID['first-hivekin'] as { units: string[] }).units = ['grub', 'worker', 'fodder'];
+  (TECHS_BY_ID['caste-fodder'] as { units: string[] }).units = [];
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
   NAVAL.enabled = true;

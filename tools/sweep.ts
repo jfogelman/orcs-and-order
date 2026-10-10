@@ -15,6 +15,7 @@ import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/mod
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { TECHS_BY_ID } from '../src/model/techs';
 import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
@@ -150,6 +151,18 @@ export const LEVERS: Record<string, object> = {
   SPLIT,
   SUPPLY,
   XP,
+  /**
+   * Two advances, registered as levers because section 136 measures a change
+   * to *what they grant* rather than to a tuning number.
+   *
+   * Unusual, and the alternative is worse: an arm that mutates a tech table
+   * the fingerprint cannot see is an arm the identity check calls a duplicate,
+   * which is the section 59 trap wearing a different hat. `PERSONALITIES` is
+   * already in here for the same reason -- `control()` rewrites its
+   * `techPriority` and the snapshot has to notice.
+   */
+  FIRST_HIVEKIN: TECHS_BY_ID['first-hivekin'],
+  CASTE_FODDER: TECHS_BY_ID['caste-fodder'],
 };
 
 /** What every lever says right now, as one comparable string. */
