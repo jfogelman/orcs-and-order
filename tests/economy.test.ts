@@ -471,3 +471,71 @@ describe('rush-buying', () => {
     expect(state.log.some((e) => /gold to have/.test(e.text))).toBe(false);
   });
 });
+
+/**
+ * Section 136, reported from a real game: two Hives set to Study from turn two
+ * and the player had **nought** beakers at turn ten, while both empires had
+ * finished an advance.
+ *
+ * `processCity` empties the shield box for a standing choice and hands back
+ * what it was worth on `events.beakers` -- a field that was declared, typed
+ * and commented *"Production turned straight into research this turn"*, and
+ * that the turn loop never read. Coin adds itself to the treasury on the spot
+ * and so always worked, which is why only one of the two was ever reported.
+ */
+describe('the standing choices actually pay (section 136)', () => {
+  function working(kind: 'coin' | 'beakers') {
+    const { state, city } = cityGame();
+    city.producing = { kind };
+    return { state, city };
+  }
+
+  it('turns Study into research, and more of it than an idle city makes', () => {
+    const study = working('beakers');
+    const shields = study.city.shields;
+    const gained = incomeOver(study.state).beakers;
+    expect(shields).toBe(0);
+    expect(gained, 'a city on Study made no research at all').toBeGreaterThan(0);
+
+    // And it beats the same city doing something else with its shields, which
+    // is the whole reason anybody picks it.
+    const building = cityGame();
+    building.city.producing = { kind: 'unit', id: 'goblin' };
+    expect(gained).toBeGreaterThan(incomeOver(building.state).beakers);
+  });
+
+  it('spends the shields rather than banking them', () => {
+    const { state, city } = working('beakers');
+    beginPlayerTurn(state, 0);
+    // A standing choice never finishes, so the box is emptied every turn.
+    expect(city.shields).toBe(0);
+  });
+
+  it('still turns Coin into gold, which is the half that always worked', () => {
+    const coin = working('coin');
+    expect(incomeOver(coin.state).gold).toBeGreaterThan(0);
+  });
+
+  it('pays Study from every city set to it, not just the first', () => {
+    // The reported symptom was two Hives on Study and nought beakers, so the
+    // per-city part is worth pinning.
+    //
+    // **Two cities against two cities**, not two against one. The first draft
+    // compared a second Study city with a single one and passed against the
+    // bug, because a second city brings its own trade whatever it is building
+    // -- it was measuring city count and calling it Study.
+    const pair = (kind: 'beakers' | 'unit') => {
+      const { state, city } = working('beakers');
+      const set = (c: City) =>
+        (c.producing = kind === 'beakers' ? { kind: 'beakers' } : { kind: 'unit', id: 'goblin' });
+      set(city);
+      const twin = { ...city, id: 99, workedTiles: [] } as City;
+      set(twin);
+      state.cities.push(twin);
+      return incomeOver(state).beakers;
+    };
+    const studying = pair('beakers');
+    const building = pair('unit');
+    expect(studying, `studying ${studying} against building ${building}`).toBeGreaterThan(building);
+  });
+});

@@ -397,3 +397,51 @@ describe('the hovered tile', () => {
     expect(panel.toLowerCase(), 'and not what is in it').not.toContain('advance');
   });
 });
+
+/**
+ * Section 136, reported twice: when the last unit has spent itself, the board
+ * should stop looking as though it wants something.
+ *
+ * Holding the last unit was added for a garrison swap -- walk a fresh unit
+ * into the settlement you have just emptied and it wants Fortify, which an
+ * empty panel cannot offer. The condition written for it was "ours and still
+ * undecided", which a unit standing in open country also satisfies, so every
+ * turn ended with somebody still lit up.
+ */
+describe('the last unit to spend itself', () => {
+  it('keeps focus in one of our own settlements, where Fortify still applies', () => {
+    const state = board();
+    const city = foundCity(state, spawnUnit(state, 0, 'peon', 10, 8))!;
+    // An orc, not a goblin: a goblin moves two and one step leaves it with a
+    // point in hand, which is a different test from the one being written.
+    const arriving = spawnUnit(state, 0, 'orc', 11, 8);
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+
+    vi.useFakeTimers();
+    app.select(arriving);
+    app.actOn(city.x, city.y);
+    letTheHoldFinish();
+    expect(arriving.moves).toBe(0);
+    expect(app.selected?.id, 'walked into our own city').toBe(arriving.id);
+    expect(fortifyOffered()).toBe(true);
+  });
+
+  it('lets go of one standing in open country, so End Turn is all that is left', () => {
+    const state = board();
+    foundCity(state, spawnUnit(state, 0, 'peon', 10, 8));
+    const walker = spawnUnit(state, 0, 'orc', 15, 8);
+    app.adopt(state);
+    beginPlayerTurn(state, 0);
+
+    vi.useFakeTimers();
+    app.select(walker);
+    // Out into the open, nowhere near anything of ours.
+    app.actOn(16, 8);
+    letTheHoldFinish();
+    expect(walker.moves).toBe(0);
+    // `selected` derives from the overlay id, so a cleared selection reads
+    // undefined rather than null.
+    expect(app.selected ?? null, 'nothing of ours is waiting on a decision').toBeNull();
+  });
+});
