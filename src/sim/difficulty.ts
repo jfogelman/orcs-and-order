@@ -30,6 +30,19 @@ export interface DifficultyDef {
   raidEvery: number;
   /** No raiders before this turn. */
   raidNotBefore: number;
+  /**
+   * Turns added to the Hive's arrival window. Section 136.
+   *
+   * Jeremy: *"a staggered arrival depending on game difficulty (later is
+   * easier, same time is harder)."* A third contender turning up is the
+   * largest single thing that can happen to a game, so **when** it happens is
+   * a difficulty dial in its own right -- and a better one than most, because
+   * it changes how much of the game you get to yourself rather than changing
+   * any number you are playing against.
+   *
+   * Zero at Normal, like everything else here. Negative is earlier and harder.
+   */
+  hiveArrives: number;
 }
 
 export const DIFFICULTIES: readonly DifficultyDef[] = [
@@ -41,6 +54,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1.3,
     raidEvery: 25,
     raidNotBefore: 40,
+    hiveArrives: 60,
   },
   {
     id: 'easy',
@@ -50,6 +64,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1.15,
     raidEvery: 20,
     raidNotBefore: 30,
+    hiveArrives: 30,
   },
   {
     id: 'normal',
@@ -59,6 +74,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1,
     raidEvery: 15,
     raidNotBefore: 25,
+    hiveArrives: 0,
   },
   {
     id: 'hard',
@@ -68,6 +84,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1,
     raidEvery: 12,
     raidNotBefore: 22,
+    hiveArrives: -25,
   },
   {
     id: 'hardest',
@@ -77,6 +94,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 0.85,
     raidEvery: 10,
     raidNotBefore: 20,
+    hiveArrives: -60,
   },
 ];
 

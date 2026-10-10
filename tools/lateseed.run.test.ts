@@ -16,7 +16,12 @@ import { playerCities } from '../src/sim/gamestate';
 it('finds seeds that still run long', () => {
   const found: number[] = [];
   const lines: string[] = [];
-  for (let seed = 1; seed <= 60 && found.length < 6; seed++) {
+  // Widened from sixty to three hundred in section 136. Sixty found three in
+  // October and **none at all** a week later, once the Hive could build a
+  // fighter on the turn it emerged: the game got decisive enough that a seed
+  // with both empires still standing at 299 is now genuinely rare rather than
+  // merely uncommon. A scan that cannot find one is not evidence there is none.
+  for (let seed = 1; seed <= 300 && found.length < 6; seed++) {
     control();
     let last = 0;
     let bothAlive = false;

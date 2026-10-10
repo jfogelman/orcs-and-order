@@ -50,6 +50,17 @@ import { isFolly } from './follyEffects';
 
 export type MoveOutcome =
   | { kind: 'moved' }
+  /**
+   * The march was written down and nothing moved, because there was nothing
+   * left to move with. Section 136, reported from play.
+   *
+   * `moveToward` has always queued the order in this case -- `goto` is set and
+   * the unit walks next turn -- but it returned the `blocked` it was holding
+   * from before the loop, so the interface said **"Nowhere to go."** over a
+   * march it had just accepted. The order worked and the player was told it
+   * had not.
+   */
+  | { kind: 'queued' }
   /** `retryable` means the obstruction is a friendly unit that may move on. */
   | { kind: 'blocked'; reason: string; retryable: boolean }
   | { kind: 'combat'; result: CombatResult; defenderDied: boolean; attackerDied: boolean }
@@ -893,8 +904,25 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
  * Walk toward a destination for as long as this turn's movement allows,
  * remembering the destination so the unit continues next turn.
  */
+/** The placeholder `moveToward` holds before it has tried anything. */
+const NOTHING_YET = 'Nowhere to go.';
+
+/**
+ * Whether a `moveToward` actually shifted the unit this call.
+ *
+ * The AI asks "did I achieve anything with this one" in three places, and it
+ * asked it as `kind !== 'blocked'`. Adding `queued` to the outcomes silently
+ * made all three answer **yes** for a unit with nothing left to move with --
+ * the behaviour they had always treated as a failure -- which is a change to
+ * how the AI spends its turn smuggled in behind a change to what a dialog
+ * says. Asked positively here so the next outcome added cannot do the same.
+ */
+export function wentSomewhere(outcome: MoveOutcome): boolean {
+  return outcome.kind === 'moved' || outcome.kind === 'combat' || outcome.kind === 'captured';
+}
+
 export function moveToward(state: GameState, unit: Unit, x: number, y: number): MoveOutcome {
-  let last: MoveOutcome = { kind: 'blocked', reason: 'Nowhere to go.', retryable: false };
+  let last: MoveOutcome = { kind: 'blocked', reason: NOTHING_YET, retryable: false };
   // Plan once and walk the route, only re-planning if a step actually fails.
   // Re-running A* for every tile of a long march was the single most expensive
   // thing the AI did.
@@ -908,7 +936,10 @@ export function moveToward(state: GameState, unit: Unit, x: number, y: number): 
     }
     if (unit.moves <= 0) {
       unit.goto = { x, y };
-      return last;
+      // Only if this call did no walking. A march that ran out of movement
+      // part way is an ordinary `moved`, and saying "queued" there would be
+      // describing the last step rather than the journey.
+      return last.kind === 'blocked' && last.reason === NOTHING_YET ? { kind: 'queued' } : last;
     }
     if (!route || step >= route.length) {
       route = routeTo(state, unit, x, y);

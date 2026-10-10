@@ -11,10 +11,11 @@ import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
-import type { DifficultyId, GameState, VictoryKind } from '../src/model/types';
+import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { HIVE_ENDING, HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { TECHS_BY_ID } from '../src/model/techs';
 import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
 import { POSTS } from '../src/sim/posts';
@@ -65,8 +66,23 @@ import { AUTO_TILES } from '../src/sim/city';
  * Off by default, so every earlier number in this file and the balance band in
  * `tests/balance.test.ts` still describe the game they were taken from.
  */
-export const NEW_GAME: { barbarians: boolean; difficulty: DifficultyId; world: 'continent' | 'archipelago' } = {
+export const NEW_GAME: {
+  barbarians: boolean;
+  difficulty: DifficultyId;
+  world: 'continent' | 'archipelago';
+  /**
+   * Which side seat 0 is created as. Undefined is the Horde, which is what
+   * `createGame` defaults to and what every measurement in this project has
+   * been taken with.
+   *
+   * Here so a probe can ask "what if the person at the keyboard were somebody
+   * else" without building its own runner -- which is the thing
+   * `probe-and-sweep-same-game` exists to stop.
+   */
+  playerFaction?: FactionId;
+} = {
   barbarians: false,
+  playerFaction: undefined,
   // Ships: the archipelago is its own world, measured as an arm of its own.
   world: 'continent',
   // Section 113. Seat 0 is created as the player's and handed to the AI, so it
@@ -97,6 +113,7 @@ export const LEVERS: Record<string, object> = {
   LEGION,
   RUINS,
   HIVEKIN,
+  HIVE_ENDING,
   BURROW,
   QUEEN,
   PREY,
@@ -134,6 +151,18 @@ export const LEVERS: Record<string, object> = {
   SPLIT,
   SUPPLY,
   XP,
+  /**
+   * Two advances, registered as levers because section 136 measures a change
+   * to *what they grant* rather than to a tuning number.
+   *
+   * Unusual, and the alternative is worse: an arm that mutates a tech table
+   * the fingerprint cannot see is an arm the identity check calls a duplicate,
+   * which is the section 59 trap wearing a different hat. `PERSONALITIES` is
+   * already in here for the same reason -- `control()` rewrites its
+   * `techPriority` and the snapshot has to notice.
+   */
+  FIRST_HIVEKIN: TECHS_BY_ID['first-hivekin'],
+  CASTE_FODDER: TECHS_BY_ID['caste-fodder'],
 };
 
 /** What every lever says right now, as one comparable string. */
@@ -301,6 +330,7 @@ export function playGame(
     barbarians: NEW_GAME.barbarians,
     difficulty: NEW_GAME.difficulty,
     world: NEW_GAME.world,
+    playerFaction: NEW_GAME.playerFaction,
   });
   const map = mapSignature(state);
   state.players[0].controller = 'ai';

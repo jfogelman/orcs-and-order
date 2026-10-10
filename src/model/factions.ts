@@ -14,7 +14,11 @@ export interface FactionDef {
   /** The advance every member of this faction starts the game already knowing. */
   startTech: TechId;
   /**
-   * Whether this side is on the map at turn one, and so can be chosen to play.
+   * Whether this side is on the map at turn one **in an ordinary game**.
+   *
+   * Not the same question as whether it can be chosen, though this field
+   * answered both until section 136 and that conflation is what kept the
+   * Hivekin out of the picker. See `playable`.
    *
    * Section 125's Hivekin are not: they **emerge**, around the middle of the
    * game, on ground nobody took. That is a rule about the world rather than
@@ -22,12 +26,23 @@ export interface FactionDef {
    * -- a later faction could perfectly well emerge *and* negotiate, or start on
    * the map and refuse to.
    *
-   * Playing as a side that emerges is a real question and an open one: it would
-   * need its own opening, and the whole point of emergence was to leave the
-   * measured opening alone. Until that is answered, the picker offers the two
-   * that start.
+   * Playing as a side that emerges turned out to need neither its own opening
+   * nor a replacement for itself. Seat 0 is on the map because it is seat 0,
+   * and the rivals are whoever would ordinarily start -- so a Hive player
+   * faces **both** empires from turn one, which is three contenders, the same
+   * as anybody else's game. `generateWorld` already took a player count.
    */
   startsOnMap: boolean;
+  /**
+   * Whether the picker offers this side. Section 136.
+   *
+   * Split from `startsOnMap`, which was doing two jobs: one is a fact about
+   * the world (does this side exist before somebody digs it up) and the other
+   * is a fact about the menu. The Hivekin are false for the first and true for
+   * the second, and reading one off the other is what made "can I play them"
+   * look like a design question instead of a line of code.
+   */
+  playable: boolean;
   /** The unit that founds cities. */
   settlerUnit: string;
   /** The first fighting unit. */
@@ -46,6 +61,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     shade: '#40561c',
     startTech: 'first-orc',
     startsOnMap: true,
+    playable: true,
     settlerUnit: 'peon',
     starterUnit: 'goblin',
     blurb:
@@ -87,6 +103,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     shade: '#1f3f66',
     startTech: 'first-human',
     startsOnMap: true,
+    playable: true,
     settlerUnit: 'peasant',
     starterUnit: 'footman',
     blurb:
@@ -132,6 +149,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     shade: '#6d3c10',
     startTech: 'first-hivekin',
     startsOnMap: false,
+    playable: true,
     settlerUnit: 'grub',
     starterUnit: 'fodder',
     blurb:
@@ -169,7 +187,19 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
 export const FACTION_IDS: FactionId[] = ['orc', 'human', 'hivekin'];
 
 /** The sides a new game may be started as, and that begin on the map. */
-export const STARTING_FACTIONS: FactionId[] = FACTION_IDS.filter((f) => FACTIONS[f].startsOnMap);
+export const STARTING_FACTIONS: FactionId[] = FACTION_IDS.filter((f) => FACTIONS[f].playable);
+
+/**
+ * The sides that sit down opposite this one at turn one.
+ *
+ * Everybody who would ordinarily start, which is the two empires -- minus
+ * whoever is being played. So an empire gets one rival and the game is the one
+ * that has always been measured, and the Hive gets two, because the side it
+ * would otherwise have been is itself.
+ */
+export function rivalsOnMap(playerFaction: FactionId): FactionId[] {
+  return FACTION_IDS.filter((f) => f !== playerFaction && FACTIONS[f].startsOnMap);
+}
 
 /**
  * Everybody who is not this one.

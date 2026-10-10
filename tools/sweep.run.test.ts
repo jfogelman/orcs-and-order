@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { DIPLOMACY_AI } from '../src/ai/diplomacy';
+import { TECHS_BY_ID } from '../src/model/techs';
 
 /**
  * The question this sweep is currently asking.
@@ -42,40 +42,35 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 135 slice 4, and it is **two levers at once**, so a 2x2 rather
-  // than a pair. They are independent and both are supposed to move the game,
-  // and folding them into one arm would mean neither gets attributed.
+  // Section 136: the Hive can build a Fodder-caste from its first turn.
   //
-  // - `readsStanding`: the AI walks at a side it hates before one it merely
-  //   dislikes, and will not come to the table at all below Angered.
-  // - `weighsTheWar`: how long this one has run and what it has cost, which is
-  //   the half of Jeremy's answer 2 that was never built.
+  // A fairness fix -- `first-orc` opens with a peon *and* a goblin, the Hive
+  // opened with a settler and a labourer -- and a real buff, because the side
+  // it mostly helps is the **emergent** one, which can now field a fighter the
+  // turn it comes out of the ground instead of researching twenty beakers
+  // first.
   //
-  // **This is the slice the plan warned could quietly end wars altogether**,
-  // and `tests/production.test.ts` is already saying something: the AI fields
-  // 2.67 kinds of fighter against a bar of 3, where main sits at exactly 3.0.
-  // Each lever costs that on its own, and one seed's army fell from thirteen
-  // units to four. So the prediction, written before the run: **fewer fights
-  // and longer games from `weighsTheWar`**, and from `readsStanding` the
-  // opposite -- more fights, because a floor below Angered means the sides that
-  // hate each other most are the ones that can no longer stop.
+  // It is already known to move the game: the late-game fixture wants a seed
+  // with both empires alive at turn 299, and the hit rate over a seed scan
+  // went from three in sixty to **none in sixty**, widening to six in three
+  // hundred. Attributed rather than assumed -- with fodder none of five
+  // candidate seeds qualified, without it 55 did.
   //
-  // If both arms come back flat, that is the third lever in a row aimed at
-  // this war that does nothing, and the question stops being about diplomacy.
-  const arm = (label: string, standing: boolean, war: boolean): Arm => ({
-    label,
+  // So the prediction, written before the run: **the Hive wins more and games
+  // end sooner**, and the empires split what is left roughly as they do now.
+  // If the Hive does not move, the fixture collapse was something else and
+  // this needs counting again before it ships.
+  const fodder = (on: boolean): Arm => ({
+    label: on ? 'fodder at once' : 'fodder researched',
     apply: () => {
       control();
-      DIPLOMACY_AI.readsStanding = standing;
-      DIPLOMACY_AI.weighsTheWar = war;
+      const first = TECHS_BY_ID['first-hivekin'] as { units: string[] };
+      first.units = on ? ['grub', 'worker', 'fodder'] : ['grub', 'worker'];
+      const caste = TECHS_BY_ID['caste-fodder'] as { units: string[] };
+      caste.units = on ? [] : ['fodder'];
     },
   });
-  return [
-    arm('neither', false, false),
-    arm('standing', true, false),
-    arm('war', false, true),
-    arm('both', true, true),
-  ];
+  return [fodder(false), fodder(true)];
 };
 
 const ARMS: Arm[] = buildArms();

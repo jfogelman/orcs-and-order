@@ -648,7 +648,13 @@ export const TECHS: TechDef[] = [
     // The Queen is not here. She is placed in the first Hive when it is
     // founded, which is what "starting unit" means for a side that cannot
     // build one -- see `sim/hivekin.ts`.
-    units: ['grub', 'worker'],
+    // **Fodder from the first turn**, which the other two sides have always
+    // had: `first-orc` opens with a peon *and* a goblin, `first-human` with a
+    // peasant and a footman. The Hive opened with a settler and a labourer and
+    // nothing that could hold a tile -- reported from the first game anybody
+    // played as them, where turn one offered a choice between a Grub it could
+    // not afford and research. Section 136.
+    units: ['grub', 'worker', 'fodder'],
     buildings: [],
     flags: [],
     flavor: 'There was a hive. This took considerably less deliberation than usual.',
@@ -659,7 +665,15 @@ export const TECHS: TechDef[] = [
     faction: 'hivekin',
     cost: 20,
     prereqs: ['first-hivekin'],
-    units: ['fodder'],
+    // **Empty since section 136**, when the shape itself moved to
+    // `first-hivekin` so the Hive could field something on turn one. This
+    // still does two jobs and neither is the caste: it opens the rest of the
+    // caste tree, and it is what a `hk-worker` citizen needs. The counting
+    // ladder was deliberately *not* given this rung -- the Hive buys the whole
+    // thing in two advances where the Horde needs six, and a test defends
+    // that, because one advance granting every shape at once is the inversion
+    // that makes the ladder theirs.
+    units: [],
     buildings: [],
     flags: [],
     flavor: 'A shape existed for this. It has been made.',

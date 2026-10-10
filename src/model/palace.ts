@@ -239,7 +239,18 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     // Wholly behind the hall, like every wing.
     per: {
       human: { size: 0.44, tierScale: [0.8, 1, 1.36] },
-      hivekin: { size: 0.46, nudge: [10, 4] },
+      // **0.34 since section 136**, reported from the first game played as
+      // them: the Brood Annex stood very nearly as tall as the mound it is
+      // attached to, and hung off its flank into the yard.
+      //
+      // The cause is upstream and worth naming, because it will catch the next
+      // Hive module too: a module's size is a share of the *frame*, and the
+      // Hive's chassis is 0.76 of it against the other two's 0.58 -- widened
+      // deliberately, because the mound art is squat and matching their width
+      // left everything standing taller than it. So a Hive hall fills 71% of
+      // the picture where an empire's fills 43%, and a module sized as though
+      // it had the empires' room has none.
+      hivekin: { size: 0.34, nudge: [10, 4] },
     },
     behind: true,
     blurb: 'Somewhere to be solemn, attached to the side of somewhere to shout.',
@@ -265,7 +276,10 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
     per: {
       orc: { tierScale: [0.84, 0.84, 0.773] },
       human: { size: 0.774 },
-      hivekin: { size: 0.6, nudge: [-26, 6] },
+      // 0.46 since section 136, for the reason on the wing above: two thirds
+      // was measured against the Kingdom's corner tower and not against how
+      // little room a 0.76 chassis leaves beside it.
+      hivekin: { size: 0.46, nudge: [-26, 6] },
     },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },

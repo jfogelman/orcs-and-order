@@ -23,7 +23,8 @@ import { GOBLIN_SCOUT } from '../src/model/units';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { HIVE_ENDING, HIVEKIN } from '../src/sim/hivekin';
+import { TECHS_BY_ID } from '../src/model/techs';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
@@ -60,10 +61,30 @@ export const control = () => {
   NEW_GAME.barbarians = false;
   NEW_GAME.world = 'continent';
   NEW_GAME.difficulty = 'normal';
+  // Seat 0 is the Horde, which is what every measurement in this project has
+  // been taken with. A probe that wants somebody else sets it after calling
+  // this, and says so.
+  NEW_GAME.playerFaction = undefined;
   // Section 125: what the Hive arrives with, named here rather than left to
   // the harness putting the levers back. The arms below are about the bar they
   // swing at, and an arm that silently depends on a default it does not state
   // is the shape of mistake this file's own rule is against.
+  // **Set, not assumed.** This was missing, and section 136's hive-seat probe
+  // found it the hard way: an arm that turned emergence off leaked into every
+  // arm after it, including one that was supposed to be today's game, and two
+  // rows of the table came back byte-identical for what should have been two
+  // different measurements. Section 59's rule is "every arm sets every knob",
+  // and `control()` is where the knobs nobody is asking about get set.
+  HIVEKIN.enabled = true;
+  // Section 136: the ending priced by when they arrived. On is the shipped
+  // game; off is section 125's flat six hundred, which is identical for every
+  // Hive that emerges in its own window and differs only for an early one.
+  HIVE_ENDING.scaled = true;
+  // Section 136: and the Hive opens able to build a fighter, as both empires
+  // always have. Pinned here so an arm that is not asking about it inherits
+  // the shipped game rather than whatever the previous arm left behind.
+  (TECHS_BY_ID['first-hivekin'] as { units: string[] }).units = ['grub', 'worker', 'fodder'];
+  (TECHS_BY_ID['caste-fodder'] as { units: string[] }).units = [];
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
   NAVAL.enabled = true;

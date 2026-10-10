@@ -5,7 +5,7 @@ import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
-import { FACTIONS, rivalFactions } from '../model/factions';
+import { FACTIONS, rivalsOnMap } from '../model/factions';
 import { unitType } from '../model/units';
 import type {
   City,
@@ -256,18 +256,6 @@ export function makePlayer(
   };
 }
 
-/**
- * The side that starts opposite this one.
- *
- * Was `otherFaction`, which could only ever be a coin flip. With three sides it
- * has to say which of them, and the answer is the other *empire* -- the one that
- * will sit down at a table, settle at turn one and be measured against you. A
- * faction that arrives mid-game is never somebody's opening rival.
- */
-function startingRival(playerFaction: FactionId): FactionId {
-  const rivals = rivalFactions(playerFaction);
-  return rivals.find((f) => FACTIONS[f].startsOnMap) ?? rivals[0];
-}
 
 export function createGame(opts: NewGameOptions = {}): GameState {
   const settings: GameSettings = {
@@ -283,7 +271,10 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   const playerFaction = opts.playerFaction ?? 'orc';
   const tileCount = settings.width * settings.height;
 
-  const world = generateWorld(seed, settings, 2);
+  // One start a seat. Was a literal two, which is the number of seats there
+  // used to be; `generateWorld` has always taken the count.
+  const seats = 1 + rivalsOnMap(playerFaction).length;
+  const world = generateWorld(seed, settings, seats);
 
   const state: GameState = {
     version: SAVE_VERSION,
@@ -297,12 +288,19 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     // Section 123: what was standing here first, settled with the world rather
     // than with the game, so a seed's ruins are part of its map.
     ruins: placeRuins(seed, settings.width, settings.height, world.terrain, world.starts),
+    // Seat 0 is whoever is being played, and the rest are whoever would
+    // ordinarily be standing on the map at turn one. For an empire that is the
+    // other empire and the game is the one measured for a hundred sections --
+    // section 125's third side is not here and is not meant to be, it emerges
+    // with its own seat around turn 100.
+    //
+    // For a **Hive** player it is both empires, because the side that would
+    // have emerged is the one at the keyboard. Three contenders either way,
+    // which is the whole of what playing them needed: not an opening of their
+    // own, and not a replacement third side.
     players: [
       makePlayer(0, playerFaction, 'human', tileCount),
-      // The two empires that start on the map are the two that talk to each
-      // other. Section 125's third side is not here at turn one and is not
-      // meant to be: it emerges, with its own seat, somewhere around turn 100.
-      makePlayer(1, startingRival(playerFaction), 'ai', tileCount),
+      ...rivalsOnMap(playerFaction).map((f, i) => makePlayer(i + 1, f, 'ai', tileCount)),
     ],
     units: [],
     cities: [],
