@@ -136,7 +136,7 @@ export function situationOf(state: GameState, playerId: number): Situation {
   const terraformKnown = TERRAFORM.enabled && hasFlag(player, 'terraform');
   const idleWorkers = units.filter(
     (u) =>
-      unitType(u.type).settler &&
+      unitType(u.type).works &&
       u.order === 'none' &&
       !u.goto &&
       !u.roadTo &&

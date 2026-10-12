@@ -919,7 +919,11 @@ export function chooseProduction(
         (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).settler,
       ).length;
     const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
-    const worker = options.units.find((u) => u.settler);
+    // The one that digs, not the one that founds. For the two empires they are
+    // the same unit and this never mattered; for the Hive it meant building a
+    // **Grub** -- their founder, and the expensive one -- every time the AI
+    // wanted a road crew.
+    const worker = options.units.find((u) => u.works);
     if (
       worker &&
       workers < wanted &&
@@ -2335,7 +2339,11 @@ export function runAiTurn(state: GameState, playerId: number): void {
     if (unit.moves <= 0) continue;
     const type = unitType(unit.type);
     if (type.sails) continue;
-    if (type.settler) actSettler(state, unit, personality);
+    // Section 136: and a unit that only *works* goes the same way, because
+    // `actSettler` is where founding, road crews and diggers all live. The
+    // Hive's Worker is no sort of settler and was being handed to
+    // `actSoldier`, which has nothing to tell a unit that cannot fight.
+    if (type.settler || type.works) actSettler(state, unit, personality);
     else actSoldier(state, unit, personality, frontier);
   }
   for (const unit of mine) {

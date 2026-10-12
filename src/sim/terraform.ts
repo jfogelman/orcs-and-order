@@ -114,7 +114,7 @@ export function tileBlocked(state: GameState, i: number, job: Job, playerId?: nu
 /** Whether this worker could start this job where it stands, and why not. */
 export function canImprove(state: GameState, unit: Unit, job: Job): { ok: boolean; reason?: string } {
   if (!TERRAFORM.enabled) return { ok: false, reason: 'Nobody here knows how to improve the land.' };
-  if (!unitType(unit.type).settler) return { ok: false, reason: 'Only workers dig.' };
+  if (!unitType(unit.type).works) return { ok: false, reason: 'Only workers dig.' };
   if (!hasFlag(state.players[unit.owner], 'terraform')) {
     // Named from the tech table, so renaming the advance cannot leave this stale.
     const teacher = TECHS.find((t) => t.flags.includes('terraform'))?.name ?? 'the right advance';

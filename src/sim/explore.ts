@@ -57,7 +57,9 @@ function visibleCities(state: GameState, playerId: number): Set<number> {
 
 /** Whether this unit could be sent exploring, and why not. */
 export function canExplore(unit: Unit): { ok: boolean; reason?: string } {
-  if (unitType(unit.type).settler) return { ok: false, reason: 'Workers have work. Send a soldier.' };
+  if (unitType(unit.type).works || unitType(unit.type).settler) {
+    return { ok: false, reason: 'Workers have work. Send a soldier.' };
+  }
   return { ok: true };
 }
 

@@ -161,6 +161,8 @@ function feedsWhat(def: UnitTypeDef): string[] {
 export function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
+  // Section 136: and the one that digs is not always the one that founds.
+  if (def.works) notes.push('builds roads and improves the ground');
   if (def.flies) notes.push('flies over anything, at no extra cost');
   if (def.siegeBonus > 1) notes.push(`×${def.siegeBonus} attacking a city`);
   if (def.range > 1) {

@@ -1227,7 +1227,7 @@ class App {
    */
   private toggleAutoWork(): void {
     const unit = this.selected;
-    if (!unit || unit.owner !== this.viewerId || !unitType(unit.type).settler) return;
+    if (!unit || unit.owner !== this.viewerId || !unitType(unit.type).works) return;
     if (unit.autoWork) {
       delete unit.autoWork;
       this.refreshSidebar();
@@ -2367,7 +2367,7 @@ class App {
     // Shift+R sends it off laying a road. Asked first, because I, M and C already
     // mean the report, the sound and centring -- and still do without Shift, or on
     // anybody who is not a worker.
-    if (e.shiftKey && unit && unit.owner === this.viewerId && unitType(unit.type).settler) {
+    if (e.shiftKey && unit && unit.owner === this.viewerId && unitType(unit.type).works) {
       const job = JOBS.find((j) => JOB_KEY[j].toLowerCase() === e.key.toLowerCase());
       if (job) {
         this.orderImprove(job);
@@ -2499,7 +2499,7 @@ class App {
         const pressed = e.key.toLowerCase();
         // R lays a road for a worker. No worker has Ranged, so the key is free on
         // exactly the units that can dig, and is still Ranged for everyone else.
-        if (pressed === 'r' && unitType(unit.type).settler) {
+        if (pressed === 'r' && unitType(unit.type).works) {
           // Shift+R lays one all the way to a tile you click; R lays one here.
           if (e.shiftKey) this.orderRoadTo();
           else this.orderRoad();
@@ -2758,7 +2758,7 @@ class App {
               : ''
           }
           ${
-            unit.owner === this.viewerId && !t.settler
+            unit.owner === this.viewerId && !t.settler && !t.works
               ? `<button class="small${unit.exploring ? ' armed' : ''}" data-act="explore" title="Walk toward the unknown, halting at the first new sighting">${
                   unit.exploring ? 'Stop exploring' : 'Explore'
                 } (E)</button>`
@@ -2778,7 +2778,7 @@ class App {
           }
           ${
             // Section 112: whatever this ground could be made into, by its owner's name for it.
-            unit.owner === this.viewerId && t.settler
+            unit.owner === this.viewerId && t.works
               ? JOBS.filter((j) => canImprove(this.state, unit, j).ok)
                   .map((j) => {
                     const ground = this.state.terrain[unit.y * this.state.width + unit.x];
@@ -2791,7 +2791,7 @@ class App {
               : ''
           }
           ${
-            unit.owner === this.viewerId && t.settler && TERRAFORM.enabled && canIrrigateTo(this.state, unit).ok
+            unit.owner === this.viewerId && t.works && TERRAFORM.enabled && canIrrigateTo(this.state, unit).ok
               ? `<button class="small${this.irrigateArmed ? ' armed' : ''}" data-act="irrigateto">Irrigate To&hellip; (Shift+W)</button>
                  <button class="small${unit.autoWork ? ' armed' : ''}" data-act="autowork">${
                    unit.autoWork ? 'Stop auto work' : 'Auto work'
