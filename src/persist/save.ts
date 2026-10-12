@@ -38,10 +38,25 @@ export function unpackBits(packed: string, expectedLength: number): number[] {
   const out: number[] = [];
   if (packed.length > 0) {
     for (const part of packed.split(';')) {
+      // **Stop at the length asked for, rather than expanding and trimming
+      // after.** Found by an outside review of the codebase, October 2026, and
+      // it is a real hang rather than a tidiness point: `Number('Infinity')`
+      // is `Infinity`, so a save carrying the run `1,Infinity` spun this loop
+      // for ever and took the tab with it. A merely enormous run was not much
+      // better -- measured at 573ms for fifty million, pushing fifty million
+      // entries into an array to keep a hundred of them.
+      //
+      // The trim below is kept because it is still the right answer for a
+      // payload that is legitimately longer than this map.
+      if (out.length >= expectedLength) break;
       const [rawValue, rawRun] = part.split(',');
       const value = Number(rawValue);
       const run = Number(rawRun);
-      for (let i = 0; i < run; i++) out.push(value);
+      // A run has to be a count. Anything else -- Infinity, NaN, a negative, a
+      // fraction -- is a corrupt file rather than a long one.
+      if (!Number.isInteger(run) || run < 0) continue;
+      const take = Math.min(run, expectedLength - out.length);
+      for (let i = 0; i < take; i++) out.push(value);
     }
   }
   // Tolerate a truncated or oversized payload rather than corrupting the map.
@@ -87,6 +102,20 @@ export function serialize(state: GameState): string {
 
 export class SaveError extends Error {}
 
+/**
+ * The widest or tallest a map may claim to be.
+ *
+ * Generous on purpose: the biggest the new-game screen offers is 88 by 60, and
+ * nothing here is trying to guess what a future map might want. It is a guard
+ * against arithmetic, not a statement about design.
+ */
+const MAX_SIDE = 1024;
+
+/** A map dimension that could belong to a real game. */
+function sane(n: unknown): n is number {
+  return typeof n === 'number' && Number.isInteger(n) && n > 0 && n <= MAX_SIDE;
+}
+
 export function deserialize(text: string): GameState {
   let file: SaveFile;
   try {
@@ -103,6 +132,15 @@ export function deserialize(text: string): GameState {
     );
   }
 
+  // **Bounded before it is multiplied.** The other half of the same hang: a
+  // save claiming to be a million tiles across sends every `unpackBits` call
+  // below into a `while` loop padding to a length no machine will reach, and
+  // the dimensions were taken on trust. The largest map the game offers is
+  // 88 by 60; this is loose enough to never trouble a real save and tight
+  // enough that a wrong one fails as a message rather than as a frozen tab.
+  if (!sane(file.width) || !sane(file.height)) {
+    throw new SaveError('That save claims a map this game could not have made.');
+  }
   const tiles = file.width * file.height;
   // Drop the save-only metadata and re-expand the packed fog bitmaps.
   const { savedAt: _savedAt, players, roads, posts, irrigation, mines, ...rest } = file;

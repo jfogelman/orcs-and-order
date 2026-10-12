@@ -172,12 +172,25 @@ on points at the turn limit.
 
 ### What is in
 
-Two factions with their own counting-joke tech trees, singleton units that grow into
-groups, promotion perks and abilities, supply lines, roads and trade routes, raiders,
-garrison posts, pillaging, land specials, hand-picked city tiles, a capital that grows
-a piece at a time, two ways to win by building something, twelve follies (the
-game's wonders), and workers who irrigate, mine and clear the land once the roads are
-laid. A council of advisors argues about all of it.
+**Three playable factions** with their own counting-joke tech trees: the Horde, the
+Kingdom, and the Hivekin, who grow castes instead of recruiting units, keep one
+immobile Queen, and go under the ground rather than around it. In an ordinary game
+they are not on the map at the start -- they **emerge** from unclaimed ground partway
+through, earlier on a hard level and later on an easy one -- but they can be chosen,
+in which case both empires are there from turn one instead.
+
+Singleton units that grow into groups, promotion perks and abilities, supply lines,
+roads and trade routes, **ships and overseas invasion**, raiders, **ruins with
+something asleep in them**, garrison posts, pillaging, land specials, hand-picked city
+tiles, a capital that grows a piece at a time, **three ways to win by building
+something**, twelve follies (the game's wonders), and workers who irrigate, mine and
+clear the land once the roads are laid.
+
+**Diplomacy**, per pair of sides: you meet somebody and hear from them, a standing
+from -50 to +50 with a name for each band, treaties that bind the two who signed and
+nobody else, and an AI that reads the number -- it will not come to the table with a
+side it is Angered at, and it walks at the side it hates before the side it merely
+dislikes. A council of advisors argues about all of it.
 
 ### Art status
 
@@ -188,11 +201,16 @@ cuts raw art out of its background, sizes it, and re-encodes audio on the way in
 
 ### Known gaps and next steps
 
-1. **No naval anything.** Worldgen therefore guarantees both civs start on the same
-   continent. Islands on the map are decorative and unreachable.
-2. **No diplomacy or governments.** Deliberate for now; both fit the architecture.
-3. **AI is a behaviour list, not a planner.** It expands, garrisons, builds roads and
-   follies, works the land, and marches at the nearest known target. It does not concentrate force
-   or defend a front.
-4. **Balance has not been played to a verdict.** The sweep says about even; play
+1. **AI is a behaviour list, not a planner.** It expands, garrisons, builds roads and
+   follies, works the land, and marches at the nearest known target. It does not
+   concentrate force, defend a front, or decide when to give a war up. An outside
+   review of the codebase named this the single highest-value thing to build next,
+   and it is hard to disagree.
+2. **No governments.** Deliberate for now; it fits the architecture.
+3. **Spies are designed and not built.** `SPIES_PLAN.md` has the whole thing -- two
+   tiers a side, a disguise you choose, five advances on the shared spine -- and the
+   art is drawn and through the pipeline.
+4. **The war is the open measurement question.** Three levers aimed at it measured as
+   nothing before one finally moved it; `DESIGN_QUEUE.md` carries what is known.
+5. **Balance has not been played to a verdict.** The sweep says about even; play
    should confirm or deny it before anything is tuned.

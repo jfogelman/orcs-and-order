@@ -240,9 +240,15 @@ export function standing(state: GameState, a: number, b: number): number {
 /**
  * Move it, and keep it on the scale.
  *
- * Everything that calls this is an event somebody watched happen. Nothing
- * reads the result yet -- section 135 slice 2 is a window, not a rule -- which
- * is why it can be turned on without touching the balance.
+ * Everything that calls this is an event somebody watched happen, which is the
+ * point: "why are they angry" always has an answer a player could have worked
+ * out by watching.
+ *
+ * It said "nothing reads the result yet -- slice 2 is a window, not a rule"
+ * until an outside review of the codebase caught it still saying so, two
+ * slices after it stopped being true. **Slice 4 reads it**: `willTalkTo`
+ * floors the table at the Angered band, and `grudge` in `ai/ai.ts` makes a
+ * hated side a nearer target. Both are behind `DIPLOMACY_AI.readsStanding`.
  */
 export function adjustStanding(state: GameState, a: number, b: number, by: number): void {
   if (!STANDING.enabled || a === b) return;
