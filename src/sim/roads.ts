@@ -150,7 +150,7 @@ export const PILLAGE = {
  */
 export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
   if (!PILLAGE.enabled) return { ok: false, reason: 'Nothing can be torn up.' };
-  if (unitType(unit.type).settler) return { ok: false, reason: 'Workers build; soldiers wreck.' };
+  if (unitType(unit.type).works) return { ok: false, reason: 'Workers build; soldiers wreck.' };
   if (unit.moves <= 0) return { ok: false, reason: 'No movement left.' };
   const i = idx(unit.x, unit.y, state.width);
   // A city tile counts as a road for movement and for trade, and is not one:
@@ -237,7 +237,7 @@ export function roadTurns(terrain: TerrainId): number | null {
  * walking one: anybody may use a road somebody else laid. Section 105.
  */
 export function canLayRoads(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
-  if (!unitType(unit.type).settler) return { ok: false, reason: 'Only workers lay roads.' };
+  if (!unitType(unit.type).works) return { ok: false, reason: 'Only workers lay roads.' };
   if (!hasFlag(state.players[unit.owner], 'bridges')) {
     // Named from the tech table, so renaming the advance cannot leave this stale.
     const teacher = TECHS.find((t) => t.flags.includes('bridges'))?.name ?? 'the right advance';

@@ -68,6 +68,21 @@ export interface CreatureDef {
   /** Can found cities. */
   settler?: boolean;
   /**
+   * Improves the ground: roads, ditches, mines, clearing, Auto work.
+   *
+   * **Separate from `settler`, which is about founding.** The two empires do
+   * both with one unit, so for a hundred sections "is a settler" was a
+   * serviceable stand-in for "can dig" -- and then section 125 split the job
+   * in two. The Hivekin grow a Grub that founds and a Worker that *"digs,
+   * drains and improves the ground"*, and every work rule still asked whether
+   * the unit could found a city, so the Worker could not lay a road, dig a
+   * ditch, or be set to Auto work. Reported from play.
+   *
+   * A unit that founds is not necessarily one that digs, and the one that digs
+   * is not necessarily one that founds. Asked separately now.
+   */
+  works?: boolean;
+  /**
    * Goes on water and only on water. Ships: built in a city beside the sea,
    * launched onto it, and never set foot ashore.
    */
@@ -230,6 +245,7 @@ export const CREATURES: CreatureDef[] = [
     sight: 1,
     counts: [1],
     settler: true,
+    works: true,
     artScale: 0.86,
     silhouette: 'worker',
     body: '#7e9b46',
@@ -703,6 +719,7 @@ export const CREATURES: CreatureDef[] = [
     sight: 1,
     counts: [1],
     settler: true,
+    works: true,
     artScale: 0.88,
     silhouette: 'worker',
     body: '#b98a55',
@@ -1021,6 +1038,7 @@ export const CREATURES: CreatureDef[] = [
     name: 'Worker',
     plural: 'Workers',
     faction: 'hivekin',
+    works: true,
     role: 'worker',
     attack: 0,
     defense: 1,
@@ -1362,6 +1380,8 @@ export interface UnitTypeDef {
   cost: number;
   sight: number;
   settler: boolean;
+  /** Improves the ground. Separate from founding -- see `CreatureDef.works`. */
+  works: boolean;
   flies: boolean;
   /** Water only. See CreatureDef.sails. */
   sails: boolean;
@@ -1452,6 +1472,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     cost: c.cost * count,
     sight: c.sight,
     settler: c.settler === true,
+    works: c.works === true,
     flies: c.flies === true,
     sails: c.sails === true,
     wades: c.wades === true,

@@ -5,8 +5,10 @@ import type { City, GameState, TerrainId } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
 import { AUTO_TILES, assignWorkers, contentLimit, tileYield } from '../src/sim/city';
 import { resumeAutoWork, startIrrigateTo } from '../src/sim/autowork';
+import { canExplore } from '../src/sim/explore';
+import { UNIT_TYPES } from '../src/model/units';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
-import { canPillage, pillage } from '../src/sim/roads';
+import { canLayRoads, canPillage, pillage } from '../src/sim/roads';
 import { TERRAFORM, canImprove, jobName, startImprove } from '../src/sim/terraform';
 import { beginPlayerTurn } from '../src/sim/turn';
 
@@ -283,5 +285,62 @@ describe('Auto work', () => {
     peon.autoWork = true;
     resumeAutoWork(state, 0);
     expect(peon.order === 'improve' || peon.goto !== null || peon.x !== city.x || peon.y !== city.y).toBe(true);
+  });
+});
+
+/**
+ * Section 136, reported from play: Hivekin workers could not build roads or
+ * work the land.
+ *
+ * The two empires found cities and dig ditches with the same unit, so for a
+ * hundred sections `settler` was a serviceable stand-in for "can work". Then
+ * section 125 split the job: the Hive grows a **Grub** that founds and a
+ * **Worker** that *"digs, drains and improves the ground"*. Every work rule
+ * went on asking whether the unit could found a city, so the one unit built
+ * for the job was the one unit refused it.
+ */
+describe('who may work the ground (section 136)', () => {
+  // Hills, so there is something under the ground worth mining, and the
+  // bridges advance, without which nobody may lay a road at all.
+  function hiveWorker(type: 'worker' | 'grub') {
+    const state = world('hills');
+    const hive = state.players[0];
+    hive.faction = 'hivekin';
+    hive.techs.push('bridge-building');
+    const unit = spawnUnit(state, 0, type, 10, 10);
+    return { state, unit };
+  }
+
+  it('lets a Worker dig, which is the whole of what it is for', () => {
+    const { state, unit } = hiveWorker('worker');
+    expect(canImprove(state, unit, 'mine').ok, canImprove(state, unit, 'mine').reason).toBe(true);
+    expect(canLayRoads(state, unit).ok, canLayRoads(state, unit).reason).toBe(true);
+  });
+
+  it('still refuses a Grub, which founds rather than digs', () => {
+    const { state, unit } = hiveWorker('grub');
+    expect(canImprove(state, unit, 'mine').ok).toBe(false);
+    expect(canLayRoads(state, unit).ok).toBe(false);
+  });
+
+  it('leaves the empires exactly as they were, doing both with one unit', () => {
+    const state = world('hills');
+    state.players[0].techs.push('bridge-building');
+    for (const type of ['peon', 'peasant'] as const) {
+      const unit = spawnUnit(state, 0, type, 12, 12);
+      expect(canLayRoads(state, unit).ok, `${type} roads`).toBe(true);
+      expect(canImprove(state, unit, 'mine').ok, `${type} digs`).toBe(true);
+      expect(UNIT_TYPES[type].settler, `${type} founds`).toBe(true);
+      state.units = state.units.filter((u) => u !== unit);
+    }
+  });
+
+  it('keeps a worker off the things workers should not do', () => {
+    const { state, unit } = hiveWorker('worker');
+    // Wrecking is the soldier's job -- "Workers build; soldiers wreck" -- and
+    // the Hive's Worker was eligible for it, being no sort of settler.
+    expect(canPillage(state, unit).ok).toBe(false);
+    // And exploring is for soldiers, which the same gap had let it do.
+    expect(canExplore(unit).ok).toBe(false);
   });
 });

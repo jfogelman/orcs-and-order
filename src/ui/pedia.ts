@@ -161,6 +161,8 @@ function feedsWhat(def: UnitTypeDef): string[] {
 export function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
+  // Section 136: and the one that digs is not always the one that founds.
+  if (def.works) notes.push('builds roads and improves the ground');
   if (def.flies) notes.push('flies over anything, at no extra cost');
   if (def.siegeBonus > 1) notes.push(`×${def.siegeBonus} attacking a city`);
   if (def.range > 1) {
@@ -977,9 +979,9 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           turns as it takes. <strong>Explore</strong> (E) is a march with no end in
           mind: any soldier walks toward the nearest dark edge of the map, turn after
           turn, and halts the moment it sees something new &mdash; an enemy, a raider,
-          a city not yours &mdash; so it is never walked unattended into a fight. It
-          will not attack anything, and it gives up when there is nothing left it can
-          reach. When a game is over, <strong>Watch It Again</strong> on the final
+          a city not yours, or a ruin nobody has opened &mdash; so it is never walked
+          unattended into a fight. It will not attack anything, it will not go into
+          anything, and it gives up when there is nothing left it can reach. When a game is over, <strong>Watch It Again</strong> on the final
           screen plays the whole thing back: each side's land spreading and changing
           hands, the score pulling apart, and every city taken or lost, to jump to.
         </p>
