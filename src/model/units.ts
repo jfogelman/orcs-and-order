@@ -83,6 +83,15 @@ export interface CreatureDef {
    */
   works?: boolean;
   /**
+   * A spy: wears a disguise, gathers rather than fights, and never swings.
+   *
+   * Section 136. The `attack: 0` below is what actually stops it fighting --
+   * that gate is already asked everywhere in this codebase -- and this flag is
+   * what makes the disguise orders available and marks it as the thing a
+   * search is looking for.
+   */
+  spy?: boolean;
+  /**
    * Goes on water and only on water. Ships: built in a city beside the sea,
    * launched onto it, and never set foot ashore.
    */
@@ -1337,6 +1346,81 @@ export const CREATURES: CreatureDef[] = [
       'wall will not enjoy. Emptied once, from the correct distance, then ' +
       'discouraged from doing anything else for the rest of the day.',
   },
+  // ------------------------------------------------------------ section 136
+  //
+  // The low tier of spies, one a side. They never swing -- `attack: 0` is what
+  // enforces that, and this codebase already screens on it everywhere a unit is
+  // sent at anything -- so "uncovered by attacking" is really "uncovered by
+  // being attacked", which is a smaller rule and a better one. There is no way
+  // to use a spy badly, because there is no way to use it as a soldier.
+  //
+  // No counting ladder on any of them. The joke is that there are more orcs
+  // than anybody expected; the joke about a spy is that there is one and you do
+  // not know where.
+  {
+    id: 'skulker',
+    name: 'Skulker',
+    plural: 'Skulkers',
+    faction: 'orc',
+    spy: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'small',
+    body: '#6b6f4a',
+    trim: '#2f3320',
+    blurb:
+      'Has been told to be quiet and is trying very hard. Wears whatever was left on the line.',
+  },
+  {
+    id: 'factor',
+    name: 'Factor',
+    plural: 'Factors',
+    faction: 'human',
+    spy: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'robed',
+    body: '#8a7352',
+    trim: '#3f3626',
+    blurb:
+      'A commercial agent with a satchel of entirely genuine paperwork. All of it checks out.',
+  },
+  {
+    id: 'mimic',
+    name: 'Mimic-caste',
+    plural: 'Mimic-caste',
+    faction: 'hivekin',
+    spy: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#b9ae8e',
+    trim: '#5e5a3c',
+    blurb:
+      'Grown to look like whatever it has been looking at. The likeness is close and not close enough.',
+  },
+
 ];
 
 // ------------------------------------------------------- generated types
@@ -1382,6 +1466,8 @@ export interface UnitTypeDef {
   settler: boolean;
   /** Improves the ground. Separate from founding -- see `CreatureDef.works`. */
   works: boolean;
+  /** Wears a disguise and gathers. See `CreatureDef.spy`. */
+  spy: boolean;
   flies: boolean;
   /** Water only. See CreatureDef.sails. */
   sails: boolean;
@@ -1473,6 +1559,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     sight: c.sight,
     settler: c.settler === true,
     works: c.works === true,
+    spy: c.spy === true,
     flies: c.flies === true,
     sails: c.sails === true,
     wades: c.wades === true,

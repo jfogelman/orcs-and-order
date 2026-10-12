@@ -76,7 +76,12 @@ describe('the roster', () => {
    */
   it('stacks the shapes quantity is the point of, and nothing else', () => {
     const castes = CREATURES.filter((c) => c.faction === 'hivekin');
-    expect(castes.length).toBe(14);
+    // Fifteen since section 136's Mimic-caste, and the count is the incidental
+    // half of this test: the subject is **which** castes stack, and the Mimic
+    // deliberately does not. The joke about the Hive is that there were always
+    // more of them than you thought; the joke about a spy is that there is one
+    // and you do not know where it is.
+    expect(castes.length).toBe(15);
     const ladder = castes.filter((c) => c.counts.length > 1).map((c) => c.id);
     expect(ladder.sort()).toEqual(['elite', 'fodder', 'soldier', 'spitter']);
 

@@ -1,3 +1,4 @@
+import { appearsTo } from '../sim/disguise';
 import { seenBy } from '../sim/burrow';
 import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
 import { claims } from '../sim/borders';
@@ -1174,8 +1175,13 @@ export class MapRenderer {
     selected: boolean,
     viewerId: number,
   ): void {
-    const type = unitType(u.type);
-    const owner = state.players[u.owner];
+    // Section 136: what this viewer is looking at, which is not always what is
+    // standing there. `seenBy` above has already decided they can see it; this
+    // decides what they see. The owner is never fooled, and neither is anybody
+    // who has uncovered it.
+    const seen = appearsTo(u, viewerId);
+    const type = unitType(seen.type);
+    const owner = state.players[seen.owner];
     this.noticeRearm(u);
     this.noticeRegen(u);
     const s = cam.tileToScreen(u.x, u.y);

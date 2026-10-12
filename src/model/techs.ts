@@ -910,6 +910,31 @@ export const TECHS: TechDef[] = [
       'would be reasonably pleased about this. Not excessively. It is, after ' +
       'all, only the one world.',
   },
+  {
+    // Section 136, the first of the spy advances and the only one built so far.
+    //
+    // **On the shared spine**, like the other four will be: all three sides
+    // build spies, and three parallel chains would have been fifteen advances
+    // and fifteen icons for one feature. The flavour is carried by the units --
+    // a Skulker and a Factor learning the same advance and doing visibly
+    // different things with it is the joke -- rather than by the tree.
+    //
+    // Nothing in this tree was about *knowing things* before it. The shared
+    // spine was land, walls, weather and mood; the faction ladders are units
+    // and counting jokes.
+    id: 'someone-elses-business',
+    name: "Someone Else's Business",
+    faction: 'both',
+    cost: 60,
+    prereqs: ['mapmaking'],
+    units: ['skulker', 'factor', 'mimic'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'It turns out you can simply walk over and look. Nobody has written down a rule ' +
+      'against it, which everyone agrees is an oversight, and nobody wants to be the one ' +
+      'to write it down in case somebody asks how they knew it was needed.',
+  },
 ];
 
 export const TECHS_BY_ID: Record<TechId, TechDef> = Object.fromEntries(

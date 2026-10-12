@@ -29,6 +29,7 @@ import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
+import { DISGUISE } from '../src/sim/disguise';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
@@ -135,6 +136,9 @@ export const control = () => {
   // Slice 3b: and the Hive comes to the table, which is the shipped game from
   // here on.
   NEGOTIATION.hivekin = true;
+  // Section 136: spies exist and may lie about themselves. Pinned so an arm
+  // not asking about them inherits the shipped game.
+  DISGUISE.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.
   DIPLOMACY_AI.readsStanding = true;
   DIPLOMACY_AI.weighsTheWar = true;

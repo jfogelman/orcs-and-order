@@ -360,6 +360,21 @@ export interface Unit {
    * every save from before it loads unchanged.
    */
   roadTo?: { x: number; y: number };
+  /**
+   * What everybody but the owner is shown instead. Section 136.
+   *
+   * `owner` and `type` above stay honest -- upkeep, supply, elimination and who
+   * may be attacked are all keyed off them -- and this is the lie told to
+   * everyone else. See `sim/disguise.ts`.
+   */
+  disguise?: { owner: number; type: string };
+  /**
+   * Sides that have seen through the disguise, by player id.
+   *
+   * Per side, so finding a spy is worth something to the finder rather than
+   * being an announcement to the map. Permanent once it happens.
+   */
+  uncoveredBy?: number[];
 }
 
 // --------------------------------------------------------------------- cities
