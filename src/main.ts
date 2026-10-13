@@ -82,6 +82,9 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
+import { openCaught, openReading } from './ui/spying';
+import { canRead, readCity } from './sim/spying';
+import { couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
 import type { Job } from './sim/terraform';
@@ -712,6 +715,87 @@ class App {
    * something of yours on purpose, and a misclick that quietly deletes a dragon
    * is not a thing anybody should have to find out about from the log.
    */
+  /**
+   * The buttons a spy gets: what it can read, and what it can wear.
+   *
+   * Section 136. The disguise is offered as one button a side rather than a
+   * menu, because there are three sides at most and a menu for three things is
+   * a menu nobody opens. Wearing your own colours is the counter-spy setting --
+   * it buys nothing abroad and everything at home, since nobody can tell which
+   * of your six goblins is the one doing the looking.
+   */
+  private spyActions(unit: Unit): string {
+    const near = this.state.cities.filter(
+      (c) => c.owner !== unit.owner && canRead(unit, c).ok,
+    );
+    const read = near
+      .map(
+        (c) =>
+          `<button class="small" data-act="read" data-city="${c.id}" title="Spend the turn finding out what is in it">Read ${escapeHtml(
+            c.name,
+          )}</button>`,
+      )
+      .join('');
+    const worn = unit.disguise?.owner;
+    const dress = couldWear(this.state, unit)
+      .map((id) => {
+        const side = this.state.players[id];
+        const mine = id === this.viewerId;
+        const label = mine ? 'our own colours' : escapeHtml(side.name);
+        return `<button class="small${worn === id ? ' armed' : ''}" data-act="wear" data-side="${id}"
+                        title="${
+                          mine
+                            ? 'Pass for one of ours. Nobody can tell which of them is doing the looking.'
+                            : 'Pass for one of theirs. They will not come for it, and anything that touches it will know.'
+                        }">${worn === id ? 'Wearing' : 'Wear'} ${label}</button>`;
+      })
+      .join('');
+    const off = unit.disguise
+      ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
+      : '';
+    return read + dress + off;
+  }
+
+  /** Spend the turn reading a town, and say what came of it. */
+  private orderRead(cityId: number): void {
+    const unit = this.selected;
+    const city = this.state.cities.find((c) => c.id === cityId);
+    if (!unit || !city || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canRead(unit, city);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const outcome = readCity(this.state, unit, city);
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshSidebar();
+    if (outcome.kind === 'read') openReading(outcome.reading, city.name);
+    else if (outcome.kind === 'caught') openCaught(this.state, unit, city);
+    else this.flash('Nothing worth reporting. Nobody seems to have minded.');
+    this.selectNextIdle();
+  }
+
+  /** Put a disguise on, take one off, or change it. */
+  private orderWear(side: string): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const as = side === 'none' ? null : Number(side);
+    if (!wearDisguise(this.state, unit, as)) {
+      this.flash('There is nothing of theirs worth passing for.');
+      return;
+    }
+    this.flash(
+      as === null
+        ? 'It is itself again.'
+        : as === this.viewerId
+          ? 'It passes for one of ours now.'
+          : `It passes for one of ${this.state.players[as].name} now.`,
+    );
+    this.refreshOverlays();
+    this.refreshSidebar();
+  }
+
   private orderDisband(): void {
     const unit = this.selected;
     if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
@@ -2758,11 +2842,17 @@ class App {
               : ''
           }
           ${
-            unit.owner === this.viewerId && !t.settler && !t.works
+            unit.owner === this.viewerId && !t.settler && !t.works && !t.spy
               ? `<button class="small${unit.exploring ? ' armed' : ''}" data-act="explore" title="Walk toward the unknown, halting at the first new sighting">${
                   unit.exploring ? 'Stop exploring' : 'Explore'
                 } (E)</button>`
               : ''
+          }
+          ${
+            // Section 136: what a spy is for, and what it can wear while doing
+            // it. The read is offered only beside somebody else's town, since
+            // that is the only place it means anything.
+            unit.owner === this.viewerId && t.spy ? this.spyActions(unit) : ''
           }
           ${
             canRoad
@@ -2900,6 +2990,12 @@ class App {
               break;
             case 'explore':
               this.orderExplore();
+              break;
+            case 'read':
+              this.orderRead(Number(btn.dataset.city));
+              break;
+            case 'wear':
+              this.orderWear(btn.dataset.side ?? 'none');
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

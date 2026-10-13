@@ -882,6 +882,30 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       </div>
       <div class="pedia-pane" data-pane="diplomacy" hidden>
         <p class="flavor">
+          <strong>Spies</strong> arrive with <em>Someone Else's Business</em>, and every
+          side builds one. A spy never attacks &mdash; it has no attack at all &mdash; so
+          there is no way to use it as a bad soldier. What it does is stand next to
+          somebody else's town and <strong>read</strong> it: what they are building, who
+          is in it, what they have put up, and whether their ending is under way. The
+          reading is good for that turn and no longer.
+        </p>
+        <p class="flavor">
+          <strong>It can wear somebody's colours.</strong> Your own, and then nobody can
+          tell which of your soldiers is the one doing the looking &mdash; useful at home.
+          Or <em>theirs</em>, and then their armies will not come for it at all, which is
+          how it walks in. The second is far stronger and breaks the moment anything
+          touches it: a fight uncovers a spy to whoever was in it, permanently, and only
+          to them.
+        </p>
+        <p class="flavor">
+          <strong>Failing and being caught are two different things.</strong> A reading
+          that fails has wasted the turn and told nobody anything &mdash; everything a spy
+          does is anonymous. Being <em>noticed</em> is the one moment the other side
+          learns whose it was, and they will hold it against you. A promoted spy reads
+          better; more to the point, it is noticed far less, which is the thing worth
+          promoting toward.
+        </p>
+        <p class="flavor">
           <strong>Meeting somebody.</strong> The first time anything of yours can see
           anything of theirs, the two of you have met, and you hear from them. They send
           a greeting, or mention where their border is, or ask to be paid, or declare war
