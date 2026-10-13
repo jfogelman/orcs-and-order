@@ -584,7 +584,7 @@ these and the near misses are all in this neighbourhood:
 
 ---
 
-## Building icons — 10 of 30 done
+## Building icons — all 30 done
 
 Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
 House style: **Flat interface icons — 48×48**, the same block the advances use. A
