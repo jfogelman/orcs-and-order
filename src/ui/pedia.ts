@@ -886,7 +886,8 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           side builds one. A spy never attacks &mdash; it has no attack at all &mdash; so
           there is no way to use it as a bad soldier. What it does is stand next to
           somebody else's town and <strong>spy on</strong> it: what they are building, who
-          is in it, what they have put up, and whether their ending is under way. The
+          is in it, what they have put up, and how far along the thing they mean to win
+          with &mdash; the Portal, the Object, the Shell &mdash; has got in that town. The
           reading is good for that turn and no longer.
         </p>
         <p class="flavor">
@@ -904,6 +905,17 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           learns whose it was, and they will hold it against you. A promoted spy reads
           better; more to the point, it is noticed far less, which is the thing worth
           promoting toward.
+        </p>
+        <p class="flavor">
+          <strong>Every spy order says what it is likely to cost you</strong> &mdash; from
+          <em>barely any risk</em> up through <em>reckless</em> &mdash; and the words are
+          read off the real odds rather than written on by hand, so they cannot drift
+          from the rules. The figure quoted is the chance the order ends with your agent
+          uncovered, not the chance it fails: those are two different rolls, and failing
+          quietly costs you a turn and nothing else. Standing at a gate and taking an
+          interest is the mildest thing on the ladder. Everything further up involves
+          doing something <em>to</em> somebody, and a thing that is done is a thing that
+          can be traced.
         </p>
         <p class="flavor">
           <strong>Meeting somebody.</strong> The first time anything of yours can see

@@ -5,6 +5,7 @@ import { unitType } from '../model/units';
 import { awardXp, XP } from './combat';
 import { STANDING, adjustStanding } from './diplomacy';
 import { uncover } from './disguise';
+import { endingFor, endingWorks, isEndingPiece } from './endings';
 import { log, withRng } from './gamestate';
 
 /**
@@ -54,7 +55,107 @@ export const SPY = {
   xpQuietFailure: XP.survive / 2,
   /** What being caught costs between the two sides. */
   caught: STANDING.fight,
+  /**
+   * A thumb on the scale for every risk on the ladder at once.
+   *
+   * Nothing moves it today. It is here because the interesting lever on a spy
+   * programme is not any one action's odds but *the weather* -- a folly, a
+   * building or an advance that makes the whole country harder or easier to
+   * work in. One multiplier that everything goes through means such a thing
+   * lands in one place rather than in five action tables.
+   */
+  weather: 1,
+  /**
+   * The part of being seen that no amount of experience drills away.
+   *
+   * Scaled by how far up the ladder the action sits, so spying on a town has
+   * none of it and turning somebody's soldier has the most.
+   *
+   * **Without this the top of the ladder collapses.** Exposure is the product
+   * of two rolls that *both* improve with rank, so a rank-3 spy came out at
+   * under one percent on every action in the table -- turning an enemy unit
+   * included -- and the risk words all read "barely any risk" at once. A
+   * promotion should make an agent good, not make the act invisible: a
+   * sabotaged building is a sabotaged building whoever did it, and somebody
+   * whose soldier has changed sides knows that much happened.
+   */
+  irreducible: 0.03,
 };
+
+/**
+ * What a spy can be told to do, and how exposed each one leaves it.
+ *
+ * `risk` is **relative to spying on a town, which is 1**. Walking up to a gate
+ * and taking an interest is the cheapest thing on the ladder; everything else
+ * involves doing something to somebody, and a thing that is done is a thing
+ * that can be traced.
+ *
+ * **The unbuilt ones are listed deliberately.** A risk band means nothing in
+ * isolation -- "slight" is only slight next to something that is not -- so the
+ * scale has to be calibrated against the whole ladder, or every slice would
+ * recalibrate it and the word printed on the button would change meaning under
+ * a player who had learned it. They are marked `ready: false` and are not
+ * offered anywhere.
+ */
+export interface SpyAction {
+  /** What it is called where it is offered. */
+  verb: string;
+  /** Exposure relative to spying on a town. */
+  risk: number;
+  /** Whether it can be ordered yet. */
+  ready: boolean;
+}
+
+export const SPY_ACTIONS: Record<string, SpyAction> = {
+  read: { verb: 'Spy on', risk: 1, ready: true },
+  incite: { verb: 'Foment discontent in', risk: 2.2, ready: false },
+  sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: false },
+  turn: { verb: 'Turn', risk: 3.6, ready: false },
+  double: { verb: 'Turn their agent in', risk: 4.5, ready: false },
+};
+
+/**
+ * The chance an action ends with this spy uncovered.
+ *
+ * **Not the notice roll.** Being noticed is conditional on having failed, so
+ * the number a player actually wants is the compound one: a rank-0 spy fails a
+ * quarter of the time and is noticed half of those, which is one in eight, not
+ * one in two. Quoting the notice roll would have told them the truth about a
+ * number they never face.
+ */
+export function exposureOdds(unit: Unit, action = 'read'): number {
+  const act = SPY_ACTIONS[action];
+  if (!act) return 0;
+  const bare = (1 - readOdds(unit)) * noticeOdds(unit);
+  const floor = (act.risk - 1) * SPY.irreducible;
+  return Math.max(floor, Math.min(0.95, bare * act.risk * SPY.weather));
+}
+
+/** The bands a risk is reported in, loosest first. */
+export const RISK_BANDS: { under: number; label: string }[] = [
+  { under: 0.05, label: 'barely any risk' },
+  // A green spy reading a town is exposed one time in eight, and the first cut
+  // of this put that a hair the wrong side of the line and called it "fair".
+  // The mildest thing on the ladder should read as mild, or the scale has
+  // nowhere left to go when the ladder gets longer.
+  { under: 0.15, label: 'slight risk' },
+  { under: 0.25, label: 'fair risk' },
+  { under: 0.45, label: 'real risk' },
+  { under: 1.01, label: 'reckless' },
+];
+
+/**
+ * What to call a risk where a player can see it.
+ *
+ * Words rather than a percentage, and on purpose. A spy programme is a thing
+ * you are meant to have a *feeling* about; a number invites arithmetic, and
+ * arithmetic on a figure the game could change next patch is a false promise.
+ * The bands are read off the real odds, so they cannot drift from the rules.
+ */
+export function riskBand(unit: Unit, action = 'read'): string {
+  const odds = exposureOdds(unit, action);
+  return (RISK_BANDS.find((b) => odds < b.under) ?? RISK_BANDS[RISK_BANDS.length - 1]).label;
+}
 
 /** What a reading tells you about a city. */
 export interface CityReading {
@@ -68,8 +169,15 @@ export interface CityReading {
   strongest: string | null;
   /** Buildings already up, by name. */
   standing: string[];
-  /** Whether this side has an ending under way, and how much of it is built. */
-  ending: { begun: boolean; parts: number } | null;
+  /**
+   * The thing this side wins with, named, and how far along it is here.
+   *
+   * **Named rather than called "their ending".** That label told a player
+   * nothing: it is a word this game uses about itself, not about anything on
+   * the board. The Demonic Portal is a thing you can picture, worry about and
+   * march on, which is the entire reason to have sent a spy.
+   */
+  greatWork: { name: string; begun: boolean; parts: number } | null;
 }
 
 /** Whether this unit could read this city, and why not. */
@@ -158,7 +266,12 @@ function readingOf(state: GameState, city: City): CityReading {
     return unitType(u.type).defense >= unitType(best.type).defense ? u : best;
   }, null);
   const owner = state.players[city.owner];
-  const parts = city.buildings.filter((b) => BUILDINGS[b]?.endingPart !== undefined).length;
+  // `isEndingPiece`, not `endingPart`. The first version counted only the
+  // lesser works, so a town with the Portal itself standing in it reported
+  // nothing of the sort under way -- the one reading worth the whole feature.
+  const parts = city.buildings.filter((b) => isEndingPiece(BUILDINGS[b])).length;
+  const kind = owner ? endingFor(owner.faction) : null;
+  const works = kind ? endingWorks(kind) : [];
   return {
     city: city.name,
     size: city.size,
@@ -170,9 +283,13 @@ function readingOf(state: GameState, city: City): CityReading {
     garrison: garrison.length,
     strongest: strongest ? unitType(strongest.type).name : null,
     standing: city.buildings.map((b) => BUILDINGS[b]?.name ?? b),
-    ending:
-      owner === undefined
+    greatWork:
+      owner === undefined || works.length === 0
         ? null
-        : { begun: owner.endingBegunAt !== undefined, parts },
+        : {
+            name: works[works.length - 1].name,
+            begun: owner.endingBegunAt !== undefined,
+            parts,
+          },
   };
 }

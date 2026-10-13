@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { foundCity } from '../src/sim/city';
-import { SPY, canRead, noticeOdds, readCity, readOdds } from '../src/sim/spying';
+import {
+  RISK_BANDS,
+  SPY,
+  SPY_ACTIONS,
+  canRead,
+  exposureOdds,
+  noticeOdds,
+  readCity,
+  readOdds,
+  riskBand,
+} from '../src/sim/spying';
+import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
 import { appearsTo, wearDisguise } from '../src/sim/disguise';
 import { standing } from '../src/sim/diplomacy';
 import type { City, GameState, Unit } from '../src/model/types';
@@ -81,6 +92,39 @@ describe('reading a town', () => {
     expect(reading!.standing).toContain('Barracks');
   });
 
+  it('names the thing they mean to win with, rather than calling it "their ending"', () => {
+    const { state, spy, city } = board();
+    spy.rank = 3;
+    let reading = null;
+    for (let i = 0; i < 40 && !reading; i++) {
+      spy.moves = 1;
+      const out = readCity(state, spy, city);
+      if (out.kind === 'read') reading = out.reading;
+    }
+    // "Their ending" is a word this game uses about itself. The Demonic Portal
+    // is a thing a player can picture and march on.
+    expect(reading!.greatWork).not.toBeNull();
+    expect(reading!.greatWork!.name).toMatch(/Portal|Object|Shell/);
+    expect(reading!.greatWork!.parts).toBe(0);
+  });
+
+  it('counts the great work itself, not only the lesser pieces of it', () => {
+    const { state, spy, city } = board();
+    // The reading worth the whole feature: the Portal is *standing in this
+    // town*. The first version counted `endingPart` only, which is set on the
+    // lesser works and not on the final one -- so the single most alarming
+    // thing a spy could find reported as nothing under way at all.
+    const final = BUILDING_IDS.find((id) => BUILDINGS[id].victory !== undefined)!;
+    city.buildings = [final];
+    spy.rank = 3;
+    let reading = null;
+    for (let i = 0; i < 40 && !reading; i++) {
+      spy.moves = 1;
+      const out = readCity(state, spy, city);
+      if (out.kind === 'read') reading = out.reading;
+    }
+    expect(reading!.greatWork!.parts).toBe(1);
+  });
   it('pays experience, because a spy can earn it no other way', () => {
     const { state, spy, city } = board();
     // It never fights -- `attack: 0` sees to that -- so without this a spy
@@ -164,5 +208,79 @@ describe('reading a town', () => {
     } finally {
       SPY.enabled = true;
     }
+  });
+});
+
+describe('what a spy order is worth risking', () => {
+  it('quotes the compound chance of exposure, not the notice roll', () => {
+    const { spy } = board();
+    // Being noticed is conditional on having failed. A rank-0 spy fails a
+    // quarter of the time and is noticed half of those: one in eight, not one
+    // in two. Quoting `noticed` would be the truth about a roll the player
+    // never faces on its own.
+    expect(exposureOdds(spy, 'read')).toBeCloseTo((1 - SPY.reads) * SPY.noticed, 6);
+    expect(exposureOdds(spy, 'read')).toBeLessThan(SPY.noticed);
+  });
+
+  it('falls as a spy is promoted, which is the argument for promoting one', () => {
+    const { spy } = board();
+    const green = exposureOdds(spy, 'read');
+    spy.rank = 3;
+    expect(exposureOdds(spy, 'read')).toBeLessThan(green);
+    // And the word on the button moves with it, or the number is private.
+    expect(riskBand(spy, 'read')).not.toBe(RISK_BANDS[RISK_BANDS.length - 1].label);
+  });
+
+  it('puts spying on a town at the bottom of the ladder', () => {
+    const { spy } = board();
+    const read = exposureOdds(spy, 'read');
+    // Every other action does something *to* somebody, and a thing that is
+    // done can be traced. If one of them ever came out milder than standing
+    // about looking interested, the scale would be telling a lie.
+    for (const [id, act] of Object.entries(SPY_ACTIONS)) {
+      if (id === 'read') continue;
+      expect(act.risk, `${id} should be riskier than reading`).toBeGreaterThan(1);
+      expect(exposureOdds(spy, id)).toBeGreaterThan(read);
+    }
+  });
+
+  it('keeps the ladder in order at the top, where it used to collapse', () => {
+    const { spy } = board();
+    spy.rank = 3;
+    // Exposure is the product of two rolls that both improve with rank, so a
+    // veteran came out under one percent on *every* action -- turning an enemy
+    // soldier included -- and every word on the ladder read the same. A
+    // promotion makes an agent good; it does not make the act invisible.
+    const bands = Object.keys(SPY_ACTIONS).map((a) => riskBand(spy, a));
+    expect(new Set(bands).size, 'a veteran found every rung equally safe').toBeGreaterThan(1);
+    expect(exposureOdds(spy, 'double')).toBeGreaterThan(exposureOdds(spy, 'incite'));
+    // And the mildest rung still gets mild, or the floor has eaten the reward
+    // for promoting at all.
+    expect(riskBand(spy, 'read')).toBe(RISK_BANDS[0].label);
+  });
+
+  it('offers only what is actually built', () => {
+    // The unbuilt entries exist to calibrate the scale, not to be ordered. If
+    // one is ever wired up, this is the line that has to be changed on purpose.
+    expect(Object.entries(SPY_ACTIONS).filter(([, a]) => a.ready).map(([id]) => id)).toEqual([
+      'read',
+    ]);
+  });
+
+  it('reads its words off the odds, so they cannot drift from the rules', () => {
+    const { spy } = board();
+    SPY.weather = 8;
+    try {
+      // One multiplier moves every risk on the ladder at once: the hook a
+      // folly or a building would hang off.
+      expect(riskBand(spy, 'read')).toBe(RISK_BANDS[RISK_BANDS.length - 1].label);
+    } finally {
+      SPY.weather = 1;
+    }
+  });
+
+  it('says nothing is at stake for an action that does not exist', () => {
+    const { spy } = board();
+    expect(exposureOdds(spy, 'drink the mayor under the table')).toBe(0);
   });
 });

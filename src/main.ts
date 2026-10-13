@@ -83,7 +83,7 @@ import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/shi
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
 import { openCaught, openQuiet, openReading } from './ui/spying';
-import { canRead, readCity } from './sim/spying';
+import { canRead, readCity, riskBand } from './sim/spying';
 import { couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -734,9 +734,15 @@ class App {
           // "Spy on", not "Read". There is no reason to be coy about what the
           // order is -- the unit is a spy, the button is the spying, and a verb
           // that could mean three other things is a verb nobody presses.
-          `<button class="small" data-act="read" data-city="${c.id}" title="Spend the turn finding out what is in it">Spy on ${escapeHtml(
+          //
+          // The risk rides on the button the way the road's cost does, because
+          // it is the same kind of fact: what pressing this will take from you.
+          // It is the honest compound chance of being uncovered, so a promoted
+          // spy watches it fall as it ranks, which is the whole argument for
+          // promoting one.
+          `<button class="small" data-act="read" data-city="${c.id}" title="Spend the turn finding out what is in it, and what it is building toward">Spy on ${escapeHtml(
             c.name,
-          )}</button>`,
+          )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'read'))}</span></button>`,
       )
       .join('');
     const worn = unit.disguise?.owner;

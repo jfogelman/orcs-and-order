@@ -113,6 +113,59 @@ describe('what a spy is shown to have come back with', () => {
     expect(panel).not.toContain(`Read ${city.name}`);
   });
 
+  it('prices the order on the button, and marks it down as the spy ranks', () => {
+    const { spy, city } = board();
+    app.refreshSidebar();
+    const green = document.getElementById('selection')!.textContent ?? '';
+    expect(green).toMatch(new RegExp(`Spy on ${city.name}\\s*·\\s*\\w`));
+
+    spy.rank = 3;
+    app.select(spy);
+    app.refreshSidebar();
+    const veteran = document.getElementById('selection')!.textContent ?? '';
+    // The whole argument for promoting a spy is that it gets safer. If the
+    // button said the same thing at rank 3 as at rank 0, the player would have
+    // no way to see that happening.
+    expect(veteran).not.toBe(green);
+  });
+
+  it('sets the noticed verdict apart in every dialog, in the same place', async () => {
+    const { spy, city } = board();
+    const boxes: { cls: string; text: string }[] = [];
+    const capture = () => {
+      const box = document.querySelector('.spy-notice');
+      expect(box, 'a spy dialog with no verdict box in it').not.toBeNull();
+      boxes.push({ cls: box!.className, text: box!.textContent ?? '' });
+    };
+
+    for (const outcome of ['read', 'missed', 'caught'] as const) {
+      await again(spy);
+      force(outcome);
+      app.orderRead(city.id);
+      capture();
+    }
+
+    // Whether the agent got away with it decides whether it still exists as an
+    // asset and whether somebody is now holding a grudge. It was a clause at
+    // the end of a flavour paragraph; it is a box of its own now, and it is
+    // there whatever happened.
+    expect(boxes.map((b) => (b.cls.includes('blown') ? 'blown' : 'safe'))).toEqual([
+      'safe',
+      'safe',
+      'blown',
+    ]);
+    expect(boxes[2].text).toMatch(/noticed/i);
+  });
+
+  it('names the great work instead of calling it “their ending”', () => {
+    const { city } = board();
+    force('read');
+    app.orderRead(city.id);
+    const said = dialog();
+    expect(said).not.toMatch(/their ending/i);
+    expect(said).toMatch(/Portal|Object|Shell/);
+  });
+
   it('opens a dialog when the reading succeeds', () => {
     const { city } = board();
     force('read');

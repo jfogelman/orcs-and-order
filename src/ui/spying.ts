@@ -16,12 +16,28 @@ import { escapeHtml, openModal } from './dom';
  * today, and tomorrow is another turn's work. That is deliberate and is the
  * difference between a spy and a permanent window.
  */
+/**
+ * Whether anybody noticed, said as its own bordered box.
+ *
+ * **The most important line in any of these dialogs**, and it was a clause at
+ * the end of a flavour paragraph. Whether the spy got away with it decides
+ * whether the unit still exists as an asset and whether a rival is now holding
+ * a grudge -- it is not a footnote on the size of a town. Same box, same place,
+ * same dashed border in all three dialogs, so a player learns where to look
+ * once and then always looks there.
+ */
+function noticedBox(safe: boolean, said: string): string {
+  return `<div class="spy-notice ${safe ? 'safe' : 'blown'}">
+      <strong>${safe ? 'Nobody noticed.' : 'We were noticed.'}</strong> ${said}
+    </div>`;
+}
+
 export function openReading(reading: CityReading, name: string): void {
   const line = (label: string, value: string) =>
     `<div class="stat-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(
       value,
     )}</span></div>`;
-  const ending = reading.ending;
+  const work = reading.greatWork;
   openModal({
     title: `A Report on ${name}`,
     width: 'min(560px, 96vw)',
@@ -40,19 +56,22 @@ export function openReading(reading: CityReading, name: string): void {
           reading.standing.length === 0 ? 'none worth the ink' : reading.standing.join(', '),
         )}
         ${
-          ending
+          work
             ? line(
-                'Their ending',
-                ending.begun
-                  ? `under way, ${ending.parts} ${ending.parts === 1 ? 'piece' : 'pieces'} of it standing here`
-                  : 'not begun, as far as anybody here knows',
+                `Work on ${work.name}`,
+                work.parts > 0
+                  ? `${work.parts} ${work.parts === 1 ? 'piece' : 'pieces'} of it standing here`
+                  : work.begun
+                    ? 'begun, though not in this town'
+                    : 'nothing of it started anywhere, that we can tell',
               )
             : ''
         }
       </div>
       <div class="panel-body">
-        <p class="flavor">Good for today. Towns are not in the habit of staying the same,
-        and nobody there has any idea you asked.</p>
+        ${noticedBox(true, 'Nobody there has any idea you asked.')}
+        <p class="flavor">Good for today only. Towns are not in the habit of staying
+        the same.</p>
       </div>`,
   });
 }
@@ -76,8 +95,8 @@ export function openQuiet(unit: Unit, city: City): void {
         <p style="font-size:15px">The ${escapeHtml(
           unitType(unit.type).name,
         )} spent the day outside ${escapeHtml(city.name)} and learned nothing useful.</p>
-        <p class="flavor">Nobody noticed it, which is the part that matters. It is still
-        where it was and still nobody's business but ours. Try again tomorrow.</p>
+        ${noticedBox(true, 'It is still where it was, and still nobody’s business but ours.')}
+        <p class="flavor">A wasted day and nothing worse. Try again tomorrow.</p>
       </div>`,
   });
 }
@@ -99,12 +118,14 @@ export function openCaught(state: GameState, unit: Unit, city: City, wore: boole
         <p style="font-size:15px">The ${escapeHtml(
           unitType(unit.type).name,
         )} outside ${escapeHtml(city.name)} was noticed, and came back with nothing.</p>
+        ${noticedBox(
+          false,
+          `${escapeHtml(them)} now know whose it was, and will remember it.${
+            wore ? ' Whatever it was wearing, it is not wearing it convincingly any more.' : ''
+          }`,
+        )}
         <p class="flavor">Everything a spy does is anonymous until it is caught. This one
-        was caught, so ${escapeHtml(them)} now know whose it was, and will remember it.${
-          wore
-            ? ' Whatever it was wearing, it is not wearing it convincingly any more.'
-            : ''
-        }</p>
+        was caught.</p>
       </div>`,
   });
 }

@@ -2125,3 +2125,45 @@ kbd {
   color: #cfe3ff;
 }
 
+
+/* ------------------------------------------------------- spy result boxes */
+/*
+ * Whether the spy was noticed, set apart from everything around it.
+ *
+ * Dashed rather than solid: it is an aside about the agent, not another row of
+ * the report, and the two should not be mistaken for each other at a glance.
+ * The colour carries the verdict for anybody who reads nothing at all.
+ */
+.spy-notice {
+  margin: 10px 0 2px;
+  padding: 9px 11px;
+  border: 1px dashed var(--edge-hi);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--parch);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.spy-notice.safe {
+  border-color: rgba(95, 191, 74, 0.5);
+}
+
+.spy-notice.safe strong {
+  color: var(--ok);
+}
+
+.spy-notice.blown {
+  border-color: rgba(201, 67, 44, 0.6);
+  background: rgba(201, 67, 44, 0.1);
+}
+
+.spy-notice.blown strong {
+  color: var(--danger);
+}
+
+/* The risk a spy order carries, on the button that gives it. */
+.risk {
+  color: var(--muted);
+  font-style: italic;
+}
