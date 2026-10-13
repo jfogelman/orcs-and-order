@@ -12,7 +12,8 @@ import {
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
-import { appearsTo } from '../sim/disguise';
+import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
+import { SPY, canRead, lastReading, readCity } from '../sim/spying';
 import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
@@ -62,7 +63,7 @@ import { rankBonus } from '../sim/combat';
 import { COWED, hasStatus } from '../sim/status';
 import { RUINS, expectedGuard, isWarden, standingRuins } from '../sim/ruins';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
-import { playerCities, playerUnits, withRng } from '../sim/gamestate';
+import { playerCities, playerUnits, unitAt, withRng } from '../sim/gamestate';
 import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
 import {
@@ -512,11 +513,21 @@ export function nearestEnemyTarget(
     // Section 116: a town of a side at peace with us is not a target.
     if (!hostile(state, playerId, c.owner)) continue;
     const i = idx(c.x, c.y, state.width);
+    // Half, meaning *no idea*: a town nobody can see is assumed middling,
+    // because assuming anything else would be the AI seeing through fog.
     let hardness = 0.5;
     if (player.visible[i]) {
       const guard = state.units.find((u) => u.x === c.x && u.y === c.y);
       const held = guard ? unitType(guard.type).defense * headcount(guard) : 0;
       hardness = Math.min(1, held / GUARD_REFERENCE);
+    } else {
+      // Section 136: and this is what a spy is *for*. A report replaces the
+      // guess with a number, for as long as it is worth acting on -- the
+      // difference between marching on the nearest town and marching on the
+      // weakest one. Eyes still beat a report: the gate you can see is the
+      // gate as it is now.
+      const filed = lastReading(state, playerId, c.id);
+      if (filed) hardness = Math.min(1, filed.held / GUARD_REFERENCE);
     }
     const begun =
       state.players[c.owner]?.endingBegunAt !== undefined &&
@@ -806,6 +817,25 @@ export function chooseProduction(
     if (diggers < BURROW.aiWants) {
       const digger = options.units.find((u) => burrows({ type: u.id }));
       if (digger) return { kind: 'unit', id: digger.id };
+    }
+  }
+
+  // 2c. Section 136: a spy, which nothing else will ever ask for.
+  //
+  // The same hole section 125 fell into, and the comment above says what it
+  // cost: `worth()` ranks a unit on strength, health and price, and a spy has
+  // **no attack at all**. It is the worst soldier that can be built, by every
+  // number the chooser looks at, in every yard, forever -- so without a want of
+  // its own the whole of espionage would have been a thing only the player
+  // could do, and a sweep of it would have come back identical on both arms.
+  //
+  // One. A standing want, like the garrison and the diggers, and small: a
+  // second spy reads the same towns the first one does.
+  if (SPY.ai && SPY.enabled) {
+    const agents = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).spy).length;
+    if (agents < SPY.aiWants) {
+      const agent = options.units.find((u) => u.spy);
+      if (agent) return { kind: 'unit', id: agent.id };
     }
   }
 
@@ -1363,6 +1393,86 @@ function bestAtHome(state: GameState, unit: Unit, radius = 8): number {
     }
   }
   return best;
+}
+
+/**
+ * What the other side does with an agent. Section 136.
+ *
+ * Deliberately a short list, because a spy that cannot fight has very few
+ * honest things to do and inventing more would be inventing a sense the player
+ * does not have. It wears somebody's colours, it walks to a rival gate, and it
+ * stands there taking an interest. Everything it learns is filed, and the file
+ * is read by `nearestEnemyTarget` when it is picking a town to march on.
+ *
+ * **It wears the colours of the side it is going to read.** Its own would hide
+ * it from nobody abroad; theirs means their armies will not come for it, which
+ * is the whole of how a spy survives a walk through somebody's country. It is
+ * also the riskier of the two if anything touches it, and that is the trade the
+ * player is offered, so the AI should be taking it too.
+ */
+function actSpy(state: GameState, unit: Unit): void {
+  if (!SPY.enabled) return;
+
+  // Standing at a gate already: that is the job, and it is worth more than any
+  // walking. Read the one it can read, preferring the town it knows least about.
+  const here = state.cities
+    .filter((c) => canRead(unit, c).ok && hostileOrNot(state, unit.owner, c.owner))
+    .sort((a, b) => staleness(state, unit.owner, b) - staleness(state, unit.owner, a))[0];
+  if (here) {
+    readCity(state, unit, here);
+    return;
+  }
+
+  // Somewhere to walk. The oldest news first, so an agent does not spend the
+  // game re-reading one town, and nearness breaks the tie.
+  const want = state.cities
+    .filter((c) => c.owner !== unit.owner && !state.players[c.owner]?.barbarian)
+    .filter((c) => state.players[unit.owner].explored[idx(c.x, c.y, state.width)])
+    .sort((a, b) => {
+      const news = staleness(state, unit.owner, b) - staleness(state, unit.owner, a);
+      if (news !== 0) return news;
+      return distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y);
+    })[0];
+  if (!want) return;
+
+  if (canDisguise(unit) && unit.disguise?.owner !== want.owner) {
+    wearDisguise(state, unit, want.owner);
+  }
+  // A gate is occupied by whoever holds it, so the agent walks to the ring
+  // around it rather than onto it -- and a spy that tried to walk onto a town
+  // would be a spy attacking a town, which it has no attack to do.
+  // `routeTo` only asks whether there is a way; `moveToward` is what walks it.
+  const spot = ringAround(state, want)
+    .filter((t) => !unitAt(state, t.x, t.y) && !TERRAIN[state.terrain[idx(t.x, t.y, state.width)]].water)
+    .sort((a, b) => distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y))[0];
+  if (!spot) return;
+  if (!routeTo(state, unit, spot.x, spot.y)) return;
+  moveToward(state, unit, spot.x, spot.y);
+}
+
+/** How long since this side heard anything about this town. Unread is forever. */
+function staleness(state: GameState, viewerId: number, city: City): number {
+  const filed = state.players[viewerId]?.readings?.[city.id];
+  return filed ? state.turn - filed.turn : Number.MAX_SAFE_INTEGER;
+}
+
+/** Whether this town belongs to anybody worth reading: anybody but us. */
+function hostileOrNot(state: GameState, viewerId: number, ownerId: number): boolean {
+  return ownerId !== viewerId && !state.players[ownerId]?.barbarian;
+}
+
+/** The eight tiles around a town, in a stable order. */
+function ringAround(state: GameState, city: City): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const x = city.x + dx;
+      const y = city.y + dy;
+      if (x >= 0 && y >= 0 && x < state.width && y < state.height) out.push({ x, y });
+    }
+  }
+  return out;
 }
 
 function actSettler(state: GameState, unit: Unit, personality: AiPersonality): void {
@@ -2354,7 +2464,12 @@ export function runAiTurn(state: GameState, playerId: number): void {
     // `actSettler` is where founding, road crews and diggers all live. The
     // Hive's Worker is no sort of settler and was being handed to
     // `actSoldier`, which has nothing to tell a unit that cannot fight.
-    if (type.settler || type.works) actSettler(state, unit, personality);
+    // Section 136: and a spy goes its own way, for the same reason. It cannot
+    // fight, so `actSoldier` would march it at the nearest enemy and hand it
+    // over -- the Hive Worker bug again, and the one `type.works` above was
+    // added to fix.
+    if (type.spy) actSpy(state, unit);
+    else if (type.settler || type.works) actSettler(state, unit, personality);
     else actSoldier(state, unit, personality, frontier);
   }
   for (const unit of mine) {

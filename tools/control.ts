@@ -30,6 +30,7 @@ import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
+import { SPY } from '../src/sim/spying';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
@@ -139,6 +140,11 @@ export const control = () => {
   // Section 136: spies exist and may lie about themselves. Pinned so an arm
   // not asking about them inherits the shipped game.
   DISGUISE.enabled = true;
+  // And the other side builds one and walks it to somebody's gate. Pinned
+  // for the same reason as the digger in section 125: a mechanic only the
+  // player ever uses measures as no mechanic at all.
+  SPY.enabled = true;
+  SPY.ai = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.
   DIPLOMACY_AI.readsStanding = true;
   DIPLOMACY_AI.weighsTheWar = true;

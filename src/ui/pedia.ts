@@ -918,6 +918,15 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           can be traced.
         </p>
         <p class="flavor">
+          <strong>Everybody does this.</strong> The other sides build agents too, dress
+          them in somebody's colours and walk them to your gates, and what they learn
+          goes in a file they plan off: an army that knows which of your towns is empty
+          marches on that one. A report keeps for about a dozen turns before it is only
+          a rumour, and a town somebody can actually <em>see</em> is never read off a
+          file &mdash; eyes are never out of date. The same is true the other way round,
+          which is what your own agent is buying you.
+        </p>
+        <p class="flavor">
           <strong>Meeting somebody.</strong> The first time anything of yours can see
           anything of theirs, the two of you have met, and you hear from them. They send
           a greeting, or mention where their border is, or ask to be paid, or declare war
