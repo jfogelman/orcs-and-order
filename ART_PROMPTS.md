@@ -604,16 +604,16 @@ somewhere rather than sitting on a card.)
 | `market` | human | a single striped market stall awning above a wooden counter with one apple on it |
 | `thinkingRock` | orc | a large smooth grey boulder with a single worn seat-shaped dip on top |
 | `scriptorium` | human | a stack of leather-bound books with a quill and inkpot resting on top |
-| `theNarrowing` | hivekin | a low chitinous tunnel mouth clenched almost shut, overlapping plates of pale shell drawn inward like a closing throat |
-| `theHum` | hivekin | a smooth hollow chamber of pale waxy comb, perfectly round, with faint concentric ripples in the air at its centre |
-| `theDeeperHum` | hivekin | the same round waxy chamber, far deeper, a shaft of stacked concentric rings receding down into darkness |
+| `theNarrowing` | hivekin | a low tunnel mouth seen from the front and slightly above, overlapping plates of **pale bone-white** shell drawn inward like a closing throat, one dark opening left at the centre |
+| `theHum` | hivekin | a domed chamber of pale honey-yellow waxy comb **seen from the side and cut away**, so the hollow inside shows, faint ripple rings across the opening |
+| `theDeeperHum` | hivekin | the same chamber **seen from the side and cut away**, far deeper -- a honey-yellow shaft of stacked rings dropping away below the opening, the lowest in shadow |
 | `theStandingNiche` | hivekin | a shallow alcove of pale shell beside a doorway, exactly wide enough for two, worn smooth at shoulder height |
 | `theScentRecord` | hivekin | a flat wall panel of pale wax scored with dense rows of short glistening marks, like writing made of beads of resin |
 | `theDeepRecord` | hivekin | a tall column of the same bead-scored wax, rows spiralling all the way down it, the lowest rows dark with age |
-| `theRenderingPit` | hivekin | a round pit of dull amber resin with a thick crust, a few clean picked-white fragments resting on the surface |
-| `theGreaterRendering` | hivekin | the same amber pit, much larger and tiered into three descending rings, the lowest one clear and glassy |
-| `theForwardBurrow` | hivekin | a small raw hole dug into bare earth with a neat mound of pale grain stacked beside its mouth |
-| `theHardeningFloor` | hivekin | a broad flat slab of dark polished chitin, its surface finely pebbled, worn glassy in one well-used track across the middle |
+| `theRenderingPit` | hivekin | a shallow bowl-shaped pit **seen from the front and above at an angle**, thick amber resin crust, a raised rim catching the light, a few picked-white fragments on the surface |
+| `theGreaterRendering` | hivekin | the same pit **seen from the front and above at an angle**, much larger and tiered into three descending rings, the lowest clear and glassy |
+| `theForwardBurrow` | hivekin | a small raw hole dug into **pale dry** earth, the spoil heaped light around it, with a neat mound of pale grain stacked beside its mouth |
+| `theHardeningFloor` | hivekin | a broad flat slab of **mid grey-brown** polished chitin, finely pebbled, with a **strong highlight** along one well-used track worn glassy across the middle |
 
 ### The Hive's ten (section 136)
 
@@ -631,6 +631,26 @@ would imply somebody wanted to be looked at.
 Keep the palette narrow -- bone, wax-yellow, amber, dark chitin -- so the set
 reads as one faction at a glance beside the Horde's browns and the Kingdom's
 greys.
+
+**Five were redrawn, and the two reasons are worth keeping.** This slot is
+**flat interface icons, not isometric** -- the follies and the palace modules
+are the ones drawn standing somewhere, and matching them here would have made
+these ten the odd set out among thirty.
+
+1. *Five were drawn down their own axis.* A tunnel seen straight into, a round
+   chamber seen from directly above and a round pit seen from directly above all
+   come out as concentric circles, which read at 48 pixels as a medallion rather
+   than a structure. Every icon that works in this set is a recognisable object
+   seen from the front and slightly above: Walls is a run of battlement you could
+   walk up to. **Say the viewing angle in the prompt** -- these subjects are
+   round, and a round subject will default to its own axis. The two that were
+   written as "the same, but more so" inherited the angle from their parents,
+   which is the thing a *same as* prompt is for and also the thing that makes
+   one wrong prompt into two wrong icons.
+2. *Three were too dark to read.* The set works because it is a light subject
+   carrying a dark outline; near-black brown on transparency turns into a blob
+   when it is shrunk onto a chip. **Name the value, not just the material** --
+   "pale bone-white shell" rather than "chitinous".
 
 The two economy pairs are where the joke lives, so lean into it: the **Goblin
 Treasury** should look valuable and *completely unprotected*, and the **Simple Market**
