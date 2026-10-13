@@ -885,7 +885,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <strong>Spies</strong> arrive with <em>Someone Else's Business</em>, and every
           side builds one. A spy never attacks &mdash; it has no attack at all &mdash; so
           there is no way to use it as a bad soldier. What it does is stand next to
-          somebody else's town and <strong>read</strong> it: what they are building, who
+          somebody else's town and <strong>spy on</strong> it: what they are building, who
           is in it, what they have put up, and whether their ending is under way. The
           reading is good for that turn and no longer.
         </p>

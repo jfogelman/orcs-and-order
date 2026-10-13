@@ -58,13 +58,38 @@ export function openReading(reading: CityReading, name: string): void {
 }
 
 /**
+ * Said when a spy comes back with nothing and nobody minded.
+ *
+ * **Every spy action gets a dialog, including this one.** The first version put
+ * the quiet failure in the log instead, which put it one line under the
+ * *caught* entry from an earlier attempt with no turn marker between them -- so
+ * "they know whose it was" and "nobody seems to have minded" read as one
+ * sentence contradicting itself. Three outcomes, three dialogs, and the player
+ * is never left to work out which of two log lines was about this turn.
+ */
+export function openQuiet(unit: Unit, city: City): void {
+  openModal({
+    title: 'Nothing To Report',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">The ${escapeHtml(
+          unitType(unit.type).name,
+        )} spent the day outside ${escapeHtml(city.name)} and learned nothing useful.</p>
+        <p class="flavor">Nobody noticed it, which is the part that matters. It is still
+        where it was and still nobody's business but ours. Try again tomorrow.</p>
+      </div>`,
+  });
+}
+
+/**
  * Said when a spy is caught.
  *
  * **This is the only moment the other side learns whose it was**, and the
  * dialog says so plainly, because the cost of being caught is the whole price
  * of the feature and a player who does not notice paying it will not weigh it.
  */
-export function openCaught(state: GameState, unit: Unit, city: City): void {
+export function openCaught(state: GameState, unit: Unit, city: City, wore: boolean): void {
   const them = state.players[city.owner]?.name ?? 'They';
   openModal({
     title: 'Our Agent Was Noticed',
@@ -75,8 +100,11 @@ export function openCaught(state: GameState, unit: Unit, city: City): void {
           unitType(unit.type).name,
         )} outside ${escapeHtml(city.name)} was noticed, and came back with nothing.</p>
         <p class="flavor">Everything a spy does is anonymous until it is caught. This one
-        was caught, so ${escapeHtml(them)} now know whose it was, and will remember it.
-        Whatever it was wearing, it is not wearing it convincingly any more.</p>
+        was caught, so ${escapeHtml(them)} now know whose it was, and will remember it.${
+          wore
+            ? ' Whatever it was wearing, it is not wearing it convincingly any more.'
+            : ''
+        }</p>
       </div>`,
   });
 }

@@ -82,7 +82,7 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
-import { openCaught, openReading } from './ui/spying';
+import { openCaught, openQuiet, openReading } from './ui/spying';
 import { canRead, readCity } from './sim/spying';
 import { couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
@@ -731,7 +731,10 @@ class App {
     const read = near
       .map(
         (c) =>
-          `<button class="small" data-act="read" data-city="${c.id}" title="Spend the turn finding out what is in it">Read ${escapeHtml(
+          // "Spy on", not "Read". There is no reason to be coy about what the
+          // order is -- the unit is a spy, the button is the spying, and a verb
+          // that could mean three other things is a verb nobody presses.
+          `<button class="small" data-act="read" data-city="${c.id}" title="Spend the turn finding out what is in it">Spy on ${escapeHtml(
             c.name,
           )}</button>`,
       )
@@ -770,9 +773,14 @@ class App {
     this.playLogCues();
     this.refreshHud();
     this.refreshSidebar();
+    // All three outcomes get a dialog. A quiet failure used to `flash`, which
+    // writes straight into the log box -- so it landed one line under the
+    // *caught* entry from an earlier attempt, with no turn marker between them,
+    // and "they know whose it was" read as the same breath as "nobody seems to
+    // have minded". What a spy came back with is never log furniture.
     if (outcome.kind === 'read') openReading(outcome.reading, city.name);
-    else if (outcome.kind === 'caught') openCaught(this.state, unit, city);
-    else this.flash('Nothing worth reporting. Nobody seems to have minded.');
+    else if (outcome.kind === 'caught') openCaught(this.state, unit, city, outcome.wore);
+    else openQuiet(unit, city);
     this.selectNextIdle();
   }
 

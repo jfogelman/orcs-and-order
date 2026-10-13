@@ -100,7 +100,8 @@ export function noticeOdds(unit: Unit): number {
 export type ReadOutcome =
   | { kind: 'read'; reading: CityReading }
   | { kind: 'missed' }
-  | { kind: 'caught' };
+  /** `wore` is whether it was in a disguise at the moment it was noticed. */
+  | { kind: 'caught'; wore: boolean };
 
 /**
  * Read a town, and spend the turn doing it.
@@ -127,7 +128,7 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
     return { kind: 'missed' };
   }
 
-  uncover(unit, city.owner);
+  const wore = uncover(unit, city.owner);
   adjustStanding(state, unit.owner, city.owner, SPY.caught);
   const them = state.players[unit.owner]?.name ?? 'Somebody';
   log(
@@ -146,7 +147,7 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
     undefined,
     [city.x, city.y],
   );
-  return { kind: 'caught' };
+  return { kind: 'caught', wore };
 }
 
 /** Everything a reading reports, gathered off the city as it stands. */
