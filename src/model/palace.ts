@@ -138,7 +138,21 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
     // Warcamp and the Grand Hall are 128 by 117 and 128 by 99, and a Hive is
     // 128 by 88. Matching their *width* share left a mound that everything
     // hung off it stood taller than. Matched on height instead.
-    width: 0.76,
+    //
+    // **And that overcorrected.** Matching height made a mound 0.76 of the box
+    // across, where the other two are 0.58, and every module hangs at a share
+    // of the *box* rather than of the chassis -- so the wings were correct and
+    // simply looked small beside it. Reported from a played game: the chassis
+    // is too big relative to the wings, and the gate is right.
+    //
+    // Matched on drawn **area** instead, which is the nearest single number to
+    // "how much of the picture is mound". The Horde's covers 0.58 x 0.53 of the
+    // box; a Hive is 128 by 88, so w * w * (88/128) = 0.307 gives w = 0.67. It
+    // sits between the two things that were tried and failed, for a reason that
+    // is not "it looks better now". Nothing else moves: the hanging points are
+    // in the art's own pixels and scale with it, and a module's size is
+    // independent of the chassis, so the gate is untouched.
+    width: 0.67,
     points: {
       // The tunnel mouth, at its base: the opening runs from about x 28 to 48.
       door: [38, 80],

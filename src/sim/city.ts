@@ -8,7 +8,7 @@ import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN, specialAt } from '../model/terrain';
 import { postCalm } from './posts';
-import { unitType, UNIT_TYPES } from '../model/units';
+import { UNIT_TYPES, holdsGround, unitType } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
@@ -440,7 +440,7 @@ export function isGarrisoned(state: GameState, city: City): boolean {
  */
 export function garrisonSize(state: GameState, city: City): number {
   return state.units.filter(
-    (u) => u.owner === city.owner && u.x === city.x && u.y === city.y && !unitType(u.type).settler,
+    (u) => u.owner === city.owner && u.x === city.x && u.y === city.y && holdsGround(unitType(u.type)),
   ).length;
 }
 
@@ -457,7 +457,10 @@ export function postedAround(state: GameState, city: City): number {
     (u) =>
       u.owner === city.owner &&
       distance(u.x, u.y, city.x, city.y) <= 1 &&
-      !unitType(u.type).settler,
+      // Not merely "not a founder". A digger never held a gate and an agent
+      // holds one even less -- it has no attack at all and is meant to be
+      // somewhere else.
+      holdsGround(unitType(u.type)),
   ).length;
 }
 

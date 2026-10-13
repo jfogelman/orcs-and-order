@@ -1,6 +1,6 @@
 import { distance, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
-import { unitType } from '../model/units';
+import { unitType, worksGround } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import { contentLimit } from './city';
 import { log, playerCities, playerUnits } from './gamestate';
@@ -38,7 +38,9 @@ export function bestImproveJob(
   const w = state.width;
   const claimed = new Set<number>();
   for (const u of playerUnits(state, playerId)) {
-    if ((from && u.id === from.id) || !unitType(u.type).settler) continue;
+    // Every ground worker, not only founders -- two Hive Workers were free to
+    // claim the same tile because neither could see the other.
+    if ((from && u.id === from.id) || !worksGround(unitType(u.type))) continue;
     if (u.order === 'improve') claimed.add(idx(u.x, u.y, w));
     if (u.goto) claimed.add(idx(u.goto.x, u.goto.y, w));
   }
@@ -104,7 +106,7 @@ export function resumeAutoWork(state: GameState, playerId: number): void {
 /** Whether this worker could be given an Irrigate To at all, and why not. */
 export function canIrrigateTo(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
   if (!TERRAFORM.enabled) return { ok: false, reason: 'Nobody here knows how to improve the land.' };
-  if (!unitType(unit.type).settler) return { ok: false, reason: 'Only workers dig.' };
+  if (!worksGround(unitType(unit.type))) return { ok: false, reason: 'Only workers dig.' };
   if (!hasFlag(state.players[unit.owner], 'terraform')) return { ok: false, reason: 'That needs Tree-Hugging.' };
   return { ok: true };
 }

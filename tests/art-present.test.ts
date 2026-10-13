@@ -88,6 +88,21 @@ const NOT_DRAWN_YET = {
     // build would be art nobody can see.
     'orcPosting',
     'soldierPosting',
+    'theStandingNiche',
+    // Section 136: the Hive's ten ordinary buildings, which it simply never
+    // had -- `faction: 'both'` meant "the two sides" when there were two, and
+    // nobody re-read those entries when a third arrived. The rules are in;
+    // the art prompts are written and the drops are pending. Each line goes
+    // the moment its file lands.
+    'theNarrowing',
+    'theHum',
+    'theDeeperHum',
+    'theScentRecord',
+    'theDeepRecord',
+    'theRenderingPit',
+    'theGreaterRendering',
+    'theForwardBurrow',
+    'theHardeningFloor',
   ],
 };
 

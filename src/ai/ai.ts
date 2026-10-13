@@ -33,7 +33,7 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
-import { UNIT_TYPES, ammoLeft, headcount, unitType } from '../model/units';
+import { UNIT_TYPES, ammoLeft, headcount, holdsGround, unitType } from '../model/units';
 import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
@@ -754,9 +754,10 @@ export function chooseProduction(
     (u) =>
       u.owner === city.owner &&
       distance(u.x, u.y, city.x, city.y) <= 1 &&
-      !unitType(u.type).settler &&
-      // A ship in the harbour does not hold the gate.
-      !unitType(u.type).sails,
+      // A ship in the harbour does not hold the gate, and neither does a
+      // digger -- the Hive's Worker is `works` and not `settler`, so this used
+      // to count one and stop asking for a defender.
+      holdsGround(unitType(u.type)),
   ).length;
   const cities = playerCities(state, city.owner).length;
   // Aboard a ship counts: a settler on its way across is not a settler to replace.

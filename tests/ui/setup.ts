@@ -126,3 +126,14 @@ if (typeof document !== 'undefined') {
     };
   }
 }
+
+/**
+ * jsdom has no layout, so it has no `scrollIntoView`.
+ *
+ * The Orcpedia calls it whenever it is opened at an entry, so without this any
+ * test that follows a pedia link throws before it can assert anything -- and
+ * the throw looks like a bug in the book rather than a gap in the fixture.
+ */
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView(): void {};
+}
