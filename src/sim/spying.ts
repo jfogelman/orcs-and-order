@@ -180,6 +180,20 @@ export function riskBand(unit: Unit, action = 'read'): string {
   return (RISK_BANDS.find((b) => odds < b.under) ?? RISK_BANDS[RISK_BANDS.length - 1]).label;
 }
 
+/**
+ * A tally of what agents actually did, for probes. Section 136.
+ *
+ * **Counted here rather than read off the log or the board afterwards.** The
+ * first probe asked how many towns were on file at the end of a game and got
+ * 0.71, which cannot tell a spy that read one town forty times from one that
+ * read forty towns once -- `readings` is keyed by city, so re-reading the same
+ * gate every turn files one entry. And the log is a 400-entry window on a
+ * 300-turn game, so counting incidents from it is counting the end of the game.
+ *
+ * Nothing in the game reads this. It is off to one side on purpose.
+ */
+export const SPY_TRACE = { attempts: 0, read: 0, missed: 0, caught: 0 };
+
 /** What a reading tells you about a city. */
 export interface CityReading {
   city: string;
@@ -252,11 +266,13 @@ export type ReadOutcome =
  */
 export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome {
   if (!canRead(unit, city).ok) return { kind: 'missed' };
+  SPY_TRACE.attempts++;
   unit.moves = 0;
   unit.order = 'none';
 
   if (withRng(state, (rng) => rng.chance(readOdds(unit)))) {
     awardXp(state, unit, SPY.xpRead);
+    SPY_TRACE.read++;
     const reading = readingOf(state, city);
     remember(state, unit.owner, city, reading);
     return { kind: 'read', reading };
@@ -267,9 +283,11 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
   // way the other side ever learns whose spy this was.
   if (!withRng(state, (rng) => rng.chance(noticeOdds(unit)))) {
     awardXp(state, unit, SPY.xpQuietFailure);
+    SPY_TRACE.missed++;
     return { kind: 'missed' };
   }
 
+  SPY_TRACE.caught++;
   const wore = uncover(unit, city.owner);
   adjustStanding(state, unit.owner, city.owner, SPY.caught);
   const them = state.players[unit.owner]?.name ?? 'Somebody';

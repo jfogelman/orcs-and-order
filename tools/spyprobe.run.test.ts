@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { playerUnits } from '../src/sim/gamestate';
 import { unitType } from '../src/model/units';
-import { SPY } from '../src/sim/spying';
+import { SPY, SPY_TRACE } from '../src/sim/spying';
 import type { GameState } from '../src/model/types';
 import { playGame, seedSet, TUNED_BASES } from './sweep';
 // The shipped game, not the levers as they stand. See the note in sweep.run.
@@ -27,23 +27,33 @@ import { control } from './control';
  * instrument.
  */
 interface Tally {
-  built: number;
+  /** Times an agent stood at a gate and tried. Counted as it happens. */
+  attempts: number;
   read: number;
+  missed: number;
   caught: number;
+  /** Distinct towns ever filed. A floor on reads, not a count of them. */
   filed: number;
+  /** Agents still alive at the end -- the rest were caught out and killed. */
   lived: number;
 }
 
 function tallyOf(state: GameState): Tally {
-  const t: Tally = { built: 0, read: 0, caught: 0, filed: 0, lived: 0 };
+  const t: Tally = {
+    attempts: SPY_TRACE.attempts,
+    read: SPY_TRACE.read,
+    missed: SPY_TRACE.missed,
+    caught: SPY_TRACE.caught,
+    filed: 0,
+    lived: 0,
+  };
   for (const p of state.players) {
     if (p.barbarian) continue;
+    // Keyed by city, so an agent that read one gate forty times files one
+    // entry. Kept as a cross-check on the counters, never as the measurement.
     t.filed += Object.keys(p.readings ?? {}).length;
     t.lived += playerUnits(state, p.id).filter((u) => unitType(u.type).spy).length;
   }
-  // The log is a 400-entry window on a three-hundred-turn game, so these are a
-  // floor and not a count. Being caught is the only spy event that logs at all.
-  t.caught += state.log.filter((e) => /noticed|taking an interest/i.test(e.text)).length;
   return t;
 }
 
@@ -51,7 +61,7 @@ describe('is espionage ever on the board', () => {
   it('counts agents, readings and incidents across a set of games', () => {
     control();
     const lines: string[] = [];
-    const totals: Tally = { built: 0, read: 0, caught: 0, filed: 0, lived: 0 };
+    const totals: Tally = { attempts: 0, read: 0, missed: 0, caught: 0, filed: 0, lived: 0 };
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
 
     for (const seed of seeds) {
@@ -59,6 +69,12 @@ describe('is espionage ever on the board', () => {
       // is handed the same state object every half-turn, so holding the last
       // one is how a probe gets to look at the game it just played.
       let last: GameState | null = null;
+      // Zeroed per game, or every row would be the running total of the ones
+      // before it and the last game would look like the busiest.
+      SPY_TRACE.attempts = 0;
+      SPY_TRACE.read = 0;
+      SPY_TRACE.missed = 0;
+      SPY_TRACE.caught = 0;
       const out = playGame(seed, undefined, (s) => {
         last = s;
       });
@@ -66,20 +82,38 @@ describe('is espionage ever on the board', () => {
       for (const k of Object.keys(totals) as (keyof Tally)[]) totals[k] += t[k];
       lines.push(
         `seed ${String(seed).padStart(9)} T${String(out.turns).padStart(4)} ` +
-          `agents alive ${t.lived} | towns on file ${t.filed} | incidents ${t.caught}`,
+          `tried ${String(t.attempts).padStart(3)} | read ${String(t.read).padStart(3)} ` +
+          `| quiet ${String(t.missed).padStart(3)} | caught ${String(t.caught).padStart(3)} ` +
+          `| towns ${t.filed} | alive ${t.lived}`,
       );
     }
 
     const n = seeds.length;
     lines.push('');
     lines.push(`games                 ${n}`);
+    lines.push(`readings attempted    ${(totals.attempts / n).toFixed(2)} per game`);
+    lines.push(`  of which read       ${(totals.read / n).toFixed(2)}`);
+    lines.push(`  quiet failures      ${(totals.missed / n).toFixed(2)}`);
+    lines.push(`  caught              ${(totals.caught / n).toFixed(2)}`);
+    lines.push(`distinct towns filed  ${(totals.filed / n).toFixed(2)} per game`);
     lines.push(`agents alive at end   ${(totals.lived / n).toFixed(2)} per game`);
-    lines.push(`towns on file at end  ${(totals.filed / n).toFixed(2)} per game`);
-    lines.push(`incidents logged      ${(totals.caught / n).toFixed(2)} per game`);
+    if (totals.attempts > 0) {
+      // The shape the rules predict at rank 0: three readings in four, and one
+      // in eight of the whole attempts caught. A measured shape far off that
+      // means agents are not surviving long enough to be promoted, or are
+      // dying before they ever reach a gate.
+      lines.push('');
+      lines.push(
+        `read ${((100 * totals.read) / totals.attempts).toFixed(0)}% ` +
+          `quiet ${((100 * totals.missed) / totals.attempts).toFixed(0)}% ` +
+          `caught ${((100 * totals.caught) / totals.attempts).toFixed(0)}% ` +
+          `(rank 0 predicts 75 / 12.5 / 12.5)`,
+      );
+    }
     lines.push('');
     lines.push(
-      totals.filed === 0
-        ? '**ZERO.** Nothing was ever read. A sweep of SPY would measure the same game twice.'
+      totals.attempts === 0
+        ? '**ZERO.** No agent ever tried. A sweep of SPY would measure the same game twice.'
         : 'Espionage happens. A sweep of it is measuring something.',
     );
     lines.push(`(SPY.ai ${SPY.ai}, SPY.aiWants ${SPY.aiWants}, remembers ${SPY.remembers})`);

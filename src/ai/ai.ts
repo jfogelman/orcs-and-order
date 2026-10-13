@@ -1413,10 +1413,19 @@ function bestAtHome(state: GameState, unit: Unit, radius = 8): number {
 function actSpy(state: GameState, unit: Unit): void {
   if (!SPY.enabled) return;
 
-  // Standing at a gate already: that is the job, and it is worth more than any
-  // walking. Read the one it can read, preferring the town it knows least about.
+  // Standing at a gate already: that is the job. Read the one it can read,
+  // preferring the town it knows least about.
+  //
+  // **But only if the file on it has gone cold.** The first version read
+  // whatever it was standing next to, every turn, forever -- one game in the
+  // probe tried sixty-eight readings and filed two towns, which is an agent
+  // re-reading one gate for sixty turns. Every one of those carried a chance of
+  // being caught, and bought information the empire already had. An agent with
+  // a fresh file walks on instead, and if there is nowhere else to go it simply
+  // waits, which costs nothing.
   const here = state.cities
     .filter((c) => canRead(unit, c).ok && hostileOrNot(state, unit.owner, c.owner))
+    .filter((c) => staleness(state, unit.owner, c) >= SPY.remembers)
     .sort((a, b) => staleness(state, unit.owner, b) - staleness(state, unit.owner, a))[0];
   if (here) {
     readCity(state, unit, here);

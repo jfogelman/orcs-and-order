@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { foundCity } from '../src/sim/city';
 import { PERSONALITIES, chooseProduction, nearestEnemyTarget, runAiTurn } from '../src/ai/ai';
-import { SPY, lastReading, readCity } from '../src/sim/spying';
+import { SPY, SPY_TRACE, lastReading, readCity } from '../src/sim/spying';
 import { appearsTo } from '../src/sim/disguise';
 import { unitType } from '../src/model/units';
+import { distance } from '../src/engine/grid';
 import { TECHS } from '../src/model/techs';
 import type { City, GameState, Unit } from '../src/model/types';
 
@@ -113,21 +114,22 @@ describe('the other side builds an agent', () => {
 
 describe('the other side uses it', () => {
   it('walks it toward somebody else’s gate rather than at their army', () => {
-    const { state, spy, near } = board();
+    const { state, spy, near, far } = board();
     const before = { x: spy.x, y: spy.y };
+    // Asked as "did it ever arrive", not "is it nearer now than it was". Once
+    // an agent has read a town it moves on to the next one, so a test that
+    // measured the distance at the end failed for the behaviour working.
+    let arrived = false;
     for (let turn = 0; turn < 30; turn++) {
       spy.moves = unitType(spy.type).move;
       runAiTurn(state, 0);
       if (!state.units.includes(spy)) break;
+      arrived ||= [near, far].some((c) => distance(spy.x, spy.y, c.x, c.y) <= 1);
     }
     expect(state.units, 'the agent was marched into something and killed').toContain(spy);
-    // It set off, and it set off the right way.
     const moved = Math.abs(spy.x - before.x) + Math.abs(spy.y - before.y);
     expect(moved, 'the agent never left home').toBeGreaterThan(0);
-    expect(
-      Math.abs(spy.x - near.x) < Math.abs(before.x - near.x),
-      'the agent walked away from every town there is',
-    ).toBe(true);
+    expect(arrived, 'thirty turns and it never reached anybody’s gate').toBe(true);
   });
 
   it('wears the colours of the side it is going to read', () => {
@@ -143,6 +145,32 @@ describe('the other side uses it', () => {
     // offered and so the one the AI should be taking.
     expect(appearsTo(spy, 1).owner).toBe(1);
     expect(appearsTo(spy, 0).owner, 'its own side is never fooled').toBe(0);
+  });
+
+  it('does not stand at one gate re-reading a file it already has', () => {
+    const { state, spy, near } = board();
+    for (let turn = 0; turn < 60; turn++) {
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      if (!state.units.includes(spy)) break;
+    }
+    const filed = lastReading(state, 0, near.id);
+    if (!filed) return; // it never got there; the walking test covers that
+
+    // A fresh file is worth nothing to read again, and every reading carries a
+    // chance of being caught. The first version read whatever it was next to
+    // every turn: one probe game tried sixty-eight readings and filed two
+    // towns, buying information the empire already had at a real price.
+    const before = SPY_TRACE.attempts;
+    for (let turn = 0; turn < 5; turn++) {
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      if (!state.units.includes(spy)) return;
+    }
+    expect(
+      SPY_TRACE.attempts - before,
+      'the agent spent five turns re-reading a file it already had',
+    ).toBeLessThan(5);
   });
 
   it('files what it finds, where the empire can act on it', () => {
