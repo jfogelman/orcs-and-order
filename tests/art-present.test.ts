@@ -76,12 +76,11 @@ const names = (glob: Record<string, unknown>) =>
 
 /** Known gaps, with the reason each one is allowed to be a gap. */
 const NOT_DRAWN_YET = {
-  advances: [
-    // Section 136: the Hive's two counting rungs. Prompts are written into
-    // ART_PROMPTS under "The Hive's counting ladder".
-    'always-this-many',
-    'assumed-fewer',
-  ],
+  // Empty, and worth leaving here rather than deleting: the Hive's two
+  // counting rungs were listed when this test was written and drawn an hour
+  // later, and the entry below caught them still being listed. An empty list
+  // is the state this should normally be in.
+  advances: [] as string[],
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is
     // false, so neither is offered in any city, and the definitions are kept
