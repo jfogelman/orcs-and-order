@@ -584,7 +584,7 @@ these and the near misses are all in this neighbourhood:
 
 ---
 
-## Building icons — 10 of 20 done
+## Building icons — 10 of 30 done
 
 Shown beside each structure in the city screen, at `art_src/buildings/<id>.png`, 48×48.
 House style: **Flat interface icons — 48×48**, the same block the advances use. A
@@ -604,6 +604,33 @@ somewhere rather than sitting on a card.)
 | `market` | human | a single striped market stall awning above a wooden counter with one apple on it |
 | `thinkingRock` | orc | a large smooth grey boulder with a single worn seat-shaped dip on top |
 | `scriptorium` | human | a stack of leather-bound books with a quill and inkpot resting on top |
+| `theNarrowing` | hivekin | a low chitinous tunnel mouth clenched almost shut, overlapping plates of pale shell drawn inward like a closing throat |
+| `theHum` | hivekin | a smooth hollow chamber of pale waxy comb, perfectly round, with faint concentric ripples in the air at its centre |
+| `theDeeperHum` | hivekin | the same round waxy chamber, far deeper, a shaft of stacked concentric rings receding down into darkness |
+| `theStandingNiche` | hivekin | a shallow alcove of pale shell beside a doorway, exactly wide enough for two, worn smooth at shoulder height |
+| `theScentRecord` | hivekin | a flat wall panel of pale wax scored with dense rows of short glistening marks, like writing made of beads of resin |
+| `theDeepRecord` | hivekin | a tall column of the same bead-scored wax, rows spiralling all the way down it, the lowest rows dark with age |
+| `theRenderingPit` | hivekin | a round pit of dull amber resin with a thick crust, a few clean picked-white fragments resting on the surface |
+| `theGreaterRendering` | hivekin | the same amber pit, much larger and tiered into three descending rings, the lowest one clear and glassy |
+| `theForwardBurrow` | hivekin | a small raw hole dug into bare earth with a neat mound of pale grain stacked beside its mouth |
+| `theHardeningFloor` | hivekin | a broad flat slab of dark polished chitin, its surface finely pebbled, worn glassy in one well-used track across the middle |
+
+### The Hive's ten (section 136)
+
+The Hivekin had **no ordinary buildings at all** -- two shared ones against ten
+apiece for the Horde and the Kingdom. These are those ten slots filled.
+
+House rule for the set: the Hive does not *build*, it **shapes**. Nothing here
+is assembled out of parts -- no planks, no masonry, no joins, no tools. Every
+one of them should read as something that was grown, secreted or dug, in pale
+waxy comb, overlapping chitin plate, amber resin or bare earth. Where the Horde
+is crude and the Kingdom is neat, the Hive is **seamless and slightly wrong**:
+surfaces are smooth and organic, and nothing is decorated, because decoration
+would imply somebody wanted to be looked at.
+
+Keep the palette narrow -- bone, wax-yellow, amber, dark chitin -- so the set
+reads as one faction at a glance beside the Horde's browns and the Kingdom's
+greys.
 
 The two economy pairs are where the joke lives, so lean into it: the **Goblin
 Treasury** should look valuable and *completely unprotected*, and the **Simple Market**
