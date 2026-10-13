@@ -382,7 +382,7 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Unit sprites | 17 | done |
 | City sprites | 6 | done |
 | Terrain sets | 8 | done |
-| Advance icons | 44 + 5 | 44 done, the five spy advances to draw |
+| Advance icons | 44 + 7 | 44 done; the five spy advances and the Hive's two counting rungs to draw |
 | Building icons | 10 | done |
 | Sound and music | 33 + 3 | done |
 | Effect animations | 10 | done and wired |
@@ -417,7 +417,7 @@ recipe to follow when any of it is re-rolled.
 
 ---
 
-## Advance icons — 44 done, 5 to draw
+## Advance icons — 44 done, 7 to draw
 
 Each advance in the tech tree can carry a 48×48 icon at `art_src/tech/<id>.png`.
 **Entirely optional**: a missing icon is removed from the card, and the tree reads
@@ -512,6 +512,41 @@ the counting ladder, stamped from three heads by `COMPOSED_ICONS`.
 | `run-you-through` | a couched lance angled across the frame |
 | `rumbling-voice` | an open mouth with concentric sound rings coming out |
 | `lordship` | an ornate crown with a single blue gem |
+
+### The Hive's counting ladder — to draw
+
+The two advances that make there be more of them, and the only two Hivekin
+advances without an icon: 15 of their 17 are done. Both are **48×48 flat
+interface icons**, same house style as the rest of the tree, at
+`art_src/tech/<id>.png`.
+
+**The empires' ladder is not available to them, and that is the point.** The
+Horde and the Kingdom stamp one good head N times — `COMPOSED_ICONS` in
+`prepare_art.py` builds ten rungs from three drawings, and the deep end becomes
+an illegible green mass all by itself, which for *And Stupidity for All* is
+exactly right. The Hive buys its whole ladder in **two** advances where the
+Horde needs six, so there is no sequence to stamp: each of these has to carry
+the whole joke in one picture.
+
+The joke is also a different one. The Horde's ladder is orcs failing to count.
+The Hive's is that the number was never in question — there were always this
+many, you simply had not seen them yet. So neither icon should look like
+*addition*. They should look like something already full.
+
+| id | Advance | Icon subject |
+|---|---|---|
+| `always-this-many` | There Were Always This Many | a dark round brood-cell opening seen face-on, packed edge to edge with pale identical chitinous shapes, the ones at the rim in sharp focus and the ones behind receding into blackness, no gaps between them |
+| `assumed-fewer` | You Had Assumed Fewer | the same cell mouth from further back, now one of many — a honeycomb wall of identical dark openings running to the edges of the frame on every side, each one packed with the same pale shapes, no wall, no sky, no edge to the comb |
+
+Two things to hold to:
+
+- **Nothing is counted.** No numerals, no tally, no three-of-something. The
+  flat-icon preamble already forbids text and it matters more here than
+  anywhere: a number would answer the question the advance is a joke about.
+- **The second is the first, further out.** `assumed-fewer` costs 80 against
+  40 and sits behind it in the tree, so it should read as the same picture
+  having pulled back — the horror of the pair is the zoom, not a new subject.
+  Drawing them as two unrelated scenes loses the only thing the pair is doing.
 
 ### The five spy advances — to draw
 
@@ -2008,7 +2043,7 @@ are the next section. Everything else is good.
 
 | Family | Count | Status |
 |---|---|---|
-| Advance icons | 15 | done, including `caste-riptide` and `caste-bloat` |
+| Advance icons | 15 of 17 | `always-this-many` and `assumed-fewer` still to draw; prompts under *The Hive's counting ladder* |
 | Advisor portraits + talking cycles | 6 + 6 | done |
 | Castes, at base / attack / weakened | 42 | done |
 | Buildings | 7 | done, including `princess-bonus` |

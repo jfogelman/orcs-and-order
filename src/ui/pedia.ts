@@ -882,6 +882,42 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       </div>
       <div class="pedia-pane" data-pane="diplomacy" hidden>
         <p class="flavor">
+          <strong>Spies</strong> arrive with <em>Someone Else's Business</em>, and every
+          side builds one. A spy never attacks &mdash; it has no attack at all &mdash; so
+          there is no way to use it as a bad soldier. What it does is stand next to
+          somebody else's town and <strong>spy on</strong> it: what they are building, who
+          is in it, what they have put up, and how far along the thing they mean to win
+          with &mdash; the Portal, the Object, the Shell &mdash; has got in that town. The
+          reading is good for that turn and no longer.
+        </p>
+        <p class="flavor">
+          <strong>It can wear somebody's colours.</strong> Your own, and then nobody can
+          tell which of your soldiers is the one doing the looking &mdash; useful at home.
+          Or <em>theirs</em>, and then their armies will not come for it at all, which is
+          how it walks in. The second is far stronger and breaks the moment anything
+          touches it: a fight uncovers a spy to whoever was in it, permanently, and only
+          to them.
+        </p>
+        <p class="flavor">
+          <strong>Failing and being caught are two different things.</strong> A reading
+          that fails has wasted the turn and told nobody anything &mdash; everything a spy
+          does is anonymous. Being <em>noticed</em> is the one moment the other side
+          learns whose it was, and they will hold it against you. A promoted spy reads
+          better; more to the point, it is noticed far less, which is the thing worth
+          promoting toward.
+        </p>
+        <p class="flavor">
+          <strong>Every spy order says what it is likely to cost you</strong> &mdash; from
+          <em>barely any risk</em> up through <em>reckless</em> &mdash; and the words are
+          read off the real odds rather than written on by hand, so they cannot drift
+          from the rules. The figure quoted is the chance the order ends with your agent
+          uncovered, not the chance it fails: those are two different rolls, and failing
+          quietly costs you a turn and nothing else. Standing at a gate and taking an
+          interest is the mildest thing on the ladder. Everything further up involves
+          doing something <em>to</em> somebody, and a thing that is done is a thing that
+          can be traced.
+        </p>
+        <p class="flavor">
           <strong>Meeting somebody.</strong> The first time anything of yours can see
           anything of theirs, the two of you have met, and you hear from them. They send
           a greeting, or mention where their border is, or ask to be paid, or declare war

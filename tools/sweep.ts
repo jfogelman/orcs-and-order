@@ -9,6 +9,7 @@ import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
+import { DISGUISE } from '../src/sim/disguise';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
@@ -124,6 +125,7 @@ export const LEVERS: Record<string, object> = {
   STANDING,
   CONTACT,
   NEGOTIATION,
+  DISGUISE,
   DIPLOMACY_AI,
   ATTRITION,
   BEAKERS_PER_TRADE,

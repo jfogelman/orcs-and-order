@@ -12,6 +12,7 @@ import {
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
+import { appearsTo } from '../sim/disguise';
 import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
@@ -534,8 +535,13 @@ export function nearestEnemyTarget(
     // the war walking at ruins and standing next to them. `seekRuin` is the
     // one route to a ruin, and it is a deliberate errand with its own rules.
     if (isWarden(u)) continue;
-    if (u.owner !== playerId && hostile(state, playerId, u.owner) && seenBy(state, u, playerId)) {
-      consider(u.x, u.y, 1.6 * grudge(state, playerId, u.owner), 0);
+    // Section 136: asked of what this side *thinks* it is looking at. A spy
+    // wearing their colours reads as one of their own, so it is not a target --
+    // which is the whole of what the disguise buys, and it falls out of asking
+    // the question honestly rather than from a rule about spies.
+    const seen = appearsTo(u, playerId);
+    if (seen.owner !== playerId && hostile(state, playerId, seen.owner) && seenBy(state, u, playerId)) {
+      consider(u.x, u.y, 1.6 * grudge(state, playerId, seen.owner), 0);
     }
   }
   return best;
@@ -986,8 +992,11 @@ function threatNear(state: GameState, playerId: number, x: number, y: number, ra
     // its doorway and it does not swing first, so a town that garrisons itself
     // against one is a town garrisoning itself against masonry.
     if (isWarden(u)) continue;
-    // A side at peace with us is standing about, not threatening anybody.
-    if (!hostile(state, playerId, u.owner)) continue;
+    // A side at peace with us is standing about, not threatening anybody --
+    // and so, to this side's eyes, is a spy wearing its colours. Section 136:
+    // counting the threat around a town is a judgement made by looking, which
+    // is exactly the sort a disguise is for.
+    if (!hostile(state, playerId, appearsTo(u, playerId).owner)) continue;
     if (!seen[u.y * w + u.x]) continue;
     if (distance(u.x, u.y, x, y) <= radius) count++;
   }
@@ -1724,7 +1733,9 @@ function lieInWait(state: GameState, unit: Unit): boolean {
     (u) =>
       u.owner !== unit.owner &&
       !isWarden(u) &&
-      hostile(state, unit.owner, u.owner) &&
+      // Likewise: something that reads as one of their own is not somebody
+      // coming, so a Burrower does not go to ground for it.
+      hostile(state, unit.owner, appearsTo(u, unit.owner).owner) &&
       seenBy(state, u, unit.owner) &&
       distance(unit.x, unit.y, u.x, u.y) <= BURROW.aiLieInWait,
   );

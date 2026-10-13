@@ -220,6 +220,12 @@ TECH_ICONS = [
     "caste-burrower", "burrower-veteran", "burrower-deep", "burrower-ambush",
     "caste-elite", "caste-broodlord", "caste-warden", "caste-princess",
     "caste-riptide", "caste-bloat", "all-is-the-hive",
+    # Section 136: their counting ladder, which this list never had. Fifteen of
+    # their seventeen advances had icons and these two were simply absent --
+    # art dropped for an id nothing here lists is skipped in silence, which is
+    # the third time that has cost something. `tests/art-present.test.ts` now
+    # catches it from the other end, by checking the model against `public/`.
+    "always-this-many", "assumed-fewer",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like

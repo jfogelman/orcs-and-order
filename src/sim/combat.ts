@@ -1,5 +1,6 @@
 import { distance, idx } from '../engine/grid';
 import { noteClash, noteFight } from './diplomacy';
+import { uncover } from './disguise';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
@@ -592,6 +593,15 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
 }
 
 export function resolveCombat(state: GameState, attacker: Unit, defender: Unit): CombatResult {
+  // Section 136: a lie does not survive contact. Whichever of these two is
+  // pretending, the other now knows -- and each is uncovered only to the side
+  // that touched it, because finding a spy should be worth something to the
+  // finder rather than being an announcement to the map.
+  //
+  // Here rather than in the mover, because this is the one place every fight
+  // in the game goes through, however it started.
+  uncover(defender, attacker.owner);
+  uncover(attacker, defender.owner);
   // Section 116: a war is something that has actually been fought.
   noteClash(state, attacker.owner, defender.owner);
   // Section 135: and it sours what stands between them. Charged to whoever is

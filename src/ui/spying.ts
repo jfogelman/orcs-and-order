@@ -1,0 +1,131 @@
+import type { City, GameState, Unit } from '../model/types';
+import { unitType } from '../model/units';
+import type { CityReading } from '../sim/spying';
+import { escapeHtml, openModal } from './dom';
+
+/**
+ * Section 136: what the spy came back with.
+ *
+ * A plain report rather than a scene. The joke in this feature lives in the
+ * units and in what the other side is told, not in a banner -- and a dialog
+ * that arrives every time a spy does its job is a dialog that wants reading
+ * quickly.
+ *
+ * Everything here is read off the city as it stands at the moment of the
+ * reading. It is a snapshot and is not kept: a spy tells you what is there
+ * today, and tomorrow is another turn's work. That is deliberate and is the
+ * difference between a spy and a permanent window.
+ */
+/**
+ * Whether anybody noticed, said as its own bordered box.
+ *
+ * **The most important line in any of these dialogs**, and it was a clause at
+ * the end of a flavour paragraph. Whether the spy got away with it decides
+ * whether the unit still exists as an asset and whether a rival is now holding
+ * a grudge -- it is not a footnote on the size of a town. Same box, same place,
+ * same dashed border in all three dialogs, so a player learns where to look
+ * once and then always looks there.
+ */
+function noticedBox(safe: boolean, said: string): string {
+  return `<div class="spy-notice ${safe ? 'safe' : 'blown'}">
+      <strong>${safe ? 'Nobody noticed.' : 'We were noticed.'}</strong> ${said}
+    </div>`;
+}
+
+export function openReading(reading: CityReading, name: string): void {
+  const line = (label: string, value: string) =>
+    `<div class="stat-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(
+      value,
+    )}</span></div>`;
+  const work = reading.greatWork;
+  openModal({
+    title: `A Report on ${name}`,
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        ${line('Size', String(reading.size))}
+        ${line('Building', reading.building ?? 'nothing in particular')}
+        ${line(
+          'Garrison',
+          reading.garrison === 0
+            ? 'nobody at all'
+            : `${reading.garrison}, the stoutest a ${reading.strongest ?? 'something'}`,
+        )}
+        ${line(
+          'Standing structures',
+          reading.standing.length === 0 ? 'none worth the ink' : reading.standing.join(', '),
+        )}
+        ${
+          work
+            ? line(
+                `Work on ${work.name}`,
+                work.parts > 0
+                  ? `${work.parts} ${work.parts === 1 ? 'piece' : 'pieces'} of it standing here`
+                  : work.begun
+                    ? 'begun, though not in this town'
+                    : 'nothing of it started anywhere, that we can tell',
+              )
+            : ''
+        }
+      </div>
+      <div class="panel-body">
+        ${noticedBox(true, 'Nobody there has any idea you asked.')}
+        <p class="flavor">Good for today only. Towns are not in the habit of staying
+        the same.</p>
+      </div>`,
+  });
+}
+
+/**
+ * Said when a spy comes back with nothing and nobody minded.
+ *
+ * **Every spy action gets a dialog, including this one.** The first version put
+ * the quiet failure in the log instead, which put it one line under the
+ * *caught* entry from an earlier attempt with no turn marker between them -- so
+ * "they know whose it was" and "nobody seems to have minded" read as one
+ * sentence contradicting itself. Three outcomes, three dialogs, and the player
+ * is never left to work out which of two log lines was about this turn.
+ */
+export function openQuiet(unit: Unit, city: City): void {
+  openModal({
+    title: 'Nothing To Report',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">The ${escapeHtml(
+          unitType(unit.type).name,
+        )} spent the day outside ${escapeHtml(city.name)} and learned nothing useful.</p>
+        ${noticedBox(true, 'It is still where it was, and still nobody’s business but ours.')}
+        <p class="flavor">A wasted day and nothing worse. Try again tomorrow.</p>
+      </div>`,
+  });
+}
+
+/**
+ * Said when a spy is caught.
+ *
+ * **This is the only moment the other side learns whose it was**, and the
+ * dialog says so plainly, because the cost of being caught is the whole price
+ * of the feature and a player who does not notice paying it will not weigh it.
+ */
+export function openCaught(state: GameState, unit: Unit, city: City, wore: boolean): void {
+  const them = state.players[city.owner]?.name ?? 'They';
+  openModal({
+    title: 'Our Agent Was Noticed',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">The ${escapeHtml(
+          unitType(unit.type).name,
+        )} outside ${escapeHtml(city.name)} was noticed, and came back with nothing.</p>
+        ${noticedBox(
+          false,
+          `${escapeHtml(them)} now know whose it was, and will remember it.${
+            wore ? ' Whatever it was wearing, it is not wearing it convincingly any more.' : ''
+          }`,
+        )}
+        <p class="flavor">Everything a spy does is anonymous until it is caught. This one
+        was caught.</p>
+      </div>`,
+  });
+}
