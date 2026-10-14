@@ -1,0 +1,37 @@
+seed         1 T 239 tried   1 | read   1 | quiet   0 | caught   0 | towns 1 | alive 2
+seed      7920 T 277 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed     15839 T 207 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed     23758 T 301 tried   3 | read   2 | quiet   0 | caught   1 | towns 2 | alive 3
+seed     31677 T 301 tried   4 | read   3 | quiet   0 | caught   1 | towns 3 | alive 0
+seed     39596 T 225 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 1
+seed     47515 T 238 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed     55434 T 257 tried   1 | read   1 | quiet   0 | caught   0 | towns 1 | alive 1
+seed   1000003 T 243 tried   1 | read   1 | quiet   0 | caught   0 | towns 1 | alive 2
+seed   1007922 T 130 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed   1015841 T 215 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 1
+seed   1023760 T 224 tried   2 | read   1 | quiet   0 | caught   1 | towns 1 | alive 2
+seed   1031679 T 225 tried   2 | read   1 | quiet   0 | caught   1 | towns 1 | alive 3
+seed   1039598 T 277 tried   1 | read   1 | quiet   0 | caught   0 | towns 1 | alive 1
+seed   1047517 T 301 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 1
+seed   1055436 T  98 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed   2000011 T 241 tried   8 | read   4 | quiet   2 | caught   2 | towns 3 | alive 2
+seed   2007930 T 276 tried   7 | read   6 | quiet   1 | caught   0 | towns 5 | alive 1
+seed   2015849 T 231 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 2
+seed   2023768 T 262 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed   2031687 T 219 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed   2039606 T 212 tried   2 | read   2 | quiet   0 | caught   0 | towns 2 | alive 2
+seed   2047525 T 283 tried   0 | read   0 | quiet   0 | caught   0 | towns 0 | alive 0
+seed   2055444 T 242 tried   1 | read   0 | quiet   0 | caught   1 | towns 0 | alive 4
+
+games                 24
+readings attempted    1.38 per game
+  of which read       0.96
+  quiet failures      0.13
+  caught              0.29
+distinct towns filed  0.88 per game
+agents alive at end   1.17 per game
+
+read 70% quiet 9% caught 21% (rank 0 predicts 75 / 12.5 / 12.5)
+
+Espionage happens. A sweep of it is measuring something.
+(SPY.ai true, SPY.aiWants 1, remembers 12)

@@ -1,7 +1,7 @@
 import { distance } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import type { City, GameState, Unit } from '../model/types';
-import { unitType } from '../model/units';
+import { headcount, unitType } from '../model/units';
 import { awardXp, XP } from './combat';
 import { STANDING, adjustStanding } from './diplomacy';
 import { uncover } from './disguise';
@@ -80,6 +80,29 @@ export const SPY = {
    * whose soldier has changed sides knows that much happened.
    */
   irreducible: 0.03,
+  /**
+   * How many turns a report is worth acting on before it is only a rumour.
+   *
+   * The dialog says a reading is good for today, and it is: what it *reports*
+   * is a snapshot. This is a different question -- how long an empire goes on
+   * planning off the last thing it heard -- and the answer is not one turn, or
+   * a spy would be worth nothing to anybody who could not act in the same
+   * breath.
+   */
+  remembers: 12,
+  /**
+   * Whether the other side builds spies, and how many it wants.
+   *
+   * **Section 125 is the reason this exists.** The Burrower-caste shipped with
+   * no want of its own, `worth()` ranks a unit on strength and price, and a
+   * digger is an expensive soldier by those lights -- so the AI built 0.2 a
+   * game and a sweep of the mechanic came back with *identical numbers on both
+   * arms*, because it was never once on the board. A spy has `attack: 0`. It
+   * would have ranked dead last of everything, forever, and the measurement
+   * would have said espionage changes nothing.
+   */
+  ai: true,
+  aiWants: 1,
 };
 
 /**
@@ -157,6 +180,20 @@ export function riskBand(unit: Unit, action = 'read'): string {
   return (RISK_BANDS.find((b) => odds < b.under) ?? RISK_BANDS[RISK_BANDS.length - 1]).label;
 }
 
+/**
+ * A tally of what agents actually did, for probes. Section 136.
+ *
+ * **Counted here rather than read off the log or the board afterwards.** The
+ * first probe asked how many towns were on file at the end of a game and got
+ * 0.71, which cannot tell a spy that read one town forty times from one that
+ * read forty towns once -- `readings` is keyed by city, so re-reading the same
+ * gate every turn files one entry. And the log is a 400-entry window on a
+ * 300-turn game, so counting incidents from it is counting the end of the game.
+ *
+ * Nothing in the game reads this. It is off to one side on purpose.
+ */
+export const SPY_TRACE = { attempts: 0, read: 0, missed: 0, caught: 0 };
+
 /** What a reading tells you about a city. */
 export interface CityReading {
   city: string;
@@ -165,6 +202,15 @@ export interface CityReading {
   building: string | null;
   /** How many units are standing in it. */
   garrison: number;
+  /**
+   * How much defence is standing in it, counted the way the attacker counts it.
+   *
+   * The number with teeth. Everything else in a reading is for the player to
+   * read; this is the one an empire can *plan* off, and it is deliberately the
+   * same arithmetic `nearestEnemyTarget` does when it can see the gate, so a
+   * report and a pair of eyes say the same thing about the same town.
+   */
+  held: number;
   /** The strongest thing in it, by name, or null for an empty town. */
   strongest: string | null;
   /** Buildings already up, by name. */
@@ -220,12 +266,16 @@ export type ReadOutcome =
  */
 export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome {
   if (!canRead(unit, city).ok) return { kind: 'missed' };
+  SPY_TRACE.attempts++;
   unit.moves = 0;
   unit.order = 'none';
 
   if (withRng(state, (rng) => rng.chance(readOdds(unit)))) {
     awardXp(state, unit, SPY.xpRead);
-    return { kind: 'read', reading: readingOf(state, city) };
+    SPY_TRACE.read++;
+    const reading = readingOf(state, city);
+    remember(state, unit.owner, city, reading);
+    return { kind: 'read', reading };
   }
 
   // Failed. Whether anybody noticed is a second roll, and it is the one that
@@ -233,9 +283,11 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
   // way the other side ever learns whose spy this was.
   if (!withRng(state, (rng) => rng.chance(noticeOdds(unit)))) {
     awardXp(state, unit, SPY.xpQuietFailure);
+    SPY_TRACE.missed++;
     return { kind: 'missed' };
   }
 
+  SPY_TRACE.caught++;
   const wore = uncover(unit, city.owner);
   adjustStanding(state, unit.owner, city.owner, SPY.caught);
   const them = state.players[unit.owner]?.name ?? 'Somebody';
@@ -256,6 +308,38 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
     [city.x, city.y],
   );
   return { kind: 'caught', wore };
+}
+
+/**
+ * File the report, so the empire can plan off it after the spy has walked away.
+ *
+ * The player gets this as a dialog they read and remember themselves. An AI
+ * cannot read a dialog, so for it the same information has to be *written
+ * down* -- and it is written down for the player's empire too, so the two sides
+ * are keeping the same kind of file rather than one of them being given a
+ * private sense.
+ */
+function remember(state: GameState, viewerId: number, city: City, reading: CityReading): void {
+  const side = state.players[viewerId];
+  if (!side) return;
+  (side.readings ??= {})[city.id] = { turn: state.turn, held: reading.held };
+}
+
+/**
+ * What this side last heard about a town, if it is still worth acting on.
+ *
+ * Null for a town nobody has read, and for a report old enough to be a rumour.
+ * Callers get the choice of believing it or not; nothing here decides.
+ */
+export function lastReading(
+  state: GameState,
+  viewerId: number,
+  cityId: number,
+): { turn: number; held: number } | null {
+  if (!SPY.enabled) return null;
+  const filed = state.players[viewerId]?.readings?.[cityId];
+  if (!filed) return null;
+  return state.turn - filed.turn <= SPY.remembers ? filed : null;
 }
 
 /** Everything a reading reports, gathered off the city as it stands. */
@@ -281,6 +365,13 @@ function readingOf(state: GameState, city: City): CityReading {
         ? (BUILDINGS[city.producing.id]?.name ?? null)
         : null,
     garrison: garrison.length,
+    // Only the unit on the gate itself, which is what `nearestEnemyTarget`
+    // counts when it can see one. A report that counted the whole district
+    // would make every read town look harder than a seen one.
+    held: (() => {
+      const guard = garrison.find((u) => u.x === city.x && u.y === city.y);
+      return guard ? unitType(guard.type).defense * headcount(guard) : 0;
+    })(),
     strongest: strongest ? unitType(strongest.type).name : null,
     standing: city.buildings.map((b) => BUILDINGS[b]?.name ?? b),
     greatWork:

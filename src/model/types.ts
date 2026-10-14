@@ -153,6 +153,16 @@ export interface Player {
    * until the first one is begun, and in every save from before them.
    */
   folliesTold?: string[];
+  /**
+   * What a spy last reported about a rival town, by city id. Section 136.
+   *
+   * The empire's standing file on somebody else's gates, and the reason to pay
+   * thirty shields for a unit that cannot fight: a town nobody can currently
+   * see is a town whose strength has to be *guessed at*, and a report replaces
+   * the guess with a number until it goes stale. Absent until a spy reports,
+   * and in every save from before there were spies.
+   */
+  readings?: Record<number, { turn: number; held: number }>;
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */
