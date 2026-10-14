@@ -983,6 +983,26 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           nobody there, or there may be somebody better at this than you are.
         </p>
         <p class="flavor">
+          <strong>Sabotage</strong> is the first thing on this list that actually
+          <em>does</em> something. An agent beside somebody else's town can spend the day
+          wrecking whatever it is building, which takes every shield banked in it and
+          leaves the town itself untouched &mdash; a spy is one person with a bad idea,
+          not an army. <strong>They are told it happened and are not told by whom</strong>,
+          which is the rule everywhere in this section: a name is the prize for catching
+          somebody, and nobody was caught.
+        </p>
+        <p class="flavor">
+          <strong>What it costs you depends on what they are building.</strong> A town
+          putting up a granary is barely watched. A town most of the way through something
+          large has eyes on it, and the risk climbs in steps as the shields go in &mdash;
+          four of them, so the question is which band you are in rather than a sum.
+          Anything that would <em>win the game</em> sits above all four, whatever is
+          banked in it: a Portal at twenty shields is already the most closely watched
+          building site in the world, because of what it is. <strong>And being caught at
+          this costs you the agent</strong>, which is what makes the top of the ladder a
+          decision rather than a free roll. Rank makes it safer and never makes it safe.
+        </p>
+        <p class="flavor">
           <strong>Everybody does this.</strong> The other sides build agents too, dress
           them in somebody's colours and walk them to your gates, and what they learn
           goes in a file they plan off: an army that knows which of your towns is empty

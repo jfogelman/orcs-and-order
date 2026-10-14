@@ -82,8 +82,9 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
-import { openCaught, openQuiet, openReading, openSearch } from './ui/spying';
+import { openCaught, openQuiet, openReading, openSabotage, openSearch } from './ui/spying';
 import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
+import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabotage';
 import { couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -759,6 +760,19 @@ class App {
           )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'read'))}</span></button>`,
       )
       .join('');
+    // Section 136 slice 5: wrecking the works. Priced per town rather than per
+    // action, because what it costs you depends on what they are building --
+    // so the word on the button moves as the town banks shields, and jumps
+    // when they start something that would end the game.
+    const wreck = near
+      .filter((c) => canSabotage(unit, c, this.state).ok)
+      .map(
+        (c) =>
+          `<button class="small" data-act="wreck" data-city="${c.id}" title="Spend the turn putting sand in the gears. Being caught at this costs the agent.">Sabotage ${escapeHtml(
+            c.name,
+          )} &middot; <span class="risk">${escapeHtml(sabotageBand(this.state, unit, c))}</span></button>`,
+      )
+      .join('');
     // Section 136 slice 4. Offered wherever the spy is standing rather than
     // beside anything in particular: the whole point is that you do not know
     // where somebody's agent is, so a sweep you could only run in the right
@@ -785,7 +799,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + sweep + dress + off;
+    return read + wreck + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -810,6 +824,26 @@ class App {
     if (outcome.kind === 'read') openReading(outcome.reading, city.name);
     else if (outcome.kind === 'caught') openCaught(this.state, unit, city, outcome.wore);
     else openQuiet(unit, city);
+    this.selectNextIdle();
+  }
+
+  /** Spend the turn wrecking what a town has been building. */
+  private orderWreck(cityId: number): void {
+    const unit = this.selected;
+    const city = this.state.cities.find((c) => c.id === cityId);
+    if (!unit || !city || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canSabotage(unit, city, this.state);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const phase = sabotagePhase(this.state, city);
+    const out = sabotage(this.state, unit, city);
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+    openSabotage(this.state, unit, city, out, phase);
     this.selectNextIdle();
   }
 
@@ -3062,6 +3096,9 @@ class App {
               break;
             case 'sweep':
               this.orderSweep();
+              break;
+            case 'wreck':
+              this.orderWreck(Number(btn.dataset.city));
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

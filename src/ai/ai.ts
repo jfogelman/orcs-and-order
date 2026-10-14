@@ -14,6 +14,7 @@ import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
+import { SABOTAGE, canSabotage, isEndingWork, sabotage, sabotageExposure } from '../sim/sabotage';
 import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
@@ -1413,6 +1414,28 @@ function bestAtHome(state: GameState, unit: Unit, radius = 8): number {
  */
 function actSpy(state: GameState, unit: Unit): void {
   if (!SPY.enabled) return;
+
+  // Section 136 slice 5: wreck it, if what is in there is worth the agent.
+  //
+  // **Only an ending work, and only at a bar.** A side that sabotaged whatever
+  // happened to be nearest would spend its one agent on a granary, and one
+  // that sabotaged anything at all would trade a thirty-shield unit for a
+  // coin-flip every turn. The thing worth losing an agent over is the thing
+  // that would otherwise lose the game -- and the odds have to be worth it,
+  // which is the same shape as `RUINS.aiOdds`: a bar on a fight you choose.
+  if (SABOTAGE.enabled && SABOTAGE.ai) {
+    const worth = state.cities.find(
+      (c) =>
+        canSabotage(unit, c, state).ok &&
+        isEndingWork(c) &&
+        hostileOrNot(state, unit.owner, c.owner) &&
+        sabotageExposure(state, unit, c) <= SABOTAGE.aiOdds,
+    );
+    if (worth) {
+      sabotage(state, unit, worth);
+      return;
+    }
+  }
 
   // Standing at a gate already: that is the job. Read the one it can read,
   // preferring the town it knows least about.

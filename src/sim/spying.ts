@@ -161,7 +161,7 @@ export const SPY_ACTIONS: Record<string, SpyAction> = {
   search: { verb: 'Search for spies', risk: 0, ready: true },
   read: { verb: 'Spy on', risk: 1, ready: true },
   incite: { verb: 'Foment discontent in', risk: 2.2, ready: false },
-  sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: false },
+  sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: true },
   turn: { verb: 'Turn', risk: 3.6, ready: false },
   double: { verb: 'Turn their agent in', risk: 4.5, ready: false },
 };
@@ -175,10 +175,22 @@ export const SPY_ACTIONS: Record<string, SpyAction> = {
  * one in two. Quoting the notice roll would have told them the truth about a
  * number they never face.
  */
+/**
+ * The chance this agent is noticed doing *something*, before the action it is
+ * doing is taken into account.
+ *
+ * Pulled out so the rungs that price themselves off the board -- sabotage
+ * scales with what is being wrecked -- multiply the same number everything
+ * else does, instead of writing the two rolls out again and drifting from it.
+ */
+export function bareExposure(unit: Unit): number {
+  return (1 - readOdds(unit)) * noticeOdds(unit);
+}
+
 export function exposureOdds(unit: Unit, action = 'read'): number {
   const act = SPY_ACTIONS[action];
   if (!act) return 0;
-  const bare = (1 - readOdds(unit)) * noticeOdds(unit);
+  const bare = bareExposure(unit);
   // Never below nothing: an action milder than reading a town (searching is
   // `risk: 0`) would otherwise be handed a negative floor.
   const floor = Math.max(0, (act.risk - 1) * SPY.irreducible);
@@ -195,7 +207,13 @@ export const RISK_BANDS: { under: number; label: string }[] = [
   { under: 0.15, label: 'slight risk' },
   { under: 0.25, label: 'fair risk' },
   { under: 0.45, label: 'real risk' },
-  { under: 1.01, label: 'reckless' },
+  { under: 0.65, label: 'reckless' },
+  // Section 136 slice 5 added a rung that can reach here: sabotaging something
+  // that would win the game. The ladder needed a word above `reckless` or the
+  // most dangerous order available would have read the same as a merely bad
+  // one, and the whole point of pricing sabotage off what is being wrecked is
+  // that the player can see the difference.
+  { under: 1.01, label: 'all but certain' },
 ];
 
 /**
@@ -259,6 +277,11 @@ export interface CityReading {
    * march on, which is the entire reason to have sent a spy.
    */
   greatWork: { name: string; begun: boolean; parts: number } | null;
+}
+
+/** Whether this unit is close enough to a town to do anything to it. */
+export function canReach(unit: Unit, city: City): boolean {
+  return distance(unit.x, unit.y, city.x, city.y) <= SPY.reach;
 }
 
 /** Whether this unit could read this city, and why not. */
