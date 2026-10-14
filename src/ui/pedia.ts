@@ -804,7 +804,9 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <strong>ruins</strong> &mdash; something that was standing here long before either
           of you, with something still in it. Walking into one wakes what is inside, and
           that costs the rest of that unit's turn: a ruin is a fight you have decided to
-          start, not a thing you collect on the way past.
+          start, not a thing you collect on the way past. <strong>You do not get in on
+          that turn.</strong> What is in there stands up <em>in the doorway</em> and your
+          unit stays where it was, so the knock buys you the fight and nothing else.
         </p>
         <p class="flavor">
           <strong>Hold it once it is quiet and it is yours.</strong> The prize comes to

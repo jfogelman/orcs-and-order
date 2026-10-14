@@ -13,7 +13,7 @@ import {
   tickRuins,
 } from '../src/sim/ruins';
 import { runRaiders } from '../src/sim/barbarians';
-import { tryStep } from '../src/sim/movement';
+import { attackTargets, tryStep } from '../src/sim/movement';
 import { resolveCombat } from '../src/sim/combat';
 import { UNIT_TYPES, unitType } from '../src/model/units';
 import { barbarianOf, createGame, spawnUnit } from '../src/sim/gamestate';
@@ -107,6 +107,40 @@ describe('walking into one', () => {
     expect(state.units.filter(isWarden).length).toBe(RUINS.guard.gold.count);
   });
 
+  it('stands the guard up in the doorway, and leaves the knocker outside', () => {
+    const { state, ruin } = world();
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    orc.moves = 3;
+
+    const out = tryStep(state, orc, ruin.x, ruin.y);
+
+    // Reported from a played game: the guardian appeared *around* the ruin and
+    // the unit that woke it was somehow standing in the middle of it. What is
+    // in a ruin is guarding the ruin; it stands up in the doorway.
+    const onTheRuin = state.units.find((u) => u.x === ruin.x && u.y === ruin.y);
+    expect(onTheRuin, 'nothing is holding the doorway').toBeDefined();
+    expect(isWarden(onTheRuin!), 'the doorway is held by the wrong thing').toBe(true);
+
+    // And knocking is not entering. The step is refused, and it still costs the
+    // turn -- waking something is a decision, not a free look.
+    expect(out.kind).toBe('blocked');
+    expect({ x: orc.x, y: orc.y }).toEqual({ x: ruin.x - 1, y: ruin.y });
+    expect(orc.moves).toBe(0);
+  });
+
+  it('lets a second knock be an ordinary attack, asked about once', () => {
+    const { state, ruin } = world();
+    const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
+    tryStep(state, orc, ruin.x, ruin.y);
+
+    // The second half of the same report: attacking the guard was asked about
+    // again as though its tile were an undisturbed ruin. With the doorway held,
+    // the ruin is awake and the tile is simply somewhere a warden is standing.
+    expect(ruinState(state, ruin.x, ruin.y)).not.toBe('undisturbed');
+    orc.moves = 1;
+    expect(attackTargets(state, orc).has(idx(ruin.x, ruin.y, state.width))).toBe(true);
+  });
+
   it('conjures a wilds slot in a game that had none', () => {
     const { state, ruin } = world();
     expect(barbarianOf(state)).toBeNull();
@@ -166,12 +200,26 @@ describe("a ruin is a soldier's business", () => {
 });
 
 describe('taking what is in it', () => {
+  /**
+   * A ruin knocked on, its guard cut down, and somebody standing in it.
+   *
+   * **Three steps, not one.** Knocking no longer puts you inside: what is in a
+   * ruin stands up *in the doorway* and the unit that woke it stays where it
+   * was, so taking the prize means winning the fight and then walking in. The
+   * first version of this helper took one step and assumed it ended up on the
+   * tile, which is exactly the bug a player reported.
+   */
   function cleared(prize: Ruin['prize']): { state: GameState; ruin: Ruin } {
     const { state, ruin } = world(prize);
     const orc = spawnUnit(state, 0, 'orc', ruin.x - 1, ruin.y, false);
     tryStep(state, orc, ruin.x, ruin.y);
+    expect(orc.x, 'knocking should not have put it inside').toBe(ruin.x - 1);
     // The fight, skipped: whatever stood up is cut down.
-    state.units = state.units.filter((u) => !isWarden(u));
+    state.units = state.units.filter((u) => !isWarden(u) || u.id === orc.id);
+    // And now it can walk in, which is the turn after.
+    orc.moves = 1;
+    tryStep(state, orc, ruin.x, ruin.y);
+    expect(orc.x, 'the way in should be clear once the guard is down').toBe(ruin.x);
     return { state, ruin };
   }
 
