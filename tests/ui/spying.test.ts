@@ -27,6 +27,7 @@ interface App {
   select(unit: Unit | null): void;
   refreshSidebar(): void;
   orderRead(cityId: number): void;
+  orderSweep(): void;
 }
 
 let app: App;
@@ -233,5 +234,50 @@ describe('what a spy is shown to have come back with', () => {
     wearDisguise(state, spy, 1);
     app.orderRead(city.id);
     expect(dialog()).toMatch(/wearing/i);
+  });
+});
+
+describe('sweeping the ground, through the interface', () => {
+  it('offers the sweep and says it costs nothing', () => {
+    const { spy } = board();
+    app.select(spy);
+    app.refreshSidebar();
+    const panel = document.getElementById('selection')!.textContent ?? '';
+    expect(panel).toContain('Search for spies');
+    // The one free order on the ladder, and it says so rather than being filed
+    // under the mildest band -- which would be a small lie.
+    expect(panel).toMatch(/Search for spies\s*·\s*no risk/);
+  });
+
+  it('opens a dialog whether or not it finds anybody', () => {
+    const { spy } = board();
+    app.select(spy);
+    app.orderSweep();
+    // Most sweeps find nothing, and a player told only when it works cannot
+    // tell "nobody is here" from "the button did nothing".
+    expect(isModalOpen()).toBe(true);
+    expect(dialog()).toMatch(/nothing out of place|not what they appear/i);
+  });
+
+  it('names whoever it saw through, and says they do not know', async () => {
+    const { state, spy } = board();
+    const hider = spawnUnit(state, 1, 'factor', spy.x + 1, spy.y);
+    wearDisguise(state, hider, 0);
+    spy.rank = 9;
+
+    // Swept until it finds, because this test is about the wording and not the
+    // dice. Rank 9 is not certainty: `findCap` holds the best searcher in the
+    // game at 0.85, deliberately, and the first draft of this assumed a high
+    // rank meant a sure thing and failed on the roll that missed.
+    let said = '';
+    for (let i = 0; i < 60 && !/Not What They Appear/i.test(said); i++) {
+      await again(spy);
+      app.orderSweep();
+      said = dialog();
+    }
+
+    expect(said, 'sixty sweeps at rank 9 and never a find').toMatch(/Not What They Appear/i);
+    expect(said).toMatch(/Factor/);
+    expect(said, 'the prize is that they do not know').toMatch(/do not know/i);
   });
 });

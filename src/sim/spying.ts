@@ -4,9 +4,10 @@ import type { City, GameState, Unit } from '../model/types';
 import { headcount, unitType } from '../model/units';
 import { awardXp, XP } from './combat';
 import { STANDING, adjustStanding } from './diplomacy';
-import { uncover } from './disguise';
+import { isDisguised, uncover } from './disguise';
 import { endingFor, endingWorks, isEndingPiece } from './endings';
 import { log, withRng } from './gamestate';
+import { seenBy } from './burrow';
 
 /**
  * Section 136 slice 2: what a spy is actually for.
@@ -103,6 +104,21 @@ export const SPY = {
    */
   ai: true,
   aiWants: 1,
+  /**
+   * Chance of seeing through a disguise, between agents of equal rank.
+   *
+   * Under a half on purpose. A sweep that reliably found everybody would make
+   * the disguise half of this feature pointless the turn the advance landed;
+   * one that reliably found nobody would make searching a wasted turn. At even
+   * rank it is a coin that lands wrong slightly more often than right, and
+   * rank is what moves it.
+   */
+  finds: 0.4,
+  /** How much a rank of difference between the two is worth. */
+  findPerRank: 0.12,
+  /** Nobody is ever impossible to find, and nobody is ever certain to be found. */
+  findFloor: 0.1,
+  findCap: 0.85,
 };
 
 /**
@@ -130,6 +146,19 @@ export interface SpyAction {
 }
 
 export const SPY_ACTIONS: Record<string, SpyAction> = {
+  /**
+   * Looking, rather than doing. **The only rung that costs nothing to try.**
+   *
+   * Everything else on this ladder is something done *to* somebody, and a
+   * thing that is done can be traced back. Standing still and paying attention
+   * is not: there is nobody to notice you looking. What it costs is the turn,
+   * which for a unit that cannot fight is the whole of its day.
+   *
+   * It is also the only defensive rung, and a counter-espionage move that
+   * might itself blow your agent would be one nobody used at home -- which is
+   * exactly where it is meant to be used.
+   */
+  search: { verb: 'Search for spies', risk: 0, ready: true },
   read: { verb: 'Spy on', risk: 1, ready: true },
   incite: { verb: 'Foment discontent in', risk: 2.2, ready: false },
   sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: false },
@@ -150,7 +179,9 @@ export function exposureOdds(unit: Unit, action = 'read'): number {
   const act = SPY_ACTIONS[action];
   if (!act) return 0;
   const bare = (1 - readOdds(unit)) * noticeOdds(unit);
-  const floor = (act.risk - 1) * SPY.irreducible;
+  // Never below nothing: an action milder than reading a town (searching is
+  // `risk: 0`) would otherwise be handed a negative floor.
+  const floor = Math.max(0, (act.risk - 1) * SPY.irreducible);
   return Math.max(floor, Math.min(0.95, bare * act.risk * SPY.weather));
 }
 
@@ -177,6 +208,10 @@ export const RISK_BANDS: { under: number; label: string }[] = [
  */
 export function riskBand(unit: Unit, action = 'read'): string {
   const odds = exposureOdds(unit, action);
+  // Said plainly when it is actually nothing. "Barely any risk" for an action
+  // that carries none is a small lie, and the one rung that is free is worth
+  // being able to recognise at a glance.
+  if (odds <= 0) return 'no risk';
   return (RISK_BANDS.find((b) => odds < b.under) ?? RISK_BANDS[RISK_BANDS.length - 1]).label;
 }
 
@@ -308,6 +343,92 @@ export function readCity(state: GameState, unit: Unit, city: City): ReadOutcome 
     [city.x, city.y],
   );
   return { kind: 'caught', wore };
+}
+
+/**
+ * Looking along the eyeline for somebody who is not what they appear to be.
+ *
+ * **The counter to slice 1**, and the reason a disguise is a gamble rather than
+ * a free pass. Until now a lie could only be broken by walking into it: a fight
+ * uncovered a spy to whoever was in it, which meant the only way to find an
+ * agent was to attack something that turned out to be one. This is the
+ * deliberate version -- a spy of your own, standing still, paying attention.
+ *
+ * Three things it is careful about:
+ *
+ * **It can only find what it can see.** Asked through `seenBy`, the same
+ * question everything else asks, so fog and burrowing still hide people.
+ * Searching is attention, not omniscience.
+ *
+ * **Rank tells on both sides.** A searcher is better at looking and a hider is
+ * better at being looked at, so the roll is the difference between them. A
+ * green agent sweeping for a veteran is the worst version of this and should
+ * be.
+ *
+ * **The side that is found is not told.** Being uncovered is permanent and
+ * per-viewer, so what you have won is that *you* know and they do not -- they
+ * will walk that agent somewhere believing it still passes. That is the whole
+ * prize, and telling them would hand most of it back. It is not a breach of
+ * the rule that a victim learns something was done to them: nothing was done
+ * to them. They were looked at.
+ */
+export function canSearch(unit: Unit): { ok: boolean; reason?: string } {
+  if (!SPY.enabled || !unitType(unit.type).spy) {
+    return { ok: false, reason: 'Only a spy knows what to look for.' };
+  }
+  if (unit.moves <= 0) return { ok: false, reason: 'No movement left this turn.' };
+  return { ok: true };
+}
+
+/** The chance this searcher sees through this hider, by the ranks of both. */
+export function findOdds(searcher: Unit, hider: Unit): number {
+  const edge = (searcher.rank - hider.rank) * SPY.findPerRank;
+  return Math.max(SPY.findFloor, Math.min(SPY.findCap, SPY.finds + edge));
+}
+
+export type SearchOutcome = { kind: 'found'; found: Unit[] } | { kind: 'nothing' };
+
+/**
+ * Spend the turn looking, and name whoever is seen through.
+ *
+ * Everything in sight is examined, not the first thing found: a sweep is a
+ * sweep. Each one is its own roll, so two agents standing together are two
+ * separate questions and finding one tells you nothing about the other.
+ */
+export function searchFrom(state: GameState, unit: Unit): SearchOutcome {
+  if (!canSearch(unit).ok) return { kind: 'nothing' };
+  unit.moves = 0;
+  unit.order = 'none';
+
+  const reach = unitType(unit.type).sight;
+  const found: Unit[] = [];
+  for (const other of state.units) {
+    if (other.owner === unit.owner) continue;
+    if (!isDisguised(other)) continue;
+    if (other.uncoveredBy?.includes(unit.owner)) continue;
+    if (distance(unit.x, unit.y, other.x, other.y) > reach) continue;
+    // What it is wearing is what we can see, so the usual sight rules apply:
+    // a disguise does not make somebody visible through fog.
+    if (!seenBy(state, other, unit.owner)) continue;
+    if (!withRng(state, (rng) => rng.chance(findOdds(unit, other)))) continue;
+    uncover(other, unit.owner);
+    awardXp(state, unit, SPY.xpRead);
+    found.push(other);
+  }
+
+  if (found.length > 0) {
+    log(
+      state,
+      found.length === 1
+        ? 'One of the figures out there is not what it has been pretending to be.'
+        : `${found.length} of the figures out there are not what they have been pretending to be.`,
+      'good',
+      unit.owner,
+      undefined,
+      [unit.x, unit.y],
+    );
+  }
+  return found.length > 0 ? { kind: 'found', found } : { kind: 'nothing' };
 }
 
 /**
