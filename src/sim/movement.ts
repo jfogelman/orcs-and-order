@@ -847,6 +847,32 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       return { kind: 'blocked', reason: `${city.name} threw them back.`, retryable: false };
     }
   }
+  // Section 123: something old is under this tile, and the step wakes it.
+  //
+  // **Before the move, not after.** This used to run once the unit had already
+  // arrived, which left the guardians standing in a ring *around* the doorway
+  // and the unit that woke them standing *in* it -- the wrong way round, and
+  // the thing a player reported. Waking something is a decision, and the
+  // decision costs you the turn; it does not get you the ground. You come back
+  // and take that off whatever is now holding it.
+  //
+  // A unit with no attack disturbs nothing and walks on as before
+  // (`RUINS.soldiersOnly`), which is why this is keyed to whether the ruin
+  // actually woke rather than to whether there was one.
+  const ruin = ruinAt(state, x, y);
+  if (ruin && ruin.wokeOn === undefined && ruin.takenOn === undefined && !isWarden(unit)) {
+    disturb(state, ruin, unit);
+    if (ruin.wokeOn !== undefined) {
+      unit.moves = 0;
+      unit.goto = null;
+      return {
+        kind: 'blocked',
+        reason: 'Something stands up in the doorway. It is not letting anybody past today.',
+        retryable: false,
+      };
+    }
+  }
+
   const cost = type.flies || type.sails ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
   unit.x = x;
   unit.y = y;
@@ -879,24 +905,6 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     return held ? { kind: 'captured', city } : { kind: 'moved' };
   }
 
-  // Section 123: and if the tile it just stepped onto had something old standing
-  // on it, that something is now awake. Deliberately here, at the end of a move
-  // that actually happened, rather than in the AI or the interface: a ruin does
-  // not care who walked in or why.
-  //
-  // The rest of the turn is spent, too. Walking into a ruin and strolling out
-  // of it again the same turn would make the guardians a formality, and the
-  // whole shape of this is that you have decided to be here.
-  const ruin = ruinAt(state, x, y);
-  if (ruin && ruin.wokeOn === undefined && ruin.takenOn === undefined && !isWarden(unit)) {
-    disturb(state, ruin, unit);
-    // Only if something actually woke. A worker crossing the tile disturbs
-    // nothing and keeps the rest of its turn -- see `RUINS.soldiersOnly`.
-    if (ruin.wokeOn !== undefined) {
-      unit.moves = 0;
-      unit.goto = null;
-    }
-  }
   return { kind: 'moved' };
 }
 

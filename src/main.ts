@@ -169,6 +169,20 @@ class App {
   private lastFrame = performance.now();
   private held = new Set<string>();
   private dragging = false;
+  /**
+   * The camera owes the new turn a look back. Section 123.
+   *
+   * `playLogCues` deliberately turns the view to the thing worth watching --
+   * the fight, the raiders, the agent caught -- and for a long time nothing
+   * ever turned it back, so a turn that had anything happen in it handed you a
+   * unit somewhere off the edge of the screen and left the view on the event.
+   * Reported from a played game: end the turn, and the next unit is not on it.
+   *
+   * It cannot simply be re-centred straight away, because the whole point of
+   * the cue camera is that the animations play where you can see them. So the
+   * look is owed, and paid once the animator is finished.
+   */
+  private owedLook = false;
   private dragMoved = 0;
   private lastPointer: { x: number; y: number } | null = null;
   /** Turn on which the battle theme may give way to the world theme again. */
@@ -610,9 +624,9 @@ class App {
     // question rather than a refusal because risking it is a legitimate play.
     if (!this.ruinRiskConfirmed) {
       const guard = attacking ? unitAt(this.state, x, y) : undefined;
-      // Any warden, not only one standing exactly on the ruin tile: they wake
-      // up *beside* the ruin and step onto it afterwards, so keying this to the
-      // tile would have asked about half of them.
+      // Any warden, not only one standing on the ruin tile. The first one up
+      // holds the doorway now, but a ruin with more than one guard still puts
+      // the rest around it, and a fight with either is the same decision.
       if (guard && isWarden(guard)) {
         this.askAboutTheGuard(unit, guard, x, y);
         return;
@@ -911,22 +925,23 @@ class App {
       body: `
         <div class="panel-body">
           <p class="flavor">The world is old, and ruins are scattered
-          throughout. If you dare to disturb them, old guardians awaken, but
-          defeating them reveals untold riches. It takes the rest of the turn if
-          you choose to explore it.</p>
+          throughout. Disturb one and what is inside <strong>stands up in the
+          doorway</strong> &mdash; this unit stays where it is and the rest of its
+          turn goes on having knocked. Put the guardians down and the ruin is
+          yours to walk into afterwards.</p>
           <div class="stat-row">
             <span class="label">The likeliest guardian</span>
             <span class="value"><a href="#" class="pedia-link" data-pedia="${escapeHtml(likely)}"
               title="Look it up in the Orcpedia">${escapeHtml(unitType(likely).name)}</a></span>
           </div>
-          <div class="stat-row"><span class="label">Going in</span><span class="value">${escapeHtml(unitType(unit.type).name)}</span></div>
+          <div class="stat-row"><span class="label">Knocking</span><span class="value">${escapeHtml(unitType(unit.type).name)}</span></div>
           <div class="stat-row"><span class="label">What ruins hold</span><span class="value">${escapeHtml(spoils.join(', '))}</span></div>
           <p class="flavor">Commonest first, and which of them is in <em>this</em>
           one is nobody's business until it is open.</p>
         </div>
         <div class="modal-actions">
           <button class="small" data-act="ruin-stay">Leave it</button>
-          <button class="small primary" data-act="ruin-enter">Go in</button>
+          <button class="small primary" data-act="ruin-enter">Knock</button>
         </div>`,
       onMount: (root, close) => {
         // The guardian's own card, which is where its numbers live. Leaves the
@@ -1574,6 +1589,10 @@ class App {
     this.lookAtTheNewTurn();
     this.refreshHud();
     this.playLogCues();
+    // `playLogCues` may have turned the camera to something that happened
+    // while the other sides moved. Come back to whatever is being handed over
+    // once that has finished playing -- a turn begins where the turn is.
+    this.owedLook = true;
     // A drawn game is over too, and has an ending to show.
     if (isOver(this.state)) {
       this.showVictory();
@@ -2137,6 +2156,9 @@ class App {
         // browser refuses it, panning still works without it.
       }
       this.dragging = true;
+      // Taking hold of the view cancels the look the turn was owed. A camera
+      // that yanks itself out of your hand is worse than one that stayed put.
+      this.owedLook = false;
       this.dragMoved = 0;
       this.lastPointer = { x: e.clientX, y: e.clientY };
     });
@@ -3187,6 +3209,14 @@ class App {
         }
       }
       if (dx || dy) this.camera.panByScreen(-dx * 900 * dt, -dy * 900 * dt);
+    }
+
+    // Pay back the look the cue camera borrowed, once the thing worth watching
+    // has finished playing. Not while a dialog is up: the end-of-turn questions
+    // are asked over the piece of map they are about.
+    if (this.owedLook && !this.renderer.animator.busy && !isModalOpen()) {
+      this.owedLook = false;
+      this.lookAtTheNewTurn();
     }
 
     this.renderOnce(dt);

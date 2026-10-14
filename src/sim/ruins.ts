@@ -393,6 +393,13 @@ export function expectedGuard(state: GameState): UnitTypeId {
   return advances >= RUINS.guardianFrom ? WARDENS.guardian : WARDENS.sentinel;
 }
 
+/** Whether this exact tile is free for something to stand up on. */
+function freeHere(state: GameState, x: number, y: number): boolean {
+  if (TERRAIN[state.terrain[idx(x, y, state.width)]].water) return false;
+  if (state.units.some((u) => u.x === x && u.y === y)) return false;
+  return !state.cities.some((c) => c.x === x && c.y === y);
+}
+
 /** Free ground beside a tile, for something to stand up on. */
 function roomAround(state: GameState, x: number, y: number): Array<[number, number]> {
   const out: Array<[number, number]> = [];
@@ -430,11 +437,22 @@ export function disturb(state: GameState, ruin: Ruin, by: Unit): void {
   // The wilds are conjured here if this game has none: a quiet game keeps its
   // two players until something in it actually stands up.
   const wild = ensureWilds(state);
-  const room = roomAround(state, ruin.x, ruin.y);
+  // **The doorway first.** What is in a ruin stands up *in* it -- it is the
+  // thing it is guarding, and standing in a ring around the doorway while
+  // somebody else stood in the middle of it was the wrong way round. Reported
+  // from a played game: the guardian spawned outside and the unit that woke it
+  // was somehow inside.
+  //
+  // It also settles the double question the interface was asking. With the
+  // ruin tile held, attacking it is attacking a warden and gets the one prompt
+  // about the fight; nothing is ever asked twice about the same doorway.
+  const spots = freeHere(state, ruin.x, ruin.y)
+    ? [[ruin.x, ruin.y] as [number, number], ...roomAround(state, ruin.x, ruin.y)]
+    : roomAround(state, ruin.x, ruin.y);
   const guard = guardFor(state, ruin.prize);
-  const standing = wild ? Math.min(guard.count, room.length) : 0;
+  const standing = wild ? Math.min(guard.count, spots.length) : 0;
   for (let n = 0; n < standing; n++) {
-    spawnUnit(state, wild!.id, guard.kind, room[n][0], room[n][1], false);
+    spawnUnit(state, wild!.id, guard.kind, spots[n][0], spots[n][1], false);
   }
 
   log(

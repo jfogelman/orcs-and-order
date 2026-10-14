@@ -251,16 +251,22 @@ describe('walking into a ruin', () => {
     expect(document.querySelector('.modal')).toBeNull();
   });
 
-  it('goes in on yes, and says by name what stood up', () => {
+  it('knocks on yes, stays outside, and says by name what stood up', () => {
     const { state, scout } = withRuin();
     app.adopt(state);
     beginPlayerTurn(state, 0);
     app.select(scout);
+    const from = { x: scout.x, y: scout.y };
 
     app.actOn(10, 8);
     document.querySelector<HTMLElement>('[data-act="ruin-enter"]')!.click();
 
-    expect([scout.x, scout.y], 'it went in').toEqual([10, 8]);
+    // **Knocking is not entering.** What is in a ruin stands up in the
+    // doorway, and the unit that woke it is still where it was -- reported
+    // from a played game, where the guardian appeared outside and the unit
+    // that knocked ended up inside.
+    expect([scout.x, scout.y], 'it should still be outside').toEqual([from.x, from.y]);
+    expect(scout.moves, 'knocking costs the turn all the same').toBe(0);
     expect(state.ruins![0].wokeOn, 'and woke it').toBeDefined();
     // The follow-up names the thing rather than leaving "something stands up"
     // in the log as the only account of it.
