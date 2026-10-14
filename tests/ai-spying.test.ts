@@ -3,7 +3,7 @@ import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { foundCity } from '../src/sim/city';
 import { PERSONALITIES, chooseProduction, nearestEnemyTarget, runAiTurn } from '../src/ai/ai';
 import { SPY, SPY_TRACE, lastReading, readCity } from '../src/sim/spying';
-import { appearsTo } from '../src/sim/disguise';
+import { appearsTo, wearDisguise } from '../src/sim/disguise';
 import { unitType } from '../src/model/units';
 import { distance } from '../src/engine/grid';
 import { TECHS } from '../src/model/techs';
@@ -237,5 +237,47 @@ describe('what a report is actually worth', () => {
     } finally {
       SPY.enabled = true;
     }
+  });
+});
+
+describe('the other side sweeps its own ground', () => {
+  it('searches when it has no town worth reading, without peeking first', () => {
+    const state = createGame({ seed: 61, width: 30, height: 20, barbarians: false });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.ruins = [];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+    }
+    // No rival towns at all, so there is nothing anywhere worth walking to.
+    const spy = spawnUnit(state, 0, 'skulker', 10, 10);
+    const hider = spawnUnit(state, 1, 'factor', 11, 10);
+    wearDisguise(state, hider, 0);
+
+    // **The trigger is "no errand", not "somebody is there".** An AI that
+    // checked for a disguised unit before deciding to search would be seeing
+    // exactly what searching exists to find out.
+    let found = false;
+    for (let turn = 0; turn < 60 && !found; turn++) {
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      found = appearsTo(hider, 0).owner === 1;
+    }
+    expect(found, 'sixty turns of an idle agent and it never swept').toBe(true);
+  });
+
+  it('prefers an errand to a sweep, because a report is worth more', () => {
+    const { state, spy, far } = board();
+    // A stale town somewhere is work; the ground underfoot can wait.
+    let walked = false;
+    for (let turn = 0; turn < 10 && !walked; turn++) {
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      walked = spy.x !== 6 || spy.y !== 12;
+    }
+    expect(walked, 'it stood still with a town unread').toBe(true);
+    void far;
   });
 });

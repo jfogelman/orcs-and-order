@@ -82,8 +82,8 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
-import { openCaught, openQuiet, openReading } from './ui/spying';
-import { canRead, readCity, riskBand } from './sim/spying';
+import { openCaught, openQuiet, openReading, openSearch } from './ui/spying';
+import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
 import { couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -759,6 +759,15 @@ class App {
           )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'read'))}</span></button>`,
       )
       .join('');
+    // Section 136 slice 4. Offered wherever the spy is standing rather than
+    // beside anything in particular: the whole point is that you do not know
+    // where somebody's agent is, so a sweep you could only run in the right
+    // place would be a sweep you could never run.
+    const sweep = canSearch(unit).ok
+      ? `<button class="small" data-act="sweep" title="Spend the turn looking for anybody who is not what they appear to be">Search for spies &middot; <span class="risk">${escapeHtml(
+          riskBand(unit, 'search'),
+        )}</span></button>`
+      : '';
     const worn = unit.disguise?.owner;
     const dress = couldWear(this.state, unit)
       .map((id) => {
@@ -776,7 +785,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + dress + off;
+    return read + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -801,6 +810,24 @@ class App {
     if (outcome.kind === 'read') openReading(outcome.reading, city.name);
     else if (outcome.kind === 'caught') openCaught(this.state, unit, city, outcome.wore);
     else openQuiet(unit, city);
+    this.selectNextIdle();
+  }
+
+  /** Spend the turn looking for anybody who is not what they appear to be. */
+  private orderSweep(): void {
+    const unit = this.selected;
+    if (!unit || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canSearch(unit);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const out = searchFrom(this.state, unit);
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+    openSearch(this.state, unit, out.kind === 'found' ? out.found : []);
     this.selectNextIdle();
   }
 
@@ -3032,6 +3059,9 @@ class App {
               break;
             case 'wear':
               this.orderWear(btn.dataset.side ?? 'none');
+              break;
+            case 'sweep':
+              this.orderSweep();
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

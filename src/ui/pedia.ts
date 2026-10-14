@@ -966,6 +966,23 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           can be traced.
         </p>
         <p class="flavor">
+          <strong>And a spy is the only thing that finds another spy.</strong> Any agent
+          can spend its turn <em>searching</em> the ground it stands on, which looks at
+          everything of somebody else's it can see and tries to see through it. It costs
+          nothing but the day &mdash; there is nobody to notice you looking, which makes
+          it the one order on the whole ladder that carries no risk at all. Rank tells on
+          both sides: a veteran finds more, and a veteran is harder to find, so a green
+          agent sweeping for a good one is the worst version of it.
+        </p>
+        <p class="flavor">
+          <strong>Whoever you see through is not told.</strong> Seeing through a disguise
+          is permanent and it is yours alone &mdash; the other side goes on walking that
+          agent about believing it still passes, and on your map it is wearing its own
+          face again while on theirs it is not. That asymmetry <em>is</em> the prize. It
+          also means a sweep that finds nothing has told you nothing: there may be
+          nobody there, or there may be somebody better at this than you are.
+        </p>
+        <p class="flavor">
           <strong>Everybody does this.</strong> The other sides build agents too, dress
           them in somebody's colours and walk them to your gates, and what they learn
           goes in a file they plan off: an army that knows which of your towns is empty

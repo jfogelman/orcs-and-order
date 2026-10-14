@@ -231,17 +231,24 @@ describe('what a spy order is worth risking', () => {
     expect(riskBand(spy, 'read')).not.toBe(RISK_BANDS[RISK_BANDS.length - 1].label);
   });
 
-  it('puts spying on a town at the bottom of the ladder', () => {
+  it('puts spying on a town at the bottom of everything that is *done*', () => {
     const { spy } = board();
     const read = exposureOdds(spy, 'read');
-    // Every other action does something *to* somebody, and a thing that is
-    // done can be traced. If one of them ever came out milder than standing
-    // about looking interested, the scale would be telling a lie.
+    // Every action that does something *to* somebody can be traced back, and
+    // reading is the mildest of those. If one of them ever came out milder, the
+    // scale would be telling a lie.
+    //
+    // Searching sits below all of it and is exempt by construction: it is the
+    // one rung that is only *looking*, so there is nobody to notice it. Named
+    // rather than skipped by a rule like "risk < 1", so a second free action
+    // added carelessly has to come through here.
     for (const [id, act] of Object.entries(SPY_ACTIONS)) {
-      if (id === 'read') continue;
+      if (id === 'read' || id === 'search') continue;
       expect(act.risk, `${id} should be riskier than reading`).toBeGreaterThan(1);
       expect(exposureOdds(spy, id)).toBeGreaterThan(read);
     }
+    expect(exposureOdds(spy, 'search'), 'looking is not doing').toBe(0);
+    expect(read).toBeGreaterThan(0);
   });
 
   it('keeps the ladder in order at the top, where it used to collapse', () => {
@@ -262,9 +269,9 @@ describe('what a spy order is worth risking', () => {
   it('offers only what is actually built', () => {
     // The unbuilt entries exist to calibrate the scale, not to be ordered. If
     // one is ever wired up, this is the line that has to be changed on purpose.
-    expect(Object.entries(SPY_ACTIONS).filter(([, a]) => a.ready).map(([id]) => id)).toEqual([
-      'read',
-    ]);
+    expect(Object.entries(SPY_ACTIONS).filter(([, a]) => a.ready).map(([id]) => id).sort()).toEqual(
+      ['read', 'search'],
+    );
   });
 
   it('reads its words off the odds, so they cannot drift from the rules', () => {

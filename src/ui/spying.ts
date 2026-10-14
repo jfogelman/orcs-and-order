@@ -129,3 +129,43 @@ export function openCaught(state: GameState, unit: Unit, city: City, wore: boole
       </div>`,
   });
 }
+
+/**
+ * What a sweep turned up, or did not.
+ *
+ * **The empty result gets a dialog too**, and the same one, because most
+ * sweeps find nothing and a player who is only told when it works cannot tell
+ * "nobody is here" from "the button did nothing". It also says plainly that
+ * the people found do not know they were found, since that is the entire prize
+ * and it is invisible on the map -- their sprites do not change for anybody but
+ * you.
+ */
+export function openSearch(state: GameState, unit: Unit, found: Unit[]): void {
+  const named = found
+    .map((u) => {
+      const side = state.players[u.owner]?.name ?? 'somebody';
+      return `<li>A ${escapeHtml(unitType(u.type).name)} of ${escapeHtml(side)}, at ${u.x}, ${u.y}</li>`;
+    })
+    .join('');
+  openModal({
+    title: found.length > 0 ? 'Not What They Appear' : 'Nothing Out Of Place',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">The ${escapeHtml(
+          unitType(unit.type).name,
+        )} spent the day watching the ground around it.</p>
+        ${
+          found.length > 0
+            ? `<ul class="spy-found">${named}</ul>
+               <div class="spy-notice safe">
+                 <strong>They do not know.</strong> Being seen through is something only
+                 we have learned. They will go on walking those about as though the
+                 disguise still holds, which is the whole of what this was worth.
+               </div>`
+            : `<p class="flavor">Everything out there is what it says it is, as far as
+               anybody of ours can tell. That is not the same as nobody being there.</p>`
+        }
+      </div>`,
+  });
+}

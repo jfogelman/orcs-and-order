@@ -13,7 +13,7 @@ import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
-import { SPY, canRead, lastReading, readCity } from '../sim/spying';
+import { SPY, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
 import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
@@ -1430,6 +1430,27 @@ function actSpy(state: GameState, unit: Unit): void {
     .sort((a, b) => staleness(state, unit.owner, b) - staleness(state, unit.owner, a))[0];
   if (here) {
     readCity(state, unit, here);
+    return;
+  }
+
+  // Nothing worth reading from here. Section 136 slice 4: an agent with no
+  // errand sweeps the ground it is standing on instead of walking.
+  //
+  // **Asked without looking first.** The tempting version checks whether there
+  // is a disguised unit in range and searches only then, which would be the AI
+  // seeing exactly what searching is supposed to find out. So the trigger is
+  // "nothing better to do", which is a fact about its own orders, and the
+  // sweep finds whatever it finds -- usually nothing, which is what a real
+  // counter-espionage turn mostly is.
+  const errand = state.cities.some(
+    (c) =>
+      c.owner !== unit.owner &&
+      !state.players[c.owner]?.barbarian &&
+      state.players[unit.owner].explored[idx(c.x, c.y, state.width)] &&
+      staleness(state, unit.owner, c) >= SPY.remembers,
+  );
+  if (!errand) {
+    searchFrom(state, unit);
     return;
   }
 
