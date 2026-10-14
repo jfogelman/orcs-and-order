@@ -1,5 +1,5 @@
 import { BUILDINGS } from '../model/buildings';
-import { techsForFaction, TECHS_BY_ID } from '../model/techs';
+import { TECHS, techsForFaction, TECHS_BY_ID } from '../model/techs';
 import type { TechDef } from '../model/techs';
 import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
@@ -82,6 +82,31 @@ function unlockSummary(t: TechDef, player: Player): string {
 }
 
 /**
+ * What an advance opens the way to, for a side it gives nothing to directly.
+ *
+ * Three shared advances hand the Hivekin nothing at all: Wall Building, Joy
+ * Making and Hammers of Glory each unlock only Horde or Kingdom buildings, and
+ * `unlockSummary` correctly filters those out -- leaving a card that looked
+ * blank and cost ninety beakers. They are not dead wood, though, and deleting
+ * them would break the tree: Wall Building is the only road to Tower Building,
+ * Joy Making to Happiness, and Hammers of Glory to the Hive's **own**
+ * Warden-caste. Each is a stepping stone, so the card says so rather than
+ * saying nothing.
+ *
+ * Immediate dependents only, and only ones that side can reach. A card is not
+ * the place to explain the whole tree.
+ */
+function opensSummary(t: TechDef, player: Player): string {
+  const next = TECHS.filter(
+    (n) =>
+      n.prereqs.includes(t.id) &&
+      (n.faction === 'both' || n.faction === player.faction) &&
+      !knowsTech(player, n.id),
+  ).map((n) => n.name);
+  return next.length === 0 ? '' : `opens the way to ${next.join(', ')}`;
+}
+
+/**
  * What each advance flag does, in the words a card shows.
  *
  * Every flag, and typed so: this was a partial table that fell back to the flag's
@@ -129,6 +154,9 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
         const active = player.researching === t.id;
         const cls = known ? 'known' : active ? 'active' : canResearch ? 'open' : 'locked';
         const unlocks = unlockSummary(t, player);
+        // A card that unlocks nothing for *this* side says what it is for
+        // instead of sitting there blank. See `opensSummary`.
+        const opens = unlocks ? '' : opensSummary(t, player);
         const missing = t.prereqs
           .filter((p) => !knowsTech(player, p))
           .map((p) => TECHS_BY_ID[p]?.name ?? p);
@@ -140,6 +168,7 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
             </div>
             <div class="tech-cost">${known ? 'known' : `${techCost(player, t)} beakers`}</div>
             ${unlocks ? `<div class="tech-unlocks">${unlocks}</div>` : ''}
+            ${opens ? `<div class="tech-opens">${escapeHtml(opens)}</div>` : ''}
             ${missing.length > 0 && !known ? `<div class="tech-needs">needs ${escapeHtml(missing.join(', '))}</div>` : ''}
             <div class="tech-flavor">${escapeHtml(t.flavor)}</div>
           </div>`;

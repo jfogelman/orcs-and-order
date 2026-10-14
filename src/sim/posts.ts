@@ -1,7 +1,7 @@
 import { fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import type { City, GameState, Unit } from '../model/types';
-import { unitType } from '../model/units';
+import { holdsGround, unitType, worksGround } from '../model/units';
 
 /**
  * Garrison posts: somewhere for soldiers to stand that is not the city tile.
@@ -55,7 +55,9 @@ export function hasPost(state: GameState, x: number, y: number): boolean {
 /** Whether this unit could put up a post where it stands, and why not. */
 export function canBuildPost(state: GameState, unit: Unit): { ok: boolean; reason?: string } {
   if (!POSTS.enabled) return { ok: false, reason: 'Nobody builds those.' };
-  if (!unitType(unit.type).settler) return { ok: false, reason: 'Only workers build posts.' };
+  if (!worksGround(unitType(unit.type))) {
+    return { ok: false, reason: 'Only workers build posts.' };
+  }
   const i = idx(unit.x, unit.y, state.width);
   if (TERRAIN[state.terrain[i]].water) return { ok: false, reason: 'Not on water.' };
   if (state.cities.some((c) => c.x === unit.x && c.y === unit.y)) {
@@ -114,7 +116,7 @@ export function mannedPosts(state: GameState, city: City): number {
     const x = i % state.width;
     const y = Math.floor(i / state.width);
     const held = state.units.some(
-      (u) => u.x === x && u.y === y && u.owner === city.owner && !unitType(u.type).settler,
+      (u) => u.x === x && u.y === y && u.owner === city.owner && holdsGround(unitType(u.type)),
     );
     if (held) manned++;
   }

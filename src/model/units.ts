@@ -1645,6 +1645,32 @@ export function aliveCount(unit: { type: UnitTypeId; hp: number }): number {
  */
 export const ATTRITION = { enabled: true };
 
+/**
+ * Whether this unit improves ground: digs, roads, irrigates, puts up posts.
+ *
+ * **A predicate rather than a fourth copy of `settler || works`.** The Hive's
+ * Worker founds nothing -- a unit that founds is not one that digs -- so it is
+ * `works` and not `settler`, and every rule that asked "is this a worker" by
+ * asking `settler` quietly excluded it. That has now been found in play four
+ * separate times: dispatch, roads, digging, and now posts and Irrigate To. Each
+ * fix was correct and each was one gate short, because the gates are scattered
+ * and nothing named the idea they share.
+ */
+export function worksGround(type: UnitTypeDef): boolean {
+  return type.settler || type.works;
+}
+
+/**
+ * Whether this unit is any use holding a gate.
+ *
+ * Diggers never were, and a **spy** is the new one: `attack: 0`, and it is
+ * meant to be somewhere else entirely. Without this a side could satisfy its
+ * garrison by building an agent and stand there thinking the town was held.
+ */
+export function holdsGround(type: UnitTypeDef): boolean {
+  return !worksGround(type) && !type.spy && !type.sails;
+}
+
 /** The share of its full strength a unit still fights at, from its losses. */
 export function headcount(unit: { type: UnitTypeId; hp: number }): number {
   if (!ATTRITION.enabled) return 1;

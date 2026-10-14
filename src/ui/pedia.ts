@@ -11,9 +11,9 @@ import type { FactionId, GameState, Player, UnitTypeId } from '../model/types';
 import { SpriteCache } from '../render/spriteCache';
 import { escapeHtml, openModal } from './dom';
 import { controlsMarkup } from './controls';
-import { BARBARIANS, PREY, RAIDER, RAIDER_TIERS, raidPace } from '../sim/barbarians';
-import { LEGION } from '../sim/wilds';
-import { RUINS } from '../sim/ruins';
+import { BARBARIANS, PREY, RAIDER_TIERS, raidPace } from '../sim/barbarians';
+import { LEGION, RAIDER_GRUNT } from '../sim/wilds';
+import { RUINS, WARDENS } from '../sim/ruins';
 import { COWED } from '../sim/status';
 import { HIVEKIN, QUEEN } from '../sim/hivekin';
 import { BURROW } from '../sim/burrow';
@@ -360,9 +360,53 @@ function unitCard(def: UnitTypeDef): string {
     </div>`;
 }
 
+/**
+ * Everything wild, in the one pane that is about wild things.
+ *
+ * **They were in no roster at all.** Every other list filters on
+ * `!c.wild` -- correctly, since a raiding party is not something the Horde can
+ * put in a queue -- and nothing picked them up afterwards. So nine creatures a
+ * player can be killed by had no entry, and `openPedia(…, 'sentinel')` sent
+ * them to the Kingdom's pane looking for an anchor that was never written,
+ * which is why the link out of the ruin dialog did nothing at all.
+ *
+ * Grouped, because "wild" covers three unrelated things: a band that walks at
+ * you, something that drowned, and something standing in a doorway waiting.
+ */
+function wildSection(): string {
+  // Read off the tables that define each group rather than three lists written
+  // out again here, which would be three more places to forget.
+  const wardens: string[] = Object.values(WARDENS);
+  const sea: string[] = [LEGION.grunt.id, LEGION.elite.id, LEGION.leader.id];
+  const land: string[] = [RAIDER_GRUNT, RAIDER_TIERS.elite.id, RAIDER_TIERS.leader.id];
+  const groups: { title: string; of: (c: CreatureDef) => boolean }[] = [
+    { title: 'Raiders', of: (c) => land.includes(c.id) },
+    { title: 'What comes out of the sea', of: (c) => sea.includes(c.id) },
+    { title: 'What stands in the ruins', of: (c) => wardens.includes(c.id) },
+  ];
+  const seen = new Set<string>();
+  const parts = groups.map((g) => {
+    const of = CREATURES.filter((c) => c.wild && g.of(c));
+    for (const c of of) seen.add(c.id);
+    return of.length === 0
+      ? ''
+      : `<h4 class="pedia-subhead">${g.title}</h4>${of.map((c) => unitCard(UNIT_TYPES[c.id])).join('')}`;
+  });
+  // Anything wild that no group claimed still gets an entry, or this fix would
+  // quietly reintroduce the bug it exists to close the next time one is added.
+  const rest = CREATURES.filter((c) => c.wild && !seen.has(c.id));
+  if (rest.length > 0) {
+    parts.push(
+      `<h4 class="pedia-subhead">Other wild things</h4>${rest.map((c) => unitCard(UNIT_TYPES[c.id])).join('')}`,
+    );
+  }
+  return parts.join('');
+}
+
 function creatureSection(faction: FactionId): string {
   // Wild things belong to nobody, so they are in neither roster. A raiding
-  // party is not something the Horde can put in a queue.
+  // party is not something the Horde can put in a queue -- they are in the
+  // Wilds pane instead, via `wildSection`.
   const creatures = CREATURES.filter((c) => c.faction === faction && !c.wild);
   return creatures
     .map((c) => {
@@ -820,9 +864,6 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           and whoever puts it down keeps it. A skirmisher is carrying nothing, so a
           hundred of them are still not a living.
         </p>
-        <div class="pedia-grid">${[RAIDER, RAIDER_TIERS.elite.id, RAIDER_TIERS.leader.id]
-          .map((id) => unitCard(UNIT_TYPES[id]))
-          .join('')}</div>
         ${
           LEGION.enabled
             ? `<p class="flavor">
@@ -850,11 +891,16 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           one of your ships is within ${LEGION.leader.dragsUnder} tiles when he goes, it
           goes with him. Kill him with soldiers, and keep the boats out of it.
         </p>
-        <div class="pedia-grid">${[LEGION.grunt.id, LEGION.elite.id, LEGION.leader.id]
-          .map((id) => unitCard(UNIT_TYPES[id]))
-          .join('')}</div>`
+        `
             : ''
         }
+        <h3 class="pedia-head">Everything wild, by name</h3>
+        <p class="flavor">
+          None of this belongs to anybody, so none of it is in either roster. It is all
+          here instead &mdash; including the things that stand in ruins, which had no
+          entry anywhere at all.
+        </p>
+        <div class="pedia-grid">${wildSection()}</div>
       </div>
       <div class="pedia-pane" data-pane="difficulty" hidden>
         <p class="flavor">
@@ -1116,7 +1162,11 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
 
       if (focus && UNIT_TYPES[focus]) {
         const creature = CREATURES_BY_ID[unitType(focus).base];
-        jumpTo(paneFor(creature.faction), `#pedia-${CSS.escape(creature.id)}`);
+        // A wild thing carries a faction for its art -- a Bone Sentinel is
+        // `human` -- so asking `paneFor` sent it to the Kingdom's roster, where
+        // wild things are filtered out and the anchor has never existed. That
+        // is why the link out of the ruin dialog did nothing.
+        jumpTo(creature.wild ? 'wilds' : paneFor(creature.faction), `#pedia-${CSS.escape(creature.id)}`);
       } else if (focus && BUILDINGS[focus]) {
         jumpTo('buildings', `#pedia-b-${CSS.escape(focus)}`);
       }
