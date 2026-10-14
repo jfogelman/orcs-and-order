@@ -2167,3 +2167,16 @@ kbd {
   color: var(--muted);
   font-style: italic;
 }
+
+/*
+ * What a stepping-stone advance is for.
+ *
+ * Quieter than `tech-unlocks`, because it is not a promise of anything you get
+ * now -- it is the answer to "why is this card blank".
+ */
+.tech-opens {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 11px;
+  margin-top: 2px;
+}

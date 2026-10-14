@@ -694,6 +694,133 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'where her Hive still stands. A Princess is a queen already being kept in reserve; this ' +
       'is what she is being kept in reserve for.',
   },
+  /*
+   * Section 136: the three the Hive never had.
+   *
+   * `faction: 'both'` meant "the two sides" when there were two, and nothing
+   * re-read those entries when a third arrived -- so Wall Building, Joy Making
+   * and Hammers of Glory each unlocked a Horde building and a Kingdom building
+   * and nothing at all for the Hivekin. Three cards that cost ninety beakers
+   * and rendered blank.
+   *
+   * Priced and costed exactly as their opposite numbers, deliberately: this is
+   * closing a hole, not tuning a faction. If the Hive should be better or worse
+   * at keeping calm than the Kingdom, that is a decision to make on purpose and
+   * measure, not one to smuggle in through a building that had to exist anyway.
+   */
+  theNarrowing: {
+    id: 'theNarrowing',
+    name: 'The Narrowing',
+    faction: 'hivekin',
+    cost: 60,
+    upkeep: 1,
+    defenseMult: 2,
+    negatedBySiege: true,
+    blurb:
+      'The ways in were made smaller. Nothing was added; a great deal was taken away, ' +
+      'which turned out to be the same thing done more cheaply.',
+  },
+  theHum: {
+    id: 'theHum',
+    name: 'The Hum',
+    faction: 'hivekin',
+    cost: 40,
+    upkeep: 1,
+    contentBonus: 2,
+    blurb:
+      'A chamber shaped so the sound the hive is always making comes back to it. ' +
+      'Two shapes stop whatever it is they do instead of complaining.',
+  },
+  theScentRecord: {
+    id: 'theScentRecord',
+    name: 'The Scent Record',
+    faction: 'hivekin',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb:
+      'What was learned is laid down in a wall and left there. Anything that walks past ' +
+      'it knows what it says, and nobody has to be taught twice.',
+  },
+  theDeeperHum: {
+    id: 'theDeeperHum',
+    name: 'The Deeper Hum',
+    faction: 'hivekin',
+    cost: 90,
+    upkeep: 2,
+    contentBonus: 3,
+    blurb:
+      'The same note, carried further down and held longer. Three shapes find they have ' +
+      'nothing they wished to raise.',
+  },
+  theStandingNiche: {
+    id: 'theStandingNiche',
+    name: 'The Standing Niche',
+    faction: 'hivekin',
+    cost: 30,
+    upkeep: 1,
+    contentBonus: 2,
+    garrisonNeeded: 2,
+    blurb:
+      'A hollow by the door, exactly large enough for two of the sturdier shapes to ' +
+      'stand in without being in the way. They are in it now.',
+  },
+  theDeepRecord: {
+    id: 'theDeepRecord',
+    name: 'The Deep Record',
+    faction: 'hivekin',
+    cost: 130,
+    upkeep: 2,
+    scienceBonus: 0.5,
+    blurb:
+      'Everything the hive has ever known, laid down in order, further down than anything ' +
+      'needs to go. Nothing is thrown away. Nothing is read twice, either.',
+  },
+  theRenderingPit: {
+    id: 'theRenderingPit',
+    name: 'The Rendering Pit',
+    faction: 'hivekin',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 1,
+    blurb:
+      'Things that are no longer any particular use go in, and come out as the sort of ' +
+      'thing other people will accept in exchange for grain.',
+  },
+  theGreaterRendering: {
+    id: 'theGreaterRendering',
+    name: 'The Greater Rendering',
+    faction: 'hivekin',
+    cost: 110,
+    upkeep: 2,
+    goldBonus: 0.5,
+    blurb:
+      'The same pit, worked out properly. It now takes in things that were still being ' +
+      'used, which was found to be more efficient and is not discussed.',
+  },
+  theForwardBurrow: {
+    id: 'theForwardBurrow',
+    name: 'The Forward Burrow',
+    faction: 'hivekin',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'A hole dug at the far end of everything, with food in it. Shapes that reach it are ' +
+      'fed. Shapes that do not reach it were going to be a loss anyway.',
+  },
+  theHardeningFloor: {
+    id: 'theHardeningFloor',
+    name: 'The Hardening Floor',
+    faction: 'hivekin',
+    cost: 100,
+    upkeep: 2,
+    startingRank: 2,
+    needs: 'barracks',
+    blurb:
+      'New shapes are walked across it until the soft parts are not soft. They arrive ' +
+      'finished, and a little quieter than the ones that were not.',
+  },
   broodwarmth: {
     id: 'broodwarmth',
     name: 'The Broodwarmth',

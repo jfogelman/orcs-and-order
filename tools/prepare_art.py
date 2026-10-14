@@ -238,6 +238,11 @@ BUILDING_ICONS = [
     "outpost", "depot",
     "bigTotem", "cathedral", "bigVault", "exchange", "biggerRock", "library",
     "yellingGrounds", "paradeGround",
+    # Section 136: the Hive's ten, which it simply never had -- `faction:
+    # 'both'` meant "the two sides" when there were two.
+    "theNarrowing", "theHum", "theDeeperHum", "theStandingNiche",
+    "theScentRecord", "theDeepRecord", "theRenderingPit",
+    "theGreaterRendering", "theForwardBurrow", "theHardeningFloor",
     # Section 110's endings: two lesser works and a final one, a side.
     "knockingStones", "offeringPit", "demonPortal",
     "committeeChamber", "pedestal", "mysteriousObject",
