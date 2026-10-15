@@ -245,7 +245,21 @@ export function riskBand(unit: Unit, action = 'read'): string {
  *
  * Nothing in the game reads this. It is off to one side on purpose.
  */
-export const SPY_TRACE = { attempts: 0, read: 0, missed: 0, caught: 0 };
+export const SPY_TRACE = {
+  attempts: 0,
+  read: 0,
+  missed: 0,
+  caught: 0,
+  /** Sweeps run, and disguises seen through. Slice 4. */
+  swept: 0,
+  found: 0,
+  /** Sabotage: tried, works wrecked, agents taken at them. Slice 5. */
+  wrecks: 0,
+  wrecked: 0,
+  lostAtWorks: 0,
+  /** Of those wrecks, the ones against something that would end the game. */
+  wreckedEndings: 0,
+};
 
 /** What a reading tells you about a city. */
 export interface CityReading {
@@ -420,6 +434,7 @@ export type SearchOutcome = { kind: 'found'; found: Unit[] } | { kind: 'nothing'
  */
 export function searchFrom(state: GameState, unit: Unit): SearchOutcome {
   if (!canSearch(unit).ok) return { kind: 'nothing' };
+  SPY_TRACE.swept++;
   unit.moves = 0;
   unit.order = 'none';
 
@@ -436,6 +451,7 @@ export function searchFrom(state: GameState, unit: Unit): SearchOutcome {
     if (!withRng(state, (rng) => rng.chance(findOdds(unit, other)))) continue;
     uncover(other, unit.owner);
     awardXp(state, unit, SPY.xpRead);
+    SPY_TRACE.found++;
     found.push(other);
   }
 

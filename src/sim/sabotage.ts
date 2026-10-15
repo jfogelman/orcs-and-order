@@ -6,7 +6,7 @@ import { uncover } from './disguise';
 import { isEndingPiece } from './endings';
 import { destroyUnit } from './combat';
 import { log, withRng } from './gamestate';
-import { RISK_BANDS, SPY, SPY_ACTIONS, bareExposure, canReach } from './spying';
+import { RISK_BANDS, SPY, SPY_ACTIONS, SPY_TRACE, bareExposure, canReach } from './spying';
 
 /**
  * Section 136 slice 5: wrecking what somebody has been building.
@@ -197,6 +197,7 @@ export type SabotageOutcome =
  */
 export function sabotage(state: GameState, unit: Unit, city: City): SabotageOutcome {
   if (!canSabotage(unit, city, state).ok) return { kind: 'failed' };
+  SPY_TRACE.wrecks++;
   unit.moves = 0;
   unit.order = 'none';
 
@@ -224,12 +225,15 @@ export function sabotage(state: GameState, unit: Unit, city: City): SabotageOutc
       [city.x, city.y],
     );
     if (SABOTAGE.caughtDies) {
+      SPY_TRACE.lostAtWorks++;
       destroyUnit(state, unit, 'is taken at the works');
       return { kind: 'caught', lost: true };
     }
     return { kind: 'caught', lost: false };
   }
 
+  SPY_TRACE.wrecked++;
+  if (phase.ending) SPY_TRACE.wreckedEndings++;
   const taken = Math.floor(phase.invested * SABOTAGE.takes);
   const item = city.producing;
   const what =

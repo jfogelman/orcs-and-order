@@ -606,3 +606,30 @@ export function chooseBrood(city: City, index: number, kind: BroodBonus): void {
 export function broodBonus(city: City, kind: BroodBonus): number {
   return (city.brood ?? []).filter((b) => b === kind).length;
 }
+
+/**
+ * The Hive's ten ordinary buildings, as a lever.
+ *
+ * Here purely so the thing can be *measured*. Before #144 the Hivekin had two
+ * ordinary buildings against ten apiece for the other two -- no happiness, no
+ * science, no gold, no supply, no veterancy -- and nothing has ever measured
+ * what giving it a full set did to the game.
+ *
+ * A lever rather than an arm that edits `TECHS`, for two reasons. The
+ * identity check in `runSweep` compares `LEVERS`, and an arm moving something
+ * that is not in there makes two real arms look like one arm run twice
+ * (section 59 -- this refused to run until it was done properly). And
+ * `restoreLevers` puts levers back with `Object.assign`, which cannot shrink
+ * an array, so a mutated `TECHS` would not be restored between runs anyway.
+ */
+export const HIVE_WORKS = { enabled: true };
+
+/** Whether this is one of the Hive's ten ordinary buildings. */
+export function isHiveWork(b: { faction?: string; folly?: unknown; endingPart?: unknown; victory?: unknown }): boolean {
+  return (
+    b.faction === 'hivekin' &&
+    b.folly === undefined &&
+    b.endingPart === undefined &&
+    b.victory === undefined
+  );
+}
