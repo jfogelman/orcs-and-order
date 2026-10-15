@@ -93,6 +93,15 @@ export const SABOTAGE = {
    * somebody's Portal is a bad trade, and the AI should not take it either.
    */
   aiOdds: 0.45,
+  /**
+   * How much has to be banked before the other side thinks a town is worth a
+   * turn, as a phase band.
+   *
+   * Band 2 is half the reference work. Below that it is a granary and the
+   * agent is better employed elsewhere; at or above it there is a season of
+   * somebody's work in there, which is worth the risk `aiOdds` will allow.
+   */
+  aiBand: 2,
 };
 
 /**

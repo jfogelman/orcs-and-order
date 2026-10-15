@@ -9,6 +9,7 @@ import { distance } from '../src/engine/grid';
 import { TECHS } from '../src/model/techs';
 import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
 import { isEndingPiece } from '../src/sim/endings';
+import { referenceWork } from '../src/sim/sabotage';
 import type { City, GameState, Unit } from '../src/model/types';
 
 /**
@@ -349,5 +350,92 @@ describe('the other side wrecks what would beat it', () => {
     // it at odds a veteran would refuse is not, and `aiOdds` is the bar.
     expect(state.players[1].worksBanked?.[work] ?? 0).toBe(300);
     void city;
+  });
+});
+
+describe('one agent abroad and one at home', () => {
+  it('sends the senior agent out and keeps the other watching our ground', () => {
+    const state = createGame({ seed: 83, width: 40, height: 24, barbarians: false });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.ruins = [];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+    }
+    const ourTown = foundCity(state, spawnUnit(state, 0, 'peon', 6, 12))!;
+    foundCity(state, spawnUnit(state, 1, 'peasant', 30, 12));
+    state.units.length = 0;
+    const first = spawnUnit(state, 0, 'skulker', 7, 12);
+    const second = spawnUnit(state, 0, 'skulker', 8, 12);
+    // Somebody of theirs, in our streets, wearing our colours.
+    const hider = spawnUnit(state, 1, 'factor', ourTown.x + 1, ourTown.y);
+    wearDisguise(state, hider, 0);
+
+    let found = false;
+    for (let turn = 0; turn < 40 && !found; turn++) {
+      for (const u of [first, second]) {
+        if (state.units.includes(u)) u.moves = unitType(u.type).move;
+      }
+      runAiTurn(state, 0);
+      found = appearsTo(hider, 0).owner === 1;
+    }
+
+    // **The thing the probe said never happened.** With one agent, sweeping
+    // was unreachable: there was always an unread town somewhere, and an
+    // unread town is infinitely stale. Measured `0.00 sweeps per game`.
+    expect(found, 'forty turns with two agents and never a sweep at home').toBe(true);
+    // And the senior one is doing the other half of the job, not standing
+    // about: it should have left home for their town.
+    expect(first.x, 'the agent abroad never went abroad').toBeGreaterThan(8);
+  });
+});
+
+describe('a bar a green agent can actually clear', () => {
+  function town(banked: number, building: string): { state: GameState; spy: Unit; city: City } {
+    const state = createGame({ seed: 97, width: 30, height: 20, barbarians: false });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.ruins = [];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+    }
+    const city = foundCity(state, spawnUnit(state, 1, 'peasant', 12, 10))!;
+    state.units = state.units.filter((u) => u.owner !== 1 || u.x !== city.x || u.y !== city.y);
+    city.producing = { kind: 'building', id: building };
+    city.shields = banked;
+    const spy = spawnUnit(state, 0, 'skulker', 11, 10);
+    return { state, spy, city };
+  }
+
+  it('wrecks a season of somebody’s work with an ordinary agent', () => {
+    // Half the reference work banked. Before the fix the AI would only ever
+    // wreck an ending -- which sits at 0.70 exposure against a bar of 0.45, so
+    // a rank-0 agent could never clear it and the order was unreachable.
+    const { state, spy, city } = town(Math.round(referenceWork() * 0.65), 'barracks');
+    expect(spy.rank).toBe(0);
+    let wrecked = false;
+    for (let turn = 0; turn < 20 && !wrecked; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      wrecked = city.shields === 0;
+    }
+    expect(wrecked, 'a green agent beside a half-built something never tried').toBe(true);
+  });
+
+  it('still leaves a barely-started town alone', () => {
+    const { state, spy, city } = town(10, 'barracks');
+    for (let turn = 0; turn < 20; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+    }
+    // A side that wrecked whatever was nearest would spend its agent on a
+    // granary. The phase band is what keeps that from happening.
+    expect(city.shields).toBe(10);
   });
 });

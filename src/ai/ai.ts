@@ -13,8 +13,15 @@ import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
-import { SPY, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
-import { SABOTAGE, canSabotage, isEndingWork, sabotage, sabotageExposure } from '../sim/sabotage';
+import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
+import {
+  SABOTAGE,
+  canSabotage,
+  isEndingWork,
+  sabotage,
+  sabotageExposure,
+  sabotagePhase,
+} from '../sim/sabotage';
 import { DIPLOMACY_AI, aiDiplomacy } from './diplomacy';
 import {
   NAVAL,
@@ -196,6 +203,25 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'wall-building',
       'next-level-stupid',
       'happiness',
+      // Section 136, and the same story the note on `insanity` below tells.
+      // Left off this list entirely, the advance was reached only when the
+      // cheapest-thing fallback found it -- measured at **turn 182 of ~240**,
+      // with five games in twenty-four never learning it at all. An agent
+      // first existed on turn 184, so the whole of espionage lived for the
+      // last fifth of a game: 1.4 readings, zero sabotage, and two rounds of
+      // me fixing spy behaviour that was never the problem. Asked for here, it
+      // arrives on turn 37 and every counter comes off zero.
+      //
+      // **After the fighting advances, not before them.** The first attempt
+      // put it high, straight after `not-you-again`, and the army-composition
+      // test caught it at once: three seeds in twelve fielded a single kind of
+      // fighter, because sixty beakers of espionage had displaced the weapons.
+      // A side with one sort of soldier and a good spy is worse off than one
+      // with three sorts and a late spy. After `tree-hugging` it still cost
+      // one seed in twelve, so it sits after `happiness` -- the end of the
+      // economy run and still a hundred and forty turns before where the
+      // fallback used to find it.
+      'someone-elses-business',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -269,6 +295,25 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'bunches-footmen',
       'wall-building',
       'happiness',
+      // Section 136, and the same story the note on `insanity` below tells.
+      // Left off this list entirely, the advance was reached only when the
+      // cheapest-thing fallback found it -- measured at **turn 182 of ~240**,
+      // with five games in twenty-four never learning it at all. An agent
+      // first existed on turn 184, so the whole of espionage lived for the
+      // last fifth of a game: 1.4 readings, zero sabotage, and two rounds of
+      // me fixing spy behaviour that was never the problem. Asked for here, it
+      // arrives on turn 37 and every counter comes off zero.
+      //
+      // **After the fighting advances, not before them.** The first attempt
+      // put it high, straight after `not-you-again`, and the army-composition
+      // test caught it at once: three seeds in twelve fielded a single kind of
+      // fighter, because sixty beakers of espionage had displaced the weapons.
+      // A side with one sort of soldier and a good spy is worse off than one
+      // with three sorts and a late spy. After `tree-hugging` it still cost
+      // one seed in twelve, so it sits after `happiness` -- the end of the
+      // economy run and still a hundred and forty turns before where the
+      // fallback used to find it.
+      'someone-elses-business',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -356,6 +401,25 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'burrower-veteran',
       'caste-broodlord',
       'happiness',
+      // Section 136, and the same story the note on `insanity` below tells.
+      // Left off this list entirely, the advance was reached only when the
+      // cheapest-thing fallback found it -- measured at **turn 182 of ~240**,
+      // with five games in twenty-four never learning it at all. An agent
+      // first existed on turn 184, so the whole of espionage lived for the
+      // last fifth of a game: 1.4 readings, zero sabotage, and two rounds of
+      // me fixing spy behaviour that was never the problem. Asked for here, it
+      // arrives on turn 37 and every counter comes off zero.
+      //
+      // **After the fighting advances, not before them.** The first attempt
+      // put it high, straight after `not-you-again`, and the army-composition
+      // test caught it at once: three seeds in twelve fielded a single kind of
+      // fighter, because sixty beakers of espionage had displaced the weapons.
+      // A side with one sort of soldier and a good spy is worse off than one
+      // with three sorts and a late spy. After `tree-hugging` it still cost
+      // one seed in twelve, so it sits after `happiness` -- the end of the
+      // economy run and still a hundred and forty turns before where the
+      // fallback used to find it.
+      'someone-elses-business',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
@@ -1415,23 +1479,50 @@ function bestAtHome(state: GameState, unit: Unit, radius = 8): number {
 function actSpy(state: GameState, unit: Unit): void {
   if (!SPY.enabled) return;
 
+  // **One agent abroad, the rest at home.** Section 136, after the probe.
+  //
+  // The first version sent every agent out and swept only when there was "no
+  // town worth reading" anywhere in the world -- and an *unread* town counts
+  // as infinitely stale, so there was always an errand and the sweep was
+  // unreachable. It measured `0.00 sweeps per game` over twenty-four games: a
+  // whole half of the feature built, documented and never once on the board.
+  //
+  // The division is by seniority rather than by what is out there, so it is
+  // still a fact about this side's own arrangements and not a peek at
+  // somebody's disguises. It is also the division the disguise rules already
+  // describe: wearing your own colours buys nothing abroad and everything at
+  // home.
+  const ours = playerUnits(state, unit.owner).filter((u) => unitType(u.type).spy);
+  const abroad = ours.reduce((first, u) => (u.id < first.id ? u : first), ours[0] ?? unit);
+  if (unit.id !== abroad.id) {
+    watchOurOwnGround(state, unit);
+    return;
+  }
+
   // Section 136 slice 5: wreck it, if what is in there is worth the agent.
   //
-  // **Only an ending work, and only at a bar.** A side that sabotaged whatever
-  // happened to be nearest would spend its one agent on a granary, and one
-  // that sabotaged anything at all would trade a thirty-shield unit for a
-  // coin-flip every turn. The thing worth losing an agent over is the thing
-  // that would otherwise lose the game -- and the odds have to be worth it,
-  // which is the same shape as `RUINS.aiOdds`: a bar on a fight you choose.
+  // **Worth it is a phase, not only an ending.** The first version would only
+  // wreck something that ends the game, on the grounds that a side spending
+  // its one agent on a granary is a side wasting it. That was right about
+  // granaries and wrong about everything in between -- and it made the order
+  // unreachable, because an ending work sits at 0.70 exposure for a rank-0
+  // agent against a bar of 0.45. A green agent could never clear it, agents
+  // barely rank up, and the probe measured `0.00 sabotage attempted per game`.
+  //
+  // So the value test is the same phase ladder the player sees: enough banked
+  // to be worth a turn, or an ending at any depth. The bar then does the rest,
+  // and does it as a gradient -- a green agent will wreck a half-built
+  // something readily, and only a veteran dares the Portal.
   if (SABOTAGE.enabled && SABOTAGE.ai) {
     const worth = state.cities.find(
       (c) =>
         canSabotage(unit, c, state).ok &&
-        isEndingWork(c) &&
         hostileOrNot(state, unit.owner, c.owner) &&
+        (isEndingWork(c) || sabotagePhase(state, c).band >= SABOTAGE.aiBand) &&
         sabotageExposure(state, unit, c) <= SABOTAGE.aiOdds,
     );
     if (worth) {
+      SPY_TRACE.turnWrecked++;
       sabotage(state, unit, worth);
       return;
     }
@@ -1452,6 +1543,7 @@ function actSpy(state: GameState, unit: Unit): void {
     .filter((c) => staleness(state, unit.owner, c) >= SPY.remembers)
     .sort((a, b) => staleness(state, unit.owner, b) - staleness(state, unit.owner, a))[0];
   if (here) {
+    SPY_TRACE.turnRead++;
     readCity(state, unit, here);
     return;
   }
@@ -1479,15 +1571,31 @@ function actSpy(state: GameState, unit: Unit): void {
 
   // Somewhere to walk. The oldest news first, so an agent does not spend the
   // game re-reading one town, and nearness breaks the tie.
+  // **Weighed against the walk, not sorted ahead of it.** This used to order
+  // by staleness and break ties on distance, which sounds the same and is not:
+  // the stalest town anywhere on the map always won, so an agent would set off
+  // across the world, and by the time it arrived something else was staler and
+  // it set off back. Measured at **1.21 readings a game** over two hundred and
+  // forty turns -- an agent that spends its whole life walking.
+  //
+  // Staleness is capped so that "never read" is a strong want and not an
+  // infinite one: without the cap an unread town at any distance beats a town
+  // going stale next door, which is the same `MAX_SAFE_INTEGER` trap that made
+  // sweeping unreachable, in a second place.
+  const worth = (c: City): number =>
+    Math.min(staleness(state, unit.owner, c), SPY.remembers * 3) -
+    distance(unit.x, unit.y, c.x, c.y) * SPY.travelWeight;
   const want = state.cities
     .filter((c) => c.owner !== unit.owner && !state.players[c.owner]?.barbarian)
     .filter((c) => state.players[unit.owner].explored[idx(c.x, c.y, state.width)])
-    .sort((a, b) => {
-      const news = staleness(state, unit.owner, b) - staleness(state, unit.owner, a);
-      if (news !== 0) return news;
-      return distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y);
-    })[0];
-  if (!want) return;
+    .sort((a, b) => worth(b) - worth(a) || a.id - b.id)[0];
+  if (!want) {
+    SPY_TRACE.turnNoTarget++;
+    return;
+  }
+  // Standing beside the town it chose, with a file still fresh: nothing to do
+  // here, and it is about to walk somewhere else.
+  if (canReach(unit, want)) SPY_TRACE.turnFresh++;
 
   if (canDisguise(unit) && unit.disguise?.owner !== want.owner) {
     wearDisguise(state, unit, want.owner);
@@ -1499,8 +1607,47 @@ function actSpy(state: GameState, unit: Unit): void {
   const spot = ringAround(state, want)
     .filter((t) => !unitAt(state, t.x, t.y) && !TERRAIN[state.terrain[idx(t.x, t.y, state.width)]].water)
     .sort((a, b) => distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y))[0];
-  if (!spot) return;
-  if (!routeTo(state, unit, spot.x, spot.y)) return;
+  if (!spot || !routeTo(state, unit, spot.x, spot.y)) {
+    SPY_TRACE.turnStuck++;
+    return;
+  }
+  SPY_TRACE.turnWalked++;
+  moveToward(state, unit, spot.x, spot.y);
+}
+
+/**
+ * What an agent that is not the one abroad does: watch our own ground.
+ *
+ * It walks to one of our own towns and sweeps from there, which is where
+ * somebody else's agent is most likely to be standing -- a disguise is worn to
+ * get *close* to something, and the things worth getting close to are ours.
+ *
+ * It sweeps every turn it is at home, including the many turns it finds
+ * nothing, because that is what a counter-espionage turn mostly is and because
+ * the alternative -- sweeping only when there is somebody to find -- is the
+ * AI being told the answer.
+ */
+function watchOurOwnGround(state: GameState, unit: Unit): void {
+  const home = playerCities(state, unit.owner).sort(
+    (a, b) => distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y),
+  )[0];
+  // No towns left: it is as well standing where it is and watching that.
+  if (!home || distance(unit.x, unit.y, home.x, home.y) <= SPY.homeReach) {
+    // Its own colours, for the reason the Orcpedia gives: nobody can tell
+    // which of our units is the one doing the looking.
+    if (canDisguise(unit) && unit.disguise?.owner !== unit.owner) {
+      wearDisguise(state, unit, unit.owner);
+    }
+    searchFrom(state, unit);
+    return;
+  }
+  const spot = ringAround(state, home)
+    .filter((t) => !unitAt(state, t.x, t.y) && !TERRAIN[state.terrain[idx(t.x, t.y, state.width)]].water)
+    .sort((a, b) => distance(unit.x, unit.y, a.x, a.y) - distance(unit.x, unit.y, b.x, b.y))[0];
+  if (!spot || !routeTo(state, unit, spot.x, spot.y)) {
+    searchFrom(state, unit);
+    return;
+  }
   moveToward(state, unit, spot.x, spot.y);
 }
 
