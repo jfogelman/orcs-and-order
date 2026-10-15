@@ -71,6 +71,28 @@ const buildArms = (): Arm[] => {
    * the instrument, exactly as section 125's was.
    */
 
+  /**
+   * **What it measured, 2026-10-15.** 216 games, 40 minutes.
+   *
+   *     shipped                Horde 45 (41.7%)  Kingdom 34 (31.5%)  Hive 29 (26.9%)
+   *     hive without its ten   Horde 46 (42.6%)  Kingdom 42 (38.9%)  Hive 20 (18.5%)
+   *
+   * Paired by seed, McNemar: 12 discordant pairs the Hive's way against 3 the
+   * other, **exact two-sided p = 0.035**. Both sets agree in direction (tuned
+   * 10 v 7, held-out 19 v 13). The *unpaired* comparison of the same numbers
+   * gives z = 1.46, p = 0.14 and says nothing -- the pairing is what makes it
+   * readable, which is why the rule about McNemar is written down.
+   *
+   * The ten did **not** make the Hive over-strong: at 26.9% of a three-way
+   * game it is still the weakest of the three, and the nine wins came out of
+   * the *Kingdom's* share rather than the Horde's, which did not move.
+   *
+   * The prediction below was half right, and the half it got wrong is worth
+   * keeping: "a visible share of the wins where it had almost none" -- the
+   * Hive already won 18.5% with no happiness, science, gold, supply or
+   * veterancy building at all. The prior that it was crippled was overstated.
+   */
+
   /** The shipped game, untouched. Both arms below are read against this. */
   const shipped = (): Arm => ({
     label: 'shipped',
