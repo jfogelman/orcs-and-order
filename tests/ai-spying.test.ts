@@ -7,6 +7,8 @@ import { appearsTo, wearDisguise } from '../src/sim/disguise';
 import { unitType } from '../src/model/units';
 import { distance } from '../src/engine/grid';
 import { TECHS } from '../src/model/techs';
+import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
+import { isEndingPiece } from '../src/sim/endings';
 import type { City, GameState, Unit } from '../src/model/types';
 
 /**
@@ -279,5 +281,73 @@ describe('the other side sweeps its own ground', () => {
     }
     expect(walked, 'it stood still with a town unread').toBe(true);
     void far;
+  });
+});
+
+describe('the other side wrecks what would beat it', () => {
+  /** Their town, mid-ending, with our agent standing beside it. */
+  function atTheWorks(): { state: GameState; spy: Unit; city: City; work: string } {
+    const state = createGame({ seed: 73, width: 30, height: 20, barbarians: false });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.ruins = [];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+    }
+    const city = foundCity(state, spawnUnit(state, 1, 'peasant', 12, 10))!;
+    state.units = state.units.filter((u) => u.owner !== 1 || u.x !== city.x || u.y !== city.y);
+    const work = BUILDING_IDS.find((id) => isEndingPiece(BUILDINGS[id]))!;
+    city.producing = { kind: 'building', id: work };
+    state.players[1].worksBanked = { [work]: 300 };
+    const spy = spawnUnit(state, 0, 'skulker', 11, 10);
+    spy.rank = 3; // clears the bar; a green one deliberately does not
+    return { state, spy, city, work };
+  }
+
+  it('wrecks an ending it is standing beside', () => {
+    const { state, spy, city, work } = atTheWorks();
+    let gone = false;
+    for (let turn = 0; turn < 30 && !gone; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      gone = (state.players[1].worksBanked?.[work] ?? 0) === 0;
+    }
+    // The thing worth losing an agent over is the thing that would otherwise
+    // lose the game.
+    expect(gone, 'thirty turns beside somebody’s Portal and it never tried').toBe(true);
+    void city;
+  });
+
+  it('will not spend its agent on a granary', () => {
+    const { state, spy, city } = atTheWorks();
+    // The same town, building something ordinary, with a full box.
+    city.producing = { kind: 'building', id: 'granary' };
+    delete state.players[1].worksBanked;
+    city.shields = 48;
+    for (let turn = 0; turn < 20; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+    }
+    // A side that sabotaged whatever happened to be nearest would spend its one
+    // agent on a granary. This is the bar doing its job.
+    expect(city.shields, 'it wrecked an ordinary building site').toBe(48);
+  });
+
+  it('will not take a bet a green agent should refuse', () => {
+    const { state, spy, city, work } = atTheWorks();
+    spy.rank = 0;
+    for (let turn = 0; turn < 20; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+    }
+    // Losing your only agent to delete somebody's Portal is a fine trade; doing
+    // it at odds a veteran would refuse is not, and `aiOdds` is the bar.
+    expect(state.players[1].worksBanked?.[work] ?? 0).toBe(300);
+    void city;
   });
 });

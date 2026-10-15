@@ -31,6 +31,7 @@ import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
 import { SPY } from '../src/sim/spying';
+import { SABOTAGE } from '../src/sim/sabotage';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
 import { FOLLIES } from '../src/sim/follyEffects';
@@ -145,6 +146,9 @@ export const control = () => {
   // player ever uses measures as no mechanic at all.
   SPY.enabled = true;
   SPY.ai = true;
+  // Slice 5: and agents wreck what somebody is building, both sides.
+  SABOTAGE.enabled = true;
+  SABOTAGE.ai = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.
   DIPLOMACY_AI.readsStanding = true;
   DIPLOMACY_AI.weighsTheWar = true;

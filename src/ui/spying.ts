@@ -1,6 +1,7 @@
 import type { City, GameState, Unit } from '../model/types';
 import { unitType } from '../model/units';
 import type { CityReading } from '../sim/spying';
+import type { SabotageOutcome, SabotagePhase } from '../sim/sabotage';
 import { escapeHtml, openModal } from './dom';
 
 /**
@@ -165,6 +166,85 @@ export function openSearch(state: GameState, unit: Unit, found: Unit[]): void {
                </div>`
             : `<p class="flavor">Everything out there is what it says it is, as far as
                anybody of ours can tell. That is not the same as nobody being there.</p>`
+        }
+      </div>`,
+  });
+}
+
+/**
+ * What came of putting sand in the gears.
+ *
+ * The three outcomes are genuinely different here in a way the reading
+ * ladder's are not, so the dialog says which plainly. A *failure* is a wasted
+ * day. A *wreck* is somebody's season gone, and the victim is told it happened
+ * and not by whom -- which the dialog says, because a player who does not
+ * realise they stayed anonymous will not weigh the risk of the time they do
+ * not. And being *caught* here costs the agent, which is the whole reason the
+ * top of this ladder is a decision.
+ */
+export function openSabotage(
+  state: GameState,
+  unit: Unit,
+  city: City,
+  outcome: SabotageOutcome,
+  phase: SabotagePhase,
+): void {
+  const them = state.players[city.owner]?.name ?? 'They';
+  const name = unitType(unit.type).name;
+  if (outcome.kind === 'caught') {
+    openModal({
+      title: 'Taken At The Works',
+      width: 'min(560px, 96vw)',
+      body: `
+        <div class="panel-body">
+          <p style="font-size:15px">The ${escapeHtml(name)} was caught at the works in
+          ${escapeHtml(city.name)}, with their hands full.</p>
+          <div class="spy-notice blown">
+            <strong>We were caught.</strong> ${escapeHtml(them)} know whose it was, and
+            will remember it.${
+              outcome.lost ? ' The agent is not coming back.' : ''
+            }</div>
+          <p class="flavor">${
+            phase.ending
+              ? 'There was never going to be a quiet way to do that to a thing that ends the world. Every eye in their empire was already on it.'
+              : 'Looking at a town is one thing. Being found inside its works is another.'
+          }</p>
+        </div>`,
+    });
+    return;
+  }
+  if (outcome.kind === 'failed') {
+    openModal({
+      title: 'Nothing Came Of It',
+      width: 'min(560px, 96vw)',
+      body: `
+        <div class="panel-body">
+          <p style="font-size:15px">The ${escapeHtml(name)} spent the day at
+          ${escapeHtml(city.name)} and achieved nothing in particular.</p>
+          <div class="spy-notice safe"><strong>Nobody noticed.</strong> The works are
+          as they were, and so is the agent.</div>
+        </div>`,
+    });
+    return;
+  }
+  openModal({
+    title: 'The Works Are Wrecked',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <div class="stat-row"><span class="label">Town</span><span class="value">${escapeHtml(city.name)}</span></div>
+        <div class="stat-row"><span class="label">What they were building</span><span class="value">${escapeHtml(outcome.what)}</span></div>
+        <div class="stat-row"><span class="label">Shields gone</span><span class="value">${outcome.shields}</span></div>
+        <div class="spy-notice safe">
+          <strong>Nobody noticed.</strong> ${escapeHtml(them)} will find the works
+          wrecked in the morning and will have no idea whose doing it was. Being caught
+          is the only thing that ever puts a name to this.
+        </div>
+        ${
+          phase.ending
+            ? `<p class="flavor">And that was the thing they meant to win with. They will
+               start it again, from nothing.</p>`
+            : ''
         }
       </div>`,
   });

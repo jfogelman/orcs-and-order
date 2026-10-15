@@ -5,6 +5,7 @@ import { foundCity } from '../../src/sim/city';
 import { SPY } from '../../src/sim/spying';
 import { wearDisguise } from '../../src/sim/disguise';
 import { closeModal, isModalOpen } from '../../src/ui/dom';
+import { SABOTAGE } from '../../src/sim/sabotage';
 import type { City, GameState, Unit } from '../../src/model/types';
 
 /**
@@ -28,6 +29,7 @@ interface App {
   refreshSidebar(): void;
   orderRead(cityId: number): void;
   orderSweep(): void;
+  orderWreck(cityId: number): void;
 }
 
 let app: App;
@@ -279,5 +281,58 @@ describe('sweeping the ground, through the interface', () => {
     expect(said, 'sixty sweeps at rank 9 and never a find').toMatch(/Not What They Appear/i);
     expect(said).toMatch(/Factor/);
     expect(said, 'the prize is that they do not know').toMatch(/do not know/i);
+  });
+});
+
+describe('wrecking the works, through the interface', () => {
+  it('prices the order per town, and raises it as the works grow', () => {
+    const { spy, city } = board();
+    city.producing = { kind: 'building', id: 'barracks' };
+    city.shields = 10;
+    app.select(spy);
+    app.refreshSidebar();
+    const quiet = document.getElementById('selection')!.textContent ?? '';
+    expect(quiet).toContain(`Sabotage ${city.name}`);
+
+    city.shields = 240;
+    app.select(spy);
+    app.refreshSidebar();
+    const busy = document.getElementById('selection')!.textContent ?? '';
+    // The word moves with what is in the town, which is the whole design: what
+    // this costs you is a fact about their works, not about your agent.
+    expect(busy).not.toBe(quiet);
+  });
+
+  it('is not offered at a town with nothing banked in it', () => {
+    const { state, spy, city } = board();
+    city.shields = 0;
+    city.producing = { kind: 'building', id: 'barracks' };
+    delete state.players[city.owner].worksBanked;
+    app.select(spy);
+    app.refreshSidebar();
+    expect(document.getElementById('selection')!.textContent ?? '').not.toContain('Sabotage');
+  });
+
+  it('says what was wrecked, and that nobody can name us for it', async () => {
+    const { spy, city } = board();
+    city.producing = { kind: 'building', id: 'barracks' };
+    city.shields = 60;
+    // Forced safe: this is about the wording, not the dice.
+    SABOTAGE.irreducible = 0;
+    const weights = [...SABOTAGE.weights];
+    SABOTAGE.weights = [0, 0, 0, 0];
+    try {
+      await again(spy);
+      app.orderWreck(city.id);
+      const said = dialog();
+      expect(said).toMatch(/wrecked/i);
+      expect(said).toMatch(/60/);
+      // A player who does not realise they stayed anonymous cannot weigh the
+      // risk of the time they do not.
+      expect(said).toMatch(/no idea whose/i);
+    } finally {
+      SABOTAGE.irreducible = 0.1;
+      SABOTAGE.weights = weights;
+    }
   });
 });
