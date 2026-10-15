@@ -5,7 +5,8 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { TECHS_BY_ID } from '../src/model/techs';
+import { SABOTAGE } from '../src/sim/sabotage';
+import { HIVE_WORKS } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -42,35 +43,77 @@ declare const process: { env: Record<string, string | undefined> };
 // See the note at the top of that file: they were not, and it showed.
 
 const buildArms = (): Arm[] => {
-  // Section 136: the Hive can build a Fodder-caste from its first turn.
-  //
-  // A fairness fix -- `first-orc` opens with a peon *and* a goblin, the Hive
-  // opened with a settler and a labourer -- and a real buff, because the side
-  // it mostly helps is the **emergent** one, which can now field a fighter the
-  // turn it comes out of the ground instead of researching twenty beakers
-  // first.
-  //
-  // It is already known to move the game: the late-game fixture wants a seed
-  // with both empires alive at turn 299, and the hit rate over a seed scan
-  // went from three in sixty to **none in sixty**, widening to six in three
-  // hundred. Attributed rather than assumed -- with fodder none of five
-  // candidate seeds qualified, without it 55 did.
-  //
-  // So the prediction, written before the run: **the Hive wins more and games
-  // end sooner**, and the empires split what is left roughly as they do now.
-  // If the Hive does not move, the fixture collapse was something else and
-  // this needs counting again before it ships.
-  const fodder = (on: boolean): Arm => ({
-    label: on ? 'fodder at once' : 'fodder researched',
+  /**
+   * Two unmeasured changes, each against the shipped game.
+   *
+   * They are asked in one run rather than two because each is a separate arm
+   * against a common control, which is the only safe way to pair anything: a
+   * single arm moving both levers could not say which one did it.
+   *
+   * **Predictions, written before the run.**
+   *
+   * *The Hive's ten buildings* (#144). Before them the Hivekin had two
+   * ordinary buildings against ten apiece -- no happiness, no science, no
+   * gold, no supply, no veterancy -- so this is the larger of the two changes
+   * by a distance. I expect **the Hive clearly better off with them**: more
+   * cities held, more advances, and a visible share of the wins where it had
+   * almost none. If this arm shows *nothing*, the likeliest explanation is not
+   * that twelve buildings are worth nothing but that the Hive never lives long
+   * enough to build them, which would be a finding about the arrival and not
+   * about the buildings.
+   *
+   * *Sabotage* (#148). Small. One agent a side, a handful of attempts a game,
+   * and the AI only wrecks ending works. I expect **no measurable difference
+   * in winners**, and if anything a slightly longer game where an ending gets
+   * set back. The honest prior is that this is below the noise floor at 108
+   * games a set, and the probe counters are what will say whether it happened
+   * at all -- a null result with zero attempts behind it is a finding about
+   * the instrument, exactly as section 125's was.
+   */
+
+  /** The shipped game, untouched. Both arms below are read against this. */
+  const shipped = (): Arm => ({
+    label: 'shipped',
     apply: () => {
       control();
-      const first = TECHS_BY_ID['first-hivekin'] as { units: string[] };
-      first.units = on ? ['grub', 'worker', 'fodder'] : ['grub', 'worker'];
-      const caste = TECHS_BY_ID['caste-fodder'] as { units: string[] };
-      caste.units = on ? [] : ['fodder'];
+      HIVE_WORKS.enabled = true;
+      SABOTAGE.enabled = true;
     },
   });
-  return [fodder(false), fodder(true)];
+
+  /**
+   * The Hive as it was before #144: its ten buildings taken back out of the
+   * advances that offer them.
+   *
+   * Done by editing the tech entries rather than the buildings, because a
+   * building nobody can reach is a building nobody builds, and it leaves the
+   * definitions alone for the arm that follows.
+   */
+  const hivePoor = (): Arm => ({
+    label: 'hive without its ten',
+    apply: () => {
+      control();
+      HIVE_WORKS.enabled = false;
+      SABOTAGE.enabled = true;
+    },
+  });
+
+  /*
+   * **The sabotage arm was dropped before it ran, and this is the record of
+   * why.** The smoke run came back byte-identical to `shipped` on every
+   * column across eighteen games -- same turns, cities, population, fights,
+   * captures -- which means the RNG stream never diverged and sabotage never
+   * fired once. The probe then confirmed it: `0.00 sabotage attempted per
+   * game` over twenty-four games, and `0.00 sweeps run` with it.
+   *
+   * So the arm would have spent twenty-five minutes proving a tautology, and
+   * a null result with no mechanism behind it is a finding about the
+   * instrument and not about balance -- which is the whole of section 125's
+   * lesson. The AI's reach for both orders has to be fixed before either can
+   * be measured; see the espionage memory.
+   */
+
+  return [shipped(), hivePoor()];
 };
 
 const ARMS: Arm[] = buildArms();

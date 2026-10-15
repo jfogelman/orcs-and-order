@@ -32,6 +32,12 @@ interface Tally {
   read: number;
   missed: number;
   caught: number;
+  swept: number;
+  found: number;
+  wrecks: number;
+  wrecked: number;
+  lostAtWorks: number;
+  wreckedEndings: number;
   /** Distinct towns ever filed. A floor on reads, not a count of them. */
   filed: number;
   /** Agents still alive at the end -- the rest were caught out and killed. */
@@ -44,6 +50,12 @@ function tallyOf(state: GameState): Tally {
     read: SPY_TRACE.read,
     missed: SPY_TRACE.missed,
     caught: SPY_TRACE.caught,
+    swept: SPY_TRACE.swept,
+    found: SPY_TRACE.found,
+    wrecks: SPY_TRACE.wrecks,
+    wrecked: SPY_TRACE.wrecked,
+    lostAtWorks: SPY_TRACE.lostAtWorks,
+    wreckedEndings: SPY_TRACE.wreckedEndings,
     filed: 0,
     lived: 0,
   };
@@ -61,7 +73,11 @@ describe('is espionage ever on the board', () => {
   it('counts agents, readings and incidents across a set of games', () => {
     control();
     const lines: string[] = [];
-    const totals: Tally = { attempts: 0, read: 0, missed: 0, caught: 0, filed: 0, lived: 0 };
+    const zero = (): Tally => ({
+      attempts: 0, read: 0, missed: 0, caught: 0, swept: 0, found: 0,
+      wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0, filed: 0, lived: 0,
+    });
+    const totals: Tally = zero();
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
 
     for (const seed of seeds) {
@@ -71,10 +87,7 @@ describe('is espionage ever on the board', () => {
       let last: GameState | null = null;
       // Zeroed per game, or every row would be the running total of the ones
       // before it and the last game would look like the busiest.
-      SPY_TRACE.attempts = 0;
-      SPY_TRACE.read = 0;
-      SPY_TRACE.missed = 0;
-      SPY_TRACE.caught = 0;
+      for (const k of Object.keys(SPY_TRACE) as (keyof typeof SPY_TRACE)[]) SPY_TRACE[k] = 0;
       const out = playGame(seed, undefined, (s) => {
         last = s;
       });
@@ -84,7 +97,9 @@ describe('is espionage ever on the board', () => {
         `seed ${String(seed).padStart(9)} T${String(out.turns).padStart(4)} ` +
           `tried ${String(t.attempts).padStart(3)} | read ${String(t.read).padStart(3)} ` +
           `| quiet ${String(t.missed).padStart(3)} | caught ${String(t.caught).padStart(3)} ` +
-          `| towns ${t.filed} | alive ${t.lived}`,
+          `| swept ${String(t.swept).padStart(3)} found ${t.found} ` +
+          `| wrecks ${String(t.wrecks).padStart(2)} (${t.wrecked} done, ${t.wreckedEndings} endings, ${t.lostAtWorks} lost) ` +
+          `| alive ${t.lived}`,
       );
     }
 
@@ -97,6 +112,18 @@ describe('is espionage ever on the board', () => {
     lines.push(`  caught              ${(totals.caught / n).toFixed(2)}`);
     lines.push(`distinct towns filed  ${(totals.filed / n).toFixed(2)} per game`);
     lines.push(`agents alive at end   ${(totals.lived / n).toFixed(2)} per game`);
+    lines.push('');
+    lines.push(`sweeps run            ${(totals.swept / n).toFixed(2)} per game`);
+    lines.push(`  disguises seen thru ${(totals.found / n).toFixed(2)}`);
+    lines.push(`sabotage attempted    ${(totals.wrecks / n).toFixed(2)} per game`);
+    lines.push(`  works wrecked       ${(totals.wrecked / n).toFixed(2)}`);
+    lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
+    lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
+    if (totals.wrecks === 0) {
+      // The whole reason this file exists. A sweep of SABOTAGE with this at
+      // zero would be measuring the same game twice and calling it balance.
+      lines.push('  **NO SABOTAGE EVER HAPPENED.** Any arm of it measures nothing.');
+    }
     if (totals.attempts > 0) {
       // The shape the rules predict at rank 0: three readings in four, and one
       // in eight of the whole attempts caught. A measured shape far off that

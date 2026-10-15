@@ -12,6 +12,7 @@ import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
 import { SPY } from '../src/sim/spying';
 import { SABOTAGE } from '../src/sim/sabotage';
+import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
@@ -130,6 +131,7 @@ export const LEVERS: Record<string, object> = {
   DISGUISE,
   SPY,
   SABOTAGE,
+  HIVE_WORKS,
   DIPLOMACY_AI,
   ATTRITION,
   BEAKERS_PER_TRADE,

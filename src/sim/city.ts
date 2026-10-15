@@ -1,4 +1,4 @@
-import { broodBonus, hiveEndingScale, placeQueen, queenless } from './hivekin';
+import { HIVE_WORKS, broodBonus, hiveEndingScale, isHiveWork, placeQueen, queenless } from './hivekin';
 import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
@@ -1067,6 +1067,9 @@ export function buildOptions(
     // upgrade -- and a city could hold a Cathedral it never built a Chapel for.
     .filter((b) => !b.needs || already.has(b.needs))
     .filter((b) => buildingsForFaction(owner.faction).some((f) => f.id === b.id))
+    // Section 136's measurement lever: the Hive's own ten, on or off. On in
+    // the shipped game; off is the Hive as it was before #144.
+    .filter((b) => HIVE_WORKS.enabled || !isHiveWork(b))
     // A capital already supplies an army; building a depot in the place the
     // supplies come from is not a thing anybody would do.
     .filter((b) => !b.suppliesArmy || seat?.id !== city.id)
