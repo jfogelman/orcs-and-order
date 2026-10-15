@@ -111,18 +111,27 @@ const buildArms = (): Arm[] => {
    * building nobody can reach is a building nobody builds, and it leaves the
    * definitions alone for the arm that follows.
    */
-  const hivePoor = (): Arm => ({
-    label: 'hive without its ten',
-    apply: () => {
-      control();
-      HIVE_WORKS.enabled = false;
-      SABOTAGE.enabled = true;
-    },
-  });
-
   /*
-   * **The sabotage arm was dropped before it ran, and this is the record of
-   * why.** The smoke run came back byte-identical to `shipped` on every
+   * **The sabotage arm was dropped once and is back, which is the point.**
+   *
+   * It is measurable now: the probe reports 0.25 sabotage attempted and 0.21
+   * works wrecked a game, where it reported 0.00 of both. What changed was not
+   * sabotage but *when espionage exists at all* -- the advance was being
+   * learned on turn 182 of 240. See the commit.
+   *
+   * The original note follows, because it is the better lesson.
+   *
+   * **What it measured, once it could.** 216 games. Only five seeds in a
+   * hundred and eight diverge in their winner at all, and no side moves:
+   * Horde 41 v 39 (p = 0.50), Kingdom 33 v 36 (p = 0.375), Hive 34 v 33
+   * (p = 1.000), with game length flat (paired t = 0.44). The prediction
+   * written before the first attempt was right -- below the noise floor.
+   *
+   * It is a *real* null rather than the earlier empty one: the probe says
+   * 0.25 sabotage attempted and 0.21 works wrecked a game, so the mechanism
+   * is on the board. It is simply too rare, as the AI uses it, to move a
+   * balance. Making it commoner is a design decision and wants its own run.
+   * The smoke run came back byte-identical to `shipped` on every
    * column across eighteen games -- same turns, cities, population, fights,
    * captures -- which means the RNG stream never diverged and sabotage never
    * fired once. The probe then confirmed it: `0.00 sabotage attempted per
@@ -135,7 +144,16 @@ const buildArms = (): Arm[] => {
    * be measured; see the espionage memory.
    */
 
-  return [shipped(), hivePoor()];
+  const noSabotage = (): Arm => ({
+    label: 'no sabotage',
+    apply: () => {
+      control();
+      HIVE_WORKS.enabled = true;
+      SABOTAGE.enabled = false;
+    },
+  });
+
+  return [shipped(), noSabotage()];
 };
 
 const ARMS: Arm[] = buildArms();
