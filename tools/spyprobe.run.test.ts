@@ -44,6 +44,11 @@ interface Tally {
   turnStuck: number;
   turnNoTarget: number;
   turnFresh: number;
+  offers: number;
+  offersTaken: number;
+  offersLater: number;
+  offersRefused: number;
+  goldSpentBuying: number;
   /** Distinct towns ever filed. A floor on reads, not a count of them. */
   filed: number;
   /** Agents still alive at the end -- the rest were caught out and killed. */
@@ -68,6 +73,11 @@ function tallyOf(state: GameState): Tally {
     turnStuck: SPY_TRACE.turnStuck,
     turnNoTarget: SPY_TRACE.turnNoTarget,
     turnFresh: SPY_TRACE.turnFresh,
+    offers: SPY_TRACE.offers,
+    offersTaken: SPY_TRACE.offersTaken,
+    offersLater: SPY_TRACE.offersLater,
+    offersRefused: SPY_TRACE.offersRefused,
+    goldSpentBuying: SPY_TRACE.goldSpentBuying,
     filed: 0,
     lived: 0,
   };
@@ -89,6 +99,7 @@ describe('is espionage ever on the board', () => {
       attempts: 0, read: 0, missed: 0, caught: 0, swept: 0, found: 0,
       wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0,
       turnRead: 0, turnWrecked: 0, turnWalked: 0, turnStuck: 0, turnNoTarget: 0, turnFresh: 0,
+      offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
       filed: 0, lived: 0,
     });
     const totals: Tally = zero();
@@ -151,6 +162,14 @@ describe('is espionage ever on the board', () => {
     lines.push(`  works wrecked       ${(totals.wrecked / n).toFixed(2)}`);
     lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
     lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
+    lines.push(`offers made           ${(totals.offers / n).toFixed(2)} per game`);
+    lines.push(`  taken               ${(totals.offersTaken / n).toFixed(2)}`);
+    lines.push(`  of those, for later ${(totals.offersLater / n).toFixed(2)}`);
+    lines.push(`  refused (and named) ${(totals.offersRefused / n).toFixed(2)}`);
+    lines.push(`  gold spent buying   ${(totals.goldSpentBuying / n).toFixed(0)}`);
+    if (totals.offers === 0) {
+      lines.push('  **NOBODY EVER MADE AN OFFER.** Any arm of turning measures nothing.');
+    }
     const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const had = firstAgentTurns.filter((t) => t > 0);
     const knew = knewItTurns.filter((t) => t > 0);

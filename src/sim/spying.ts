@@ -296,6 +296,17 @@ export const SPY_TRACE = {
   turnStuck: 0,
   turnNoTarget: 0,
   turnFresh: 0,
+  /**
+   * Slice 6: offers made, taken, taken for later, and refused.
+   *
+   * Counted from the day the rung was built rather than after a measurement
+   * came back zero, which is the one thing this session cost most to learn.
+   */
+  offers: 0,
+  offersTaken: 0,
+  offersLater: 0,
+  offersRefused: 0,
+  goldSpentBuying: 0,
 };
 
 /** What a reading tells you about a city. */

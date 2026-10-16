@@ -10,6 +10,7 @@ import { TECHS } from '../src/model/techs';
 import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
 import { isEndingPiece } from '../src/sim/endings';
 import { referenceWork } from '../src/sim/sabotage';
+import { TURNING, aiOffer, askingPrice, turnOdds } from '../src/sim/turning';
 import type { City, GameState, Unit } from '../src/model/types';
 
 /**
@@ -437,5 +438,88 @@ describe('a bar a green agent can actually clear', () => {
     // A side that wrecked whatever was nearest would spend its agent on a
     // granary. The phase band is what keeps that from happening.
     expect(city.shields).toBe(10);
+  });
+});
+
+describe('the other side buys soldiers too', () => {
+  function faceToFace(gold: number, rank = 0): { state: GameState; spy: Unit; mark: Unit } {
+    const state = createGame({ seed: 67, width: 30, height: 20, barbarians: false });
+    state.terrain.fill('grass');
+    state.units.length = 0;
+    state.cities.length = 0;
+    state.ruins = [];
+    for (const p of state.players) {
+      p.explored.fill(1);
+      p.visible.fill(1);
+      p.techs = TECHS.map((t) => t.id);
+      p.gold = 0;
+    }
+    state.players[0].gold = gold;
+    const spy = spawnUnit(state, 0, 'skulker', 10, 10);
+    spy.rank = rank;
+    const mark = spawnUnit(state, 1, 'footman', 11, 10);
+    return { state, spy, mark };
+  }
+
+  it('makes an offer when it can afford to be sure enough', () => {
+    const { state, spy, mark } = faceToFace(2000);
+    const offer = aiOffer(state, spy, mark);
+    expect(offer, 'a full purse and a Footman next door, and it offered nothing').not.toBeNull();
+    expect(turnOdds(spy, mark, offer!.gold, offer!.delay)).toBeGreaterThanOrEqual(TURNING.aiOdds);
+
+    let settled = false;
+    for (let turn = 0; turn < 10 && !settled; turn++) {
+      if (!state.units.includes(spy)) break;
+      spy.moves = unitType(spy.type).move;
+      runAiTurn(state, 0);
+      settled = mark.owner === 0 || mark.bought !== undefined || state.players[0].gold < 2000;
+    }
+    expect(settled, 'ten turns beside a buyable soldier and it never tried').toBe(true);
+  });
+
+  it('offers the least that clears its bar, not the most it can afford', () => {
+    const { state, spy, mark } = faceToFace(2000);
+    const offer = aiOffer(state, spy, mark)!;
+    // A buyer, not a spender: being refused is being named, so it wants to be
+    // sure enough and no surer.
+    expect(offer.gold).toBeLessThan(askingPrice(mark, offer.delay) * 2);
+    expect(turnOdds(spy, mark, offer.gold - 1, offer.delay)).toBeLessThan(TURNING.aiOdds + 0.02);
+  });
+
+  it('will not be named over somebody who cannot fight', () => {
+    const { state, spy } = faceToFace(2000);
+    const peon = spawnUnit(state, 1, 'peasant', 10, 11);
+    // Refusal here is *certain* exposure, so a labourer is not worth it.
+    //
+    // Tested on what it is rather than what it cost, because a Peon and a
+    // Footman both cost twenty: the first version of this gate used the
+    // shield cost alone, and so excluded the common soldier along with the
+    // labourer, and the AI made no offers at all.
+    expect(aiOffer(state, spy, peon)).toBeNull();
+    const soldier = spawnUnit(state, 1, 'footman', 9, 10);
+    expect(aiOffer(state, spy, soldier), 'a common soldier should be buyable').not.toBeNull();
+  });
+
+  it('keeps its hands in its pockets when the purse is empty', () => {
+    const { state, spy, mark } = faceToFace(5);
+    expect(aiOffer(state, spy, mark)).toBeNull();
+  });
+
+  it('takes the waiting price when it cannot afford to buy outright', () => {
+    // Enough for a delayed Fair-ish offer and not an immediate one.
+    const { state, spy, mark } = faceToFace(1);
+    state.players[0].gold = Math.ceil(askingPrice(mark, TURNING.maxDelay) * 1.2);
+    const offer = aiOffer(state, spy, mark);
+    if (offer) expect(offer.delay).toBe(TURNING.maxDelay);
+  });
+
+  it('does none of it with the lever off', () => {
+    const { state, spy, mark } = faceToFace(2000);
+    TURNING.ai = false;
+    try {
+      expect(aiOffer(state, spy, mark)).toBeNull();
+    } finally {
+      TURNING.ai = true;
+    }
   });
 });

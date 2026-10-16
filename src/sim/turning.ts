@@ -4,7 +4,7 @@ import { adjustStanding } from './diplomacy';
 import { uncover } from './disguise';
 import { hasFlag } from './rules';
 import { log, withRng } from './gamestate';
-import { SPY } from './spying';
+import { SPY, SPY_TRACE } from './spying';
 
 /**
  * Section 136 slice 6: buying somebody else's soldier.
@@ -71,9 +71,65 @@ export const TURNING = {
   refused: SPY.caught,
   /** Whether the other side buys units too. */
   ai: true,
-  /** The most it will pay, as a share of what it has in the bank. */
+  /** The most it will pay for one soldier, as a share of what is in the bank. */
   aiPurse: 0.5,
+  /**
+   * The odds the other side insists on before it will make an offer.
+   *
+   * Being refused is being *named* -- it is the one rung where that is certain
+   * -- so an AI that made thin offers would spend its purse buying diplomatic
+   * incidents. The same shape as `RUINS.aiOdds` and `SABOTAGE.aiOdds`: a bar on
+   * a thing you choose to do.
+   */
+  aiOdds: 0.55,
+  /**
+   * The least a target may be worth, in shields, before it is worth the risk.
+   *
+   * **Paired with "it must be able to fight", which is the test that actually
+   * does the work.** The first cut used the shield cost alone to mean "not
+   * worth being named over" -- and a Peon and a Footman both cost twenty, so
+   * at any threshold that excluded the labourer the common soldier went with
+   * it, and the AI made no offers at all. Cost cannot tell those two apart;
+   * `attack` can.
+   */
+  aiWorth: 20,
 };
+
+/**
+ * What the other side would offer for this unit, or nothing.
+ *
+ * Picks the **cheapest offer that clears its bar**, which is the shape of a
+ * buyer rather than a spender: it is not trying to be generous, it is trying
+ * to be sure enough. Prefers to buy outright when it can afford to, because a
+ * unit held now is a unit that cannot be killed before the day comes; falls
+ * back to the delayed price when the purse is thin, which is also when waiting
+ * is most attractive.
+ */
+export function aiOffer(
+  state: GameState,
+  spy: Unit,
+  target: Unit,
+): { gold: number; delay: number } | null {
+  if (!TURNING.ai) return null;
+  const type = unitType(target.type);
+  // Worth being named over: something that can fight, and not the cheapest
+  // thing on the board. See `aiWorth`.
+  if (type.attack <= 0 || type.cost < TURNING.aiWorth) return null;
+  const purse = Math.floor((state.players[spy.owner]?.gold ?? 0) * TURNING.aiPurse);
+  for (const delay of [0, TURNING.maxDelay]) {
+    const asking = askingPrice(target, delay);
+    // The share of the asking price that just clears the bar, rounded up.
+    const need = Math.max(
+      0,
+      (TURNING.aiOdds - spy.rank * TURNING.perAgentRank) / TURNING.atAsking,
+    );
+    const gold = Math.ceil(asking * need);
+    if (gold <= purse && turnOdds(spy, target, gold, delay) >= TURNING.aiOdds) {
+      return { gold, delay };
+    }
+  }
+  return null;
+}
 
 /** Whether this unit could be bought at all, and why not. */
 export function canTurn(
@@ -154,13 +210,17 @@ export function turnUnit(
   spy.moves = 0;
   spy.order = 'none';
   buyer.gold -= paid;
+  SPY_TRACE.offers++;
+  SPY_TRACE.goldSpentBuying += paid;
 
   const wait = Math.max(0, Math.min(delay, TURNING.maxDelay));
   if (withRng(state, (rng) => rng.chance(turnOdds(spy, target, paid, wait)))) {
     const on = state.turn + wait;
+    SPY_TRACE.offersTaken++;
     if (wait === 0) {
       changeSides(state, target, spy.owner);
     } else {
+      SPY_TRACE.offersLater++;
       // **Still theirs until the day comes.** Nothing else in the game reads
       // `bought`, deliberately: it fights for them, is supplied by them and
       // holds their gate right up until it does not.
@@ -182,6 +242,7 @@ export function turnUnit(
   // **Refused is caught.** The thing being bought is a person, and a person
   // who says no has somebody to tell -- so unlike every rung below this one,
   // the other side always learns whose agent it was.
+  SPY_TRACE.offersRefused++;
   uncover(spy, target.owner);
   adjustStanding(state, spy.owner, target.owner, TURNING.refused);
   const them = state.players[spy.owner]?.name ?? 'Somebody';
