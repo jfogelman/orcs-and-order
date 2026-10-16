@@ -10,6 +10,8 @@ import type { BuildingId, FactionId, TechId, UnitTypeId } from './types';
  */
 
 export type TechFlag =
+  /** Section 136 slice 8: a spy may set a town talking against its own rulers. */
+  | 'incite'
   /** Section 136 slice 7: a spy may ask a town what it thinks of everybody. */
   | 'gossip'
   /** Section 136 slice 6: a spy may offer somebody else's soldier money. */
@@ -926,6 +928,20 @@ export const TECHS: TechDef[] = [
     // Nothing in this tree was about *knowing things* before it. The shared
     // spine was land, walls, weather and mood; the faction ladders are units
     // and counting jokes.
+    id: 'a-word-in-the-wrong-ear',
+    name: 'A Word In The Wrong Ear',
+    faction: 'both',
+    cost: 120,
+    prereqs: ['asking-around'],
+    units: [],
+    buildings: [],
+    flags: ['incite'],
+    flavor:
+      'Nothing is invented and nothing is even untrue. The trick is only to mention the ' +
+      'right grievance to the right person at the right hour, and then to be somewhere ' +
+      'else by the time they have finished agreeing with themselves.',
+  },
+  {
     id: 'asking-around',
     name: 'Asking Around',
     faction: 'both',

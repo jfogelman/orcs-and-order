@@ -607,6 +607,16 @@ export interface City {
   chosenTiles?: number[];
   /** True while the city is rioting; it produces nothing. */
   disorder: boolean;
+  /**
+   * Somebody has been talking, and the town is harder to keep calm until this
+   * turn. Section 136 slice 8.
+   *
+   * Absent for almost every city almost always. Deliberately a subtraction
+   * from the town's **patience** rather than a flag that forces a riot: a city
+   * with room to spare shrugs it off and a city already stretched tips over,
+   * which is the judgement the order is asking the player to make.
+   */
+  unrest?: { until: number };
   foundedTurn: number;
   /**
    * Who founded it, which is not always who holds it.

@@ -14,6 +14,7 @@ import { SPY } from '../src/sim/spying';
 import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
+import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
@@ -135,6 +136,7 @@ export const LEVERS: Record<string, object> = {
   SABOTAGE,
   TURNING,
   GOSSIP,
+  INCITE,
   HIVE_WORKS,
   DIPLOMACY_AI,
   ATTRITION,

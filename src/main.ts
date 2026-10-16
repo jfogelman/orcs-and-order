@@ -86,6 +86,7 @@ import {
   openCaught,
   openOffer,
   openGossip,
+  openIncite,
   openOfferResult,
   openQuiet,
   openReading,
@@ -96,6 +97,7 @@ import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying
 import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabotage';
 import { askingPrice, canTurn, turnUnit } from './sim/turning';
 import { askAround, canAsk } from './sim/gossip';
+import { canIncite, incite } from './sim/incite';
 import { appearsTo, couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -793,6 +795,16 @@ class App {
           riskBand(unit, 'search'),
         )}</span></button>`
       : '';
+    // Section 136 slice 8: a word in the wrong ear.
+    const stir = near
+      .filter((c) => canIncite(this.state, unit, c).ok)
+      .map(
+        (c) =>
+          `<button class="small" data-act="stir" data-city="${c.id}" title="Spend the day mentioning the right grievance to the right people. Takes patience away rather than forcing a riot.">Foment discontent in ${escapeHtml(
+            c.name,
+          )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'incite'))}</span></button>`,
+      )
+      .join('');
     // Section 136 slice 7: ask a town what it thinks of its neighbours.
     const gossip = near
       .filter((c) => canAsk(this.state, unit, c).ok)
@@ -832,7 +844,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + gossip + wreck + offers + sweep + dress + off;
+    return read + gossip + stir + wreck + offers + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -877,6 +889,25 @@ class App {
     this.refreshOverlays();
     this.refreshSidebar();
     openSabotage(this.state, unit, city, out, phase);
+    this.selectNextIdle();
+  }
+
+  /** Spend the day mentioning the right grievance to the right people. */
+  private orderStir(cityId: number): void {
+    const unit = this.selected;
+    const city = this.state.cities.find((c) => c.id === cityId);
+    if (!unit || !city || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canIncite(this.state, unit, city);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const out = incite(this.state, unit, city);
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+    openIncite(this.state, unit, city, out);
     this.selectNextIdle();
   }
 
@@ -3177,6 +3208,9 @@ class App {
               break;
             case 'ask':
               this.orderAsk(Number(btn.dataset.city));
+              break;
+            case 'stir':
+              this.orderStir(Number(btn.dataset.city));
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

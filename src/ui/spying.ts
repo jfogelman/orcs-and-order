@@ -4,6 +4,7 @@ import type { CityReading } from '../sim/spying';
 import type { SabotageOutcome, SabotagePhase } from '../sim/sabotage';
 import type { TurnOutcome } from '../sim/turning';
 import type { StandingReading } from '../sim/gossip';
+import type { InciteOutcome } from '../sim/incite';
 import { TURNING, askingPrice, turnOdds } from '../sim/turning';
 import { escapeHtml, openModal } from './dom';
 
@@ -397,6 +398,47 @@ export function openGossip(state: GameState, reading: StandingReading, where: st
         are cross with is not a thing anybody has thought to forbid.</div>
         <p class="flavor">Opinions move slowly, so this is worth knowing for a good
         while &mdash; unlike a garrison, which is worth knowing until tomorrow.</p>
+      </div>`,
+  });
+}
+
+/** What came of a word in the wrong ear. */
+export function openIncite(
+  state: GameState,
+  unit: Unit,
+  city: City,
+  outcome: InciteOutcome,
+): void {
+  const them = state.players[city.owner]?.name ?? 'They';
+  if (outcome.kind === 'caught') {
+    openModal({
+      title: 'Caught Talking',
+      width: 'min(560px, 96vw)',
+      body: `
+        <div class="panel-body">
+          <p style="font-size:15px">The ${escapeHtml(
+            unitType(unit.type).name,
+          )} was noticed saying a great deal to the wrong people in ${escapeHtml(city.name)}.</p>
+          <div class="spy-notice blown"><strong>We were noticed.</strong> ${escapeHtml(
+            them,
+          )} know whose it was, and will remember it. The agent got away, which is more
+          than can be said for being found in somebody's works.</div>
+        </div>`,
+    });
+    return;
+  }
+  openModal({
+    title: 'They Are Talking',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">${escapeHtml(city.name)} is chewing over its grievances,
+        and will go on doing so until turn ${outcome.until}.</p>
+        <div class="spy-notice safe"><strong>Nobody noticed.</strong> ${escapeHtml(them)}
+        can see perfectly well that something has got into the place. They have no idea
+        who to blame for it.</div>
+        <p class="flavor">It takes patience away rather than forcing a riot. A town with
+        room to spare will shrug this off; a town already stretched will not.</p>
       </div>`,
   });
 }
