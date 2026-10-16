@@ -1003,6 +1003,22 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           decision rather than a free roll. Rank makes it safer and never makes it safe.
         </p>
         <p class="flavor">
+          <strong>A word in the wrong ear</strong> sets a town chewing over its own
+          grievances. Nothing is invented and nothing is even untrue &mdash; the
+          complaints were already there, and all an agent does is mention the right one
+          to the right person at the right hour. It <em>takes patience away</em> rather
+          than forcing a riot, so a town with room to spare shrugs it off and a town
+          already stretched tips into disorder. Knowing which is which is what the
+          city report is for.
+        </p>
+        <p class="flavor">
+          They can see perfectly well that something has got into the place, and they
+          have no idea who to blame &mdash; the rule everywhere in this section. Being
+          caught at it costs you the agent's name and their good opinion, but not the
+          agent: being the stranger who was in the market on the day everybody got cross
+          is not the same as being found in somebody's works with your hands full.
+        </p>
+        <p class="flavor">
           <strong>Asking around</strong> is the one order that is about somebody who is
           not in the room. An agent beside a rival town can spend the day listening, and
           comes back with what <em>that</em> side makes of all its neighbours &mdash; who

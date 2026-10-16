@@ -34,6 +34,7 @@ import { SPY } from '../src/sim/spying';
 import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
+import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
@@ -158,6 +159,9 @@ export const control = () => {
   // Slice 7: and agents ask towns what they think of their neighbours.
   GOSSIP.enabled = true;
   GOSSIP.ai = true;
+  // Slice 8: and agents set towns talking against their own rulers.
+  INCITE.enabled = true;
+  INCITE.ai = true;
   // #144: the Hive has a full set of ordinary buildings.
   HIVE_WORKS.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.

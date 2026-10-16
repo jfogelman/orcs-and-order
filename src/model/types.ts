@@ -399,6 +399,15 @@ export interface Unit {
    */
   bought?: { by: number; on: number };
   /**
+   * Which side this unit was raised by, if it is not the side that holds it.
+   *
+   * Set when a unit changes hands and never cleared. Nothing in the rules
+   * reads it -- it exists so a measurement can tell "this side built more
+   * units" apart from "this side bought more units", which is the question
+   * three sweeps in a row have failed to answer.
+   */
+  boughtFrom?: number;
+  /**
    * Sides that have seen through the disguise, by player id.
    *
    * Per side, so finding a spy is worth something to the finder rather than
@@ -607,6 +616,16 @@ export interface City {
   chosenTiles?: number[];
   /** True while the city is rioting; it produces nothing. */
   disorder: boolean;
+  /**
+   * Somebody has been talking, and the town is harder to keep calm until this
+   * turn. Section 136 slice 8.
+   *
+   * Absent for almost every city almost always. Deliberately a subtraction
+   * from the town's **patience** rather than a flag that forces a riot: a city
+   * with room to spare shrugs it off and a city already stretched tips over,
+   * which is the judgement the order is asking the player to make.
+   */
+  unrest?: { until: number };
   foundedTurn: number;
   /**
    * Who founded it, which is not always who holds it.

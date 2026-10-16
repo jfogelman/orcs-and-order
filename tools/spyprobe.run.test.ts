@@ -45,6 +45,9 @@ interface Tally {
   turnNoTarget: number;
   turnFresh: number;
   asked: number;
+  incites: number;
+  incitesTook: number;
+  incitesCaught: number;
   offers: number;
   offersTaken: number;
   offersLater: number;
@@ -75,6 +78,9 @@ function tallyOf(state: GameState): Tally {
     turnNoTarget: SPY_TRACE.turnNoTarget,
     turnFresh: SPY_TRACE.turnFresh,
     asked: SPY_TRACE.asked,
+    incites: SPY_TRACE.incites,
+    incitesTook: SPY_TRACE.incitesTook,
+    incitesCaught: SPY_TRACE.incitesCaught,
     offers: SPY_TRACE.offers,
     offersTaken: SPY_TRACE.offersTaken,
     offersLater: SPY_TRACE.offersLater,
@@ -101,11 +107,18 @@ describe('is espionage ever on the board', () => {
       attempts: 0, read: 0, missed: 0, caught: 0, swept: 0, found: 0,
       wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0,
       turnRead: 0, turnWrecked: 0, turnWalked: 0, turnStuck: 0, turnNoTarget: 0, turnFresh: 0,
-      asked: 0, offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
+      asked: 0, incites: 0, incitesTook: 0, incitesCaught: 0, offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
       filed: 0, lived: 0,
     });
     const totals: Tally = zero();
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
+    // **The standing question, chased at last.** `Kingdom units` has moved in
+    // all three espionage sweeps (+1.54, +1.20, +1.86) and no single story
+    // covers them. Counted per side here: agents, every unit, the purse, and
+    // how many soldiers were bought -- which is the only way to tell "the
+    // Kingdom builds more agents" from "the Kingdom buys more soldiers".
+    const perSide: Record<string, { agents: number; units: number; gold: number; bought: number }> =
+      {};
     const firstAgentTurns: number[] = [];
     const knewItTurns: number[] = [];
 
@@ -136,6 +149,16 @@ describe('is espionage ever on the board', () => {
       });
       firstAgentTurns.push(firstAgent);
       knewItTurns.push(knewIt);
+      const board = last! as GameState;
+      for (const p of board.players) {
+        if (p.barbarian || !p.faction) continue;
+        const row = (perSide[p.faction] ??= { agents: 0, units: 0, gold: 0, bought: 0 });
+        const mine = playerUnits(board, p.id);
+        row.agents += mine.filter((u) => unitType(u.type).spy).length;
+        row.units += mine.length;
+        row.gold += p.gold;
+        row.bought += mine.filter((u) => u.boughtFrom !== undefined).length;
+      }
       const t = tallyOf(last!);
       for (const k of Object.keys(totals) as (keyof Tally)[]) totals[k] += t[k];
       lines.push(
@@ -158,6 +181,15 @@ describe('is espionage ever on the board', () => {
     lines.push(`distinct towns filed  ${(totals.filed / n).toFixed(2)} per game`);
     lines.push(`agents alive at end   ${(totals.lived / n).toFixed(2)} per game`);
     lines.push('');
+    lines.push('per side, at the end of the game:');
+    for (const [who, v] of Object.entries(perSide)) {
+      lines.push(
+        `  ${who.padEnd(8)} agents ${(v.agents / n).toFixed(2)}  ` +
+          `all units ${(v.units / n).toFixed(1)}  gold ${(v.gold / n).toFixed(0)}  ` +
+          `bought ${(v.bought / n).toFixed(2)}`,
+      );
+    }
+    lines.push('');
     lines.push(`sweeps run            ${(totals.swept / n).toFixed(2)} per game`);
     lines.push(`  disguises seen thru ${(totals.found / n).toFixed(2)}`);
     lines.push(`sabotage attempted    ${(totals.wrecks / n).toFixed(2)} per game`);
@@ -165,6 +197,9 @@ describe('is espionage ever on the board', () => {
     lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
     lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
     lines.push(`asked around          ${(totals.asked / n).toFixed(2)} per game`);
+    lines.push(`words in wrong ears   ${(totals.incites / n).toFixed(2)} per game`);
+    lines.push(`  towns set talking   ${(totals.incitesTook / n).toFixed(2)}`);
+    lines.push(`  caught at it        ${(totals.incitesCaught / n).toFixed(2)}`);
     lines.push(`offers made           ${(totals.offers / n).toFixed(2)} per game`);
     lines.push(`  taken               ${(totals.offersTaken / n).toFixed(2)}`);
     lines.push(`  of those, for later ${(totals.offersLater / n).toFixed(2)}`);

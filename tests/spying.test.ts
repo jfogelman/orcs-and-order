@@ -270,7 +270,7 @@ describe('what a spy order is worth risking', () => {
     // The unbuilt entries exist to calibrate the scale, not to be ordered. If
     // one is ever wired up, this is the line that has to be changed on purpose.
     expect(Object.entries(SPY_ACTIONS).filter(([, a]) => a.ready).map(([id]) => id).sort()).toEqual(
-      ['gossip', 'read', 'sabotage', 'search'],
+      ['gossip', 'incite', 'read', 'sabotage', 'search'],
     );
   });
 

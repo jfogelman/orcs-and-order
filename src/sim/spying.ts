@@ -192,7 +192,7 @@ export const SPY_ACTIONS: Record<string, SpyAction> = {
    * and people remember a stranger who asked a lot of questions.
    */
   gossip: { verb: 'Ask around in', risk: 1.4, ready: true },
-  incite: { verb: 'Foment discontent in', risk: 2.2, ready: false },
+  incite: { verb: 'Foment discontent in', risk: 2.2, ready: true },
   sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: true },
   turn: { verb: 'Turn', risk: 3.6, ready: false },
   double: { verb: 'Turn their agent in', risk: 4.5, ready: false },
@@ -312,6 +312,10 @@ export const SPY_TRACE = {
    */
   /** Slice 7: times an agent spent the day listening. */
   asked: 0,
+  /** Slice 8: words put in wrong ears, taken, and caught at. */
+  incites: 0,
+  incitesTook: 0,
+  incitesCaught: 0,
   offers: 0,
   offersTaken: 0,
   offersLater: 0,

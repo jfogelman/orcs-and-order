@@ -15,6 +15,7 @@ import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
 import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../sim/gossip';
+import { INCITE, canIncite, incite, inciteExposure } from '../sim/incite';
 import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
 import {
   SABOTAGE,
@@ -232,6 +233,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'everyone-has-a-price',
       // Slice 7, asked for the same day it was written, as slice 6 was.
       'asking-around',
+      // Slice 8, asked for the same day it was written.
+      'a-word-in-the-wrong-ear',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -332,6 +335,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'everyone-has-a-price',
       // Slice 7, asked for the same day it was written, as slice 6 was.
       'asking-around',
+      // Slice 8, asked for the same day it was written.
+      'a-word-in-the-wrong-ear',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -446,6 +451,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'everyone-has-a-price',
       // Slice 7, asked for the same day it was written, as slice 6 was.
       'asking-around',
+      // Slice 8, asked for the same day it was written.
+      'a-word-in-the-wrong-ear',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
@@ -1602,6 +1609,29 @@ function actSpy(state: GameState, unit: Unit): void {
         turnUnit(state, unit, mark, offer.gold, offer.delay);
         return;
       }
+    }
+  }
+
+  // Section 136 slice 8: a word in the wrong ear, in a town big enough to be
+  // worth the trouble.
+  //
+  // **Chosen on size, which is public, and not on how close the town is to
+  // rioting**, which is not. Patience is made of buildings, trade rates and
+  // half a dozen other things the fog has no reason to hand over, and an AI
+  // picking the town it *knows* is one citizen from the edge would be reading
+  // the defender's own books. Size is on the map for anybody with eyes, and a
+  // big town is the better bet anyway.
+  if (INCITE.enabled && INCITE.ai) {
+    const ripe = state.cities.find(
+      (c) =>
+        canIncite(state, unit, c).ok &&
+        hostileOrNot(state, unit.owner, c.owner) &&
+        c.size >= INCITE.aiSize &&
+        inciteExposure(unit) <= INCITE.aiOdds,
+    );
+    if (ripe) {
+      incite(state, unit, ripe);
+      return;
     }
   }
 

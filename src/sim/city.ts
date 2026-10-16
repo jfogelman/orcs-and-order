@@ -1,4 +1,5 @@
 import { HIVE_WORKS, broodBonus, hiveEndingScale, isHiveWork, placeQueen, queenless } from './hivekin';
+import { unrestBite } from './unrest';
 import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
@@ -364,6 +365,10 @@ export function contentLimit(state: GameState, city: City): number {
   // they are as small as they are.
   if (palaceComplete(owner)) limit += PALACE_COMPLETE_CONTENT;
   if (knowsEverything(owner)) limit += OMNISCIENCE.content;
+  // Section 136 slice 8: somebody has been talking. Subtracted from the town's
+  // patience rather than forcing a riot, so a town with room to spare shrugs
+  // it off and one already stretched tips over.
+  limit -= unrestBite(state, city);
   if (city.producing.kind === 'calm') limit += CALM_BONUS;
   // What the empire spends on keeping this particular city calm.
   const rates = tradeRates(owner);
