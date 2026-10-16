@@ -103,7 +103,31 @@ export const SPY = {
    * would have said espionage changes nothing.
    */
   ai: true,
-  aiWants: 1,
+  /**
+   * How many agents a side keeps.
+   *
+   * **Two, since the probe.** One is not enough to do both halves of this: an
+   * agent abroad reading towns is never at home sweeping, and with one agent
+   * the counter-espionage half of the feature measured `0.00 sweeps per game`
+   * over twenty-four games -- built, documented, and never once on the board.
+   *
+   * The second is the home one. See `actSpy`: the side's first agent works
+   * abroad and the rest watch their own ground, which is also the division
+   * the disguise rules already describe -- wearing your own colours buys
+   * nothing abroad and everything at home.
+   */
+  aiWants: 2,
+  /** How near one of our own towns counts as "at home", for the watcher. */
+  homeReach: 2,
+  /**
+   * What a tile of walking is worth against a turn of staleness, when an agent
+   * abroad is choosing where to go next.
+   *
+   * Above one, so a town going stale next door beats an unread one across the
+   * world. At one the agent still crossed the map for marginally older news,
+   * which is how it came to spend its life walking.
+   */
+  travelWeight: 1.5,
   /**
    * Chance of seeing through a disguise, between agents of equal rank.
    *
@@ -259,6 +283,19 @@ export const SPY_TRACE = {
   lostAtWorks: 0,
   /** Of those wrecks, the ones against something that would end the game. */
   wreckedEndings: 0,
+  /**
+   * What the other side's agent abroad actually *did* with each of its turns.
+   *
+   * Added because two rounds of fixing what I thought was wrong moved the
+   * readings from 1.21 a game to 1.42, which is the measurement saying my
+   * theory was wrong twice. A zero explains nothing; count the branches.
+   */
+  turnRead: 0,
+  turnWrecked: 0,
+  turnWalked: 0,
+  turnStuck: 0,
+  turnNoTarget: 0,
+  turnFresh: 0,
 };
 
 /** What a reading tells you about a city. */

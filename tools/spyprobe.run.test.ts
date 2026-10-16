@@ -38,6 +38,12 @@ interface Tally {
   wrecked: number;
   lostAtWorks: number;
   wreckedEndings: number;
+  turnRead: number;
+  turnWrecked: number;
+  turnWalked: number;
+  turnStuck: number;
+  turnNoTarget: number;
+  turnFresh: number;
   /** Distinct towns ever filed. A floor on reads, not a count of them. */
   filed: number;
   /** Agents still alive at the end -- the rest were caught out and killed. */
@@ -56,6 +62,12 @@ function tallyOf(state: GameState): Tally {
     wrecked: SPY_TRACE.wrecked,
     lostAtWorks: SPY_TRACE.lostAtWorks,
     wreckedEndings: SPY_TRACE.wreckedEndings,
+    turnRead: SPY_TRACE.turnRead,
+    turnWrecked: SPY_TRACE.turnWrecked,
+    turnWalked: SPY_TRACE.turnWalked,
+    turnStuck: SPY_TRACE.turnStuck,
+    turnNoTarget: SPY_TRACE.turnNoTarget,
+    turnFresh: SPY_TRACE.turnFresh,
     filed: 0,
     lived: 0,
   };
@@ -75,10 +87,14 @@ describe('is espionage ever on the board', () => {
     const lines: string[] = [];
     const zero = (): Tally => ({
       attempts: 0, read: 0, missed: 0, caught: 0, swept: 0, found: 0,
-      wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0, filed: 0, lived: 0,
+      wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0,
+      turnRead: 0, turnWrecked: 0, turnWalked: 0, turnStuck: 0, turnNoTarget: 0, turnFresh: 0,
+      filed: 0, lived: 0,
     });
     const totals: Tally = zero();
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
+    const firstAgentTurns: number[] = [];
+    const knewItTurns: number[] = [];
 
     for (const seed of seeds) {
       // `playGame` returns an Outcome and not the board. The observer it takes
@@ -88,9 +104,25 @@ describe('is espionage ever on the board', () => {
       // Zeroed per game, or every row would be the running total of the ones
       // before it and the last game would look like the busiest.
       for (const k of Object.keys(SPY_TRACE) as (keyof typeof SPY_TRACE)[]) SPY_TRACE[k] = 0;
+      // **When does an agent first exist at all?** The branch counts said the
+      // agent abroad takes about ten turns in a two-hundred-and-forty-turn
+      // game, which is not a unit choosing badly -- it is a unit that is
+      // hardly ever on the board. Watched here rather than counted in the sim,
+      // because it is a question about the game and not about the rule.
+      let firstAgent = 0;
+      let knewIt = 0;
       const out = playGame(seed, undefined, (s) => {
         last = s;
+        if (!firstAgent && s.units.some((u) => unitType(u.type).spy)) firstAgent = s.turn;
+        if (
+          !knewIt &&
+          s.players.some((p) => !p.barbarian && p.techs.includes('someone-elses-business'))
+        ) {
+          knewIt = s.turn;
+        }
       });
+      firstAgentTurns.push(firstAgent);
+      knewItTurns.push(knewIt);
       const t = tallyOf(last!);
       for (const k of Object.keys(totals) as (keyof Tally)[]) totals[k] += t[k];
       lines.push(
@@ -119,6 +151,22 @@ describe('is espionage ever on the board', () => {
     lines.push(`  works wrecked       ${(totals.wrecked / n).toFixed(2)}`);
     lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
     lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
+    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+    const had = firstAgentTurns.filter((t) => t > 0);
+    const knew = knewItTurns.filter((t) => t > 0);
+    lines.push('');
+    lines.push(`games with an agent at all   ${had.length}/${n}`);
+    lines.push(`  first one appears on turn  ${mean(had).toFixed(0)} (of ~240)`);
+    lines.push(`games where somebody learned Someone Else's Business  ${knew.length}/${n}`);
+    lines.push(`  learned on turn            ${mean(knew).toFixed(0)}`);
+    lines.push('');
+    lines.push('what the agent abroad did with its turns, per game:');
+    lines.push(`  read a town         ${(totals.turnRead / n).toFixed(1)}`);
+    lines.push(`  wrecked works       ${(totals.turnWrecked / n).toFixed(1)}`);
+    lines.push(`  walked              ${(totals.turnWalked / n).toFixed(1)}`);
+    lines.push(`  stood beside a town it had already read  ${(totals.turnFresh / n).toFixed(1)}`);
+    lines.push(`  could not get there ${(totals.turnStuck / n).toFixed(1)}`);
+    lines.push(`  nowhere to go       ${(totals.turnNoTarget / n).toFixed(1)}`);
     if (totals.wrecks === 0) {
       // The whole reason this file exists. A sweep of SABOTAGE with this at
       // zero would be measuring the same game twice and calling it balance.
