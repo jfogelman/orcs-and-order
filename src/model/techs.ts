@@ -10,6 +10,8 @@ import type { BuildingId, FactionId, TechId, UnitTypeId } from './types';
  */
 
 export type TechFlag =
+  /** Section 136 slice 7: a spy may ask a town what it thinks of everybody. */
+  | 'gossip'
   /** Section 136 slice 6: a spy may offer somebody else's soldier money. */
   | 'turning'
   /** Removes the movement penalty on groups of five or more. */
@@ -924,6 +926,20 @@ export const TECHS: TechDef[] = [
     // Nothing in this tree was about *knowing things* before it. The shared
     // spine was land, walls, weather and mood; the faction ladders are units
     // and counting jokes.
+    id: 'asking-around',
+    name: 'Asking Around',
+    faction: 'both',
+    cost: 85,
+    prereqs: ['someone-elses-business'],
+    units: [],
+    buildings: [],
+    flags: ['gossip'],
+    flavor:
+      'People will tell you a startling amount about their neighbours if you stand ' +
+      'near them and look interested. They will tell you more if you buy the next ' +
+      'round, but that is a separate advance and somebody is still costing it.',
+  },
+  {
     id: 'everyone-has-a-price',
     name: "Everyone Has A Price",
     faction: 'both',

@@ -184,6 +184,14 @@ export const SPY_ACTIONS: Record<string, SpyAction> = {
    */
   search: { verb: 'Search for spies', risk: 0, ready: true },
   read: { verb: 'Spy on', risk: 1, ready: true },
+  /**
+   * Asking a town what it thinks of its neighbours.
+   *
+   * Dearer than watching a town and cheaper than doing anything to one: you
+   * are not hiding in a hedge, you are standing in a market talking to people,
+   * and people remember a stranger who asked a lot of questions.
+   */
+  gossip: { verb: 'Ask around in', risk: 1.4, ready: true },
   incite: { verb: 'Foment discontent in', risk: 2.2, ready: false },
   sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: true },
   turn: { verb: 'Turn', risk: 3.6, ready: false },
@@ -302,6 +310,8 @@ export const SPY_TRACE = {
    * Counted from the day the rung was built rather than after a measurement
    * came back zero, which is the one thing this session cost most to learn.
    */
+  /** Slice 7: times an agent spent the day listening. */
+  asked: 0,
   offers: 0,
   offersTaken: 0,
   offersLater: 0,

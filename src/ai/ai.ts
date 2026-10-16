@@ -14,6 +14,7 @@ import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
+import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../sim/gossip';
 import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
 import {
   SABOTAGE,
@@ -229,6 +230,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // fallback on turn 182 of ~240, and an entire half of espionage measured
       // zero for three slices running. Straight after its own prerequisite.
       'everyone-has-a-price',
+      // Slice 7, asked for the same day it was written, as slice 6 was.
+      'asking-around',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -327,6 +330,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // fallback on turn 182 of ~240, and an entire half of espionage measured
       // zero for three slices running. Straight after its own prerequisite.
       'everyone-has-a-price',
+      // Slice 7, asked for the same day it was written, as slice 6 was.
+      'asking-around',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -439,6 +444,8 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // fallback on turn 182 of ~240, and an entire half of espionage measured
       // zero for three slices running. Straight after its own prerequisite.
       'everyone-has-a-price',
+      // Slice 7, asked for the same day it was written, as slice 6 was.
+      'asking-around',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
@@ -574,6 +581,34 @@ function grudge(state: GameState, playerId: number, owner: number): number {
   return 1 - hate * (1 - DIPLOMACY_AI.grudgePull);
 }
 
+/**
+ * How much more attractive a side is for being busy fighting somebody else.
+ *
+ * Section 136 slice 7, and the reason asking around is worth a turn. A
+ * multiplier on effective distance, so below one is nearer: an empire with a
+ * war on its far side has its army somewhere else, and that is the moment to
+ * walk at it.
+ *
+ * **Keyed to what we have been told, never to what is true.** `heardIsDistracted`
+ * reads a *filed report*, so a war nobody has reported is a war this side is
+ * not entitled to take advantage of. Reading the live relations here would be
+ * the AI seeing through the fog, and would make the agent who went and asked
+ * pointless -- which is the whole failure mode slice 3 was built to avoid, and
+ * the one the Burrowers and the spies both fell into.
+ */
+function distracted(state: GameState, playerId: number, owner: number): number {
+  if (!GOSSIP.enabled) return 1;
+  return heardIsDistracted(state, playerId, owner) ? DISTRACTED_PULL : 1;
+}
+
+/**
+ * What a war on somebody's far side is worth, as a share of real distance.
+ *
+ * Gentler than the ending pulls: those are about losing the game, and this is
+ * only about catching somebody at a bad moment.
+ */
+const DISTRACTED_PULL = 0.75;
+
 export function nearestEnemyTarget(
   state: GameState,
   playerId: number,
@@ -617,7 +652,7 @@ export function nearestEnemyTarget(
       state.players[c.owner]?.endingBegunAt !== undefined &&
       (hasEndingPiece(c) || capitalOf(state, c.owner)?.id === c.id);
     const pull = endingOpen(c) ? ENDING_PULL : begun ? BEGUN_PULL : 1;
-    consider(c.x, c.y, pull * grudge(state, playerId, c.owner), hardness);
+    consider(c.x, c.y, pull * grudge(state, playerId, c.owner) * distracted(state, playerId, c.owner), hardness);
   }
   for (const u of state.units) {
     // Section 123: a thing standing in a ruin is furniture, not an enemy army.
@@ -1567,6 +1602,26 @@ function actSpy(state: GameState, unit: Unit): void {
         turnUnit(state, unit, mark, offer.gold, offer.delay);
         return;
       }
+    }
+  }
+
+  // Section 136 slice 7: and if we have never asked this town what it thinks
+  // of its neighbours, that is worth a day.
+  //
+  // Behind buying and wrecking, which take things, and **ahead of reading**,
+  // because a town's garrison changes every few turns and its opinion of its
+  // neighbours does not -- so the gossip is the better use of a visit that is
+  // only going to happen once in a while, and the file keeps far longer.
+  if (GOSSIP.enabled && GOSSIP.ai) {
+    const unasked = state.cities.find(
+      (c) =>
+        canAsk(state, unit, c).ok &&
+        hostileOrNot(state, unit.owner, c.owner) &&
+        lastGossip(state, unit.owner, c.owner) === null,
+    );
+    if (unasked) {
+      askAround(state, unit, unasked);
+      return;
     }
   }
 

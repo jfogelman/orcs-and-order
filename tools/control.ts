@@ -33,6 +33,7 @@ import { DISGUISE } from '../src/sim/disguise';
 import { SPY } from '../src/sim/spying';
 import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
+import { GOSSIP } from '../src/sim/gossip';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
@@ -154,6 +155,9 @@ export const control = () => {
   // Slice 6: and agents buy somebody else's soldiers.
   TURNING.enabled = true;
   TURNING.ai = true;
+  // Slice 7: and agents ask towns what they think of their neighbours.
+  GOSSIP.enabled = true;
+  GOSSIP.ai = true;
   // #144: the Hive has a full set of ordinary buildings.
   HIVE_WORKS.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.
