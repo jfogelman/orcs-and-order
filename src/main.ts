@@ -85,6 +85,7 @@ import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
 import {
   openCaught,
   openOffer,
+  openGossip,
   openOfferResult,
   openQuiet,
   openReading,
@@ -94,6 +95,7 @@ import {
 import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
 import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabotage';
 import { askingPrice, canTurn, turnUnit } from './sim/turning';
+import { askAround, canAsk } from './sim/gossip';
 import { appearsTo, couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -791,6 +793,16 @@ class App {
           riskBand(unit, 'search'),
         )}</span></button>`
       : '';
+    // Section 136 slice 7: ask a town what it thinks of its neighbours.
+    const gossip = near
+      .filter((c) => canAsk(this.state, unit, c).ok)
+      .map(
+        (c) =>
+          `<button class="small" data-act="ask" data-city="${c.id}" title="Spend the day listening. Comes back with what they make of everybody else.">Ask around in ${escapeHtml(
+            c.name,
+          )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'gossip'))}</span></button>`,
+      )
+      .join('');
     // Section 136 slice 6: somebody standing next to us who might be bought.
     // Offered per unit rather than per town, because the thing being bought is
     // a person and the price is a fact about that person.
@@ -820,7 +832,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + wreck + offers + sweep + dress + off;
+    return read + gossip + wreck + offers + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -865,6 +877,24 @@ class App {
     this.refreshOverlays();
     this.refreshSidebar();
     openSabotage(this.state, unit, city, out, phase);
+    this.selectNextIdle();
+  }
+
+  /** Spend the day listening to what a town says about its neighbours. */
+  private orderAsk(cityId: number): void {
+    const unit = this.selected;
+    const city = this.state.cities.find((c) => c.id === cityId);
+    if (!unit || !city || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canAsk(this.state, unit, city);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const reading = askAround(this.state, unit, city);
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshSidebar();
+    if (reading) openGossip(this.state, reading, city.name);
     this.selectNextIdle();
   }
 
@@ -3144,6 +3174,9 @@ class App {
               break;
             case 'offer':
               this.orderOffer(Number(btn.dataset.unit));
+              break;
+            case 'ask':
+              this.orderAsk(Number(btn.dataset.city));
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

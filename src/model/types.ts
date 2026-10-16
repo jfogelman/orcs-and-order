@@ -163,6 +163,16 @@ export interface Player {
    * and in every save from before there were spies.
    */
   readings?: Record<number, { turn: number; held: number }>;
+  /**
+   * What an agent last heard a side say about its neighbours, by player id.
+   *
+   * Section 136 slice 7. The thing nothing else in the game tells you: the
+   * Talks screen says what *you* and they think of each other, and there has
+   * never been a way to learn what two other sides think of one another. An
+   * empire at war on its far side is a different proposition from one that is
+   * not, and until now nobody could find that out.
+   */
+  gossip?: Record<number, { turn: number; atWarWith: number[]; standings: Record<number, number> }>;
   /** 0/1 per tile: has this player ever seen it? Drives the terrain memory. */
   explored: number[];
   /** 0/1 per tile: can this player see it right now? Recomputed each turn. */

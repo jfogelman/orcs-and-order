@@ -44,6 +44,7 @@ interface Tally {
   turnStuck: number;
   turnNoTarget: number;
   turnFresh: number;
+  asked: number;
   offers: number;
   offersTaken: number;
   offersLater: number;
@@ -73,6 +74,7 @@ function tallyOf(state: GameState): Tally {
     turnStuck: SPY_TRACE.turnStuck,
     turnNoTarget: SPY_TRACE.turnNoTarget,
     turnFresh: SPY_TRACE.turnFresh,
+    asked: SPY_TRACE.asked,
     offers: SPY_TRACE.offers,
     offersTaken: SPY_TRACE.offersTaken,
     offersLater: SPY_TRACE.offersLater,
@@ -99,7 +101,7 @@ describe('is espionage ever on the board', () => {
       attempts: 0, read: 0, missed: 0, caught: 0, swept: 0, found: 0,
       wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0,
       turnRead: 0, turnWrecked: 0, turnWalked: 0, turnStuck: 0, turnNoTarget: 0, turnFresh: 0,
-      offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
+      asked: 0, offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
       filed: 0, lived: 0,
     });
     const totals: Tally = zero();
@@ -162,6 +164,7 @@ describe('is espionage ever on the board', () => {
     lines.push(`  works wrecked       ${(totals.wrecked / n).toFixed(2)}`);
     lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
     lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
+    lines.push(`asked around          ${(totals.asked / n).toFixed(2)} per game`);
     lines.push(`offers made           ${(totals.offers / n).toFixed(2)} per game`);
     lines.push(`  taken               ${(totals.offersTaken / n).toFixed(2)}`);
     lines.push(`  of those, for later ${(totals.offersLater / n).toFixed(2)}`);

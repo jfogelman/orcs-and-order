@@ -1003,6 +1003,30 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           decision rather than a free roll. Rank makes it safer and never makes it safe.
         </p>
         <p class="flavor">
+          <strong>Asking around</strong> is the one order that is about somebody who is
+          not in the room. An agent beside a rival town can spend the day listening, and
+          comes back with what <em>that</em> side makes of all its neighbours &mdash; who
+          they like, who they cannot stand, and who they are at war with. Nothing else in
+          the game will ever tell you this: the Talks screen says what you and they think
+          of each other, and two other empires' opinion of one another has always been
+          none of your business.
+        </p>
+        <p class="flavor">
+          <strong>It is the one rung that cannot fail</strong>, because you are not doing
+          anything to anybody &mdash; you are standing in a market asking who people are
+          cross with, which is a thing one may simply find out. It still costs the day,
+          and people remember a stranger who asked a great many questions, which is why
+          it is priced above watching a town and below touching one. And it keeps:
+          opinions move slowly, so a report is worth acting on long after a note about
+          somebody's garrison has gone stale.
+        </p>
+        <p class="flavor">
+          <strong>What it is for.</strong> An empire with a war on its far side has its
+          army somewhere else, and that is the moment to walk at it. The other sides
+          think so too &mdash; and they can only act on a war they have actually heard
+          about, which is exactly what their own agents are out there doing.
+        </p>
+        <p class="flavor">
           <strong>And a soldier is a person, which is the expensive discovery.</strong>
           With <em>Everyone Has A Price</em> an agent standing beside somebody else's
           unit can walk up and make it an offer. The asking price is a fact about

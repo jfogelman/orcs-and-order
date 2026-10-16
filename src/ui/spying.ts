@@ -3,6 +3,7 @@ import { unitType } from '../model/units';
 import type { CityReading } from '../sim/spying';
 import type { SabotageOutcome, SabotagePhase } from '../sim/sabotage';
 import type { TurnOutcome } from '../sim/turning';
+import type { StandingReading } from '../sim/gossip';
 import { TURNING, askingPrice, turnOdds } from '../sim/turning';
 import { escapeHtml, openModal } from './dom';
 
@@ -349,6 +350,53 @@ export function openOfferResult(
         <div class="spy-notice blown"><strong>We were named.</strong> This is the one
         thing a spy does by walking up and speaking, so there was never a version of
         it that stayed anonymous once it failed. The money is gone too.</div>
+      </div>`,
+  });
+}
+
+/**
+ * What the market had to say.
+ *
+ * Laid out as a list of *their* neighbours rather than as numbers about us,
+ * because the whole value of this rung is that it is about somebody who is not
+ * in the room. The side asked is named once at the top and never again; every
+ * row is "what they make of <somebody>".
+ */
+export function openGossip(state: GameState, reading: StandingReading, where: string): void {
+  const them = state.players[reading.about]?.name ?? 'They';
+  const rows = reading.rows
+    .map((r) => {
+      const other = state.players[r.other]?.name ?? 'somebody';
+      const sign = r.standing > 0 ? '+' : '';
+      // Three separate facts, said separately. The mood is how they feel, the
+      // truce is what they have signed, and the fighting is whether anybody is
+      // actually shooting -- and a pair can be any combination of those.
+      const note = [
+        r.fighting ? '<strong>fighting</strong>' : '',
+        r.truce ? 'truce' : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+      return `<div class="stat-row"><span class="label">${escapeHtml(other)}</span><span class="value">${escapeHtml(
+        r.mood,
+      )} <span class="muted">(${sign}${r.standing})</span>${
+        note ? ` &mdash; ${note}` : ''
+      }</span></div>`;
+    })
+    .join('');
+  openModal({
+    title: `What They Say In ${where}`,
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">What ${escapeHtml(them)} make of their neighbours.</p>
+        ${rows || '<p class="flavor">They have not met anybody worth an opinion.</p>'}
+      </div>
+      <div class="panel-body">
+        <div class="spy-notice safe"><strong>Nobody minded.</strong> Asking who people
+        are cross with is not a thing anybody has thought to forbid.</div>
+        <p class="flavor">Opinions move slowly, so this is worth knowing for a good
+        while &mdash; unlike a garrison, which is worth knowing until tomorrow.</p>
       </div>`,
   });
 }

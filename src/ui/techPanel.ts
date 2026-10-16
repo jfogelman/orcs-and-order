@@ -115,6 +115,7 @@ function opensSummary(t: TechDef, player: Player): string {
  * is now a compile error rather than a word nobody explained.
  */
 const FLAG_LABELS: Record<TechFlag, string> = {
+  gossip: 'Spies can ask a town what it thinks of everybody',
   turning: 'Spies can buy somebody else’s soldier',
   coordination: 'Big groups stop losing a movement point',
   mapmaking: '+1 sight for every unit',
