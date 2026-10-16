@@ -5,8 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { SABOTAGE } from '../src/sim/sabotage';
-import { HIVE_WORKS } from '../src/sim/hivekin';
+import { PERSONALITIES } from '../src/ai/ai';
 
 /**
  * The question this sweep is currently asking.
@@ -93,67 +92,98 @@ const buildArms = (): Arm[] => {
    * veterancy building at all. The prior that it was crippled was overstated.
    */
 
-  /** The shipped game, untouched. Both arms below are read against this. */
+  /**
+   * **Predictions for the research-order arm, written before the run.**
+   *
+   * All three sides get the advance equally, so there is no reason for one to
+   * gain over another and I expect **no significant shift in winners**. The
+   * interesting columns are the other ones: sixty beakers and two
+   * thirty-shield units that cannot fight are diverted from armies and
+   * economy about a hundred turns earlier than before, so if anything moves I
+   * expect **slightly fewer fights and slightly fewer units**, paid by
+   * everybody at once.
+   *
+   * The honest worry is the opposite of a balance worry: that espionage
+   * arriving a hundred turns earlier costs every side a little and buys them
+   * something the AI is not good enough to use. The probe says the AI does use
+   * it -- 8.4 readings and 388 sweeps a game -- but using a thing is not the
+   * same as profiting by it, and this arm is the only way to tell.
+   *
+   * If winners *do* move, the first place to look is the Hive: it is the side
+   * with the fewest cities and so the one for which thirty shields is the
+   * largest share of a turn's production.
+   */
+
+  /**
+   * **What it measured, 2026-10-16.** 216 games, 64 minutes.
+   *
+   *     asked for             Horde 41  Kingdom 33  Hive 34
+   *     left to the fallback  Horde 44  Kingdom 33  Hive 31
+   *
+   * Paired McNemar: Horde p = 0.711, Kingdom p = 1.000, Hive p = 0.678.
+   * **No side gains**, and the prediction below was right about that. Fights
+   * (t = -0.13), captures (t = -0.89), turns (t = +0.87) and cities are all
+   * flat: moving espionage a hundred turns earlier does not change the
+   * character of the game either.
+   *
+   * **It is not a no-op, though: 37 of 108 seeds changed winner.** It reshapes
+   * individual games thoroughly and favours nobody, which is worth knowing
+   * mostly because it means a single game is no evidence about this change.
+   *
+   * One column moved and the prediction had the sign wrong: **Kingdom units
+   * +1.54 (t = +4.14)**, where I expected fewer from shields diverted to units
+   * that cannot fight. The likeliest reading is dull -- the probe measures
+   * about 1.6 agents alive a side and this column counts units, so the
+   * Kingdom is largely "gaining" the agents it now builds. But this file has
+   * no spy breakdown and cannot separate that from a real change in army
+   * size, and the Horde's +0.20 does not fit that story neatly. What it can
+   * say is that whatever it is never reached the fighting.
+   */
+
+  /** The lists as they ship, captured before any arm has touched them. */
+  const asShipped = new Map(
+    Object.entries(PERSONALITIES).map(([k, v]) => [k, [...v.techPriority]] as const),
+  );
+  const SPY_TECH = 'someone-elses-business';
+
+  /**
+   * Put the advance into every priority list, or take it out of all of them.
+   *
+   * Set explicitly in **both** arms off the captured original, never by
+   * editing in place: `restoreLevers` puts levers back with `Object.assign`,
+   * which copies `PERSONALITIES`' top-level keys by reference and so would not
+   * undo a change made inside one of them. Section 59, the same trap the Hive
+   * arm fell into.
+   */
+  const askForIt = (on: boolean): void => {
+    for (const [name, list] of asShipped) {
+      PERSONALITIES[name].techPriority = on ? [...list] : list.filter((t) => t !== SPY_TECH);
+    }
+  };
+
+  /** The shipped game: the advance is asked for, after the economy run. */
   const shipped = (): Arm => ({
-    label: 'shipped',
+    label: 'asked for',
     apply: () => {
       control();
-      HIVE_WORKS.enabled = true;
-      SABOTAGE.enabled = true;
+      askForIt(true);
     },
   });
 
   /**
-   * The Hive as it was before #144: its ten buildings taken back out of the
-   * advances that offer them.
-   *
-   * Done by editing the tech entries rather than the buildings, because a
-   * building nobody can reach is a building nobody builds, and it leaves the
-   * definitions alone for the arm that follows.
+   * The game as it was before: in nobody's list, so the AI reaches it only
+   * when the cheapest-thing fallback finds it -- measured at turn 182 of ~240,
+   * and never at all in five games of twenty-four.
    */
-  /*
-   * **The sabotage arm was dropped once and is back, which is the point.**
-   *
-   * It is measurable now: the probe reports 0.25 sabotage attempted and 0.21
-   * works wrecked a game, where it reported 0.00 of both. What changed was not
-   * sabotage but *when espionage exists at all* -- the advance was being
-   * learned on turn 182 of 240. See the commit.
-   *
-   * The original note follows, because it is the better lesson.
-   *
-   * **What it measured, once it could.** 216 games. Only five seeds in a
-   * hundred and eight diverge in their winner at all, and no side moves:
-   * Horde 41 v 39 (p = 0.50), Kingdom 33 v 36 (p = 0.375), Hive 34 v 33
-   * (p = 1.000), with game length flat (paired t = 0.44). The prediction
-   * written before the first attempt was right -- below the noise floor.
-   *
-   * It is a *real* null rather than the earlier empty one: the probe says
-   * 0.25 sabotage attempted and 0.21 works wrecked a game, so the mechanism
-   * is on the board. It is simply too rare, as the AI uses it, to move a
-   * balance. Making it commoner is a design decision and wants its own run.
-   * The smoke run came back byte-identical to `shipped` on every
-   * column across eighteen games -- same turns, cities, population, fights,
-   * captures -- which means the RNG stream never diverged and sabotage never
-   * fired once. The probe then confirmed it: `0.00 sabotage attempted per
-   * game` over twenty-four games, and `0.00 sweeps run` with it.
-   *
-   * So the arm would have spent twenty-five minutes proving a tautology, and
-   * a null result with no mechanism behind it is a finding about the
-   * instrument and not about balance -- which is the whole of section 125's
-   * lesson. The AI's reach for both orders has to be fixed before either can
-   * be measured; see the espionage memory.
-   */
-
-  const noSabotage = (): Arm => ({
-    label: 'no sabotage',
+  const fallbackOnly = (): Arm => ({
+    label: 'left to the fallback',
     apply: () => {
       control();
-      HIVE_WORKS.enabled = true;
-      SABOTAGE.enabled = false;
+      askForIt(false);
     },
   });
 
-  return [shipped(), noSabotage()];
+  return [shipped(), fallbackOnly()];
 };
 
 const ARMS: Arm[] = buildArms();
