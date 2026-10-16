@@ -32,6 +32,7 @@ import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
 import { SPY } from '../src/sim/spying';
 import { SABOTAGE } from '../src/sim/sabotage';
+import { TURNING } from '../src/sim/turning';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
@@ -150,6 +151,9 @@ export const control = () => {
   // Slice 5: and agents wreck what somebody is building, both sides.
   SABOTAGE.enabled = true;
   SABOTAGE.ai = true;
+  // Slice 6: and agents buy somebody else's soldiers.
+  TURNING.enabled = true;
+  TURNING.ai = true;
   // #144: the Hive has a full set of ordinary buildings.
   HIVE_WORKS.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.

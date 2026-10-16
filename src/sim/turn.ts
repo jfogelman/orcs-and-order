@@ -1,4 +1,5 @@
 import { checkEndings, isEndingPiece } from './endings';
+import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
 import { advanceImproveWork } from './terraform';
@@ -758,6 +759,11 @@ function warnAboutTheClock(state: GameState): void {
 export function beginPlayerTurn(state: GameState, playerId: number): void {
   const player = state.players[playerId];
   if (!player.alive) return;
+
+  // Section 136 slice 6: anybody who was bought some weeks ago turns round
+  // now. **Before anything else this side does**, so a unit that has changed
+  // hands is not first asked to fight for the side that no longer owns it.
+  collectDebts(state, playerId);
 
   // A raiding band has no economy, no research and nothing to heal for; it
   // gets its movement back and a wave now and then, and that is all it is.

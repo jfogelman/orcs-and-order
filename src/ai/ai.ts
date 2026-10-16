@@ -222,6 +222,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -314,6 +320,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -420,6 +432,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
