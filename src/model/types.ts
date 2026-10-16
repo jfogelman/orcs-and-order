@@ -379,6 +379,16 @@ export interface Unit {
    */
   disguise?: { owner: number; type: string };
   /**
+   * Somebody has bought this unit, and it changes sides on this turn.
+   *
+   * Section 136 slice 6. Absent for everybody who has not been bought, which
+   * is almost everybody. **The unit goes on being its owner's in every rule
+   * that asks** -- it fights for them, is supplied by them, holds their gate
+   * -- until the turn comes round. That is the whole of what a delayed
+   * betrayal is: a unit that is still theirs, and will not be.
+   */
+  bought?: { by: number; on: number };
+  /**
    * Sides that have seen through the disguise, by player id.
    *
    * Per side, so finding a spy is worth something to the finder rather than

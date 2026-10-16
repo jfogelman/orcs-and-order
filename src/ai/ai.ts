@@ -14,6 +14,7 @@ import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
+import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
 import {
   SABOTAGE,
   canSabotage,
@@ -222,6 +223,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -314,6 +321,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -420,6 +433,12 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       // economy run and still a hundred and forty turns before where the
       // fallback used to find it.
       'someone-elses-business',
+      // Section 136 slice 6, and asked for **the same day it was written**,
+      // which is the whole lesson of the slice before it: left out of these
+      // lists, `someone-elses-business` was reached only by the cheapest-thing
+      // fallback on turn 182 of ~240, and an entire half of espionage measured
+      // zero for three slices running. Straight after its own prerequisite.
+      'everyone-has-a-price',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
@@ -1525,6 +1544,29 @@ function actSpy(state: GameState, unit: Unit): void {
       SPY_TRACE.turnWrecked++;
       sabotage(state, unit, worth);
       return;
+    }
+  }
+
+  // Section 136 slice 6: somebody standing next to us who could be bought.
+  //
+  // Ahead of reading, because a soldier who changes sides is worth more than
+  // anything a report will tell you -- it is the only spy order that *takes*
+  // something rather than learning about it. Behind sabotage, because an
+  // ending work decides the game and a Footman does not.
+  //
+  // The dearest target first: the asking price is a fact about the unit, so
+  // the most expensive thing it can afford to be sure about is the best use of
+  // a purse the AI otherwise never spends.
+  if (TURNING.enabled && TURNING.ai) {
+    const marks = state.units
+      .filter((u) => canTurn(state, unit, u).ok && hostileOrNot(state, unit.owner, u.owner))
+      .sort((a, b) => askingPrice(b) - askingPrice(a));
+    for (const mark of marks) {
+      const offer = aiOffer(state, unit, mark);
+      if (offer) {
+        turnUnit(state, unit, mark, offer.gold, offer.delay);
+        return;
+      }
     }
   }
 

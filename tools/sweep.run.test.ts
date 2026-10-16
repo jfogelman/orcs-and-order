@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { PERSONALITIES } from '../src/ai/ai';
+import { TURNING } from '../src/sim/turning';
 
 /**
  * The question this sweep is currently asking.
@@ -93,97 +93,85 @@ const buildArms = (): Arm[] => {
    */
 
   /**
-   * **Predictions for the research-order arm, written before the run.**
+   * **Predictions for the turning arm, written before the run.**
    *
-   * All three sides get the advance equally, so there is no reason for one to
-   * gain over another and I expect **no significant shift in winners**. The
-   * interesting columns are the other ones: sixty beakers and two
-   * thirty-shield units that cannot fight are diverted from armies and
-   * economy about a hundred turns earlier than before, so if anything moves I
-   * expect **slightly fewer fights and slightly fewer units**, paid by
-   * everybody at once.
+   * This is the busiest rung yet built. The probe says **10.88 offers a game,
+   * 5.42 taken and 5.46 refused**, with 678 gold spent -- against sabotage's
+   * 0.25 attempts, which measured a clean null. So unlike that one I expect
+   * this to *move something*, and the honest uncertainty is which direction.
    *
-   * The honest worry is the opposite of a balance worry: that espionage
-   * arriving a hundred turns earlier costs every side a little and buys them
-   * something the AI is not good enough to use. The probe says the AI does use
-   * it -- 8.4 readings and 388 sweeps a game -- but using a thing is not the
-   * same as profiting by it, and this arm is the only way to tell.
+   * Two forces pull opposite ways and I cannot call it:
    *
-   * If winners *do* move, the first place to look is the Hive: it is the side
-   * with the fewest cities and so the one for which thirty shields is the
-   * largest share of a turn's production.
+   * **For the buyer**: five soldiers a game change hands, each swinging twice
+   * (one lost to them, one gained by us), paid for out of a purse the AI
+   * otherwise never spends. That should be worth real ground.
+   *
+   * **Against the buyer**: 5.46 refusals a game are 5.46 *certain* exposures
+   * and standing hits, and section 135's slice 4 made the AI read standing
+   * when it chooses who to march on. A side that spends the game insulting
+   * everybody may simply get attacked more.
+   *
+   * So: **winners move, by more than sabotage did**, and I will not guess the
+   * sign. If the Kingdom gains it is probably the purse -- it banks 55 to 70
+   * per cent more gold than the Horde, which is the measured reason
+   * `rushBuying` stays off, and the same asymmetry would apply here. That is
+   * the first thing to check if this comes back lopsided.
    */
 
   /**
-   * **What it measured, 2026-10-16.** 216 games, 64 minutes.
+   * **What it measured, 2026-10-16.** 216 games.
    *
-   *     asked for             Horde 41  Kingdom 33  Hive 34
-   *     left to the fallback  Horde 44  Kingdom 33  Hive 31
+   *     buying allowed  Horde 34  Kingdom 35  Hive 38
+   *     no buying       Horde 38  Kingdom 32  Hive 38
    *
-   * Paired McNemar: Horde p = 0.711, Kingdom p = 1.000, Hive p = 0.678.
-   * **No side gains**, and the prediction below was right about that. Fights
-   * (t = -0.13), captures (t = -0.89), turns (t = +0.87) and cities are all
-   * flat: moving espionage a hundred turns earlier does not change the
-   * character of the game either.
+   * Horde p = 0.52, Kingdom p = 0.68, Hive p = 1.00. **The prediction below
+   * was wrong**: I said winners would move by more than sabotage did, on the
+   * strength of 10.88 offers a game against sabotage's 0.25, and they did not
+   * move at all. Five soldiers changing hands a game reshuffles 29 seeds in a
+   * hundred and eight without tilting any of them.
    *
-   * **It is not a no-op, though: 37 of 108 seeds changed winner.** It reshapes
-   * individual games thoroughly and favours nobody, which is worth knowing
-   * mostly because it means a single game is no evidence about this change.
+   * The *other* half of the prediction was right, and is the interesting part.
+   * "If the Kingdom gains it is probably the purse" -- and the purse shows up
+   * exactly where it should: **Kingdom units +1.20 (t = +3.80)** and Kingdom
+   * cities +0.44 (t = +1.73), against the Horde flat and slightly down. The
+   * Kingdom banks 55 to 70 per cent more gold, so it buys more soldiers, and
+   * turning *transfers* units rather than creating them -- so this is a real
+   * net gain and not a counting artefact.
    *
-   * One column moved and the prediction had the sign wrong: **Kingdom units
-   * +1.54 (t = +4.14)**, where I expected fewer from shields diverted to units
-   * that cannot fight. The likeliest reading is dull -- the probe measures
-   * about 1.6 agents alive a side and this column counts units, so the
-   * Kingdom is largely "gaining" the agents it now builds. But this file has
-   * no spy breakdown and cannot separate that from a real change in army
-   * size, and the Horde's +0.20 does not fit that story neatly. What it can
-   * say is that whatever it is never reached the fighting.
+   * It simply never reaches the win column. The side that profits by it is
+   * already the side that was going to bank the gold, and gaining a soldier a
+   * game is not the same as gaining a game.
+   *
+   * **Worth noting across two sweeps:** Kingdom units was also the one moving
+   * column when espionage arrived a hundred turns earlier (+1.54, t = +4.14).
+   * There I guessed it was the agents themselves being counted; here nothing
+   * is created, so that explanation cannot carry this one. The common factor
+   * is more likely the Kingdom's economy expressing itself wherever espionage
+   * becomes more available. Two observations are not a finding -- but a third
+   * sweep that moves this column again would be worth chasing properly.
    */
 
-  /** The lists as they ship, captured before any arm has touched them. */
-  const asShipped = new Map(
-    Object.entries(PERSONALITIES).map(([k, v]) => [k, [...v.techPriority]] as const),
-  );
-  const SPY_TECH = 'someone-elses-business';
-
-  /**
-   * Put the advance into every priority list, or take it out of all of them.
-   *
-   * Set explicitly in **both** arms off the captured original, never by
-   * editing in place: `restoreLevers` puts levers back with `Object.assign`,
-   * which copies `PERSONALITIES`' top-level keys by reference and so would not
-   * undo a change made inside one of them. Section 59, the same trap the Hive
-   * arm fell into.
-   */
-  const askForIt = (on: boolean): void => {
-    for (const [name, list] of asShipped) {
-      PERSONALITIES[name].techPriority = on ? [...list] : list.filter((t) => t !== SPY_TECH);
-    }
-  };
-
-  /** The shipped game: the advance is asked for, after the economy run. */
+  /** The shipped game: agents may buy somebody else's soldiers. */
   const shipped = (): Arm => ({
-    label: 'asked for',
+    label: 'buying allowed',
     apply: () => {
       control();
-      askForIt(true);
+      TURNING.enabled = true;
+      TURNING.ai = true;
     },
   });
 
-  /**
-   * The game as it was before: in nobody's list, so the AI reaches it only
-   * when the cheapest-thing fallback finds it -- measured at turn 182 of ~240,
-   * and never at all in five games of twenty-four.
-   */
-  const fallbackOnly = (): Arm => ({
-    label: 'left to the fallback',
+  /** The same game with the purse shut. */
+  const noBuying = (): Arm => ({
+    label: 'no buying',
     apply: () => {
       control();
-      askForIt(false);
+      TURNING.enabled = false;
+      TURNING.ai = false;
     },
   });
 
-  return [shipped(), fallbackOnly()];
+  return [shipped(), noBuying()];
 };
 
 const ARMS: Arm[] = buildArms();

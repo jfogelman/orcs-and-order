@@ -2,6 +2,8 @@ import type { City, GameState, Unit } from '../model/types';
 import { unitType } from '../model/units';
 import type { CityReading } from '../sim/spying';
 import type { SabotageOutcome, SabotagePhase } from '../sim/sabotage';
+import type { TurnOutcome } from '../sim/turning';
+import { TURNING, askingPrice, turnOdds } from '../sim/turning';
 import { escapeHtml, openModal } from './dom';
 
 /**
@@ -246,6 +248,107 @@ export function openSabotage(
                start it again, from nothing.</p>`
             : ''
         }
+      </div>`,
+  });
+}
+
+/**
+ * The offer, before it is made.
+ *
+ * **Three named offers and two timings, rather than a slider and a number
+ * box.** The same reasoning as sabotage's phases: a player should be deciding
+ * *how generous to be* and *whether to wait*, which are questions with
+ * characters, not solving for a gold figure. The odds are shown because they
+ * are a fact about the offer and hiding them would make the dial meaningless.
+ */
+export function openOffer(
+  state: GameState,
+  spy: Unit,
+  target: Unit,
+  onChoose: (gold: number, delay: number) => void,
+): void {
+  const purse = state.players[spy.owner]?.gold ?? 0;
+  const them = state.players[target.owner]?.name ?? 'they';
+  const row = (label: string, share: number, delay: number) => {
+    const gold = Math.round(askingPrice(target, delay) * share);
+    const odds = Math.round(turnOdds(spy, target, gold, delay) * 100);
+    const afford = gold <= purse;
+    return `<button class="small${afford ? '' : ' disabled'}" data-gold="${gold}" data-delay="${delay}"
+              ${afford ? '' : 'disabled'}>${escapeHtml(label)} &middot; ${gold}g &middot; ${odds}%</button>`;
+  };
+  openModal({
+    title: `An Offer To A ${unitType(target.type).name}`,
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <div class="stat-row"><span class="label">They are asking</span><span class="value">${askingPrice(target)}g</span></div>
+        <div class="stat-row"><span class="label">We have</span><span class="value">${purse}g</span></div>
+        <p class="flavor">The money is spent whatever they say. A refusal is not a
+        refund, and ${escapeHtml(them)} will be told exactly whose offer it was &mdash;
+        this is the one thing a spy does by walking up and speaking.</p>
+      </div>
+      <div class="panel-body">
+        <div class="stat-row"><span class="label">Now</span></div>
+        <div class="button-row">
+          ${row('Thin', 0.5, 0)}${row('Fair', 1, 0)}${row('Generous', 1.6, 0)}
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="stat-row"><span class="label">In ${TURNING.maxDelay} turns</span></div>
+        <div class="button-row">
+          ${row('Thin', 0.5, TURNING.maxDelay)}${row('Fair', 1, TURNING.maxDelay)}${row('Generous', 1.6, TURNING.maxDelay)}
+        </div>
+        <p class="flavor">Cheaper, because a soldier will agree to a great deal when
+        the bill is some other week's problem. It stays theirs until then &mdash;
+        fighting for them, holding their gate &mdash; and you choose the week.</p>
+      </div>
+      <div class="modal-actions"><button class="small" data-act="never-mind">Never mind</button></div>`,
+    onMount: (root, close) => {
+      root.querySelectorAll<HTMLElement>('[data-gold]').forEach((b) => {
+        b.addEventListener('click', () => {
+          close();
+          onChoose(Number(b.dataset.gold), Number(b.dataset.delay));
+        });
+      });
+      root.querySelector('[data-act="never-mind"]')?.addEventListener('click', () => close());
+    },
+  });
+}
+
+/** What came of the offer. */
+export function openOfferResult(
+  state: GameState,
+  target: Unit,
+  outcome: TurnOutcome,
+): void {
+  const who = unitType(target.type).name;
+  if (outcome.kind === 'bought') {
+    const later = outcome.on > state.turn;
+    openModal({
+      title: later ? 'They Will Remember' : 'Bought',
+      width: 'min(560px, 96vw)',
+      body: `
+        <div class="panel-body">
+          <p style="font-size:15px">${escapeHtml(who)} took the ${outcome.gold} gold.</p>
+          <div class="spy-notice safe"><strong>Nobody noticed.</strong> ${
+            later
+              ? `They stay where they are and go on being somebody else's, right up until turn ${outcome.on}.`
+              : 'They are ours, where they stand.'
+          }</div>
+        </div>`,
+    });
+    return;
+  }
+  openModal({
+    title: 'They Said No',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">${escapeHtml(who)} heard the offer of ${outcome.gold} gold,
+        turned it down, and went to tell somebody.</p>
+        <div class="spy-notice blown"><strong>We were named.</strong> This is the one
+        thing a spy does by walking up and speaking, so there was never a version of
+        it that stayed anonymous once it failed. The money is gone too.</div>
       </div>`,
   });
 }

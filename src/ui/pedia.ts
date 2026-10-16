@@ -1003,6 +1003,29 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           decision rather than a free roll. Rank makes it safer and never makes it safe.
         </p>
         <p class="flavor">
+          <strong>And a soldier is a person, which is the expensive discovery.</strong>
+          With <em>Everyone Has A Price</em> an agent standing beside somebody else's
+          unit can walk up and make it an offer. The asking price is a fact about
+          <em>them</em> &mdash; what they cost to raise, how many of them there are, how
+          decorated &mdash; and what you choose is how generous to be. A thin offer is a
+          long shot; a fat one is good and never certain, because a soldier who could be
+          bought for certain would make a full purse a way of winning.
+        </p>
+        <p class="flavor">
+          <strong>Or buy them for later.</strong> A delayed betrayal is cheaper, because
+          people will agree to a great deal when the bill is some other week's problem
+          &mdash; and until that week they are <em>entirely theirs</em>: fighting for
+          them, holding their gate, counted in their garrison. Then they turn round. You
+          pick the week, which is most of what you are paying for.
+        </p>
+        <p class="flavor">
+          <strong>The money is gone either way, and a refusal names you.</strong> This is
+          the one thing on the whole ladder done by walking up and speaking, so there was
+          never a version of it that stayed quiet when it failed: they are told what was
+          offered and by whom, and they will remember. Everything else a spy does is
+          anonymous unless it is caught. This is anonymous only while it works.
+        </p>
+        <p class="flavor">
           <strong>Everybody does this.</strong> The other sides build agents too, dress
           them in somebody's colours and walk them to your gates, and what they learn
           goes in a file they plan off: an army that knows which of your towns is empty

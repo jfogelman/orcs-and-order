@@ -82,10 +82,19 @@ import { canExplore, startExplore } from './sim/explore';
 import { canBoard, landingTiles, roomAboard, unload, unloadAll } from './sim/ships';
 import { BROKEN, PEACE, atPeace, peaceLeft } from './sim/diplomacy';
 import { openPeaceBroken, openPeaceOffer, openTalks } from './ui/talks';
-import { openCaught, openQuiet, openReading, openSabotage, openSearch } from './ui/spying';
+import {
+  openCaught,
+  openOffer,
+  openOfferResult,
+  openQuiet,
+  openReading,
+  openSabotage,
+  openSearch,
+} from './ui/spying';
 import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
 import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabotage';
-import { couldWear, wearDisguise } from './sim/disguise';
+import { askingPrice, canTurn, turnUnit } from './sim/turning';
+import { appearsTo, couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
 import type { Job } from './sim/terraform';
@@ -782,6 +791,18 @@ class App {
           riskBand(unit, 'search'),
         )}</span></button>`
       : '';
+    // Section 136 slice 6: somebody standing next to us who might be bought.
+    // Offered per unit rather than per town, because the thing being bought is
+    // a person and the price is a fact about that person.
+    const buyable = this.state.units.filter((u) => canTurn(this.state, unit, u).ok);
+    const offers = buyable
+      .map(
+        (u) =>
+          `<button class="small" data-act="offer" data-unit="${u.id}" title="Walk up and make an offer. Refused is caught, and the money is gone either way.">Make an offer to ${escapeHtml(
+            unitType(appearsTo(u, this.viewerId).type).name,
+          )} &middot; <span class="risk">${askingPrice(u)}g</span></button>`,
+      )
+      .join('');
     const worn = unit.disguise?.owner;
     const dress = couldWear(this.state, unit)
       .map((id) => {
@@ -799,7 +820,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + wreck + sweep + dress + off;
+    return read + wreck + offers + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -845,6 +866,27 @@ class App {
     this.refreshSidebar();
     openSabotage(this.state, unit, city, out, phase);
     this.selectNextIdle();
+  }
+
+  /** Walk up to somebody else's soldier and make them an offer. */
+  private orderOffer(unitId: number): void {
+    const spy = this.selected;
+    const target = this.state.units.find((u) => u.id === unitId);
+    if (!spy || !target || spy.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canTurn(this.state, spy, target);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    openOffer(this.state, spy, target, (gold, delay) => {
+      const out = turnUnit(this.state, spy, target, gold, delay);
+      this.playLogCues();
+      this.refreshHud();
+      this.refreshOverlays();
+      this.refreshSidebar();
+      afterModalCloses(() => openOfferResult(this.state, target, out));
+      this.selectNextIdle();
+    });
   }
 
   /** Spend the turn looking for anybody who is not what they appear to be. */
@@ -3099,6 +3141,9 @@ class App {
               break;
             case 'wreck':
               this.orderWreck(Number(btn.dataset.city));
+              break;
+            case 'offer':
+              this.orderOffer(Number(btn.dataset.unit));
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));

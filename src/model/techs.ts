@@ -10,6 +10,8 @@ import type { BuildingId, FactionId, TechId, UnitTypeId } from './types';
  */
 
 export type TechFlag =
+  /** Section 136 slice 6: a spy may offer somebody else's soldier money. */
+  | 'turning'
   /** Removes the movement penalty on groups of five or more. */
   | 'coordination'
   /** +1 sight for every unit. */
@@ -922,6 +924,20 @@ export const TECHS: TechDef[] = [
     // Nothing in this tree was about *knowing things* before it. The shared
     // spine was land, walls, weather and mood; the faction ladders are units
     // and counting jokes.
+    id: 'everyone-has-a-price',
+    name: "Everyone Has A Price",
+    faction: 'both',
+    cost: 110,
+    prereqs: ['someone-elses-business', 'not-you-again'],
+    units: [],
+    buildings: [],
+    flags: ['turning'],
+    flavor:
+      'Somebody worked out that a soldier is a person, and that a person who is paid ' +
+      'once a season can be paid twice. The second payment is the interesting one, and ' +
+      'nobody has yet found the argument against it.',
+  },
+  {
     id: 'someone-elses-business',
     name: "Someone Else's Business",
     faction: 'both',
