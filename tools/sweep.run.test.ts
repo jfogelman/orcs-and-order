@@ -5,7 +5,13 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
+import { PERSONALITIES } from '../src/ai/ai';
+import { SPY } from '../src/sim/spying';
+import { DISGUISE } from '../src/sim/disguise';
+import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
+import { GOSSIP } from '../src/sim/gossip';
+import { INCITE } from '../src/sim/unrest';
 
 /**
  * The question this sweep is currently asking.
@@ -119,59 +125,126 @@ const buildArms = (): Arm[] => {
    */
 
   /**
-   * **What it measured, 2026-10-16.** 216 games.
+   * **What is the whole of espionage worth?**
    *
-   *     buying allowed  Horde 34  Kingdom 35  Hive 38
-   *     no buying       Horde 38  Kingdom 32  Hive 38
+   * Eight rungs have landed one at a time, and every measurement so far has
+   * asked about *one* of them against a game that already had the others. This
+   * asks the question nobody has: take the lot away and see what changes.
    *
-   * Horde p = 0.52, Kingdom p = 0.68, Hive p = 1.00. **The prediction below
-   * was wrong**: I said winners would move by more than sabotage did, on the
-   * strength of 10.88 offers a game against sabotage's 0.25, and they did not
-   * move at all. Five soldiers changing hands a game reshuffles 29 seeds in a
-   * hundred and eight without tilting any of them.
+   * **The "away" arm takes the research with it, on purpose.** Switching the
+   * levers off alone would leave the AI still working through four espionage
+   * advances worth about 375 beakers that now do nothing at all -- which would
+   * make the arm look worse for a reason that has nothing to do with
+   * espionage. The counterfactual being tested is *a game where this feature
+   * was never built*, and in that game nobody researches it either. Several
+   * knobs move together because they are one feature; both arms set every one
+   * of them explicitly, which is section 59.
    *
-   * The *other* half of the prediction was right, and is the interesting part.
-   * "If the Kingdom gains it is probably the purse" -- and the purse shows up
-   * exactly where it should: **Kingdom units +1.20 (t = +3.80)** and Kingdom
-   * cities +0.44 (t = +1.73), against the Horde flat and slightly down. The
-   * Kingdom banks 55 to 70 per cent more gold, so it buys more soldiers, and
-   * turning *transfers* units rather than creating them -- so this is a real
-   * net gain and not a counting artefact.
+   * **Predictions, before the run.** Every side gets espionage equally, so I
+   * expect **no winner shift** -- that has been the answer for turning, for
+   * sabotage and for the research order, and nothing here is more one-sided
+   * than those were. What I expect to see is the *character* columns: the
+   * feature costs beakers and shields and buys information, so if anything
+   * moves it should be advances and units rather than wins.
    *
-   * It simply never reaches the win column. The side that profits by it is
-   * already the side that was going to bank the gold, and gaining a soldier a
-   * game is not the same as gaining a game.
-   *
-   * **Worth noting across two sweeps:** Kingdom units was also the one moving
-   * column when espionage arrived a hundred turns earlier (+1.54, t = +4.14).
-   * There I guessed it was the agents themselves being counted; here nothing
-   * is created, so that explanation cannot carry this one. The common factor
-   * is more likely the Kingdom's economy expressing itself wherever espionage
-   * becomes more available. Two observations are not a finding -- but a third
-   * sweep that moves this column again would be worth chasing properly.
+   * **The one thing I am actively watching for: Kingdom units.** It has moved
+   * in both espionage sweeps so far (+1.54, then +1.20), and I have no
+   * explanation that covers both. If it moves a third time, that is three
+   * sightings and worth chasing properly rather than noting again.
    */
 
-  /** The shipped game: agents may buy somebody else's soldiers. */
+  /**
+   * **What it measured, 2026-10-16.** 216 games.
+   *
+   *     with espionage       Horde 32  Kingdom 34  Hive 42
+   *     no espionage at all  Horde 42  Kingdom 33  Hive 33
+   *
+   * **No winner shift** at the bar: Horde p = 0.11, Kingdom p = 1.00, Hive
+   * p = 0.12. The prediction was right. Both trends have both seed sets
+   * agreeing in direction, which is half of the believe-it test, and the
+   * second half failed -- see below.
+   *
+   * **Games run 15.3 turns longer (t = 3.81)**, and twice as many reach the
+   * limit: 22 of 108 against 9. Fights (t = -0.29) and captures (t = -0.21)
+   * are flat, so it is the same amount of war resolving more slowly.
+   * **Jeremy's call: that is wanted, not a cost** -- the game "was honestly a
+   * little fast from a player perspective at times."
+   *
+   * **A mechanism tested and disproved.** The obvious story was that longer
+   * games favour the late-arriving Hive. Games are longer; but *within each
+   * arm* the Hive does not win later than anybody else (t = -0.92 and +0.13),
+   * so the chain breaks. It would have been an easy thing to assert.
+   *
+   * **The Kingdom-units question, closed.** +1.86 here (t = +5.09), after
+   * +1.54 and +1.20. It is **not** turning: `boughtFrom` counts soldiers that
+   * changed hands and 0.04 a game survive to the end. It is the agents
+   * themselves plus an economy that does not feel their cost -- the Kingdom
+   * ends with 2.67 agents, 35.5 units and 778 gold against the Horde's 2.00,
+   * 31.3 and 155, so the same sixty shields costs it proportionally less. The
+   * Horde pays for two agents with about 1.8 real units; the Kingdom with 0.8.
+   *
+   * **Found while looking for something else:** the Hive ends with **0.38
+   * agents** against 2.00 and 2.67, on the same `aiWants` of 2. Jeremy has
+   * ruled the late-arrival gap out of scope for now -- staggered arrival by
+   * difficulty is coming, and the adjustment belongs in that decision.
+   */
+
+  const SPY_TECHS = [
+    'someone-elses-business',
+    'asking-around',
+    'everyone-has-a-price',
+    'a-word-in-the-wrong-ear',
+  ];
+
+  /** The priority lists as they ship, captured before any arm touches them. */
+  const asShipped = new Map(
+    Object.entries(PERSONALITIES).map(([k, v]) => [k, [...v.techPriority]] as const),
+  );
+
+  /**
+   * Every espionage knob, set one way or the other.
+   *
+   * Set from the captured original in **both** arms rather than edited in
+   * place: `restoreLevers` puts levers back with `Object.assign`, which copies
+   * `PERSONALITIES`' top-level keys by reference and would not undo a change
+   * made inside one of them.
+   */
+  const espionage = (on: boolean): void => {
+    SPY.enabled = on;
+    SPY.ai = on;
+    SABOTAGE.enabled = on;
+    SABOTAGE.ai = on;
+    TURNING.enabled = on;
+    TURNING.ai = on;
+    GOSSIP.enabled = on;
+    GOSSIP.ai = on;
+    INCITE.enabled = on;
+    INCITE.ai = on;
+    DISGUISE.enabled = on;
+    for (const [name, list] of asShipped) {
+      PERSONALITIES[name].techPriority = on
+        ? [...list]
+        : list.filter((t) => !SPY_TECHS.includes(t));
+    }
+  };
+
   const shipped = (): Arm => ({
-    label: 'buying allowed',
+    label: 'with espionage',
     apply: () => {
       control();
-      TURNING.enabled = true;
-      TURNING.ai = true;
+      espionage(true);
     },
   });
 
-  /** The same game with the purse shut. */
-  const noBuying = (): Arm => ({
-    label: 'no buying',
+  const without = (): Arm => ({
+    label: 'no espionage at all',
     apply: () => {
       control();
-      TURNING.enabled = false;
-      TURNING.ai = false;
+      espionage(false);
     },
   });
 
-  return [shipped(), noBuying()];
+  return [shipped(), without()];
 };
 
 const ARMS: Arm[] = buildArms();

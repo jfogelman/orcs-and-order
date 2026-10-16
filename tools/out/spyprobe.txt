@@ -31,6 +31,11 @@ readings attempted    7.04 per game
 distinct towns filed  3.42 per game
 agents alive at end   5.04 per game
 
+per side, at the end of the game:
+  orc      agents 2.00  all units 31.3  gold 155  bought 0.00
+  human    agents 2.67  all units 35.5  gold 778  bought 0.04
+  hivekin  agents 0.38  all units 14.1  gold 341  bought 0.04
+
 sweeps run            407.96 per game
   disguises seen thru 0.08
 sabotage attempted    0.04 per game

@@ -267,6 +267,8 @@ export function turnUnit(
 
 /** Hand a unit over, and tidy up everything that was true of it before. */
 function changeSides(_state: GameState, unit: Unit, to: number): void {
+  // Kept for measurement only; see the note on `boughtFrom`.
+  if (unit.boughtFrom === undefined) unit.boughtFrom = unit.owner;
   unit.owner = to;
   unit.moves = 0;
   unit.order = 'none';

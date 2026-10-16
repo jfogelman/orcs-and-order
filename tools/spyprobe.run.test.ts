@@ -112,6 +112,13 @@ describe('is espionage ever on the board', () => {
     });
     const totals: Tally = zero();
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
+    // **The standing question, chased at last.** `Kingdom units` has moved in
+    // all three espionage sweeps (+1.54, +1.20, +1.86) and no single story
+    // covers them. Counted per side here: agents, every unit, the purse, and
+    // how many soldiers were bought -- which is the only way to tell "the
+    // Kingdom builds more agents" from "the Kingdom buys more soldiers".
+    const perSide: Record<string, { agents: number; units: number; gold: number; bought: number }> =
+      {};
     const firstAgentTurns: number[] = [];
     const knewItTurns: number[] = [];
 
@@ -142,6 +149,16 @@ describe('is espionage ever on the board', () => {
       });
       firstAgentTurns.push(firstAgent);
       knewItTurns.push(knewIt);
+      const board = last! as GameState;
+      for (const p of board.players) {
+        if (p.barbarian || !p.faction) continue;
+        const row = (perSide[p.faction] ??= { agents: 0, units: 0, gold: 0, bought: 0 });
+        const mine = playerUnits(board, p.id);
+        row.agents += mine.filter((u) => unitType(u.type).spy).length;
+        row.units += mine.length;
+        row.gold += p.gold;
+        row.bought += mine.filter((u) => u.boughtFrom !== undefined).length;
+      }
       const t = tallyOf(last!);
       for (const k of Object.keys(totals) as (keyof Tally)[]) totals[k] += t[k];
       lines.push(
@@ -163,6 +180,15 @@ describe('is espionage ever on the board', () => {
     lines.push(`  caught              ${(totals.caught / n).toFixed(2)}`);
     lines.push(`distinct towns filed  ${(totals.filed / n).toFixed(2)} per game`);
     lines.push(`agents alive at end   ${(totals.lived / n).toFixed(2)} per game`);
+    lines.push('');
+    lines.push('per side, at the end of the game:');
+    for (const [who, v] of Object.entries(perSide)) {
+      lines.push(
+        `  ${who.padEnd(8)} agents ${(v.agents / n).toFixed(2)}  ` +
+          `all units ${(v.units / n).toFixed(1)}  gold ${(v.gold / n).toFixed(0)}  ` +
+          `bought ${(v.bought / n).toFixed(2)}`,
+      );
+    }
     lines.push('');
     lines.push(`sweeps run            ${(totals.swept / n).toFixed(2)} per game`);
     lines.push(`  disguises seen thru ${(totals.found / n).toFixed(2)}`);
