@@ -28,6 +28,8 @@ import {
 import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
 import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
+import { noticeStrangers } from './noticing';
+import { UNSEEN_TRACE, forgetSpotted, goesUnseen } from './unseen';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
 import { claimRuins, sleepRuins, tickRuins } from './ruins';
@@ -780,6 +782,22 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   }
 
   tickUnitStatuses(state, playerId);
+  // Section 138: anybody of ours who was trodden on slips out of sight again.
+  //
+  // **Before this side moves**, which is the whole of what the mark is worth:
+  // whoever walked into one had the rest of their turn, and everybody else's
+  // turn in between, to do something about it. Now the agent gets to move, and
+  // is a secret once more.
+  for (const u of state.units) {
+    if (u.owner === playerId && u.spottedBy !== undefined && goesUnseen(u)) {
+      UNSEEN_TRACE.walkedAway++;
+    }
+  }
+  forgetSpotted(state, playerId);
+  // And the towns have a look around. Early, before this side moves anything,
+  // so an agent found at a gate can be dealt with on the turn it was found
+  // rather than after everything has already marched past it.
+  noticeStrangers(state, playerId);
   // Section 125: "already waiting" is true for exactly one turn. Cleared at the
   // start of its own turn rather than after it swings, because a Burrower that
   // comes up and does not attack has still given away where it is.

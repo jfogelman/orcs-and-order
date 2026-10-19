@@ -1,4 +1,4 @@
-import { distance } from '../engine/grid';
+import { distance, idx } from '../engine/grid';
 import { BUILDINGS } from '../model/buildings';
 import type { City, GameState, Unit } from '../model/types';
 import { headcount, unitType } from '../model/units';
@@ -8,6 +8,7 @@ import { isDisguised, uncover } from './disguise';
 import { endingFor, endingWorks, isEndingPiece } from './endings';
 import { log, withRng } from './gamestate';
 import { seenBy } from './burrow';
+import { UNSEEN_TRACE, hiddenFrom, unseenOdds } from './unseen';
 
 /**
  * Section 136 slice 2: what a spy is actually for.
@@ -502,18 +503,31 @@ export function searchFrom(state: GameState, unit: Unit): SearchOutcome {
 
   const reach = unitType(unit.type).sight;
   const found: Unit[] = [];
+  const lit = state.players[unit.owner]?.visible;
   for (const other of state.units) {
     if (other.owner === unit.owner) continue;
-    if (!isDisguised(other)) continue;
     if (other.uncoveredBy?.includes(unit.owner)) continue;
     if (distance(unit.x, unit.y, other.x, other.y) > reach) continue;
-    // What it is wearing is what we can see, so the usual sight rules apply:
-    // a disguise does not make somebody visible through fog.
-    if (!seenBy(state, other, unit.owner)) continue;
-    if (!withRng(state, (rng) => rng.chance(findOdds(unit, other)))) continue;
+    // Section 138: one loop, two tiers, two different rolls.
+    //
+    // A disguised agent is **seen and misread**, so the usual sight rules
+    // apply -- `seenBy` says yes and a disguise does not make somebody visible
+    // through fog. A hidden one is **not seen at all**, so asking `seenBy`
+    // would refuse every single one of them and the high tier would be
+    // unfindable by the one thing built to find it. What it needs instead is
+    // the tile to be lit, which is the half of `seenBy` that is about the map
+    // rather than about the unit.
+    const unseenHere = hiddenFrom(other, unit.owner);
+    if (!unseenHere && !isDisguised(other)) continue;
+    if (unseenHere) {
+      if (!lit?.[idx(other.x, other.y, state.width)]) continue;
+    } else if (!seenBy(state, other, unit.owner)) continue;
+    const odds = unseenHere ? unseenOdds(unit, other) : findOdds(unit, other);
+    if (!withRng(state, (rng) => rng.chance(odds))) continue;
     uncover(other, unit.owner);
     awardXp(state, unit, SPY.xpRead);
     SPY_TRACE.found++;
+    if (unseenHere) UNSEEN_TRACE.foundBySearch++;
     found.push(other);
   }
 

@@ -1,56 +1,67 @@
-seed         1 T 238 tried   7 | read   5 | quiet   1 | caught   1 | swept 420 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 7
-seed      7920 T 301 tried  17 | read  14 | quiet   1 | caught   2 | swept 500 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
-seed     15839 T 217 tried   7 | read   6 | quiet   1 | caught   0 | swept 302 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 7
-seed     23758 T 301 tried  14 | read  12 | quiet   1 | caught   1 | swept 385 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
-seed     31677 T 215 tried   3 | read   3 | quiet   0 | caught   0 | swept  91 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 2
-seed     39596 T 222 tried   1 | read   1 | quiet   0 | caught   0 | swept 172 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
-seed     47515 T 267 tried   2 | read   2 | quiet   0 | caught   0 | swept 495 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
-seed     55434 T 279 tried   4 | read   4 | quiet   0 | caught   0 | swept 562 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
-seed   1000003 T 253 tried  16 | read  12 | quiet   1 | caught   3 | swept 550 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
-seed   1007922 T 239 tried   7 | read   5 | quiet   1 | caught   1 | swept 256 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 2
-seed   1015841 T 250 tried   9 | read   7 | quiet   1 | caught   1 | swept 354 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
-seed   1023760 T 245 tried   2 | read   2 | quiet   0 | caught   0 | swept 458 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
-seed   1031679 T 257 tried   7 | read   6 | quiet   0 | caught   1 | swept 270 found 0 | wrecks  1 (1 done, 0 endings, 0 lost) | alive 5
-seed   1039598 T 301 tried   5 | read   4 | quiet   1 | caught   0 | swept 379 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 3
-seed   1047517 T 237 tried   2 | read   1 | quiet   1 | caught   0 | swept 354 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
-seed   1055436 T 226 tried  16 | read   9 | quiet   4 | caught   3 | swept 175 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 2
-seed   2000011 T 214 tried   2 | read   2 | quiet   0 | caught   0 | swept 444 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
-seed   2007930 T 301 tried  12 | read   8 | quiet   2 | caught   2 | swept 639 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
-seed   2015849 T 245 tried   6 | read   4 | quiet   1 | caught   1 | swept 390 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
-seed   2023768 T 301 tried   0 | read   0 | quiet   0 | caught   0 | swept 466 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 3
-seed   2031687 T 212 tried   1 | read   1 | quiet   0 | caught   0 | swept 167 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
-seed   2039606 T 246 tried  13 | read  10 | quiet   1 | caught   2 | swept 1149 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 7
-seed   2047525 T 301 tried  15 | read  10 | quiet   2 | caught   3 | swept 528 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
-seed   2055444 T 217 tried   1 | read   1 | quiet   0 | caught   0 | swept 285 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 2
+seed         1 T 244 tried   0 | read   0 | quiet   0 | caught   0 | swept 620 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 11
+seed      7920 T 301 tried  15 | read  11 | quiet   4 | caught   0 | swept 637 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
+seed     15839 T 209 tried   6 | read   4 | quiet   1 | caught   1 | swept 321 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
+seed     23758 T 301 tried  14 | read   9 | quiet   2 | caught   3 | swept 539 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 9
+seed     31677 T 216 tried   4 | read   1 | quiet   2 | caught   1 | swept 247 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
+seed     39596 T 232 tried   1 | read   1 | quiet   0 | caught   0 | swept 294 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
+seed     47515 T 301 tried  13 | read  11 | quiet   0 | caught   2 | swept 991 found 2 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 9
+seed     55434 T 269 tried   8 | read   7 | quiet   1 | caught   0 | swept 730 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 11
+seed   1000003 T 265 tried   5 | read   3 | quiet   0 | caught   2 | swept 471 found 0 | wrecks  2 (1 done, 1 endings, 1 lost) | alive 6
+seed   1007922 T 297 tried   9 | read   8 | quiet   1 | caught   0 | swept 1252 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 7
+seed   1015841 T 260 tried  19 | read  10 | quiet   6 | caught   3 | swept 489 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
+seed   1023760 T 264 tried  20 | read  11 | quiet   4 | caught   5 | swept 600 found 2 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 5
+seed   1031679 T 278 tried  14 | read   9 | quiet   1 | caught   4 | swept 360 found 0 | wrecks  1 (0 done, 0 endings, 1 lost) | alive 4
+seed   1039598 T 301 tried   2 | read   1 | quiet   0 | caught   1 | swept 350 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
+seed   1047517 T 246 tried   2 | read   2 | quiet   0 | caught   0 | swept 702 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
+seed   1055436 T 254 tried  11 | read   8 | quiet   1 | caught   2 | swept 201 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 3
+seed   2000011 T 240 tried   1 | read   1 | quiet   0 | caught   0 | swept 422 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 6
+seed   2007930 T 251 tried   5 | read   4 | quiet   1 | caught   0 | swept 519 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
+seed   2015849 T 267 tried   7 | read   7 | quiet   0 | caught   0 | swept 757 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 8
+seed   2023768 T 301 tried   3 | read   2 | quiet   0 | caught   1 | swept 444 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 3
+seed   2031687 T 219 tried   0 | read   0 | quiet   0 | caught   0 | swept 189 found 0 | wrecks  1 (0 done, 0 endings, 1 lost) | alive 7
+seed   2039606 T 263 tried   3 | read   3 | quiet   0 | caught   0 | swept 1613 found 1 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 9
+seed   2047525 T 301 tried  14 | read  10 | quiet   4 | caught   0 | swept 465 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 4
+seed   2055444 T 242 tried   0 | read   0 | quiet   0 | caught   0 | swept 472 found 0 | wrecks  0 (0 done, 0 endings, 0 lost) | alive 9
 
 games                 24
-readings attempted    7.04 per game
-  of which read       5.38
-  quiet failures      0.79
-  caught              0.88
-distinct towns filed  3.42 per game
-agents alive at end   5.04 per game
+readings attempted    7.33 per game
+  of which read       5.13
+  quiet failures      1.17
+  caught              1.04
+distinct towns filed  3.58 per game
+agents alive at end   6.54 per game
 
 per side, at the end of the game:
-  orc      agents 2.00  all units 31.3  gold 155  bought 0.00
-  human    agents 2.67  all units 35.5  gold 778  bought 0.04
-  hivekin  agents 0.38  all units 14.1  gold 341  bought 0.04
+  orc      agents 2.71  all units 34.9  gold 140  bought 0.08
+  human    agents 3.38  all units 43.1  gold 584  bought 0.25
+  hivekin  agents 0.46  all units 14.5  gold 360  bought 0.04
 
-sweeps run            407.96 per game
-  disguises seen thru 0.08
-sabotage attempted    0.04 per game
+sweeps run            570.21 per game
+  disguises seen thru 0.33
+sabotage attempted    0.17 per game
   works wrecked       0.04
-  of those, endings   0.00
-  agents lost at them 0.00
+  of those, endings   0.04
+  agents lost at them 0.13
+
+hidden agents built   6.42 per game
+  alive at the end    1.75
+  turns on enemy land 17.1
+  found by a search   0.21
+  found by a town     1.21
+  walked into         7.83 (temporary)
+  and slipped away    6.54
+disguised found by town 0.50 per game
+town rolls made       30.7 per game
+
 asked around          3.63 per game
-words in wrong ears   5.46 per game
-  towns set talking   3.83
-  caught at it        1.63
-offers made           9.17 per game
-  taken               5.25
-  of those, for later 0.83
-  refused (and named) 3.92
-  gold spent buying   588
+words in wrong ears   4.13 per game
+  towns set talking   3.21
+  caught at it        0.92
+offers made           12.38 per game
+  taken               7.25
+  of those, for later 0.67
+  refused (and named) 5.13
+  gold spent buying   819
 
 games with an agent at all   24/24
   first one appears on turn  89 (of ~240)
@@ -58,14 +69,15 @@ games where somebody learned Someone Else's Business  24/24
   learned on turn            86
 
 what the agent abroad did with its turns, per game:
-  read a town         7.0
-  wrecked works       0.0
-  walked              47.3
-  stood beside a town it had already read  3.0
-  could not get there 10.0
+  read a town         7.3
+  wrecked works       0.2
+  walked              66.1
+  stood beside a town it had already read  2.0
+  could not get there 10.4
   nowhere to go       0.0
 
-read 76% quiet 11% caught 12% (rank 0 predicts 75 / 12.5 / 12.5)
+read 70% quiet 16% caught 14% (rank 0 predicts 75 / 12.5 / 12.5)
 
 Espionage happens. A sweep of it is measuring something.
 (SPY.ai true, SPY.aiWants 2, remembers 12)
+(UNSEEN.ai true, UNSEEN.aiWants 1, finds 0.2, notice 0.04)

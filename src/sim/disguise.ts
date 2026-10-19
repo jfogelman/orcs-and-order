@@ -1,5 +1,6 @@
 import type { GameState, Unit } from '../model/types';
 import { CREATURES, unitType } from '../model/units';
+import { goesUnseen } from './unseen';
 
 /**
  * Section 136: a unit that is not what it appears to be.
@@ -47,14 +48,23 @@ export function isDisguised(unit: Unit): boolean {
 }
 
 /**
- * Drop the pretence, for one side.
+ * Record that this side has seen through whatever this unit was doing.
  *
  * Per side rather than globally, so finding a spy is worth something to the
  * side that found it and is not an announcement to the whole map. The owner is
  * never added, having never been fooled.
+ *
+ * **One field, two tiers.** Section 138 added agents that are not disguised at
+ * all and simply cannot be seen, and "this side has seen through it" means
+ * exactly the same thing for both -- so the guard asks whether the unit was
+ * concealed *in any way* rather than whether it was wearing colours. The first
+ * version asked for `unit.disguise` and silently refused to uncover anything
+ * from the high tier, which is a function that returns false and breaks a
+ * feature without failing anywhere.
  */
 export function uncover(unit: Unit, viewerId: number): boolean {
-  if (!unit.disguise || unit.owner === viewerId) return false;
+  if (unit.owner === viewerId) return false;
+  if (!unit.disguise && !goesUnseen(unit)) return false;
   const seen = (unit.uncoveredBy ??= []);
   if (seen.includes(viewerId)) return false;
   seen.push(viewerId);
@@ -88,9 +98,17 @@ export function plausibleAs(state: GameState, ownerId: number): string | null {
   return candidates.reduce((a, b) => (a.cost <= b.cost ? a : b)).id;
 }
 
-/** Whether this unit could be told to put a disguise on at all. */
+/**
+ * Whether this unit could be told to put a disguise on at all.
+ *
+ * The low tier only. Section 138's agents are not seen in the first place, and
+ * an invisible unit wearing somebody's colours is a contradiction with a
+ * button -- there is nobody to show the colours to. It is also the line that
+ * keeps the two tiers legible: one lies, the other is not there.
+ */
 export function canDisguise(unit: Unit): boolean {
-  return DISGUISE.enabled && unitType(unit.type).spy === true;
+  const type = unitType(unit.type);
+  return DISGUISE.enabled && type.spy === true && !goesUnseen(unit);
 }
 
 export const DISGUISE = {

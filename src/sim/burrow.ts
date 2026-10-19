@@ -5,6 +5,7 @@ import { idx, inBounds } from '../engine/grid';
 import { cityAt, log, unitAt } from './gamestate';
 import { hostile } from './diplomacy';
 import { hasFlag } from './rules';
+import { hiddenFrom } from './unseen';
 
 /**
  * Section 125 slice B: the Burrower-caste, and the two different things it does
@@ -103,7 +104,14 @@ export function seenBy(state: GameState, unit: Unit, viewerId: number): boolean 
   if (!viewer) return false;
   if (!viewer.visible[idx(unit.x, unit.y, state.width)]) return false;
   if (unit.owner === viewerId) return true;
-  return !(BURROW.enabled && isSunk(unit));
+  if (BURROW.enabled && isSunk(unit)) return false;
+  // Section 138: and the second reason, which is the whole of the high tier of
+  // spies. Asked here rather than anywhere else for exactly the reason in the
+  // note at the top of this file -- a rule about who can see what that is
+  // implemented in four places is four different rules within a month. The
+  // renderer, the AI's target search, the sighting report and the mover's
+  // blocker check all come through this line.
+  return !hiddenFrom(unit, viewerId);
 }
 
 /**

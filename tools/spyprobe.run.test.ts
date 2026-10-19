@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { playerUnits } from '../src/sim/gamestate';
 import { unitType } from '../src/model/units';
 import { SPY, SPY_TRACE } from '../src/sim/spying';
+import { UNSEEN, UNSEEN_TRACE, goesUnseen, resetUnseenTrace } from '../src/sim/unseen';
 import type { GameState } from '../src/model/types';
 import { playGame, seedSet, TUNED_BASES } from './sweep';
 // The shipped game, not the levers as they stand. See the note in sweep.run.
@@ -111,6 +112,14 @@ describe('is espionage ever on the board', () => {
       filed: 0, lived: 0,
     });
     const totals: Tally = zero();
+    // Section 138: the high tier, asked the same question as everything else
+    // in this file -- does it ever happen at all? A Nobody costs fifty-five
+    // shields and has no attack, so it is the worst purchase in every yard by
+    // an even wider margin than a Skulker, and `built: 0` here would mean any
+    // sweep of UNSEEN was measuring the same game twice.
+    const unseen = { ...UNSEEN_TRACE };
+    for (const k of Object.keys(unseen) as (keyof typeof unseen)[]) unseen[k] = 0;
+    let unseenAlive = 0;
     const seeds = seedSet('spy probe', TUNED_BASES, 8).seeds;
     // **The standing question, chased at last.** `Kingdom units` has moved in
     // all three espionage sweeps (+1.54, +1.20, +1.86) and no single story
@@ -130,6 +139,7 @@ describe('is espionage ever on the board', () => {
       // Zeroed per game, or every row would be the running total of the ones
       // before it and the last game would look like the busiest.
       for (const k of Object.keys(SPY_TRACE) as (keyof typeof SPY_TRACE)[]) SPY_TRACE[k] = 0;
+      resetUnseenTrace();
       // **When does an agent first exist at all?** The branch counts said the
       // agent abroad takes about ten turns in a two-hundred-and-forty-turn
       // game, which is not a unit choosing badly -- it is a unit that is
@@ -161,6 +171,13 @@ describe('is espionage ever on the board', () => {
       }
       const t = tallyOf(last!);
       for (const k of Object.keys(totals) as (keyof Tally)[]) totals[k] += t[k];
+      // Section 138. Summed here because `resetUnseenTrace` runs per game, the
+      // way SPY_TRACE does -- a running total would make the last game look
+      // like the busiest, which is the bug the note above describes.
+      for (const k of Object.keys(UNSEEN_TRACE) as (keyof typeof UNSEEN_TRACE)[]) {
+        unseen[k] += UNSEEN_TRACE[k];
+      }
+      unseenAlive += last!.units.filter((u) => goesUnseen(u)).length;
       lines.push(
         `seed ${String(seed).padStart(9)} T${String(out.turns).padStart(4)} ` +
           `tried ${String(t.attempts).padStart(3)} | read ${String(t.read).padStart(3)} ` +
@@ -196,6 +213,22 @@ describe('is espionage ever on the board', () => {
     lines.push(`  works wrecked       ${(totals.wrecked / n).toFixed(2)}`);
     lines.push(`  of those, endings   ${(totals.wreckedEndings / n).toFixed(2)}`);
     lines.push(`  agents lost at them ${(totals.lostAtWorks / n).toFixed(2)}`);
+    lines.push('');
+    lines.push(`hidden agents built   ${(unseen.built / n).toFixed(2)} per game`);
+    lines.push(`  alive at the end    ${(unseenAlive / n).toFixed(2)}`);
+    lines.push(`  turns on enemy land ${(unseen.abroad / n).toFixed(1)}`);
+    lines.push(`  found by a search   ${(unseen.foundBySearch / n).toFixed(2)}`);
+    lines.push(`  found by a town     ${(unseen.foundByTown / n).toFixed(2)}`);
+    lines.push(`  walked into         ${(unseen.foundByFoot / n).toFixed(2)} (temporary)`);
+    lines.push(`  and slipped away    ${(unseen.walkedAway / n).toFixed(2)}`);
+    lines.push(`disguised found by town ${(unseen.disguisedFoundByTown / n).toFixed(2)} per game`);
+    lines.push(`town rolls made       ${(unseen.townRolls / n).toFixed(1)} per game`);
+    if (unseen.built === 0) {
+      lines.push('  **NOBODY EVER BUILT ONE.** Any arm of UNSEEN measures nothing.');
+    } else if (unseen.abroad === 0) {
+      lines.push('  **BUILT AND NEVER WALKED ANYWHERE.** The expensive half is unmeasured.');
+    }
+    lines.push('');
     lines.push(`asked around          ${(totals.asked / n).toFixed(2)} per game`);
     lines.push(`words in wrong ears   ${(totals.incites / n).toFixed(2)} per game`);
     lines.push(`  towns set talking   ${(totals.incitesTook / n).toFixed(2)}`);
@@ -249,6 +282,9 @@ describe('is espionage ever on the board', () => {
         : 'Espionage happens. A sweep of it is measuring something.',
     );
     lines.push(`(SPY.ai ${SPY.ai}, SPY.aiWants ${SPY.aiWants}, remembers ${SPY.remembers})`);
+    lines.push(
+      `(UNSEEN.ai ${UNSEEN.ai}, UNSEEN.aiWants ${UNSEEN.aiWants}, finds ${UNSEEN.finds}, notice ${UNSEEN.notice})`,
+    );
 
     const report = lines.join('\n');
     console.log(report);

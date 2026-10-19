@@ -1,6 +1,7 @@
 import type { GameState } from '../model/types';
 import { idx } from '../engine/grid';
 import { log } from './gamestate';
+import { seenBy } from './burrow';
 import {
   STANDING,
   adjustStanding,
@@ -436,7 +437,15 @@ export function checkContacts(state: GameState, viewerId: number): void {
   const seen = new Set<number>();
   for (const u of state.units) {
     if (u.owner === viewerId) continue;
-    if (viewer.visible[idx(u.x, u.y, state.width)]) seen.add(u.owner);
+    // **`seenBy`, not the visibility bitmap.** Section 138. A lit tile is not
+    // the same question as a visible unit, and two things in this game stand
+    // on lit tiles without being visible: a Burrower that has gone to ground,
+    // and a hidden agent. Asking the bitmap meant an empire could be *met* --
+    // told that a side existed, and handed the rough bearing of its nearest
+    // town, since a meeting reveals both ways -- by something nobody could see
+    // walking past. The whole of what a hidden agent is for, given away by the
+    // one subsystem that was not asking the right question.
+    if (seenBy(state, u, viewerId)) seen.add(u.owner);
   }
   for (const c of state.cities) {
     if (c.owner === viewerId) continue;

@@ -11,6 +11,7 @@ import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
 import { SPY } from '../src/sim/spying';
+import { UNSEEN } from '../src/sim/unseen';
 import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
@@ -133,6 +134,10 @@ export const LEVERS: Record<string, object> = {
   NEGOTIATION,
   DISGUISE,
   SPY,
+  // Section 138: the high tier. In the table the day it was written, so an
+  // arm that turns it off is a real arm rather than a duplicate the identity
+  // check refuses.
+  UNSEEN,
   SABOTAGE,
   TURNING,
   GOSSIP,
