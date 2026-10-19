@@ -516,7 +516,14 @@ describe('what the book says about them', () => {
    * rule in the book is only worth doing if the pin moves when the rule does.
    */
   it('says who everybody is before it says what they do', () => {
-    const intro = HIVE_RULES.slice(0, HIVE_RULES.indexOf('She does not move'));
+    // Cut at the Queen topic's *anchor* rather than at the words "She does not
+    // move". Section 137 gave the pane a contents strip, so that phrase now
+    // appears twice -- once in the strip at the very top and once as the
+    // heading it links to -- and slicing on the phrase cut the intro off
+    // before it had said anything at all. The anchor is written once.
+    const queenRule = HIVE_RULES.indexOf('<section class="pedia-topic" id="pedia-s-hive-she-does-not-move"');
+    expect(queenRule, 'the Queen rule should have a topic of its own').toBeGreaterThan(0);
+    const intro = HIVE_RULES.slice(0, queenRule);
     expect(intro).toMatch(/Hives/);
     expect(intro).toMatch(/castes/);
     expect(intro).toMatch(/Queen/);
