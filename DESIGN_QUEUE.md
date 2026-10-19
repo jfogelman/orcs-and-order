@@ -11271,3 +11271,72 @@ Nothing warned, because from the pipeline's point of view nothing was wrong.
 Cheap fix worth making: when two source files collapse to the same id and
 neither carries a known `VARIANTS` note, say so. One line of output would have
 turned an hour into ten seconds. `art_src/unused/` is where the loser belongs.
+
+## 137. The book had no topics, and several cards said nothing
+
+Two complaints off a played game, and they turned out to be the same one:
+**the Orcpedia had grown by accretion.** Every slice since section 123 added a
+paragraph to the end of whichever pane was nearest, and nothing ever went back
+and asked what the pane was now about.
+
+Diplomacy was the worst of it -- twenty-three consecutive `<p class="flavor">`
+with no heading between any of them, and **two unrelated subjects in one
+scroll**. Diplomacy is what you say to somebody who knows you are saying it;
+espionage is the whole of what you do because they do not. They shared a pane
+for the accident that both arrived in sections 135 and 136, and by the eighth
+rung the ladder was ten unheaded paragraphs buried under the peace rules. The
+Wilds and the Hive's rules were going the same way.
+
+What shipped:
+
+- **Espionage is its own pane.** Six topics, with the ladder as one of them and
+  a sub-heading per rung, read off `SPY_ACTIONS` so the words in the book are
+  the words on the buttons.
+- **`topicPane`** -- a heading per topic and a contents strip at the top of the
+  pane. The strip is the half worth having: a heading helps somebody already
+  scrolling past it, and the strip answers *is the answer to my question even
+  in here*. A topic with an empty body drops out of both, so a pane whose lever
+  is off does not advertise a heading that goes nowhere.
+- **Every long pane**, not only the three complained about. Structures,
+  Terrain and Controls had the same wall -- Terrain carried six unrelated
+  subjects above its table, and Controls four -- and leaving them would have
+  been exactly the inconsistency the complaint was about.
+- **Cross-references in the prose**, `seeTopic` and `seeEntry`. A topic link
+  does not name its pane -- `onMount` switches to whichever pane the anchor is
+  sitting in -- and an entry link goes through the same `locate` the `focus`
+  argument does, so a link written in the prose and a link arriving from the
+  ruin dialog cannot land in two different places.
+
+And three sets of cards that said nothing the unit does:
+
+- **Ranged.** An Archer does not shoot from a distance. It walks up and fights
+  like everything else and the whole of the difference is a free opening round,
+  which was written down in `combat.ts` and nowhere a player could reach. So a
+  card reading A4 D1 beside a Footman's A3 D2 made the unit look like a worse
+  soldier wearing a misleading label, which is exactly backwards.
+- **Spies.** Eight rungs shipped across section 136's slices and every word
+  about them lived in one pane, so the card for the unit itself showed A0 D1
+  and a joke. It now says what it cannot do, what it can, what an order risks,
+  and -- the line to keep -- that **an agent is in plain sight the whole time**.
+  A disguise answers *what am I looking at*. It never answers *can I see it*.
+- **The Burrower-caste.** Sink and Burrow were written up in the Hive's rules
+  and not on the Burrower.
+
+### Left for the high tier
+
+When the invisible rung lands it wants a topic in the Espionage pane and a note
+on its own card, and the pair of lines above are what it is defined against:
+the low tier is seen and mistaken for somebody else, the high tier is not seen
+at all. The `seenBy` seam the Burrower already uses is the one it shares -- so
+the Burrower's card and the high tier's should end up saying the same thing in
+two different voices, and the Hive's rules already point at Espionage for it.
+
+### The one that nearly shipped wrong
+
+The group note on first strikes was written as `if (def.count > 1)`, which is
+perfectly correct and **never renders**: the book draws the single card for a
+creature and hangs its ladder off it as chips, so no card with `count > 1` is
+ever built. The test passed, against a string no player could reach. Keyed to
+the creature having a ladder instead. Third cousin of the `numeric proxy is not
+what the thing is` family -- here it was *the entry I am describing* standing in
+for *the entry anybody will read*.
