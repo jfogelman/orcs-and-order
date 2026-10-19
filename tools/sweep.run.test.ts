@@ -97,6 +97,63 @@ const buildArms = (): Arm[] => {
    *    probe against 2.71 and 3.38. It barely participates in espionage at
    *    all, which is the late-arrival gap Jeremy has ruled out of scope until
    *    staggered arrival is decided.
+   *
+   * ## What came back. 324 games, 73 minutes, 54 an arm a seed set.
+   *
+   * **(1) Right. No winner shift anywhere.** Against `no high tier`: Horde
+   * p = 1.00, Kingdom p = 0.68, Hive p = 1.00. Against `no watchful towns`:
+   * 0.75, 0.75, 1.00. Nothing is close, and the totals barely move -- Horde
+   * 33/34/31, Kingdom 36/33/38, Hive 39/40/39.
+   *
+   * **(5) Right. The Hive is flat**, as predicted and for the reason
+   * predicted.
+   *
+   * **(2) Wrong, and usefully. The high tier buys +6.62 turns, t = +2.39**,
+   * which clears the bar I predicted it would not. The size was nearly right
+   * and the significance call was not. It is believable by the standing test
+   * in `sweep-noise-at-108-games`: both seed sets agree and agree *closely*
+   * (+6.81 and +6.43), turn-limit games move with it (21 -> 26), and a
+   * second column does too -- endings shift from conquest to points,
+   * 7/26 against 12/20. Fights (t = +0.85) and captures (t = -0.90) are
+   * flat, so it is the same amount of war resolving more slowly. **That is
+   * the espionage-entire signature at a fifth the size** (+15.3 turns there),
+   * which is about right for one more rung.
+   *
+   * **(3) Wrong, and it was the argument for running three arms.** The
+   * prediction was that the watchful towns would shorten games, so the
+   * shipped arm would read flatter than either half and a two-arm sweep
+   * would null out for the wrong reason. It does not: removing the towns
+   * moves turns by +0.95 with t = 0.60 and **the two seed sets disagree in
+   * direction** (+2.52 and -0.61), which is the definition of nothing. The
+   * +6.62 belongs to the high tier alone, and the two-arm version of this
+   * sweep would have been right. The third arm cost 24 minutes and bought a
+   * ruled-out confound rather than the one it was run for.
+   *
+   * **(4) Not testable as written, which is a flaw in the prediction.** It
+   * named `Kingdom units`, and `rawRows` has no units column -- the pair
+   * after techs is `ladder`, the deepest counting-group reached. The nearest
+   * proxies both point the predicted way and neither clears the bar: Kingdom
+   * population +2.46 (t = +1.30) and Kingdom cities +0.43 (t = +1.59), both
+   * with the seed sets agreeing. Write predictions against columns the
+   * instrument actually has.
+   *
+   * ## The one thing nobody predicted
+   *
+   * Against `no watchful towns`, the **Horde** gains: population +2.84
+   * (t = +2.92) and cities +0.26 (t = +2.30), both with the seed sets
+   * agreeing. So towns noticing strangers is worth something to the Horde
+   * specifically.
+   *
+   * A story fits -- the Kingdom builds the most agents (3.38 a game against
+   * 2.71), so Horde towns have the most strangers to catch and the most to
+   * gain from catching them. **It is a story invented after seeing the
+   * number**, which is the thing `attribution-needs-the-same-bar` exists to
+   * warn about, and two correlated columns are one finding rather than two.
+   * Twenty tests were run at a 2-sigma bar, so about one false positive is
+   * expected and three flagged. Confirming it would want a probe counting
+   * incidents by *victim* side, which is a cheap addition and has not been
+   * made. No winner moved with it, so whatever it is, it is not deciding
+   * games.
    */
 
   /** The advance that buys the high tier, and nothing else. */

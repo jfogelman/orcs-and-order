@@ -11423,8 +11423,33 @@ rioting town is at the floor.
 Jeremy's call that it covers **both tiers** — the tell for the low one being a
 garrison that comes to a different number depending on who counts it.
 
+### Measured
+
+324 games, three arms, 73 minutes. **No winner shift anywhere** — the largest
+p-value gap is Kingdom at 0.68, and the totals barely move. What the high tier
+buys is **+6.62 turns (t = +2.39)**, with both seed sets agreeing closely
+(+6.81, +6.43), turn-limit games 21 → 26, and endings shifting from conquest
+to points (7/26 against 12/20). Fights and captures are flat, so it is the
+same amount of war resolving more slowly: the espionage-entire signature at a
+fifth the size, which is about right for one more rung.
+
+**The watchful towns do nothing to game length** — +0.95 turns, t = 0.60, and
+the two seed sets disagree in direction. The third arm was run on the
+prediction that they would *shorten* games and mask the high tier's effect;
+that was wrong, and the two-arm version of this sweep would have been right.
+
+**Unpredicted, and unexplained:** with watchful towns on, the Horde gains
+population (+2.84, t = +2.92) and cities (+0.26, t = +2.30), both seed sets
+agreeing. The story that fits is that the Kingdom builds the most agents, so
+Horde towns have the most to catch — but that story was invented after seeing
+the number, and twenty tests at a 2σ bar expect about one false positive.
+Confirming it wants a probe counting incidents by **victim** side, which is
+cheap and has not been done.
+
 ### Still open
 
+- A probe counting espionage incidents by victim side, to settle the Horde
+  gain above rather than leaving it as a plausible story.
 - The **double agent** is still queued (the entry further up this file), and
   it is now the only espionage idea left unbuilt.
 - `plausibleAs` still picks the *cheapest* fighting unit as a disguise rather
