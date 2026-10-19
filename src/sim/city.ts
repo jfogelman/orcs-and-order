@@ -1,5 +1,6 @@
 import { HIVE_WORKS, broodBonus, hiveEndingScale, isHiveWork, placeQueen, queenless } from './hivekin';
 import { unrestBite } from './unrest';
+import { UNSEEN_TRACE, goesUnseen } from './unseen';
 import { FACTIONS } from '../model/factions';
 import { OMNISCIENCE, knowsEverything } from './research';
 import { PALACE_COMPLETE_CONTENT, palaceComplete } from '../model/palace';
@@ -1257,6 +1258,10 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           const reach = unitType(item.id).base === 'mage' ? cityFollyBonus(city, (b) => b.builtReach) : 0;
           if (reach > 0) unit.reach = reach;
           unit.homeCity = city.id;
+          // Section 138: counted here rather than inferred from the board at the
+          // end, because a hidden agent that is built and killed on turn 40
+          // leaves nothing behind to count.
+          if (goesUnseen(unit)) UNSEEN_TRACE.built++;
           city.shields -= cost;
           if (takesCitizen) {
             city.size -= 1;

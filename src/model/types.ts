@@ -414,6 +414,22 @@ export interface Unit {
    * being an announcement to the map. Permanent once it happens.
    */
   uncoveredBy?: number[];
+  /**
+   * Sides that can see this hidden agent *just now*, by player id. Section 138.
+   *
+   * The difference between this and `uncoveredBy` is the whole of what being
+   * trodden on costs. Somebody who walks into an agent in the dark has found
+   * it for the rest of their turn and not for the rest of the game: cleared at
+   * the start of the agent's owner's own turn, which is its chance to walk
+   * away before the news is any use to anybody.
+   *
+   * The probe is what argued for it. With a collision uncovering permanently,
+   * `found underfoot` ran at 4.42 a game against 0.79 for both designed
+   * counters put together -- so the commonest end for a fifty-five shield
+   * agent was an accident, and a unit whose life is decided by somebody else's
+   * marching orders is not a unit anybody will build twice.
+   */
+  spottedBy?: number[];
 }
 
 // --------------------------------------------------------------------- cities

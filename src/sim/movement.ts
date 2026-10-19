@@ -1,4 +1,5 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
+import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
@@ -189,15 +190,25 @@ function occupantWades(state: GameState, x: number, y: number): boolean {
  * visibility let an army walk into a defended city and capture it without a
  * fight, because the defender happened to be on an unlit tile.
  *
- * The one thing that is genuinely not in the way is a **sunk Burrower**, and
- * that is a fact about the Burrower rather than about who is looking: it is
- * under the ground, nobody is standing on anybody, and walking over it finds it
- * out (`disturbedBy`) instead of stopping anyone.
+ * Two things are genuinely not in the way, and both are facts about the thing
+ * standing there rather than about who is looking.
+ *
+ * A **sunk Burrower** is under the ground, nobody is standing on anybody, and
+ * walking over it finds it out (`disturbedBy`) instead of stopping anyone.
+ *
+ * A **hidden agent** -- section 138's high tier -- is the one case where this
+ * really does turn on the viewer, and it has to. If one of them blocked, the
+ * tile it stands on would stop being a legal destination, and a player who
+ * found a patch of empty grass they could not walk onto would have located an
+ * invisible unit by process of elimination. That is the whole mechanic given
+ * away by the pathfinder. So it does not block, and `tryStep` catches the
+ * contact before the step commits.
  */
 function blockerFor(state: GameState, mover: Unit, x: number, y: number): Unit | undefined {
   const there = unitAt(state, x, y);
   if (!there) return undefined;
   if (there.owner !== mover.owner && isSunk(there)) return undefined;
+  if (hiddenFrom(there, mover.owner)) return undefined;
   return there;
 }
 
@@ -226,7 +237,11 @@ export function reachableTiles(state: GameState, unit: Unit): Map<number, number
     const x = i % state.width;
     const y = Math.floor(i / state.width);
     const there = unitAt(state, x, y);
-    if (there && !(there.owner !== unit.owner && isSunk(there))) raw.delete(i);
+    // Whatever `blockerFor` lets past has to be let past here too, or the
+    // highlight and the step disagree -- and in the hidden agent's case the
+    // disagreement is visible, which is the one thing it must not be.
+    const passable = there && (isSunk(there) || hiddenFrom(there, unit.owner));
+    if (there && !(there.owner !== unit.owner && passable)) raw.delete(i);
   }
   return raw;
 }
@@ -859,6 +874,57 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // A unit with no attack disturbs nothing and walks on as before
   // (`RUINS.soldiersOnly`), which is why this is keyed to whether the ruin
   // actually woke rather than to whether there was one.
+  // Section 138: and somebody is standing here that this side cannot see.
+  //
+  // **Found, not fought.** The step does not become an attack, because you
+  // cannot aim at what you have not noticed -- you walk into somebody in the
+  // dark. It costs you the rest of the turn and leaves them standing there,
+  // visible to you, to be dealt with properly if you have anything else in
+  // reach.
+  //
+  // **And found for now, not for good.** `spot` rather than `uncover`, and
+  // the probe is what settled it: with a collision uncovering permanently,
+  // `found underfoot` ran at 4.42 a game against 0.79 for the search and the
+  // watchful town put together. The commonest end for a fifty-five shield
+  // agent was somebody else's marching orders, which is not a risk anybody can
+  // play around. The mark clears at the start of the agent's own next turn --
+  // exactly the Burrower's bargain, which is also found by being stood on and
+  // also lives to go back down.
+  //
+  // Before the step commits, for the reason the ruin check below is: arriving
+  // is not what happens, so the mover must not arrive.
+  const unseen = unitAt(state, x, y);
+  if (unseen && unseen.owner !== unit.owner && hiddenFrom(unseen, unit.owner)) {
+    spot(unseen, unit.owner);
+    UNSEEN_TRACE.foundByFoot++;
+    unit.moves = 0;
+    unit.goto = null;
+    log(
+      state,
+      `${type.name} walks straight into somebody who was not there a moment ago.`,
+      'good',
+      unit.owner,
+      undefined,
+      [x, y],
+    );
+    // And they know they have been found, which they would: somebody has just
+    // trodden on them.
+    log(
+      state,
+      `${unitType(unseen.type).name} has been walked into by ${state.players[unit.owner].name}, and is in plain sight until it moves.`,
+      'bad',
+      unseen.owner,
+      undefined,
+      [x, y],
+    );
+    recomputeVisibility(state, unit.owner);
+    return {
+      kind: 'blocked',
+      reason: 'You walk straight into somebody. They are standing right there — for the moment.',
+      retryable: false,
+    };
+  }
+
   const ruin = ruinAt(state, x, y);
   if (ruin && ruin.wokeOn === undefined && ruin.takenOn === undefined && !isWarden(unit)) {
     disturb(state, ruin, unit);

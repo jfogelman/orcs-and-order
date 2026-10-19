@@ -21,6 +21,7 @@ import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
 import { RISK_BANDS, SPY, SPY_ACTIONS } from '../sim/spying';
+import { UNSEEN } from '../sim/unseen';
 import { SABOTAGE } from '../sim/sabotage';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
@@ -199,18 +200,39 @@ export function abilityNotes(def: UnitTypeDef): string[] {
     notes.push(
       'anywhere at all it can search the ground for other sides’ agents, which is the one order that risks nothing',
     );
-    notes.push(
-      'can wear somebody’s colours — your own, so nobody can tell which soldier is looking, or theirs, so their armies leave it alone',
-    );
+    // **Low tier only**, and the card said it of both for one run of the
+    // probe. A hidden agent cannot wear colours -- `canDisguise` refuses it,
+    // and there is nobody to show them to -- so the entry for the expensive
+    // unit was offering an order that does not exist, two lines above the one
+    // explaining why it cannot.
+    if (!def.hidden) {
+      notes.push(
+        'can wear somebody’s colours — your own, so nobody can tell which soldier is looking, or theirs, so their armies leave it alone',
+      );
+    }
     notes.push(
       'every order says what it risks before you give it, and only being caught tells the other side whose it was',
     );
-    // The line Jeremy asked for, and the one the high tier will be defined
-    // against: this tier is *seen the whole time*. A disguise is an answer to
-    // "what am I looking at", never to "can I see it".
-    notes.push(
-      'it is in plain sight throughout: a disguise changes who they think it belongs to, never whether they can see it standing there',
-    );
+    // Section 138: and now there are two tiers, so the card has to say which
+    // one it is holding. The low tier is *seen the whole time* -- a disguise
+    // is an answer to "what am I looking at". The high tier is the answer to
+    // "can I see it", and the two notes are written against each other on
+    // purpose.
+    if (def.hidden) {
+      notes.push(
+        'nobody else can see it at all: it is not drawn on their map, and no disguise is needed or possible',
+      );
+      notes.push(
+        'it does not block anybody — walk onto the tile and you find it, which costs that unit the rest of its turn and leaves the agent in plain sight to you until it moves',
+      );
+      notes.push(
+        'found for good by a searching agent or a town paying attention, and by that side only — everybody else goes on not seeing it at all',
+      );
+    } else {
+      notes.push(
+        'it is in plain sight throughout: a disguise changes who they think it belongs to, never whether they can see it standing there',
+      );
+    }
   }
   // Section 137: Sink and Burrow were written up in the Hive's rules and
   // nowhere else, so the one unit they are about had a card that did not
@@ -1181,6 +1203,84 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           offered and by whom, and they will remember. That is why the button quotes a
           price in gold where the others quote a risk &mdash; the cost of failing here is
           not a chance, it is a certainty you are choosing to pay for.
+        </p>`,
+      },
+      {
+        title: 'The agent nobody can see',
+        body: !UNSEEN.enabled
+          ? ''
+          : `
+        <p class="flavor">
+          <strong>${escapeHtml(techNamed('unseen'))}</strong> buys a second kind of agent
+          entirely, and it is the one thing in this section that is not about lying.
+          Everything above is an answer to <em>what am I looking at</em>. ${seeEntry('nobody')},
+          the ${seeEntry('intelligencer')} and the ${seeEntry('hollow', 'Hollow-caste')} answer
+          <em>can I see it at all</em>, and the answer is no. They are simply not
+          drawn on anybody else's map, from the turn they are built.
+        </p>
+        <p class="flavor">
+          <strong>They wear no colours, and cannot.</strong> There is nobody to show
+          them to. That is also what keeps the two tiers apart &mdash; one lies and
+          the other is not there &mdash; and it is why finding one is a different roll
+          from seeing through a Skulker: a disguise is a wrong answer you can catch,
+          and this is no answer at all.
+        </p>
+        <p class="flavor">
+          <strong>Nothing is in anybody's way.</strong> An agent standing in a field
+          does not stop an army walking through it &mdash; if it did, a patch of grass
+          nobody could march onto would give the whole thing away. What happens instead
+          is that somebody walks <em>into</em> it. That costs the walker the rest of its
+          turn and puts the agent in plain sight, to <em>them</em>, until it moves:
+          long enough to bring something over and deal with it, and not a moment longer.
+          You are not fighting what you have not noticed.
+        </p>
+        <p class="flavor">
+          <strong>So being trodden on is a fright rather than an ending.</strong> Come
+          its own turn it walks away and is a secret again. The two orders below
+          &mdash; a searching agent and a town paying attention &mdash; are the ones
+          that find one <em>for good</em>.
+        </p>
+        <p class="flavor">
+          <strong>Being found properly is permanent, and it is one side's secret.</strong>
+          The same bargain a disguise is uncovered under: the side that found it can see it
+          for the rest of the game and the others go on not seeing it at all &mdash; so
+          an agent that has been rumbled in one empire is still invisible in the next
+          one along. The unit's own panel says which, by name.
+        </p>
+        <p class="flavor">
+          It costs rather more than the low tier, sees a tile further &mdash; which is
+          what a ${seeTopic('espionage', 'The ladder, cheapest first', 'search')} is
+          measured in &mdash; and does everything else on the ladder exactly as a
+          Skulker does, at exactly the same risk. What you are buying is the walk in.
+        </p>`,
+      },
+      {
+        title: 'What a town notices by itself',
+        body: !UNSEEN.enabled
+          ? ''
+          : `
+        <p class="flavor">
+          <strong>A side that has built no agents is not defenceless.</strong> Searching
+          is the counter to all of this and searching needs an agent of your own, which
+          is a fine answer for somebody who has one and no answer whatsoever for
+          somebody who has not. So a town looks for itself, every turn, at anybody
+          concealed standing on or near its own land.
+        </p>
+        <p class="flavor">
+          <strong>What makes a town good at it is being happy.</strong> A town that is
+          content, fed and growing is one where everybody knows everybody and the
+          stranger is conspicuous; soldiers standing in it help, up to a point; and a
+          town in disorder has other things on its mind and is as bad at this as a town
+          can be. There is no building for it and there is not going to be one &mdash;
+          the price is keeping your towns pleased with themselves, which the game has
+          never otherwise paid you for.
+        </p>
+        <p class="flavor">
+          The odds in any one turn are small on purpose. It is a clock rather than a
+          wall: an agent parked at the same gate for twenty turns is taking a risk it
+          would not take by walking home, and an agent passing through is almost
+          certainly fine. Both tiers are in scope &mdash; the tell for the low one is a
+          garrison that comes to a different number depending on who counts it.
         </p>`,
       },
       {

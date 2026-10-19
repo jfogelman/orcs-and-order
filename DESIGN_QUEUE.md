@@ -11340,3 +11340,118 @@ ever built. The test passed, against a string no player could reach. Keyed to
 the creature having a ladder instead. Third cousin of the `numeric proxy is not
 what the thing is` family -- here it was *the entry I am describing* standing in
 for *the entry anybody will read*.
+
+## 138. The high tier: the agent nobody can see
+
+The last rung of section 136's ladder, and the only one that is a different
+question. Everything in slices 2–8 answers **what am I looking at** — a
+Skulker stands on the map like anything else and what it changes is whose
+people think it is, which is `appearsTo` and a disguise and a fight that
+breaks it. Nobody, the Intelligencer and the Hollow-caste answer **can I see
+it at all**, which is `seenBy`, and until now exactly one thing in this game
+had ever made that question interesting: a Burrower under the ground.
+
+Keeping the two apart is the design. A spy that hid *and* lied would be two
+mechanics wearing one name, so the high tier wears no colours and cannot —
+`canDisguise` refuses it. There is nothing to see through, which is why
+finding one is a different roll from seeing through a Skulker.
+
+It is a **unit, not a stance**: no order to go quiet, never drawn from the
+turn it is built. Charging a turn for it, the way the Burrower pays for Sink,
+would only mean every one of them spent its first turn doing the one thing it
+was built to do.
+
+Three new units at 55 shields with a tile more sight, one advance
+(`nobody-in-particular`, behind `a-word-in-the-wrong-ear` so the counter
+exists before the thing it counters), and the art was already on disk from
+the original plan.
+
+### The leaks, which are the real work
+
+A unit nobody can see is only unseen if nothing else on the screen quietly
+says where it is.
+
+**The pathfinder.** If a hidden agent blocked movement, the one tile on an
+empty plain a mover could not be sent to would be the tile it was standing
+on, and any player reads that in a heartbeat. So it does not block —
+`blockerFor` and `reachableTiles` both let it past — and `tryStep` catches the
+contact before the step commits.
+
+**First contact, which was a real bug and silent.** `checkContacts` asked the
+visibility *bitmap* — "is that tile lit" — rather than `seenBy`. A lit tile is
+not a visible unit, and two things stand on lit tiles without being visible: a
+sunk Burrower and a hidden agent. So an empire could be *met* — told a side
+existed and handed the bearing of its nearest town, since a meeting reveals
+both ways — by something nobody could see walking past. Found by reading every
+consumer of `seenBy` and noticing one subsystem that was not a consumer at
+all. It was a pre-existing Burrower bug too.
+
+### What the probe changed
+
+Built first, measured second, as every rung since slice 3 has been. 24 games:
+
+```
+hidden agents built   6.88 per game
+  alive at the end    1.79
+  found by a search   0.08
+  found by a town     0.71
+  found underfoot     4.42
+```
+
+**The dominant counter was one nobody designed**, by a factor of five over
+both intended ones put together. Agents were built, walked into, killed and
+rebuilt; the commonest end for a 55-shield unit was somebody else's marching
+orders, which is not a risk any amount of play can dodge.
+
+Jeremy's call: treading on one finds it **for now, not for good**. `spottedBy`
+beside `uncoveredBy`, cleared at the start of the agent's own next turn — so
+whoever walked into it has the rest of their turn and everybody else's turn in
+between to bring something over, and then it is a secret again. Exactly the
+Burrower's bargain, which is also found by being stood on and also lives to go
+back down.
+
+### A town that is pleased with itself
+
+The passive defence, and the only one a side with no agents has — which is the
+side least able to cope with somebody else's. Read off contentment and the
+garrison rather than off a building, because there is no building for this and
+there should not be: a happy, well-watched town is one where everybody knows
+everybody and the stranger is conspicuous, and the payoff is that keeping
+towns content is finally worth something in a currency that is not score. A
+rioting town is at the floor.
+
+Jeremy's call that it covers **both tiers** — the tell for the low one being a
+garrison that comes to a different number depending on who counts it.
+
+### Measured
+
+324 games, three arms, 73 minutes. **No winner shift anywhere** — the largest
+p-value gap is Kingdom at 0.68, and the totals barely move. What the high tier
+buys is **+6.62 turns (t = +2.39)**, with both seed sets agreeing closely
+(+6.81, +6.43), turn-limit games 21 → 26, and endings shifting from conquest
+to points (7/26 against 12/20). Fights and captures are flat, so it is the
+same amount of war resolving more slowly: the espionage-entire signature at a
+fifth the size, which is about right for one more rung.
+
+**The watchful towns do nothing to game length** — +0.95 turns, t = 0.60, and
+the two seed sets disagree in direction. The third arm was run on the
+prediction that they would *shorten* games and mask the high tier's effect;
+that was wrong, and the two-arm version of this sweep would have been right.
+
+**Unpredicted, and unexplained:** with watchful towns on, the Horde gains
+population (+2.84, t = +2.92) and cities (+0.26, t = +2.30), both seed sets
+agreeing. The story that fits is that the Kingdom builds the most agents, so
+Horde towns have the most to catch — but that story was invented after seeing
+the number, and twenty tests at a 2σ bar expect about one false positive.
+Confirming it wants a probe counting incidents by **victim** side, which is
+cheap and has not been done.
+
+### Still open
+
+- A probe counting espionage incidents by victim side, to settle the Horde
+  gain above rather than leaving it as a plausible story.
+- The **double agent** is still queued (the entry further up this file), and
+  it is now the only espionage idea left unbuilt.
+- `plausibleAs` still picks the *cheapest* fighting unit as a disguise rather
+  than the commonest, so Kingdom agents wear Outrider colours. Fourth instance
+  of "a numeric proxy is not what the thing is", and still open.

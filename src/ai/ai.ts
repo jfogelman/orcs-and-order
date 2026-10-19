@@ -14,6 +14,7 @@ import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
+import { UNSEEN, goesUnseen } from '../sim/unseen';
 import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../sim/gossip';
 import { INCITE, canIncite, incite, inciteExposure } from '../sim/incite';
 import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
@@ -235,6 +236,10 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'asking-around',
       // Slice 8, asked for the same day it was written.
       'a-word-in-the-wrong-ear',
+      // Section 138, asked for the same day it was written. Fourth time of
+      // asking and the reason has not changed: an advance nobody lists is an
+      // advance the cheapest-thing fallback reaches around turn 190.
+      'nobody-in-particular',
       // Section 111: straight after its own prerequisite, because three things hang
       // off Insanity -- the Long Peace rides on it, and both magics sit under it --
       // and the list asked for none of them. Left off entirely, the Horde reached
@@ -337,6 +342,10 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'asking-around',
       // Slice 8, asked for the same day it was written.
       'a-word-in-the-wrong-ear',
+      // Section 138, asked for the same day it was written. Fourth time of
+      // asking and the reason has not changed: an advance nobody lists is an
+      // advance the cheapest-thing fallback reaches around turn 190.
+      'nobody-in-particular',
       'pointed-ears',
       'ten-heads',
       'let-us-ride',
@@ -453,6 +462,10 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
       'asking-around',
       // Slice 8, asked for the same day it was written.
       'a-word-in-the-wrong-ear',
+      // Section 138, asked for the same day it was written. Fourth time of
+      // asking and the reason has not changed: an advance nobody lists is an
+      // advance the cheapest-thing fallback reaches around turn 190.
+      'nobody-in-particular',
       'caste-princess',
       'burrower-deep',
       'burrower-ambush',
@@ -961,8 +974,33 @@ export function chooseProduction(
   if (SPY.ai && SPY.enabled) {
     const agents = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).spy).length;
     if (agents < SPY.aiWants) {
-      const agent = options.units.find((u) => u.spy);
+      // The cheap one, explicitly. Once section 138's advance is known both
+      // tiers are in `options.units`, and taking whichever happens to be
+      // first would have the chooser spending fifty-five shields on its
+      // *first* agent, in a yard that is usually also the yard that should be
+      // building the garrison.
+      const agent = options.units.find((u) => u.spy && !u.hidden) ?? options.units.find((u) => u.spy);
       if (agent) return { kind: 'unit', id: agent.id };
+    }
+  }
+
+  // 2d. Section 138: and one that nobody can see, once that is possible.
+  //
+  // A want of its own rather than a larger `SPY.aiWants`, because the two
+  // tiers are not interchangeable and the chooser cannot tell them apart: by
+  // every number it reads a Nobody is a Skulker that costs very nearly twice
+  // as much, so a shared want would buy two Skulkers every time and the high
+  // tier would sit in the tree unbuilt. That is section 125's Burrower and
+  // section 136's spy for the third time, and the fix is the same each time.
+  //
+  // One, and only when the side already has its cheap agents: the expensive
+  // one is a thing you add to a programme, not a thing you start with.
+  if (UNSEEN.ai && UNSEEN.enabled) {
+    const ours = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).spy);
+    const unseenOnes = ours.filter((u) => goesUnseen(u)).length;
+    if (ours.length >= SPY.aiWants && unseenOnes < UNSEEN.aiWants) {
+      const ghost = options.units.find((u) => u.hidden);
+      if (ghost) return { kind: 'unit', id: ghost.id };
     }
   }
 
@@ -1553,8 +1591,15 @@ function actSpy(state: GameState, unit: Unit): void {
   // somebody's disguises. It is also the division the disguise rules already
   // describe: wearing your own colours buys nothing abroad and everything at
   // home.
+  //
+  // Section 138: and the one that goes is the one nobody can see, if there is
+  // one. The whole price of a hidden agent is paid for the walk in -- keeping
+  // it at home to sweep our own fields would be spending fifty-five shields
+  // on the one job a thirty-shield Skulker does equally well.
   const ours = playerUnits(state, unit.owner).filter((u) => unitType(u.type).spy);
-  const abroad = ours.reduce((first, u) => (u.id < first.id ? u : first), ours[0] ?? unit);
+  const senior = (pool: Unit[]) => pool.reduce((first, u) => (u.id < first.id ? u : first), pool[0]);
+  const ghosts = ours.filter((u) => goesUnseen(u));
+  const abroad = (ghosts.length > 0 ? senior(ghosts) : senior(ours)) ?? unit;
   if (unit.id !== abroad.id) {
     watchOurOwnGround(state, unit);
     return;

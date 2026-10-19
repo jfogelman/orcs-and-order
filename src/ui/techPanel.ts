@@ -118,6 +118,7 @@ const FLAG_LABELS: Record<TechFlag, string> = {
   incite: 'Spies can set a town talking against its rulers',
   gossip: 'Spies can ask a town what it thinks of everybody',
   turning: 'Spies can buy somebody else’s soldier',
+  unseen: 'An agent nobody else can see at all',
   coordination: 'Big groups stop losing a movement point',
   mapmaking: '+1 sight for every unit',
   bridges: 'Forest and swamp cost 1 movement; workers can lay roads',

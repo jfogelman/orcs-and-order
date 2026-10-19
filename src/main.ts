@@ -94,6 +94,7 @@ import {
   openSearch,
 } from './ui/spying';
 import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
+import { goesUnseen } from './sim/unseen';
 import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabotage';
 import { askingPrice, canTurn, turnUnit } from './sim/turning';
 import { askAround, canAsk } from './sim/gossip';
@@ -2976,6 +2977,26 @@ class App {
           ${
             !inSupply(this.state, unit)
               ? `<div class="stat-row"><span class="label k-bad">Out of supply</span><span class="value k-bad">too far from your capital, an outpost or a town you have long held &middot; fights weakly and cannot heal</span></div>`
+              : ''
+          }
+          ${
+            // Section 138: who can see this agent, and who cannot.
+            //
+            // Said on the unit rather than left to the map, because the map
+            // cannot show it -- the whole point is that nothing is drawn, and
+            // a player with a fifty-five shield unit standing in somebody's
+            // capital deserves to be told whether the trick is still working.
+            goesUnseen(unit) && unit.owner === this.viewerId
+              ? (() => {
+                  const rumbled = (unit.uncoveredBy ?? []).filter(
+                    (id) => this.state.players[id]?.alive,
+                  );
+                  return rumbled.length === 0
+                    ? `<div class="stat-row"><span class="label">Unseen</span><span class="value">nobody else can see it at all &middot; a search, a watchful town or somebody treading on it</span></div>`
+                    : `<div class="stat-row"><span class="label k-bad">Found out</span><span class="value k-bad">${escapeHtml(
+                        rumbled.map((id) => this.state.players[id].name).join(', '),
+                      )} can see it, and always will &middot; it is an ordinary unit to them now</span></div>`;
+                })()
               : ''
           }
           ${

@@ -92,6 +92,16 @@ export interface CreatureDef {
    */
   spy?: boolean;
   /**
+   * Not drawn at all, to anybody but its owner. Section 138.
+   *
+   * The high tier of spies. `spy` above is what makes the orders available;
+   * this is what takes the unit off everybody else's map. It is deliberately
+   * **not** a second kind of disguise -- a disguised unit is seen and
+   * misread, and one of these is not seen. `seenBy` in `sim/burrow.ts` is the
+   * one place that distinction lives, and this is its second reason to say no.
+   */
+  hidden?: boolean;
+  /**
    * Goes on water and only on water. Ships: built in a city beside the sea,
    * launched onto it, and never set foot ashore.
    */
@@ -1420,7 +1430,91 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Grown to look like whatever it has been looking at. The likeness is close and not close enough.',
   },
-
+  // ------------------------------------------------ section 138: the high tier
+  //
+  // The last rung, and the structurally different one. Everything the low tier
+  // does is an answer to **what am I looking at** -- `appearsTo`, a disguise, a
+  // lie that a fight breaks. These three answer **can I see it at all**, which
+  // is `seenBy`, and the only thing in the game that has ever asked it is a
+  // Burrower under the ground.
+  //
+  // Keeping the two apart is the whole design: a spy that hid *and* lied would
+  // be two mechanics wearing one name, and neither would be legible. So the
+  // high tier does not wear colours at all. There is nothing to see through,
+  // which is why finding one is a different roll from finding a Skulker.
+  //
+  // Dearer, and with a tile further of sight, because searching is the job the
+  // expensive agent is best at and eyeline is what a search is measured in.
+  // No counting ladder, for the same reason the low tier has none.
+  {
+    id: 'nobody',
+    name: 'Nobody',
+    plural: 'Nobody',
+    faction: 'orc',
+    spy: true,
+    hidden: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 55,
+    sight: 3,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'small',
+    body: '#4c4f3a',
+    trim: '#23261a',
+    blurb:
+      'Nobody was there. Nobody saw anything. Nobody has been in the treasury, and the Horde ' +
+      'considers the matter closed.',
+  },
+  {
+    id: 'intelligencer',
+    name: 'Intelligencer',
+    plural: 'Intelligencers',
+    faction: 'human',
+    spy: true,
+    hidden: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 55,
+    sight: 3,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'robed',
+    body: '#6d6256',
+    trim: '#2b2620',
+    blurb:
+      'Files. Nobody has met one, nobody has approved the budget for one, and the files ' +
+      'arrive regardless, which everyone has agreed to find reassuring.',
+  },
+  {
+    id: 'hollow',
+    name: 'Hollow-caste',
+    plural: 'Hollow-caste',
+    faction: 'hivekin',
+    spy: true,
+    hidden: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 55,
+    sight: 3,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#9a937c',
+    trim: '#45412f',
+    blurb:
+      'The Mimic-caste is grown to look like whatever it has been looking at. This one is ' +
+      'grown to look like nothing, which took considerably longer to get right.',
+  },
 ];
 
 // ------------------------------------------------------- generated types
@@ -1468,6 +1562,8 @@ export interface UnitTypeDef {
   works: boolean;
   /** Wears a disguise and gathers. See `CreatureDef.spy`. */
   spy: boolean;
+  /** Not on anybody else's map at all. See `CreatureDef.hidden`. */
+  hidden: boolean;
   flies: boolean;
   /** Water only. See CreatureDef.sails. */
   sails: boolean;
@@ -1560,6 +1656,7 @@ function makeVariant(c: CreatureDef, count: number): UnitTypeDef {
     settler: c.settler === true,
     works: c.works === true,
     spy: c.spy === true,
+    hidden: c.hidden === true,
     flies: c.flies === true,
     sails: c.sails === true,
     wades: c.wades === true,

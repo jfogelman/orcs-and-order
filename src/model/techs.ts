@@ -16,6 +16,8 @@ export type TechFlag =
   | 'gossip'
   /** Section 136 slice 6: a spy may offer somebody else's soldier money. */
   | 'turning'
+  /** Section 138: the high tier of spies, which nobody else can see at all. */
+  | 'unseen'
   /** Removes the movement penalty on groups of five or more. */
   | 'coordination'
   /** +1 sight for every unit. */
@@ -968,6 +970,28 @@ export const TECHS: TechDef[] = [
       'Somebody worked out that a soldier is a person, and that a person who is paid ' +
       'once a season can be paid twice. The second payment is the interesting one, and ' +
       'nobody has yet found the argument against it.',
+  },
+  {
+    // Section 138: the last rung, and the one that is a different question.
+    //
+    // Priced well above the four below it and sitting behind the two that
+    // teach an agent to *do* something, because what it buys is not another
+    // order -- it is a unit nobody can look at. A side that learns this
+    // before it has learned to search has built something the other side has
+    // no answer to at all, which is why `asking-around` is a prerequisite:
+    // the counter exists before the thing it counters.
+    id: 'nobody-in-particular',
+    name: 'Nobody In Particular',
+    faction: 'both',
+    cost: 160,
+    prereqs: ['a-word-in-the-wrong-ear'],
+    units: ['nobody', 'intelligencer', 'hollow'],
+    buildings: [],
+    flags: ['unseen'],
+    flavor:
+      'The discovery is not a method, it is a posture. Walk as though you have every right ' +
+      'to be there and are faintly bored of being there, and people will look directly at ' +
+      'you and later be quite certain the room was empty.',
   },
   {
     id: 'someone-elses-business',
