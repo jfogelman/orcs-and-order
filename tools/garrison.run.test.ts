@@ -144,8 +144,8 @@ function measure(seeds: number[]) {
         }
       }
     });
-    sacks[0] += outcome.sacks[0];
-    sacks[1] += outcome.sacks[1];
+    sacks[0] += outcome.sacks.orc ?? 0;
+    sacks[1] += outcome.sacks.human ?? 0;
     if (outcome.winner === 0) wins = [wins[0] + 1, wins[1]];
     else if (outcome.winner === 1) wins = [wins[0], wins[1] + 1];
   }

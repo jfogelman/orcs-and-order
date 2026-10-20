@@ -264,7 +264,12 @@ describe('sweep', () => {
           table,
           '',
           'seed by seed:',
-          'arm\tset\tseed\tturns\twinner\tfights\tcaps\torcC\thumC\torcP\thumP\torcT\thumT\torcL\thumL\tvictory\torcSacked\thumSacked\tmap\troadTiles\torcJoined\thumJoined\torcLinks\thumLinks\torcRouteGold\thumRouteGold',
+          // **No hand-written header.** `rawRows` emits its own, built from
+          // the same list it builds the rows from, so the two cannot drift.
+          // The one that used to live here had drifted: it said `orcL/humL`
+          // for a column pair that is the deepest counting-group reached, and
+          // section 138 wrote a prediction against "Kingdom units" on the
+          // strength of it. There was no units column at all.
           rawRows(results),
           '',
         ].join('\n'),
