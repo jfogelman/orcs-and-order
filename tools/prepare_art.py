@@ -86,6 +86,32 @@ CREATURES = [
     # for the rules.
     "skulker", "nobody", "factor", "intelligencer",
     "mimic", "hollow",
+    # Sections 141+: the Wandering Folk and the Unbound, both drawn in full and
+    # dropped in one go. Listed here the day the art arrived, for the reason
+    # the spies above were: this table is hand-maintained rather than read off
+    # the game, so **art that is drawn and not listed is art that silently does
+    # nothing**. The drop was 229 files and not one of them reached `public/`
+    # until these lines existed, which is the same fortnight the three Hivekin
+    # specials spent drawing the fallback diamond.
+    #
+    # Processed and banked, waiting for the rules -- no `units.ts` entry exists
+    # for any of them yet.
+    #
+    # The Wandering Folk: six recruitable tiers, four Create-only signatures,
+    # two ships, a siege engine and two spies.
+    "wanderer", "skirmisher", "warband", "outcast", "brute", "slinger",
+    "mystic", "champion", "bonebound", "drake",
+    "ferrycontract", "corsair", "collector",
+    "tagalong", "offbooks",
+    # The Unbound: eight tiers, two ships, a siege engine and two spies.
+    "effigy", "domovoi", "revenant", "yaksha", "sylph", "naiad", "jinn",
+    "archon",
+    "ferrymansdue", "drowned", "cairn",
+    "borrowedface", "unreturned",
+    # And the Horde's answer to them, which is filed in the Unbound's folder
+    # because that is the only reason it exists. Its advance belongs in the
+    # orc tree; only the picture lives over there.
+    "orc-shaman",
 ]
 
 # The wilds, drawn in `art_src/barbarians/` and named for the creature rather

@@ -11521,3 +11521,71 @@ asserts the third side as the comment always implied it did.
 - The Hive's thin espionage participation (0.46 agents a game against 2.71 and
   3.38) was ruled out of scope for section 138 pending this decision. It is
   now decidable, and has not been looked at.
+
+## 141. The Wandering Folk and the Unbound: the designs arrive
+
+Jeremy handed over two complete faction bibles and 229 art files. Copied
+into the repo as `WANDERERS_PLAN.md`, `UNBOUND_PLAN.md`,
+`NEW_FACTION_BUILDINGS.md`, `NEW_FACTION_SPIES.md` and
+`NEW_FACTION_ART_PROMPTS.md` — the `HIVEKIN_PLAN.md` precedent, so the
+design is version-controlled beside the code that will implement it.
+
+Two of the source files existed in several numbered copies. The ones Jeremy
+named are the current ones: `art_prompts_wandering_unbound (2).md` is the
+newest at 332 lines, and the two `buildings` copies are byte-identical. The
+hazard is the one in `art-src-old-rolls-win`, and it is worth saying which
+copy was taken.
+
+### The art was drawn and doing nothing
+
+`prepare_art.py` discovers `art_src/factions/*` by itself, so it found both
+folders — but `CREATURES` is hand-maintained, and **not one of the 229 files
+reached `public/`**. Exactly the failure the comment above the spy entries
+warns about, and the same one that cost section 125 a fortnight of fallback
+diamonds.
+
+Twenty-nine creature ids added, and the drop went from 34 files landing to
+149. Processed and banked, waiting for the rules; no `units.ts` entry exists
+for any of them.
+
+Note that `orc-shaman` — the Horde's Bone-Speaker — is filed in the Unbound's
+folder, because the Unbound are the only reason it exists. Its advance belongs
+in the orc tree; only the picture lives over there.
+
+### Two gaps in the art, neither blocking
+
+- **`drake attacl.jpg`** is a typo for `attack`, so the Drake's attack strip
+  is not found. One rename fixes it.
+- **No naval or siege unit on any faction has an attack strip**, Hivekin
+  included — Ballista and Goblin Catapult have one, and none of the six new
+  ships and engines do. The art-prompts doc flags this against itself, so it
+  is known rather than discovered.
+
+### What building these actually involves
+
+Far more than one section. Per faction: ~14 units with stats, a tech fork of
+~15 advances, 10 city buildings, 3 follies, 6 advisors, a capital, an ending,
+two spies, and a core mechanic that touches the simulation — **Recruit and
+the Caravan** for the Wandering Folk, **dispersal and reform** for the
+Unbound.
+
+And one cross-cutting piece: the Unbound's whole fairness promise is that
+there is always a hard counter, so **exorcism has to land in the same slice
+as dispersal**, and it touches all five factions — Paladin (exists),
+Bone-Speaker (new, Horde), Warden-caste (new, Hive), and the Mystic's
+upgrade (new, Wandering Folk).
+
+Suggested order, to be confirmed:
+
+1. Art wired and banked. *(this section)*
+2. The faction table: both sides in `FACTIONS` and `FACTION_IDS`, so section
+   139's picker offers them — which must land **with** their rosters, or the
+   picker offers a side that cannot build anything.
+3. Rosters, tech forks and city buildings. Both factions plainly playable:
+   they expand, research, build and fight.
+4. The Wandering Folk's Caravan and Recruit.
+5. The Unbound's dispersal and reform, **with** exorcism across all five.
+6. Follies, advisors, capitals, endings, spy rows.
+
+Section 140's n-sided sweep report should merge before any of these is
+measured, or a five-sided sweep reports two of them.
