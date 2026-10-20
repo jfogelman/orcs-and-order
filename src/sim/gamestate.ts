@@ -5,7 +5,8 @@ import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
-import { FACTIONS, rivalsOnMap } from '../model/factions';
+import { FACTION_IDS, FACTIONS } from '../model/factions';
+import { ARRIVALS } from './arrivals';
 import { unitType } from '../model/units';
 import type {
   City,
@@ -40,6 +41,14 @@ export interface NewGameOptions {
   barbarians?: boolean;
   /** Islands, for ships. The ordinary world unless asked for. */
   world?: 'continent' | 'archipelago';
+  /**
+   * Who else is in this game, in the order they turn up. Section 139.
+   *
+   * The first is on the map at turn one and the rest arrive on a staggered
+   * clock. Absent means everybody else, which is every game before that
+   * section.
+   */
+  opponents?: FactionId[];
 }
 
 // ------------------------------------------------------------- accessors
@@ -271,9 +280,26 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   const playerFaction = opts.playerFaction ?? 'orc';
   const tileCount = settings.width * settings.height;
 
+  // Section 139: who is in this game, and who of them is here at turn one.
+  //
+  // **A rule about the slot, not the faction.** The first opponent stands on
+  // the map; the rest arrive on a staggered clock. For an empire with nothing
+  // chosen that is the other empire at turn one and the Hive around ninety,
+  // which is the game a hundred sections were measured on -- so the default
+  // is not merely equivalent to the old `rivalsOnMap`, it is identical.
+  const chosen: FactionId[] =
+    opts.opponents && opts.opponents.length > 0
+      ? opts.opponents.filter((f) => f !== playerFaction && FACTIONS[f] !== undefined)
+      : FACTION_IDS.filter((f) => f !== playerFaction);
+  const onMap = ARRIVALS.enabled ? chosen.slice(0, 1) : chosen;
+  // Written down rather than left to the default, so a save remembers who was
+  // *meant* to be in this game. Without it a game loaded after a faction was
+  // added to the table would quietly acquire a new opponent at turn ninety.
+  settings.opponents = chosen;
+
   // One start a seat. Was a literal two, which is the number of seats there
   // used to be; `generateWorld` has always taken the count.
-  const seats = 1 + rivalsOnMap(playerFaction).length;
+  const seats = 1 + onMap.length;
   const world = generateWorld(seed, settings, seats);
 
   const state: GameState = {
@@ -300,7 +326,7 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     // own, and not a replacement third side.
     players: [
       makePlayer(0, playerFaction, 'human', tileCount),
-      ...rivalsOnMap(playerFaction).map((f, i) => makePlayer(i + 1, f, 'ai', tileCount)),
+      ...onMap.map((f, i) => makePlayer(i + 1, f, 'ai', tileCount)),
     ],
     units: [],
     cities: [],

@@ -637,6 +637,22 @@ button.small {
   border-color: var(--edge-hi);
 }
 
+/* Section 139: your own side is not an opponent, so its card is hidden in the
+   Against row. `display: flex` above beats the `hidden` attribute on its own
+   -- the same trap `.pedia-pane[hidden]` exists for -- so the card went on
+   sitting there, unticked and untickable, reading as a bug. */
+.choice-card[hidden] {
+  display: none;
+}
+
+/* A choice that cannot be turned off, because it is the last one left. It is
+   still shown as chosen: greying it out would read as "not in this game",
+   which is the opposite of what it means. */
+.choice-card.opponent:has(input:disabled) {
+  cursor: default;
+  opacity: 0.85;
+}
+
 .choice-card.selected {
   border-color: var(--gold);
   background: rgba(120, 92, 36, 0.35);

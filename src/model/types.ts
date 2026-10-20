@@ -723,6 +723,15 @@ export interface LogEntry {
 }
 
 export interface GameSettings {
+  /**
+   * Who is in this game besides the player, in the order they turn up.
+   *
+   * Section 139. Absent means everybody else, which is what every game before
+   * that section was. The **first** is on the map at turn one and the rest
+   * arrive on a staggered clock -- a rule about the slot rather than about the
+   * faction, so the Hivekin stop being the only side that emerges.
+   */
+  opponents?: FactionId[];
   width: number;
   height: number;
   /** 0..1, share of the map that should end up as land. */
@@ -939,6 +948,16 @@ export interface GameState {
    * it -- which is the bug section 110's ending clock had.
    */
   hivekinAt?: number;
+  /**
+   * The turn each latecomer arrives, by position in the queue. Section 139.
+   *
+   * Stored rather than recomputed, for the reason `hivekinAt` is: the level
+   * shift and the spacing make it cheap to recompute, but a number the player
+   * can plan against must not be able to change its mind halfway through a
+   * game. Keyed by index so a save carries every side's clock, not just the
+   * first one's.
+   */
+  arrivals?: Record<number, number>;
   /**
    * The game was won and the player asked to carry on anyway.
    *

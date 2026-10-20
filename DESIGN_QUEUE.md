@@ -11455,3 +11455,69 @@ cheap and has not been done.
 - `plausibleAs` still picks the *cheapest* fighting unit as a disguise rather
   than the commonest, so Kingdom agents wear Outrider colours. Fourth instance
   of "a numeric proxy is not what the thing is", and still open.
+
+## 139. Choosing who is in the game, and when they turn up
+
+Jeremy's queue item: *"allowing choosing 2-3 (potentially more later) factions
+in play to play against"*, with arrival staggered by difficulty.
+
+**The rule is about the slot, not the faction.** Asked what decides whether a
+chosen opponent starts on the map or arrives later, Jeremy took the uniform
+answer: the first opponent is there from turn one, and every one after that
+arrives on its own staggered clock — later on an easy game, earlier on a hard
+one. That is a deliberate demotion of section 125's Hivekin, who used to be
+the only side that emerged. Pick the Hive as your only opponent and it starts
+on the map like anybody else.
+
+His ruling on the documentation, given with it: **the Hivekin pane stops
+describing when they arrive**, because arrival is no longer theirs. It belongs
+to the difficulty section, which is where it now lives — along with a new
+column in the level table.
+
+### What it cost, which was less than expected
+
+Almost nothing was still two-sided. Sections 125 and 135 had already done the
+work: per-pair diplomacy, `rivalFactions`, and a `generateWorld` that takes a
+seat count. A grep for `players[1]` and for two-sided ternaries came back
+empty. So this is a selection screen, a setting, a seating rule and a
+generalised arrival — not a rewrite.
+
+`sim/arrivals.ts` owns the queue and the clock. `maybeEmerge` became
+`maybeArrive` and lost its only two Hive-specific lines: founders and escort
+are `settlerUnit` and `starterUnit` off the faction table, which every side
+has had since section 125.
+
+**The default game is identical, not merely equivalent.** An Orc player facing
+the Kingdom from turn one and the Hive around ninety is the configuration
+every balance number in this project was taken on. The arrival turn is hashed
+so the *first* latecomer draws exactly what section 125 drew — `n` is mixed in
+after the first round, so `n = 0` is untouched.
+
+**A Hive player's game does change**, knowingly: it used to face both empires
+at turn one and now faces one at turn one and the other on the clock. That is
+what "the slot, not the faction" means, and the alternative was keeping the
+special case the section exists to remove.
+
+### Three fixtures were seating three sides by accident
+
+`gossip.test.ts` and `disguise.test.ts` both got a third party by playing as
+the Hive, because that used to seat everybody. Gossip's three tests died in
+`foundCity` with `players[2]` undefined — loudly, which is the good case.
+
+**Disguise's did not fail**, because nothing in it had ever asserted the third
+side existed: the fixture's comment claimed a third party and no test used
+one. It now flips `ARRIVALS.enabled` to ask for what it means, and `couldWear`
+asserts the third side as the comment always implied it did.
+
+### Still open
+
+- **The sweep report is two-sided** — `orcC/humC`, `cities[0]/cities[1]`. A
+  sweep of an Orc-versus-Hive game would report the Kingdom's columns as
+  zeroes. That is a limit on *measuring* multi-faction games, not on playing
+  them, and it wants doing before any arm varies the opponents.
+- **No player-facing "everybody from turn one"**. The lever exists for sweeps
+  and tests; the new-game screen does not offer it, because staggering is the
+  rule Jeremy chose. Worth revisiting if the staggered game plays badly.
+- The Hive's thin espionage participation (0.46 agents a game against 2.71 and
+  3.38) was ruled out of scope for section 138 pending this decision. It is
+  now decidable, and has not been looked at.

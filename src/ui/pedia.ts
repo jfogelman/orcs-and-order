@@ -17,6 +17,7 @@ import { LEGION, RAIDER_GRUNT } from '../sim/wilds';
 import { RUINS, WARDENS } from '../sim/ruins';
 import { COWED } from '../sim/status';
 import { HIVEKIN, QUEEN } from '../sim/hivekin';
+import { ARRIVALS } from '../sim/arrivals';
 import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
@@ -657,17 +658,22 @@ export const HIVE_RULES = topicPane(
   '',
   [
     {
-      title: 'Who they are, and when they turn up',
+      title: 'Who they are',
       body: `
-  <p class="flavor">They are not on the map when the game starts. Somewhere around turn
-  ${HIVEKIN.from} to ${HIVEKIN.until} the ground opens on ground nobody had
-  claimed, and a third side is simply there, with no explanation offered and
-  none apparently required. <strong>When depends on the level you chose</strong>
-  &mdash; later on an easy game, which is more of the map to yourself before
-  anybody else wants it, and earlier on a hard one. Their cities are <strong>Hives</strong> and their
+  <p class="flavor">Their cities are <strong>Hives</strong> and their
   units are <strong>castes</strong> &mdash; one shape per job, grown rather than
   recruited &mdash; and there is exactly one <strong>Queen</strong>, who is the
-  reason any of it works.</p>`,
+  reason any of it works. When they are not on the map at the start of a game
+  the ground simply opens somewhere nobody had claimed and they are there,
+  with no explanation offered and none apparently required.</p>
+  <p class="flavor">
+  <strong>When that happens is not their rule any more.</strong> Section 139
+  made arrival a fact about <em>the level and the order you picked your
+  opponents in</em> rather than about the Hivekin, who used to be the only
+  side that turned up late and now are simply whoever happens to be next in
+  the queue &mdash; chosen as your only opponent they start on the map like
+  anybody else. It is written up
+  ${seeTopic('difficulty', 'Who turns up, and when', 'under Difficulty')}.</p>`,
     },
     {
       title: 'They will talk, and they want different things',
@@ -1360,7 +1366,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           is spending itself on. Short of room to grow, it wants ground, and ground is
           what somebody else is standing on. The Voice will relay all of this while
           attempting an expression. The rest of what they are is
-          ${seeTopic('hive', 'Who they are, and when they turn up', 'in their own pane')}.
+          ${seeTopic('hive', 'Who they are', 'in their own pane')}.
         </p>`,
       },
       {
@@ -1615,6 +1621,80 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
     ],
   );
 
+  // Section 139: the difficulty pane, as topics, and carrying the arrival
+  // rules that used to live in the Hive's own.
+  //
+  // **Jeremy's ruling when he settled "the slot, not the faction":** the
+  // Hivekin pane stops saying when they turn up, because arrival is no longer
+  // a fact about them. It is a fact about the level, and this is the level's
+  // section. The half of that text which really is about the Hive -- that
+  // their cities are Hives, their units castes, and that there is a Queen --
+  // stays where it was.
+  const difficultyPane = topicPane(
+    'difficulty',
+    '',
+    [
+      {
+        title: 'The level, and what it changes',
+        body: `
+        <p class="flavor">
+          This game is <strong>${escapeHtml(difficultyOf(state.settings).name)}</strong>. The
+          level is chosen on the new-game screen and kept for the whole game. The other
+          sides play the same way at every level; what changes is how patient your cities
+          are, what they pay for their buildings and their advances, in a
+          game with raiders how soon and how often they come, and
+          ${seeTopic('difficulty', 'Who turns up, and when', 'when the sides who are not here yet arrive')}.
+        </p>
+        <table class="report-table pedia-difficulty">
+          <thead>
+            <tr><th>Level</th><th>Your cities riot</th><th>Their costs</th><th>Raiders</th><th>Latecomers</th></tr>
+          </thead>
+          <tbody>
+            ${DIFFICULTIES.map(
+              (d) => `<tr${d.id === difficultyOf(state.settings).id ? ' class="current"' : ''}>
+                <td>${escapeHtml(d.name)}</td>
+                <td>${d.content === 0 ? 'as measured' : `${Math.abs(d.content)} citizen${Math.abs(d.content) === 1 ? '' : 's'} ${d.content > 0 ? 'later' : 'sooner'}`}</td>
+                <td>${Math.round(d.aiCost * 100)}%</td>
+                <td>from turn ${d.raidNotBefore}, every ${d.raidEvery}</td>
+                <td>${d.hiveArrives === 0 ? 'as measured' : `${Math.abs(d.hiveArrives)} turns ${d.hiveArrives > 0 ? 'later' : 'sooner'}`}</td>
+              </tr>`,
+            ).join('')}
+          </tbody>
+        </table>`,
+      },
+      {
+        title: 'Who turns up, and when',
+        body: `
+        <p class="flavor">
+          <strong>You choose who you are playing against</strong> on the new-game screen,
+          and you may pick more than one. <strong>The first of them is on the map from
+          the first turn.</strong> Everybody else is coming, and has not arrived yet.
+        </p>
+        <p class="flavor">
+          A side that is still on its way turns up somewhere around turn
+          ${ARRIVALS.from} to ${ARRIVALS.until}, and each one after that roughly
+          ${ARRIVALS.spacing} turns behind the last &mdash; so a four-sided game is one
+          rival at the start, one in the middle, and one rather late. They appear on
+          <strong>ground nobody has claimed</strong>, well away from anybody's towns,
+          with a couple of settlers and an escort, and for their first
+          ${HIVEKIN.grace} turns they cannot be attacked at all.
+        </p>
+        <p class="flavor">
+          <strong>The level moves the whole schedule.</strong> Later on an easy game,
+          which is more of the map to yourself before anybody else wants any of it;
+          sooner on a hard one. The exact turn is drawn once, from the map's own seed,
+          and never changes afterwards &mdash; near enough to plan against, not near
+          enough to diarise.
+        </p>
+        <p class="flavor">
+          <strong>Everybody is told the moment it happens</strong>, wherever they are
+          standing. A new contender is the largest single thing that can happen to a
+          game, and finding out by losing a town to one would not be fair.
+        </p>`,
+      },
+    ],
+  );
+
   openModal({
     title: 'Orcpedia',
     width: 'min(1100px, 96vw)',
@@ -1684,28 +1764,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         ${wildsPane}
       </div>
       <div class="pedia-pane" data-pane="difficulty" hidden>
-        <p class="flavor">
-          This game is <strong>${escapeHtml(difficultyOf(state.settings).name)}</strong>. The
-          level is chosen on the new-game screen and kept for the whole game. The other
-          side plays the same way at every level; what changes is how patient your cities
-          are, what the other side pays for its buildings and its advances, and, in a
-          game with raiders, how soon and how often they come.
-        </p>
-        <table class="report-table pedia-difficulty">
-          <thead>
-            <tr><th>Level</th><th>Your cities riot</th><th>Their costs</th><th>Raiders</th></tr>
-          </thead>
-          <tbody>
-            ${DIFFICULTIES.map(
-              (d) => `<tr${d.id === difficultyOf(state.settings).id ? ' class="current"' : ''}>
-                <td>${escapeHtml(d.name)}</td>
-                <td>${d.content === 0 ? 'as measured' : `${Math.abs(d.content)} citizen${Math.abs(d.content) === 1 ? '' : 's'} ${d.content > 0 ? 'later' : 'sooner'}`}</td>
-                <td>${Math.round(d.aiCost * 100)}%</td>
-                <td>from turn ${d.raidNotBefore}, every ${d.raidEvery}</td>
-              </tr>`,
-            ).join('')}
-          </tbody>
-        </table>
+        ${difficultyPane}
       </div>
       <div class="pedia-pane" data-pane="espionage" hidden>
         ${spyPane}

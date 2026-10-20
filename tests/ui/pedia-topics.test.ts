@@ -5,6 +5,8 @@ import { CREATURES, UNIT_TYPES } from '../../src/model/units';
 import { BUILDINGS } from '../../src/model/buildings';
 import { abilityNotes, openPedia } from '../../src/ui/pedia';
 import { SPY_ACTIONS } from '../../src/sim/spying';
+import { ARRIVALS } from '../../src/sim/arrivals';
+import { HIVEKIN } from '../../src/sim/hivekin';
 import { closeModal, isModalOpen } from '../../src/ui/dom';
 import type { GameState } from '../../src/model/types';
 
@@ -138,7 +140,7 @@ describe('a card says what the unit actually does', () => {
  * stops having topics should fail -- and a sweep over "panes that have topics"
  * would pass by definition.
  */
-const LONG_PANES = ['espionage', 'diplomacy', 'wilds', 'buildings', 'terrain', 'controls'];
+const LONG_PANES = ['espionage', 'diplomacy', 'wilds', 'buildings', 'terrain', 'controls', 'difficulty'];
 
 describe('a long pane is topics, not a wall', () => {
   /** Open the book and hand back the pane element. */
@@ -167,7 +169,10 @@ describe('a long pane is topics, not a wall', () => {
       const el = pane(name);
       const heads = el.querySelectorAll('.pedia-topic > .pedia-head');
       const strip = el.querySelectorAll('.pedia-toc-item');
-      expect(heads.length, `${name} has no topics`).toBeGreaterThan(2);
+      // Two is a pane that has been broken into topics; one is a pane
+      // pretending. Difficulty genuinely has two and should not be padded to
+      // three to satisfy a number picked when every pane here was long.
+      expect(heads.length, `${name} has no topics`).toBeGreaterThanOrEqual(2);
       // One entry per topic. A strip that has drifted from the sections is
       // worse than no strip, because it is a contents page that lies.
       expect(strip.length, `${name}'s contents strip does not match its topics`).toBe(heads.length);
@@ -232,6 +237,25 @@ describe('a long pane is topics, not a wall', () => {
     expect(text, 'the three that come with the spy are named as such').toMatch(
       /come with the spy itself/i,
     );
+  });
+
+  it('carries the arrival rules that left the Hive’s pane', () => {
+    // **Section 139.** Arrival stopped being a fact about the Hivekin and
+    // became a fact about the level and the order you picked your opponents
+    // in, so the window and the level-shift moved here. These are the
+    // assertions that used to sit in `tests/hivekin.test.ts` against
+    // `HIVE_RULES`; they moved with the text rather than being deleted with
+    // it, because a rule that relocates and sheds its test is a rule that
+    // quietly stops being checked.
+    const text = pane('difficulty').textContent ?? '';
+    expect(text, 'the window').toContain(String(ARRIVALS.from));
+    expect(text).toContain(String(ARRIVALS.until));
+    expect(text, 'the grace a latecomer gets').toContain(String(HIVEKIN.grace));
+    expect(text, 'that the level moves it').toMatch(/easy game/i);
+    expect(text, 'that you choose who is in the game').toMatch(/choose who you are playing against/i);
+    // And the table gained a column for it, or the level page would describe
+    // a thing its own table does not show.
+    expect(text, 'the per-level column').toMatch(/Latecomers/);
   });
 
   it('never prints a lever it failed to look up', () => {

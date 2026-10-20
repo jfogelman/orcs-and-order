@@ -33,7 +33,7 @@ import { UNSEEN_TRACE, forgetSpotted, goesUnseen } from './unseen';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
 import { intimidateNeighbours } from './wilds';
 import { claimRuins, sleepRuins, tickRuins } from './ruins';
-import { maybeEmerge, tickSuccession } from './hivekin';
+import { maybeArrive, tickSuccession } from './hivekin';
 import { clearAmbush } from './burrow';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
@@ -865,7 +865,9 @@ export function endPlayerTurn(state: GameState): void {
       // rather than inside anybody's turn, because it appends to
       // `state.players` and the loop above walks that array by index -- adding
       // a seat mid-walk would have skipped somebody's turn or run it twice.
-      maybeEmerge(state);
+      // Section 139: whoever is next in the queue, if the calendar has
+      // reached them. Was `maybeEmerge`, which only ever meant the Hive.
+      maybeArrive(state);
       // Here, not in `beginPlayerTurn`: that runs once per player, so the
       // dominance countdown said itself six times a turn until it was moved.
       // The calendar advances exactly here and nowhere else.

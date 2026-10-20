@@ -1,7 +1,8 @@
 import { FACTIONS } from '../model/factions';
+import type { FactionDef } from '../model/factions';
 import type { BroodBonus, City, GameState, Player, Unit } from '../model/types';
 import { TERRAIN } from '../model/terrain';
-import { difficultyOf } from './difficulty';
+import { arrivalTurnFor, dueNow, latecomers } from './arrivals';
 import { contenders, log, makePlayer, playerCities, spawnUnit } from './gamestate';
 import { ensureWilds } from './barbarians';
 import { tileYield } from './city';
@@ -150,43 +151,21 @@ export function hivekinArrived(state: GameState): boolean {
 }
 
 /**
- * The turn this game's Hive arrives, drawn once and remembered.
+ * The turn this game's Hive arrives.
  *
- * Stored on the state rather than recomputed, because it is drawn from the
- * shared random stream: asking twice would draw twice and move every roll after
- * it. Section 110 learned that the hard way with the ending clock.
+ * Section 139 moved the schedule to `sim/arrivals.ts`, where it is a fact
+ * about *the queue* rather than about the Hivekin -- the Hive is simply
+ * whichever latecomer it happens to be. Kept here as a thin question because
+ * the Orcpedia, the Hive's own rules and two tests all ask it by this name,
+ * and because "when does the Hive come up" is a question worth being able to
+ * ask even when the answer is somebody else's business.
+ *
+ * Null when the Hive is not a latecomer in this game at all: chosen as the
+ * only opponent it starts on the map, and chosen by nobody it never comes.
  */
-function arrivalTurn(state: GameState): number {
-  if (state.hivekinAt === undefined) {
-    const span = Math.max(1, HIVEKIN.until - HIVEKIN.from + 1);
-    // Hashed off the map's seed rather than drawn from the shared stream, for
-    // two reasons and the second is the important one.
-    //
-    // The first: `state.rngState` starts life as `seed ^ 0x1d872b41`, so two
-    // small seeds differ only in the low byte, and one xorshift round later
-    // `float()` reads the top bits -- which have not been mixed yet. The first
-    // draw of a fresh game is therefore very nearly seed-independent, and six
-    // seeds in a row all emerged on turn 117 before this was understood.
-    //
-    // The second: taking nothing from the shared stream means switching the
-    // Hivekin off does not shift every roll that comes after them. A sweep arm
-    // with `enabled: false` is then the same game as before this section rather
-    // than a differently-shuffled one, which is section 59's whole rule about
-    // emulating a control instead of stashing it.
-    let h = (state.seed ^ 0x9e3779b9) >>> 0;
-    for (let i = 0; i < 4; i++) {
-      h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
-    }
-    // Section 136: and the level shifts the whole window. Later on an easy
-    // game is more of the map to yourself before the third side exists;
-    // earlier on a hard one is less. Clamped at turn one, which is as early as
-    // anything can be, and the ending they are walking toward is priced from
-    // the same number -- see `hiveEndingScale`, without which an early arrival
-    // would simply be a free win.
-    const shift = difficultyOf(state.settings).hiveArrives;
-    state.hivekinAt = Math.max(1, HIVEKIN.from + (h % span) + shift);
-  }
-  return state.hivekinAt;
+export function hiveArrivalTurn(state: GameState): number | null {
+  const n = latecomers(state).indexOf('hivekin');
+  return n < 0 ? null : arrivalTurnFor(state, n);
 }
 
 /** Whether this tile could hold the first Hive. */
@@ -261,7 +240,7 @@ function awayFromEveryone(state: GameState, x: number, y: number): number {
  * the distance rather than by giving up, because a crowded map should still get
  * its third side -- just with less elbow room, which is its own kind of fair.
  */
-function emergenceSpot(state: GameState): { x: number; y: number } | null {
+export function arrivalSpot(state: GameState): { x: number; y: number } | null {
   for (const clearance of [HIVEKIN.clearOf, HIVEKIN.clearOf - 3, HIVEKIN.clearOf - 6]) {
     let best: { x: number; y: number; score: number } | null = null;
     for (let y = 1; y < state.height - 1; y++) {
@@ -300,55 +279,66 @@ function besideIt(state: GameState, x: number, y: number, wanted: number): Array
 }
 
 /**
- * The Hive arrives, if this is the turn for it.
+ * A side that was not here turns up, if this is the turn for one.
+ *
+ * Section 139 generalised this from the Hive's own emergence. Everything it
+ * does was already faction-agnostic except the two lines that named the
+ * Hivekin: the founders and the escort are `settlerUnit` and `starterUnit`
+ * off the faction table, which every side has had since section 125, and the
+ * spot is unclaimed ground wherever it is.
  *
  * Called at the top of the calendar rather than inside anybody's turn, because
- * a new seat changes `state.players` and every turn loop in the game walks that
- * array by index.
+ * a new seat changes `state.players` and every turn loop in the game walks
+ * that array by index.
  */
-export function maybeEmerge(state: GameState): void {
-  if (!HIVEKIN.enabled || state.winner !== null) return;
-  if (hivekinArrived(state)) return;
-  if (state.turn < arrivalTurn(state)) return;
+export function maybeArrive(state: GameState): void {
+  if (state.winner !== null) return;
+  const due = dueNow(state);
+  if (!due) return;
+  // Section 125's switch still governs the Hive specifically, so a sweep arm
+  // that turns the Hivekin off gets no Hive however the slots are arranged.
+  if (due.faction === 'hivekin' && !HIVEKIN.enabled) return;
 
-  const spot = emergenceSpot(state);
-  // No room anywhere. Tried again next turn rather than cancelled: cities fall,
-  // empires shrink, and ground that was crowded on turn ninety may not be on
-  // turn one hundred.
+  const spot = arrivalSpot(state);
+  // No room anywhere. Tried again next turn rather than cancelled: cities
+  // fall, empires shrink, and ground that was crowded on turn ninety may not
+  // be on turn one hundred.
   if (!spot) return;
 
   const tileCount = state.width * state.height;
-  const hive = makePlayer(state.players.length, 'hivekin', 'ai', tileCount);
-  state.players.push(hive);
+  const side = makePlayer(state.players.length, due.faction, 'ai', tileCount);
+  state.players.push(side);
 
-  const def = FACTIONS.hivekin;
-  spawnUnit(state, hive.id, def.settlerUnit, spot.x, spot.y);
+  const def: FactionDef = FACTIONS[due.faction];
+  spawnUnit(state, side.id, def.settlerUnit, spot.x, spot.y);
   // The rest stand around it. Founders first, so a cramped spot that can only
   // fit three of them gets the ones that matter.
   const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + HIVEKIN.escort);
   around.forEach(([x, y], n) => {
     const type = n < HIVEKIN.founders - 1 ? def.settlerUnit : def.starterUnit;
-    spawnUnit(state, hive.id, type, x, y);
+    spawnUnit(state, side.id, type, x, y);
   });
-  hive.safeUntil = state.turn + HIVEKIN.grace;
-  hive.joinedAt = state.turn;
+  side.safeUntil = state.turn + HIVEKIN.grace;
+  side.joinedAt = state.turn;
 
-  // Told to everybody, the way an ending being begun is. A third empire
+  // Told to everybody, the way an ending being begun is. Another contender
   // appearing is the largest single thing that can happen to a game, and a
   // player who finds out by losing a city to it has been treated unfairly.
+  //
+  // The Hive keeps its own words. It comes up out of the ground and the others
+  // walk over a hill, and a line written for the first would be nonsense about
+  // the second.
+  const news =
+    due.faction === 'hivekin'
+      ? 'Ground that nobody had claimed has opened, and something has come up out of it. ' +
+        'It does not appear to be in a hurry.'
+      : `${side.name} has been found out there, on ground nobody had claimed. ` +
+        'They appear to have been on their way for some time.';
   for (const p of contenders(state)) {
-    if (p.id === hive.id) continue;
-    log(
-      state,
-      'Ground that nobody had claimed has opened, and something has come up out of it. ' +
-        'It does not appear to be in a hurry.',
-      'bad',
-      p.id,
-      undefined,
-      [spot.x, spot.y],
-    );
+    if (p.id === side.id) continue;
+    log(state, news, 'bad', p.id, undefined, [spot.x, spot.y]);
   }
-  log(state, `${hive.name} is here. It was always going to be.`, 'good', hive.id, undefined, [
+  log(state, `${side.name} is here. It was always going to be.`, 'good', side.id, undefined, [
     spot.x,
     spot.y,
   ]);
