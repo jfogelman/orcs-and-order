@@ -99,14 +99,22 @@ CREATURES = [
     #
     # The Wandering Folk: six recruitable tiers, four Create-only signatures,
     # two ships, a siege engine and two spies.
-    "wanderer", "skirmisher", "warband", "outcast", "brute", "slinger",
+    # `wf-skirmisher` and `wf-brute` are prefixed, and not for tidiness: the
+    # wilds already own `skirmisher` (the raiders' grunt) and `brute` (the
+    # Ogre Clan Brute), and the Unbound's ship already collided with the
+    # Sunken Legion's `drowned`. The first run of this table **overwrote all
+    # three** in `public/` -- shipped art for three creatures a player can be
+    # killed by, replaced by art for units that do not exist yet, and nothing
+    # anywhere said so. The source files are prefixed to match the citizen
+    # sheets, which had got this right already.
+    "wanderer", "wf-skirmisher", "warband", "outcast", "wf-brute", "slinger",
     "mystic", "champion", "bonebound", "drake",
     "ferrycontract", "corsair", "collector",
     "tagalong", "offbooks",
     # The Unbound: eight tiers, two ships, a siege engine and two spies.
     "effigy", "domovoi", "revenant", "yaksha", "sylph", "naiad", "jinn",
     "archon",
-    "ferrymansdue", "drowned", "cairn",
+    "ferrymansdue", "ub-drowned", "cairn",
     "borrowedface", "unreturned",
     # And the Horde's answer to them, which is filed in the Unbound's folder
     # because that is the only reason it exists. Its advance belongs in the

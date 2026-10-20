@@ -11552,6 +11552,33 @@ Note that `orc-shaman` — the Horde's Bone-Speaker — is filed in the Unbound'
 folder, because the Unbound are the only reason it exists. Its advance belongs
 in the orc tree; only the picture lives over there.
 
+### Three id collisions, and one had already clobbered shipped art
+
+**The worst thing found this section, and it was found by reading a commit
+listing rather than by any test.** Three of the new factions' ids are already
+taken by the wilds:
+
+| new unit | collides with |
+|---|---|
+| Wandering Folk `skirmisher` | the raiders' grunt (`RAIDER_GRUNT`) |
+| Wandering Folk `brute` | the Ogre Clan Brute (`RAIDER_TIERS.elite`) |
+| Unbound `drowned` | the Drowned Sailor (`LEGION.grunt`) |
+
+The first run of the art pipeline **overwrote all three in `public/`** --
+`brute_attack.png`, `skirmisher_attack.png` and `drowned_hurt.png`, shipped
+art for three creatures a player can be killed by, replaced by art for units
+that do not exist yet. Nothing warned. The only reason it surfaced was that
+`brute.png` appeared as *modified* in a commit otherwise full of additions.
+
+Restored from the previous commit, and the source files renamed `wf-brute`,
+`wf-skirmisher` and `ub-drowned` so it cannot happen again. The citizen
+sheets had already got this right -- they have used `wf-` and `ub-` prefixes
+from the start -- so this is the drop being made consistent with itself
+rather than a new convention.
+
+**The display names are unchanged**: a Wandering Folk Brute is still called a
+Brute. Only the internal id is prefixed, and only for the three that clash.
+
 ### Two gaps in the art, neither blocking
 
 - **`drake attacl.jpg`** is a typo for `attack`, so the Drake's attack strip
