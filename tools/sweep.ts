@@ -20,6 +20,7 @@ import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
+import { FACTION_IDS, FACTIONS } from '../src/model/factions';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN, QUEEN } from '../src/sim/hivekin';
@@ -206,10 +207,37 @@ function saveLevers(): Record<string, object> {
 
 // -------------------------------------------------------------------- games
 
+/**
+ * A measure taken per side, keyed by **faction** rather than by seat.
+ *
+ * Section 140. Every one of these used to be `[number, number]`, meaning seat
+ * 0 and seat 1 -- which meant the Horde and the Kingdom for as long as those
+ * were the only two seats there could be. Section 139 made the sides in a game
+ * a choice, so seat 1 is now whoever was picked first and a seat may not exist
+ * at all. A column headed `hum` that reported whatever sat in seat 1 would
+ * have been wrong without ever looking wrong.
+ *
+ * **A missing key means that side was not in the game**, which is not the same
+ * as a side that was in it and ended with nothing. The averages below count
+ * only the games a side actually played, or a faction present in half the
+ * games would report half its real size and read as weak.
+ */
+export type PerSide = Partial<Record<FactionId, number>>;
+
 export interface Outcome {
   seed: number;
   turns: number;
   winner: number | null;
+  /**
+   * The side that won, by faction.
+   *
+   * `winner` is a seat, and a seat is no longer a side: section 139 lets the
+   * Hive be picked as the first opponent, in which case it sits in seat 1 and
+   * the old `winner > 1` test for "the Hive won" counted it as the Kingdom.
+   */
+  winnerFaction: FactionId | null;
+  /** Every non-barbarian side that was in this game, in seat order. */
+  sides: FactionId[];
   combats: number;
   /**
    * Cities that changed hands, counted by watching ownership rather than by
@@ -217,19 +245,19 @@ export interface Outcome {
    * counted from it over a 300-turn game is a floor and not a total.
    */
   captures: number;
-  cities: [number, number];
+  cities: PerSide;
   /** Total citizens. Weighted heavily by the score, so worth watching. */
-  population: [number, number];
-  units: [number, number];
-  techs: [number, number];
-  ladder: [number, number];
+  population: PerSide;
+  units: PerSide;
+  techs: PerSide;
+  ladder: PerSide;
   /** How it ended, or null for a game still going when the half-turns ran out. */
   victory: VictoryKind | null;
   /**
    * Cities of each side raided, counted as it happens for the same reason
    * combats are. Always zero in a game without raiders.
    */
-  sacks: [number, number];
+  sacks: PerSide;
   /**
    * A fingerprint of the map and starting positions this game was played on.
    *
@@ -248,7 +276,7 @@ export interface Outcome {
    * orc and human. Here so a roads arm cannot come back "no effect" for the
    * reason section 91 did: because the AI never used the thing at all.
    */
-  joined: [number, number];
+  joined: PerSide;
   /**
    * Trade routes standing at the end, orc and human, and what they pay a turn.
    *
@@ -256,8 +284,8 @@ export interface Outcome {
    * columns: an arm that moves nothing because no AI ever earned a route should
    * say so here rather than read as "no effect".
    */
-  links: [number, number];
-  routeGold: [number, number];
+  links: PerSide;
+  routeGold: PerSide;
 }
 
 function deepestGroup(types: string[]): number {
@@ -362,14 +390,18 @@ export function playGame(
   // early fighting straight out of the window. Read off the tail, a seed with
   // thirty-seven fights reports none.
   let combats = 0;
-  const sacks: [number, number] = [0, 0];
+  // Keyed by faction as everything else now is, and counted for every side
+  // rather than only seats 0 and 1 -- a latecomer takes whatever seat is free
+  // and would have been counted as nobody.
+  const sacks: PerSide = {};
   let readLog = 0;
   const countCombat = () => {
     for (let i = readLog; i < state.log.length; i++) {
       const entry = state.log[i];
       if (entry.kind === 'combat') combats++;
-      if (entry.subject === RAIDED && (entry.player === 0 || entry.player === 1)) {
-        sacks[entry.player]++;
+      if (entry.subject === RAIDED && entry.player !== null) {
+        const who = state.players[entry.player];
+        if (who && !who.barbarian) sacks[who.faction] = (sacks[who.faction] ?? 0) + 1;
       }
     }
     readLog = state.log.length;
@@ -395,27 +427,38 @@ export function playGame(
     watch?.(state);
   }
   const per = (p: number) => playerUnits(state, p).map((u) => u.type);
+  // Everybody who was in this game, barbarians excluded -- they are a seat but
+  // not a side, and averaging the wilds' cities would be a column of zeroes
+  // pretending to be a contender.
+  const contending = state.players.filter((p) => !p.barbarian);
+  const sides = contending.map((p) => p.faction);
+  /** A measure taken for every side that was in the game, keyed by faction. */
+  const each = (f: (id: number) => number): PerSide =>
+    Object.fromEntries(contending.map((p) => [p.faction, f(p.id)]));
+  const winnerSeat = state.winner;
   return {
     seed,
     turns: state.turn,
-    winner: state.winner,
+    winner: winnerSeat,
+    winnerFaction:
+      winnerSeat === null ? null : (state.players[winnerSeat]?.faction ?? null),
+    sides,
     combats,
     captures,
-    cities: [playerCities(state, 0).length, playerCities(state, 1).length],
-    population: [
-      playerCities(state, 0).reduce((n, c) => n + c.size, 0),
-      playerCities(state, 1).reduce((n, c) => n + c.size, 0),
-    ],
-    units: [playerUnits(state, 0).length, playerUnits(state, 1).length],
-    techs: [state.players[0].techs.length, state.players[1].techs.length],
-    ladder: [deepestGroup(per(0)), deepestGroup(per(1))],
+    cities: each((id) => playerCities(state, id).length),
+    population: each((id) => playerCities(state, id).reduce((n, c) => n + c.size, 0)),
+    units: each((id) => playerUnits(state, id).length),
+    techs: each((id) => state.players[id].techs.length),
+    ladder: each((id) => deepestGroup(per(id))),
     victory: state.victory ?? null,
-    sacks,
+    // Every side that was raided gets a key, and one that never was gets a
+    // zero rather than being missing -- it was in the game.
+    sacks: { ...each(() => 0), ...sacks },
     map,
     roadTiles: (state.roads ?? []).reduce((n, r) => n + r, 0),
-    joined: [joinedShare(state, 0), joinedShare(state, 1)],
-    links: [tradeLinks(state, 0).length, tradeLinks(state, 1).length],
-    routeGold: [tradeGold(state, 0), tradeGold(state, 1)],
+    joined: each((id) => joinedShare(state, id)),
+    links: each((id) => tradeLinks(state, id).length),
+    routeGold: each((id) => tradeGold(state, id)),
   };
 }
 
@@ -619,18 +662,15 @@ export interface Summary {
   arm: string;
   set: string;
   games: number;
-  orcWins: number;
-  humanWins: number;
   /**
-   * Games won by section 125's third side, and the turn they arrived on.
+   * Wins per faction, keyed by faction. Section 140.
    *
-   * A column of its own rather than folded into anybody else's, because the
-   * question this section has to answer is not "did the Hivekin win" -- it is
-   * **whether the Horde against the Kingdom still reads the same with a third
-   * side on the map**, which is the stated balance target. That needs their
-   * wins taken out of the other two columns rather than hidden in them.
+   * Was three fixed fields, the last of which read `winner > 1` -- "anything
+   * past seat one is the Hive". Section 139 lets the Hive be picked as the
+   * first opponent, which puts it in seat 1, where that test counted it as
+   * the Kingdom. Counted off the winner's actual faction now.
    */
-  hiveWins: number;
+  wins: PerSide;
   draws: number;
   /**
    * Games the loop gave up on before anybody won or the limit came. Should
@@ -638,9 +678,10 @@ export interface Summary {
    */
   unfinished: number;
   turns: number;
-  cities: [number, number];
-  population: [number, number];
-  techs: [number, number];
+  cities: PerSide;
+  population: PerSide;
+  units: PerSide;
+  techs: PerSide;
   combats: number;
   captures: number;
   /**
@@ -654,15 +695,58 @@ export interface Summary {
    * the third side's ending cannot show the third side winning.
    */
   routes: Record<string, number>;
-  /** Mean cities raided per game, orc and human. */
-  sacks: [number, number];
+  /** Mean cities raided per game, per side. */
+  sacks: PerSide;
   /** Mean road tiles at the end of a game. */
   roadTiles: number;
-  /** Mean share of cities joined to the capital by road, orc and human. */
-  joined: [number, number];
+  /** Mean share of cities joined to the capital by road, per side. */
+  joined: PerSide;
   /** Mean trade routes standing at the end, and mean gold a turn from them. */
-  links: [number, number];
-  routeGold: [number, number];
+  links: PerSide;
+  routeGold: PerSide;
+  /**
+   * Every side that appeared in this arm, in table order.
+   *
+   * So the report can print a block per side that was actually there, rather
+   * than a fixed two and a guess about the rest.
+   */
+  sides: FactionId[];
+}
+
+/**
+ * Mean of a per-side measure, over **the games that side was in**.
+ *
+ * Section 140, and the half of this change that is not cosmetic. Dividing by
+ * every game in the arm would report a faction present in half of them at
+ * half its real size, which reads as a weak side rather than a rare one --
+ * and with section 139 letting the opponents be chosen, "present in half the
+ * games" is now an ordinary thing for an arm to be.
+ */
+function meanPerSide(outcomes: Outcome[], pick: (o: Outcome) => PerSide): PerSide {
+  const sum: Record<string, number> = {};
+  const seen: Record<string, number> = {};
+  for (const o of outcomes) {
+    for (const [faction, value] of Object.entries(pick(o))) {
+      if (value === undefined) continue;
+      sum[faction] = (sum[faction] ?? 0) + value;
+      seen[faction] = (seen[faction] ?? 0) + 1;
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(sum).map(([faction, total]) => [faction, total / seen[faction]]),
+  ) as PerSide;
+}
+
+/** Wins per faction, counted by faction rather than by seat. */
+function winsPerSide(outcomes: Outcome[]): PerSide {
+  const out: Record<string, number> = {};
+  for (const o of outcomes) {
+    // Every side that played gets a key, so a faction that was in the arm and
+    // never won reads as a zero rather than as absent.
+    for (const f of o.sides) out[f] ??= 0;
+    if (o.winnerFaction) out[o.winnerFaction] = (out[o.winnerFaction] ?? 0) + 1;
+  }
+  return out as PerSide;
 }
 
 export function summarise(results: ArmResult[]): Summary[] {
@@ -670,31 +754,24 @@ export function summarise(results: ArmResult[]): Summary[] {
     arm: r.arm,
     set: r.set,
     games: r.outcomes.length,
-    orcWins: r.outcomes.filter((o) => o.winner === 0).length,
-    humanWins: r.outcomes.filter((o) => o.winner === 1).length,
-    // By seat, not by index: the Hivekin take whatever slot is free when they
-    // emerge, which is 2 in a quiet game and 3 in one with raiders in it.
-    hiveWins: r.outcomes.filter((o) => o.winner !== null && o.winner > 1).length,
+    wins: winsPerSide(r.outcomes),
     draws: r.outcomes.filter((o) => o.victory === 'draw').length,
     unfinished: r.outcomes.filter((o) => o.victory === null).length,
     turns: mean(r.outcomes.map((o) => o.turns)),
-    cities: [mean(r.outcomes.map((o) => o.cities[0])), mean(r.outcomes.map((o) => o.cities[1]))],
-    population: [
-      mean(r.outcomes.map((o) => o.population[0])),
-      mean(r.outcomes.map((o) => o.population[1])),
-    ],
-    techs: [mean(r.outcomes.map((o) => o.techs[0])), mean(r.outcomes.map((o) => o.techs[1]))],
+    cities: meanPerSide(r.outcomes, (o) => o.cities),
+    population: meanPerSide(r.outcomes, (o) => o.population),
+    units: meanPerSide(r.outcomes, (o) => o.units),
+    techs: meanPerSide(r.outcomes, (o) => o.techs),
     combats: mean(r.outcomes.map((o) => o.combats)),
     captures: mean(r.outcomes.map((o) => o.captures)),
     routes: countBy(r.outcomes.map((o) => o.victory ?? 'unfinished')),
-    sacks: [mean(r.outcomes.map((o) => o.sacks[0])), mean(r.outcomes.map((o) => o.sacks[1]))],
+    sacks: meanPerSide(r.outcomes, (o) => o.sacks),
     roadTiles: mean(r.outcomes.map((o) => o.roadTiles)),
-    joined: [mean(r.outcomes.map((o) => o.joined[0])), mean(r.outcomes.map((o) => o.joined[1]))],
-    links: [mean(r.outcomes.map((o) => o.links[0])), mean(r.outcomes.map((o) => o.links[1]))],
-    routeGold: [
-      mean(r.outcomes.map((o) => o.routeGold[0])),
-      mean(r.outcomes.map((o) => o.routeGold[1])),
-    ],
+    joined: meanPerSide(r.outcomes, (o) => o.joined),
+    links: meanPerSide(r.outcomes, (o) => o.links),
+    routeGold: meanPerSide(r.outcomes, (o) => o.routeGold),
+    /** Every side that appeared in this arm, in a stable order. */
+    sides: FACTION_IDS.filter((f) => r.outcomes.some((o) => o.sides.includes(f))),
   }));
 }
 
@@ -708,53 +785,132 @@ export function summarise(results: ArmResult[]): Summary[] {
 export function report(results: ArmResult[]): string {
   const rows = summarise(results);
   const pad = (s: string | number, n: number) => String(s).padStart(n);
+  // Every side that appeared anywhere in the run, in table order. Taken across
+  // all the arms rather than per arm, so the columns line up down the page
+  // even when one arm had a side in it and another did not.
+  const sides = FACTION_IDS.filter((f) => rows.some((r) => r.sides.includes(f)));
+  const label = (f: FactionId) => FACTIONS[f].name.slice(0, 8);
+  /** A per-side figure, or a dash where that side was not in the arm. */
+  const cell = (v: PerSide, f: FactionId, dp: number, pct = false): string => {
+    const n = v[f];
+    if (n === undefined) return '-';
+    return pct ? `${Math.round(n * 100)}%` : n.toFixed(dp);
+  };
+
+  // ---- the game, which is not per side -----------------------------------
   const head =
-    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('orc', 5)}${pad('hum', 5)}${pad('hive', 6)}` +
-    `${pad('draw', 5)}${pad('unfin', 6)}${pad('turns', 7)}${pad('cities', 14)}${pad('pop', 14)}${pad('techs', 13)}` +
-    `${pad('fights', 8)}${pad('caps', 6)}${pad('cq/dm/pt/po/ob/hv', 19)}${pad('sacked', 11)}${pad('roads', 7)}${pad('joined', 11)}${pad('routes', 10)}${pad('routeG', 9)}`;
+    `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('draw', 6)}${pad('unfin', 6)}` +
+    `${pad('turns', 7)}${pad('fights', 8)}${pad('caps', 6)}${pad('roads', 7)}` +
+    `  cq/dm/pt/po/ob/hv`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
       r.set.padEnd(10) +
       pad(r.games, 6) +
-      pad(r.orcWins, 5) +
-      pad(r.humanWins, 5) +
-      pad(r.hiveWins, 6) +
-      pad(r.draws, 5) +
+      pad(r.draws, 6) +
       pad(r.unfinished, 6) +
       pad(r.turns.toFixed(0), 7) +
-      pad(`${r.cities[0].toFixed(2)}/${r.cities[1].toFixed(2)}`, 14) +
-      pad(`${r.population[0].toFixed(1)}/${r.population[1].toFixed(1)}`, 14) +
-      pad(`${r.techs[0].toFixed(1)}/${r.techs[1].toFixed(1)}`, 13) +
       pad(r.combats.toFixed(0), 8) +
       pad(r.captures.toFixed(1), 6) +
-      pad(
-        `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
-          `${r.routes.portal ?? 0}/${r.routes.object ?? 0}/${r.routes.hive ?? 0}`,
-        16,
-      ) +
-      pad(`${r.sacks[0].toFixed(1)}/${r.sacks[1].toFixed(1)}`, 11) +
       pad(r.roadTiles.toFixed(0), 7) +
-      pad(`${Math.round(r.joined[0] * 100)}%/${Math.round(r.joined[1] * 100)}%`, 11) +
-      pad(`${r.links[0].toFixed(1)}/${r.links[1].toFixed(1)}`, 10) +
-      pad(`${r.routeGold[0].toFixed(1)}/${r.routeGold[1].toFixed(1)}`, 9),
+      '  ' +
+      `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
+      `${r.routes.portal ?? 0}/${r.routes.object ?? 0}/${r.routes.hive ?? 0}`,
   );
-  return [head, '-'.repeat(head.length), ...body].join('\n');
+
+  // ---- and then each side, one block apiece ------------------------------
+  //
+  // **A block rather than more columns.** The old row carried the Horde's and
+  // the Kingdom's figures as `a/b` pairs and was already 180 characters wide;
+  // a third side would have pushed it past any terminal and a fifth is
+  // coming. A side gets its own short table, which also means a run with one
+  // side in it prints one table rather than a row full of dashes.
+  const blocks = sides.map((f) => {
+    const subhead =
+      `${label(f).padEnd(18)}${'set'.padEnd(10)}${pad('wins', 6)}${pad('cities', 8)}${pad('pop', 8)}` +
+      `${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}`;
+    const lines = rows.map(
+      (r) =>
+        r.arm.padEnd(18) +
+        r.set.padEnd(10) +
+        pad(r.wins[f] ?? '-', 6) +
+        pad(cell(r.cities, f, 2), 8) +
+        pad(cell(r.population, f, 1), 8) +
+        pad(cell(r.units, f, 1), 8) +
+        pad(cell(r.techs, f, 1), 8) +
+        pad(cell(r.sacks, f, 1), 8) +
+        pad(cell(r.joined, f, 0, true), 8) +
+        pad(cell(r.links, f, 1), 8) +
+        pad(cell(r.routeGold, f, 1), 8),
+    );
+    return [subhead, '-'.repeat(subhead.length), ...lines].join('\n');
+  });
+
+  return [head, '-'.repeat(head.length), ...body, '', ...blocks.flatMap((b) => [b, ''])]
+    .join('\n')
+    .trimEnd();
 }
 
-/** Every game, one per line, for when the summary hides the thing you need. */
+/**
+ * Every game, one per line, for when the summary hides the thing you need.
+ *
+ * **Named columns, generated per side.** Section 140. The old row was
+ * twenty-six positional fields with a hand-written header some distance away,
+ * and the per-side pairs in it meant seat 0 and seat 1 — so the little
+ * analysis scripts that get written against this file counted tabs and
+ * trusted that seat 1 was still the Kingdom. One of them was written in
+ * section 138 and had `units` where the file actually held `ladder`, which
+ * cost a prediction that could not be tested.
+ *
+ * Now the header names every column (`hivekinCities`, `orcPop`) and is built
+ * from the same list the rows are, so the two cannot drift.
+ */
 export function rawRows(results: ArmResult[]): string {
-  return results
-    .flatMap((r) =>
-      r.outcomes.map(
-        (o) =>
-          `${r.arm}\t${r.set}\t${o.seed}\t${o.turns}\t${o.winner ?? '-'}\t${o.combats}\t` +
-          `${o.captures}\t${o.cities[0]}\t${o.cities[1]}\t${o.population[0]}\t${o.population[1]}\t` +
-          `${o.techs[0]}\t${o.techs[1]}\t${o.ladder[0]}\t${o.ladder[1]}\t` +
-          `${o.victory ?? '-'}\t${o.sacks[0]}\t${o.sacks[1]}\t${o.map}\t` +
-          `${o.roadTiles}\t${o.joined[0].toFixed(2)}\t${o.joined[1].toFixed(2)}\t` +
-          `${o.links[0]}\t${o.links[1]}\t${o.routeGold[0]}\t${o.routeGold[1]}`,
-      ),
-    )
-    .join('\n');
+  const sides = FACTION_IDS.filter((f) =>
+    results.some((r) => r.outcomes.some((o) => o.sides.includes(f))),
+  );
+  const measures: Array<[string, (o: Outcome) => PerSide]> = [
+    ['Cities', (o) => o.cities],
+    ['Pop', (o) => o.population],
+    ['Units', (o) => o.units],
+    ['Techs', (o) => o.techs],
+    ['Ladder', (o) => o.ladder],
+    ['Sacked', (o) => o.sacks],
+    ['Joined', (o) => o.joined],
+    ['Links', (o) => o.links],
+    ['RouteGold', (o) => o.routeGold],
+  ];
+  const cols = [
+    'arm',
+    'set',
+    'seed',
+    'turns',
+    'winner',
+    'fights',
+    'caps',
+    'victory',
+    'map',
+    'roadTiles',
+    ...sides.flatMap((f) => measures.map(([name]) => `${f}${name}`)),
+  ];
+  const lines = results.flatMap((r) =>
+    r.outcomes.map((o) =>
+      [
+        r.arm,
+        r.set,
+        o.seed,
+        o.turns,
+        // The faction, not the seat. A seat number was never readable and is
+        // not stable any more either.
+        o.winnerFaction ?? '-',
+        o.combats,
+        o.captures,
+        o.victory ?? '-',
+        o.map,
+        o.roadTiles,
+        ...sides.flatMap((f) => measures.map(([, pick]) => pick(o)[f] ?? '-')),
+      ].join('\t'),
+    ),
+  );
+  return [cols.join('\t'), ...lines].join('\n');
 }
