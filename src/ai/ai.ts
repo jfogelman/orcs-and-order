@@ -497,6 +497,83 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
     caution: 0.35,
     stormingParty: 3,
   },
+  /**
+   * Section 142. **The third time of writing this comment**, and the reason
+   * has not changed since section 125 wrote it about the Hivekin.
+   *
+   * Without an entry here a faction falls to `PERSONALITIES.orc`, whose every
+   * priority is either an orc advance it cannot research or a shared one it
+   * can. So it works straight down the shared spine and never researches a
+   * single one of its own units. Measured before this existed, over sixty
+   * turns against the Horde: **nine advances to fifteen, three cities to six,
+   * and the only two unit types ever built were the Wanderer and the
+   * Skirmisher** -- the free one and the twenty-beaker one, both reached by
+   * the cheapest-thing fallback rather than by any intention.
+   *
+   * The list leads with the cheap line and the ranged tier, because a faction
+   * with no homeland roster has nothing at all until it can field something,
+   * and because `tier-warband` gates both the Mystic and the whole upper half
+   * of the fork.
+   */
+  wandering: {
+    // Between the Horde's spread and the Hive's five. They expand like an
+    // empire rather than a brood -- `startsOnMap` and an ordinary settler --
+    // but every unit costs them a quarter more, so the same ground buys less
+    // army. Not measured yet; the obvious first thing to probe.
+    targetCities: 6,
+    garrisonPerCity: 1,
+    techPriority: [
+      // Something to fight with, before anything else whatsoever.
+      'tier-skirmisher',
+      'tier-warband',
+      // The free opening blow, early, for the reason section 137 had to write
+      // down at all: a ranged unit here is not artillery, it is a unit that
+      // strikes first, and that is worth more than the point of attack it
+      // looks like it is trading for.
+      'tier-slinger',
+      'mapmaking',
+      'bridge-building',
+      // The upper half of the fork. A quarter dearer per unit than anybody
+      // else's means the cheap tiers stop paying sooner, so the heavy ones
+      // are not a luxury for this side the way they are for the Horde.
+      'tier-outcast',
+      'tree-hugging',
+      'signature-mystic',
+      'not-you-again',
+      'tier-brute',
+      'joy-making',
+      'wall-building',
+      'hammers-of-glory',
+      'signature-champion',
+      'happiness',
+      // Espionage after the fighting advances, exactly as the Hive's note
+      // explains: asked for earlier, sixty beakers of it displaces a weapon
+      // and the side ends up with one sort of soldier and a good spy.
+      'someone-elses-business',
+      'everyone-has-a-price',
+      'asking-around',
+      'a-word-in-the-wrong-ear',
+      'nobody-in-particular',
+      'signature-bonebound',
+      'signature-drake',
+      'insanity',
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
+    ],
+    /**
+     * How good the odds have to look before one of them will swing.
+     *
+     * The Horde's 0.25, not the Hive's 0.35, and not measured either way yet.
+     * The reasoning: these are ordinary troops on ordinary stat lines rather
+     * than the Hive's glass castes, so the Hive's caution does not obviously
+     * transfer -- but they cost a quarter more to replace than the same unit
+     * costs anybody else, which argues the other way. Both halves of that are
+     * guesses and the probe is the thing that settles it.
+     */
+    caution: 0.25,
+    stormingParty: 3,
+  },
 };
 
 // -------------------------------------------------------------- evaluation

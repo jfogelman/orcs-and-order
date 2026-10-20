@@ -821,6 +821,115 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'New shapes are walked across it until the soft parts are not soft. They arrive ' +
       'finished, and a little quieter than the ones that were not.',
   },
+  // --------------------------------------------- section 142: the Wandering Folk
+  //
+  // The same ten slots the Hivekin got, filled from
+  // `NEW_FACTION_BUILDINGS.md`: defence, calm 2, calm 3, posting, study x2,
+  // gold x2, supply, veterancy. Ids, names, costs, unlocks and flavour are
+  // Jeremy's; the mechanical fields are copied **from the Hive's equivalent
+  // slot unchanged**, deliberately, so all four sides stay on one economy and
+  // a faction cannot be accidentally buffed by being written later.
+  //
+  // `tech-useful.test.ts` is what insisted on these. With the units and the
+  // tech fork in and no buildings at all, it reported that the Wandering Folk
+  // "cannot keep a city calm, cannot study, cannot make gold, cannot supply
+  // an army abroad, cannot send units out hardened" -- a faction that could
+  // fight and never develop. Four of its tests caught it at once.
+  circledWagons: {
+    id: 'circledWagons',
+    name: 'The Circled Wagons',
+    faction: 'wandering',
+    cost: 60,
+    upkeep: 1,
+    defenseMult: 2,
+    negatedBySiege: true,
+    blurb: 'Defence, achieved by parking carefully and chaining the wheels together.',
+  },
+  sharedFire: {
+    id: 'sharedFire',
+    name: 'The Shared Fire',
+    faction: 'wandering',
+    cost: 40,
+    upkeep: 1,
+    contentBonus: 2,
+    blurb: 'Anyone may sit. Nobody asks what you brought.',
+  },
+  bigTent: {
+    id: 'bigTent',
+    name: 'The Big Tent',
+    faction: 'wandering',
+    cost: 90,
+    upkeep: 2,
+    contentBonus: 3,
+    blurb: 'Everyone is welcome. The terms are printed on the flap, in very small writing.',
+  },
+  hiredPost: {
+    id: 'hiredPost',
+    name: 'The Hired Post',
+    faction: 'wandering',
+    cost: 30,
+    upkeep: 1,
+    contentBonus: 2,
+    garrisonNeeded: 2,
+    blurb: 'One guard, engaged by the night, renewable if the night goes well.',
+  },
+  routeBook: {
+    id: 'routeBook',
+    name: 'The Route Book',
+    faction: 'wandering',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb: 'Every road anyone has ever taken, and what it cost them.',
+  },
+  knottedRecord: {
+    id: 'knottedRecord',
+    name: 'The Knotted Record',
+    faction: 'wandering',
+    cost: 130,
+    upkeep: 2,
+    scienceBonus: 0.5,
+    blurb: 'Nothing here was written down. Everybody agrees on what it says.',
+  },
+  strongboxWagon: {
+    id: 'strongboxWagon',
+    name: 'The Strongbox Wagon',
+    faction: 'wandering',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 1,
+    blurb: 'The one wagon nobody is allowed to borrow, and the only one with a lock.',
+  },
+  tollPost: {
+    id: 'tollPost',
+    name: 'The Toll Post',
+    faction: 'wandering',
+    cost: 110,
+    upkeep: 2,
+    goldBonus: 0.5,
+    blurb:
+      'It has never been established what it is a toll *on*. Payment is accepted regardless.',
+  },
+  waystation: {
+    id: 'waystation',
+    name: 'The Waystation',
+    faction: 'wandering',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'A cache for whoever comes next. Whoever comes next is expected to leave it fuller.',
+  },
+  wagerRing: {
+    id: 'wagerRing',
+    name: 'The Wager Ring',
+    faction: 'wandering',
+    cost: 100,
+    upkeep: 2,
+    startingRank: 2,
+    needs: 'barracks',
+    blurb: 'Veterans are made here, mostly because there is money riding on it.',
+  },
   broodwarmth: {
     id: 'broodwarmth',
     name: 'The Broodwarmth',

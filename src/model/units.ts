@@ -1515,6 +1515,237 @@ export const CREATURES: CreatureDef[] = [
       'The Mimic-caste is grown to look like whatever it has been looking at. This one is ' +
       'grown to look like nothing, which took considerably longer to get right.',
   },
+  // ------------------------------------------------ section 142: the Wandering Folk
+  //
+  // `WANDERERS_PLAN.md` has the design. It gives every tier a **rough
+  // equivalent** on an existing roster rather than a stat line, plus one
+  // rule about pricing: *"Create costs noticeably more per tier than the
+  // equivalent unit costs either established faction."*
+  //
+  // So the fighting numbers are the equivalent's, unchanged -- a Warband is
+  // an Orc, an Outcast is a Troll -- and the **cost carries a flat quarter
+  // on top**, rounded to the nearest shield. One multiplier, written down
+  // here, so retuning the whole faction's half of its identity is one pass
+  // rather than thirteen opinions. The other half, Recruit, is the cheaper
+  // path and is not built yet.
+  //
+  // Two ids are prefixed `wf-`: the wilds already own `skirmisher` and
+  // `brute`, and the first art run overwrote both. See section 141. The
+  // **names** are the bible's -- a Brute is still called a Brute.
+  //
+  // Counting ladders are mine, not the bible's, which is silent on them. The
+  // Hive's pattern is followed: ladders on the cheap tiers, none on the
+  // signatures, because a signature is a thing you have one of.
+  {
+    id: 'wanderer',
+    name: 'Wanderer',
+    plural: 'Wanderers',
+    faction: 'wandering',
+    settler: true,
+    works: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 25,
+    sight: 1,
+    counts: [1],
+    artScale: 0.86,
+    silhouette: 'worker',
+    body: '#b08a5e',
+    trim: '#5a3b22',
+    blurb: 'Never had a homeland to leave in the first place, which saved a great deal of fuss.',
+  },
+  {
+    id: 'wf-skirmisher',
+    name: 'Skirmisher',
+    plural: 'Skirmishers',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 1,
+    defense: 1,
+    hp: 10,
+    move: 2,
+    cost: 13,
+    sight: 2,
+    counts: [1, 2, 3, 5],
+    artScale: 0.8,
+    silhouette: 'small',
+    body: '#8a9a4a',
+    trim: '#4a5524',
+    blurb:
+      'Left the Horde once it became clear that "disposable" was a permanent job ' +
+      'description there rather than a phase.',
+  },
+  {
+    id: 'warband',
+    name: 'Warband',
+    plural: 'Warbands',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 3,
+    defense: 2,
+    hp: 12,
+    move: 1,
+    cost: 25,
+    sight: 1,
+    counts: [1, 2, 3, 5],
+    artScale: 0.95,
+    silhouette: 'armored',
+    body: '#9a7a52',
+    trim: '#4a3320',
+    blurb: 'Deserted, exiled, or the paperwork simply never got filed either way.',
+  },
+  {
+    id: 'slinger',
+    name: 'Slinger',
+    plural: 'Slingers',
+    faction: 'wandering',
+    role: 'ranged',
+    // The same free opening round an Archer and an Axethrower get. See
+    // section 137's note on what "ranged" actually means in this game.
+    firstStrikes: 1,
+    attack: 4,
+    defense: 2,
+    hp: 10,
+    move: 1,
+    cost: 32,
+    sight: 2,
+    counts: [1, 2, 3],
+    artScale: 0.92,
+    silhouette: 'thrower',
+    body: '#7f9a6a',
+    trim: '#3f5230',
+    blurb:
+      'Left once the Kingdom’s committees developed opinions about how an elf ought to ' +
+      'feel about things.',
+  },
+  {
+    id: 'outcast',
+    name: 'Outcast',
+    plural: 'Outcasts',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 5,
+    defense: 3,
+    hp: 15,
+    move: 1,
+    cost: 52,
+    sight: 1,
+    counts: [1, 2, 3],
+    artScale: 1.0,
+    silhouette: 'brute',
+    body: '#7d8a46',
+    trim: '#45331e',
+    blurb: 'Exiled outright. The tier name and the story are the same word for a reason.',
+  },
+  {
+    id: 'wf-brute',
+    name: 'Brute',
+    plural: 'Brutes',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 7,
+    defense: 4,
+    hp: 20,
+    move: 1,
+    cost: 78,
+    sight: 1,
+    counts: [1, 2],
+    artScale: 1.08,
+    silhouette: 'brute',
+    body: '#9c7b4e',
+    trim: '#4e3418',
+    blurb:
+      'Grown with only one head, and made to feel it every day it stayed among ogres who ' +
+      'had two.',
+  },
+  {
+    id: 'mystic',
+    name: 'Mystic',
+    plural: 'Mystics',
+    faction: 'wandering',
+    role: 'caster',
+    attack: 6,
+    defense: 2,
+    hp: 12,
+    move: 1,
+    cost: 56,
+    sight: 3,
+    counts: [1],
+    artScale: 0.92,
+    silhouette: 'robed',
+    body: '#6f7fa0',
+    trim: '#34405c',
+    blurb:
+      'Abandoned proper ledger-keeping to learn a kind of magic no dwarven institution — ' +
+      'and no Kingdom archmage either — would agree to teach.',
+  },
+  {
+    id: 'champion',
+    name: 'Champion',
+    plural: 'Champions',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 8,
+    defense: 6,
+    hp: 18,
+    move: 2,
+    cost: 88,
+    sight: 2,
+    counts: [1],
+    artScale: 1.0,
+    silhouette: 'armored',
+    body: '#b09a5e',
+    trim: '#5a4420',
+    blurb:
+      'Belonged fully to neither side from birth, so declared an order of exactly one ' +
+      'rather than wait for somebody else to decide where they fit.',
+  },
+  {
+    id: 'bonebound',
+    name: 'Bonebound',
+    plural: 'Bonebound',
+    faction: 'wandering',
+    role: 'melee',
+    attack: 6,
+    defense: 3,
+    hp: 15,
+    move: 2,
+    cost: 60,
+    sight: 2,
+    counts: [1],
+    artScale: 1.0,
+    silhouette: 'brute',
+    body: '#7a8a72',
+    trim: '#3a4436',
+    blurb:
+      'Regenerates fast enough that whatever it is bound to has never quite finished ' +
+      'leaving.',
+  },
+  {
+    id: 'drake',
+    name: 'Drake',
+    plural: 'Drakes',
+    faction: 'wandering',
+    role: 'flying',
+    flies: true,
+    attack: 10,
+    defense: 6,
+    hp: 25,
+    move: 4,
+    cost: 138,
+    sight: 3,
+    counts: [1],
+    artScale: 1.2,
+    silhouette: 'winged',
+    body: '#8a6a3e',
+    trim: '#46301a',
+    blurb:
+      'Not a defector at all, and the one entry on this roster with no "why they left" ' +
+      'story: nobody asked it to leave anywhere. It was simply caught.',
+  },
 ];
 
 // ------------------------------------------------------- generated types

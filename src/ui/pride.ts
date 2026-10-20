@@ -24,6 +24,7 @@ const PRIDE_TITLE: Record<FactionId, string> = {
   orc: 'The camp is doing well',
   human: 'The realm is doing well',
   hivekin: 'The Hive is adequate',
+  wandering: 'The books are balanced',
 };
 
 export function openPrideOffer(

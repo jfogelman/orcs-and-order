@@ -11521,3 +11521,169 @@ asserts the third side as the comment always implied it did.
 - The Hive's thin espionage participation (0.46 agents a game against 2.71 and
   3.38) was ruled out of scope for section 138 pending this decision. It is
   now decidable, and has not been looked at.
+
+## 141. The Wandering Folk and the Unbound: the designs arrive
+
+Jeremy handed over two complete faction bibles and 229 art files. Copied
+into the repo as `WANDERERS_PLAN.md`, `UNBOUND_PLAN.md`,
+`NEW_FACTION_BUILDINGS.md`, `NEW_FACTION_SPIES.md` and
+`NEW_FACTION_ART_PROMPTS.md` — the `HIVEKIN_PLAN.md` precedent, so the
+design is version-controlled beside the code that will implement it.
+
+Two of the source files existed in several numbered copies. The ones Jeremy
+named are the current ones: `art_prompts_wandering_unbound (2).md` is the
+newest at 332 lines, and the two `buildings` copies are byte-identical. The
+hazard is the one in `art-src-old-rolls-win`, and it is worth saying which
+copy was taken.
+
+### The art was drawn and doing nothing
+
+`prepare_art.py` discovers `art_src/factions/*` by itself, so it found both
+folders — but `CREATURES` is hand-maintained, and **not one of the 229 files
+reached `public/`**. Exactly the failure the comment above the spy entries
+warns about, and the same one that cost section 125 a fortnight of fallback
+diamonds.
+
+Twenty-nine creature ids added, and the drop went from 34 files landing to
+149. Processed and banked, waiting for the rules; no `units.ts` entry exists
+for any of them.
+
+Note that `orc-shaman` — the Horde's Bone-Speaker — is filed in the Unbound's
+folder, because the Unbound are the only reason it exists. Its advance belongs
+in the orc tree; only the picture lives over there.
+
+### Three id collisions, and one had already clobbered shipped art
+
+**The worst thing found this section, and it was found by reading a commit
+listing rather than by any test.** Three of the new factions' ids are already
+taken by the wilds:
+
+| new unit | collides with |
+|---|---|
+| Wandering Folk `skirmisher` | the raiders' grunt (`RAIDER_GRUNT`) |
+| Wandering Folk `brute` | the Ogre Clan Brute (`RAIDER_TIERS.elite`) |
+| Unbound `drowned` | the Drowned Sailor (`LEGION.grunt`) |
+
+The first run of the art pipeline **overwrote all three in `public/`** --
+`brute_attack.png`, `skirmisher_attack.png` and `drowned_hurt.png`, shipped
+art for three creatures a player can be killed by, replaced by art for units
+that do not exist yet. Nothing warned. The only reason it surfaced was that
+`brute.png` appeared as *modified* in a commit otherwise full of additions.
+
+Restored from the previous commit, and the source files renamed `wf-brute`,
+`wf-skirmisher` and `ub-drowned` so it cannot happen again. The citizen
+sheets had already got this right -- they have used `wf-` and `ub-` prefixes
+from the start -- so this is the drop being made consistent with itself
+rather than a new convention.
+
+**The display names are unchanged**: a Wandering Folk Brute is still called a
+Brute. Only the internal id is prefixed, and only for the three that clash.
+
+### Two gaps in the art, neither blocking
+
+- **`drake attacl.jpg`** is a typo for `attack`, so the Drake's attack strip
+  is not found. One rename fixes it.
+- **No naval or siege unit on any faction has an attack strip**, Hivekin
+  included — Ballista and Goblin Catapult have one, and none of the six new
+  ships and engines do. The art-prompts doc flags this against itself, so it
+  is known rather than discovered.
+
+### What building these actually involves
+
+Far more than one section. Per faction: ~14 units with stats, a tech fork of
+~15 advances, 10 city buildings, 3 follies, 6 advisors, a capital, an ending,
+two spies, and a core mechanic that touches the simulation — **Recruit and
+the Caravan** for the Wandering Folk, **dispersal and reform** for the
+Unbound.
+
+And one cross-cutting piece: the Unbound's whole fairness promise is that
+there is always a hard counter, so **exorcism has to land in the same slice
+as dispersal**, and it touches all five factions — Paladin (exists),
+Bone-Speaker (new, Horde), Warden-caste (new, Hive), and the Mystic's
+upgrade (new, Wandering Folk).
+
+Suggested order, to be confirmed:
+
+1. Art wired and banked. *(this section)*
+2. The faction table: both sides in `FACTIONS` and `FACTION_IDS`, so section
+   139's picker offers them — which must land **with** their rosters, or the
+   picker offers a side that cannot build anything.
+3. Rosters, tech forks and city buildings. Both factions plainly playable:
+   they expand, research, build and fight.
+4. The Wandering Folk's Caravan and Recruit.
+5. The Unbound's dispersal and reform, **with** exorcism across all five.
+6. Follies, advisors, capitals, endings, spy rows.
+
+Section 140's n-sided sweep report should merge before any of these is
+measured, or a five-sided sweep reports two of them.
+
+## 142. The Wandering Folk, playable
+
+Jeremy: *"We'll therefore do wanderers first"*, with the Bone-Speaker to join
+the orc tree when the Unbound arrive.
+
+Ten units, ten advances, ten city buildings, a faction entry, a palace, perks,
+advisor lines and an AI personality. They expand, research, build and fight.
+**Their own mechanic — the Caravan and Recruit — is not here**, nor are the
+Caravan and ending advances that unlock buildings which do not exist yet.
+
+### Stats were derived, because the bible gives equivalents
+
+`WANDERERS_PLAN.md` gives every tier a *rough equivalent* on an existing
+roster rather than a stat line, plus one rule: *"Create costs noticeably more
+per tier than the equivalent unit costs either established faction."* So the
+fighting numbers are the equivalent's unchanged, and the cost carries a flat
+quarter on top. One multiplier, written down in `units.ts`, so retuning half
+the faction's identity is one pass rather than thirteen opinions.
+
+Counting ladders are mine — the bible is silent — and follow the Hive's
+pattern: ladders on the cheap tiers, none on the signatures.
+
+Four things the bible does not give and I drafted, all flagged in place and
+all trivially replaceable: the civ name, the leader, the colour and the
+twenty-four city names.
+
+### A faction with everything, invisible to the game
+
+`FACTION_IDS` was a hand-written array. The Wandering Folk had units, a tech
+fork, a palace, perks and advisor lines — and nothing offered them, because
+that one line had not been edited. The opponent picker, the Orcpedia's tabs,
+`rivalFactions` and `opponentsOf` all read it.
+
+Nothing failed. Two Orcpedia tests caught it, and only because they sweep the
+creature table rather than a list somebody maintains. **`FACTION_IDS` is
+derived from `FACTIONS` now** — which is an exhaustive `Record`, so it cannot
+drift again.
+
+### Four tests found four real gaps
+
+- **`tech-useful.test.ts`** reported that the Wandering Folk *"cannot keep a
+  city calm, cannot study, cannot make gold, cannot supply an army abroad,
+  cannot send units out hardened"*. A faction that could fight and never
+  develop. That is what prompted the ten city buildings, whose mechanical
+  fields are copied from the Hive's equivalent slot unchanged so all four
+  sides stay on one economy.
+- **`art-present.test.ts`** caught the advance and building icons — the
+  third and fourth hand-maintained art lists this drop has tripped over.
+
+### The AI personality is the third time of writing this comment
+
+Without one, a faction falls to `PERSONALITIES.orc`, whose every priority is
+an orc advance it cannot research. Measured before the entry existed, sixty
+turns against the Horde: **nine advances to fifteen, three cities to six, and
+the only two unit types ever built were the free one and the twenty-beaker
+one.** With it: six to eight cities, fifteen to seventeen advances, four to
+five unit kinds, and games that finish.
+
+### Open, and wants Jeremy
+
+**The default game is four-sided now.** Section 139's rule is "everybody else
+unless you choose", so every default game gets the Wandering Folk arriving
+around turn 150. That is the honest reading of the rule and it moves the
+baseline every measurement in this project was taken against. Worth deciding
+deliberately rather than inheriting.
+
+Also open: the palace chassis points are the Horde's, borrowed, because the
+Wandering Folk's palace art has not been processed — `prepare_art.py` keeps
+its own list for those too. The tier names match the art's own filenames
+(`Wing, On Credit`), so no art needs renaming.
