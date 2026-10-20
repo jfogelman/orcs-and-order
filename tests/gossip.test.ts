@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { afterEach } from 'vitest';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
+import { ARRIVALS } from '../src/sim/arrivals';
 import { foundCity } from '../src/sim/city';
 import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../src/sim/gossip';
 import { SPY } from '../src/sim/spying';
@@ -19,12 +21,28 @@ import type { City, GameState, Unit } from '../src/model/types';
 /**
  * **Three sides, because the whole rung is about a third party.**
  *
- * `createGame` makes two and the Hive emerges later, so a default board has
- * nobody for side 1 to have an opinion *about*. Asking for the Hive as the
- * player's faction puts all three on the board from turn one, which is how
- * `disguise.test.ts` gets its third party too.
+ * A default board has two and the third arrives later, so side 1 has nobody
+ * to have an opinion *about*. This used to be got by playing as the Hive,
+ * which seated all three at turn one because `startsOnMap` was a fact about
+ * the faction and both empires had it.
+ *
+ * **Section 139 took that away**, and rightly: arrival is now a fact about
+ * the slot, so a Hive player faces one empire at turn one and the other on a
+ * clock like anybody else. The board went to two seats, `state.players[2]`
+ * became undefined, and three tests here died in `foundCity` rather than
+ * anywhere that would explain why.
+ *
+ * So it asks for what it actually wants instead of arranging it by side
+ * effect: everybody on the map at once, which is exactly what the `ARRIVALS`
+ * lever is for. Restored in `afterEach`, because a lever left flipped is the
+ * next file's mystery.
  */
+afterEach(() => {
+  ARRIVALS.enabled = true;
+});
+
 function board(): { state: GameState; spy: Unit; theirs: City } {
+  ARRIVALS.enabled = false;
   const state = createGame({
     seed: 71,
     width: 40,
@@ -148,6 +166,9 @@ describe('what the report is worth', () => {
   });
 
   it('pulls an army toward a side that is busy elsewhere', () => {
+    // Its own board rather than `board()`, so it needs the same three seats
+    // for the same reason -- see the note on `board()` about section 139.
+    ARRIVALS.enabled = false;
     const state = createGame({
       seed: 71,
       width: 40,
@@ -155,6 +176,7 @@ describe('what the report is worth', () => {
       barbarians: false,
       playerFaction: 'hivekin',
     });
+    expect(state.players, 'three sides, or there is no third party').toHaveLength(3);
     state.terrain.fill('grass');
     state.units.length = 0;
     state.cities.length = 0;

@@ -1,5 +1,5 @@
 import { audio } from '../audio/audio';
-import { FACTIONS, STARTING_FACTIONS } from '../model/factions';
+import { FACTIONS, FACTION_IDS, STARTING_FACTIONS } from '../model/factions';
 import { perkName } from '../model/perks';
 import type { PerkDef } from '../model/perks';
 import type { DifficultyId, FactionId, GameState } from '../model/types';
@@ -33,6 +33,26 @@ export function openNewGameMenu(
       </label>`;
   }).join('');
 
+  /**
+   * Who to play against. Section 139.
+   *
+   * Every side but the one being played, and at least one of them. The
+   * **order** is what decides who is on the map at turn one and who arrives
+   * later -- the first checked is there from the start and the rest turn up
+   * on a staggered clock, later on an easy game and earlier on a hard one.
+   * So the note under the row is not decoration: without it the difference
+   * between two ticks and three is invisible until turn ninety.
+   */
+  const opponentCards = FACTION_IDS.map((id) => {
+    const f = FACTIONS[id];
+    return `
+      <label class="choice-card opponent" data-opponent="${id}">
+        <input type="checkbox" name="opponent" value="${id}" checked />
+        <span class="choice-name" style="color:${f.color}">${escapeHtml(f.civName)}</span>
+        <span class="choice-sub">${escapeHtml(f.leader)}</span>
+      </label>`;
+  }).join('');
+
   // Section 113: five levels, Normal picked unless the player asks otherwise.
   const difficultyCards = DIFFICULTIES.map(
     (d) => `
@@ -50,6 +70,10 @@ export function openNewGameMenu(
       <div class="panel-body">
         <div class="field-label">Play as</div>
         <div class="choice-row">${factionCards}</div>
+
+        <div class="field-label" style="margin-top:12px">Against</div>
+        <div class="choice-row" id="opponent-row">${opponentCards}</div>
+        <p class="flavor" id="opponent-note"></p>
 
         <div class="field-label" style="margin-top:12px">World size</div>
         <div class="choice-row">
@@ -137,6 +161,58 @@ export function openNewGameMenu(
         });
       });
 
+      /**
+       * Keep the opponent row honest as the player changes sides.
+       *
+       * Your own side is not an opponent, so its card is hidden rather than
+       * merely unchecked -- an unchecked card you cannot tick reads as a bug.
+       * And the last remaining tick is refused, because a game against nobody
+       * is not a game and the start button would simply do nothing.
+       */
+      const syncOpponents = (): void => {
+        const mine =
+          root.querySelector<HTMLInputElement>('input[name="faction"]:checked')?.value ?? current;
+        const boxes = [...root.querySelectorAll<HTMLInputElement>('input[name="opponent"]')];
+        for (const box of boxes) {
+          const card = box.closest<HTMLElement>('.choice-card');
+          const isMe = box.value === mine;
+          if (card) card.hidden = isMe;
+          if (isMe) box.checked = false;
+          else if (card?.dataset.touched !== 'yes') box.checked = true;
+        }
+        const live = boxes.filter((b) => b.value !== mine && b.checked);
+        // The last one cannot be turned off.
+        for (const box of boxes) box.disabled = live.length === 1 && box.checked;
+        for (const box of boxes) {
+          box.closest<HTMLElement>('.choice-card')?.classList.toggle('selected', box.checked);
+        }
+        const note = root.querySelector('#opponent-note');
+        if (note) {
+          const names = live.map((b) => FACTIONS[b.value as FactionId].civName);
+          note.textContent =
+            names.length <= 1
+              ? `${names[0] ?? 'Nobody'} is on the map from the first turn.`
+              : `${names[0]} is on the map from the first turn. ` +
+                `${names.slice(1).join(' and ')} ` +
+                // A civ name is singular -- "The Radiant Kingdom of Bram
+                // arrive later" is wrong, and wrong in the one sentence that
+                // explains the whole feature.
+                `${names.length > 2 ? 'arrive' : 'arrives'} later, on ground nobody has ` +
+                'claimed — later on an easy game, sooner on a hard one.';
+        }
+      };
+      root.querySelectorAll<HTMLInputElement>('input[name="opponent"]').forEach((box) => {
+        box.addEventListener('change', () => {
+          const card = box.closest<HTMLElement>('.choice-card');
+          if (card) card.dataset.touched = 'yes';
+          syncOpponents();
+        });
+      });
+      root.querySelectorAll<HTMLInputElement>('input[name="faction"]').forEach((box) => {
+        box.addEventListener('change', syncOpponents);
+      });
+      syncOpponents();
+
       root.querySelector('#btn-start')?.addEventListener('click', () => {
         const faction =
           (root.querySelector<HTMLInputElement>('input[name="faction"]:checked')?.value as
@@ -167,9 +243,19 @@ export function openNewGameMenu(
             ? ('archipelago' as const)
             : ('continent' as const);
 
+        const opponents = [
+          ...root.querySelectorAll<HTMLInputElement>('input[name="opponent"]:checked'),
+        ]
+          .map((b) => b.value as FactionId)
+          .filter((f) => f !== faction);
+
         close();
         onStart({
           playerFaction: faction,
+          // Empty would mean "everybody", which is not what an empty row
+          // means to the person who emptied it -- but the row cannot be
+          // emptied, so this is belt and braces rather than a real case.
+          ...(opponents.length > 0 ? { opponents } : {}),
           difficulty,
           world,
           ...dims,

@@ -20,10 +20,11 @@ import { assignWorkers, cityYield, foundCity, productionCostIn } from '../src/si
 import { atPeace, hostile, signPeace, PEACE } from '../src/sim/diplomacy';
 import { attackStrength } from '../src/sim/combat';
 import { dominanceShare } from '../src/sim/turn';
-import { HIVEKIN, hivekinOf, placeQueen } from '../src/sim/hivekin';
+import { HIVEKIN, hiveArrivalTurn, hivekinOf, placeQueen } from '../src/sim/hivekin';
 import { endingFor } from '../src/sim/endings';
 import { effectiveMove } from '../src/sim/rules';
 import { HIVE_RULES } from '../src/ui/pedia';
+import { arrivalTurnFor, latecomers } from '../src/sim/arrivals';
 import { QUEEN } from '../src/sim/hivekin';
 import { BURROW } from '../src/sim/burrow';
 
@@ -461,13 +462,31 @@ describe('three sides, counted', () => {
     expect(FACTIONS.hivekin.playable).toBe(true);
   });
 
-  it('gives a Hive player both empires, so everybody faces two rivals', () => {
+  it('gives a Hive player one empire now and the other on the clock', () => {
+    // **Changed on purpose by section 139**, and this is the test that says
+    // so. A Hive player used to face both empires at turn one, because
+    // `startsOnMap` was a fact about the *faction* and both empires had it.
+    // It is now a fact about the *slot*: the first opponent is here, the rest
+    // arrive staggered. The Hive is no longer the only side that turns up
+    // late, which is the whole point of the section, and the price is that
+    // its own game stops being the one exception to its own rule.
     const theirs = createGame({ seed: 7, width: 30, height: 20, playerFaction: 'hivekin' });
-    expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc', 'human']);
-    // And an empire's game is untouched: one rival at turn one, and the third
-    // side still arrives out of the ground later.
+    expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc']);
+    // Still two rivals, and the second is on a clock rather than cancelled.
+    expect(latecomers(theirs)).toEqual(['human']);
+    expect(arrivalTurnFor(theirs, 0)).toBeGreaterThan(1);
+  });
+
+  it('leaves an empire’s game exactly as it was measured', () => {
+    // The one that must not move. A hundred sections of balance were taken on
+    // an Orc player facing the Kingdom from turn one and the Hive around
+    // ninety, and section 139 has to reproduce it identically rather than
+    // merely equivalently -- including the drawn arrival turn, which is
+    // hashed so that the first latecomer gets exactly what section 125 drew.
     const ours = createGame({ seed: 7, width: 30, height: 20 });
     expect(ours.players.map((p) => p.faction)).toEqual(['orc', 'human']);
+    expect(latecomers(ours)).toEqual(['hivekin']);
+    expect(hiveArrivalTurn(ours)).toBe(arrivalTurnFor(ours, 0));
   });
 
   it('starts a Hive player with the same forces as anybody else', () => {
@@ -528,23 +547,38 @@ describe('what the book says about them', () => {
     expect(intro).toMatch(/Hives/);
     expect(intro).toMatch(/castes/);
     expect(intro).toMatch(/Queen/);
-    // When they turn up, and that they are not there at the start.
-    expect(intro).toMatch(/not on the map when the game starts/i);
-    expect(intro).toMatch(new RegExp(`${HIVEKIN.from}`));
-    expect(intro).toMatch(new RegExp(`${HIVEKIN.until}`));
     // And the rule an empire player will otherwise learn by trying it: they
     // do come to the table, and a treaty with them binds that pair alone.
     expect(intro).toMatch(/will talk/i);
     expect(intro).toMatch(/signed for itself/i);
-    // Section 136: and that when they arrive is the level's business.
-    expect(intro).toMatch(/level you chose/i);
+  });
+
+  it('no longer claims the arrival rules as its own', () => {
+    // **Section 139, and Jeremy's ruling when he settled it.** Arrival stopped
+    // being a fact about the Hivekin -- any side can be the one that turns up
+    // late, and which one does is decided by the order you picked your
+    // opponents in. So the window and the level-shift moved to the Difficulty
+    // pane, where they describe every latecomer rather than this one.
+    //
+    // The assertions did not vanish with the text: they are in
+    // `tests/ui/pedia-topics.test.ts`, against the pane that now carries
+    // them. A rule that moves and takes no test with it is a rule that
+    // quietly stops being checked.
+    expect(HIVE_RULES).not.toMatch(/level you chose/i);
+    expect(HIVE_RULES).not.toContain(String(HIVEKIN.from));
+    expect(HIVE_RULES).not.toContain(String(HIVEKIN.until));
+    // It still says where to look, or the reader is simply left wondering.
+    expect(HIVE_RULES).toMatch(/under Difficulty/);
   });
 
   it('never prints a number it failed to look up', () => {
     // Every figure in the block is interpolated from the levers, so a renamed
     // one would read "undefined" to the player rather than failing anywhere.
     expect(HIVE_RULES).not.toMatch(/undefined|NaN|\[object/);
-    for (const n of [HIVEKIN.from, HIVEKIN.until, HIVEKIN.grace, QUEEN.countdown, BURROW.range]) {
+    // `from`, `until` and `grace` left with the arrival rules in section 139
+    // and are pinned against the Difficulty pane instead. What remains here
+    // is what is genuinely about the Hive.
+    for (const n of [QUEEN.countdown, BURROW.range]) {
       expect(typeof n, 'a lever the book quotes').toBe('number');
       expect(HIVE_RULES).toContain(String(n));
     }

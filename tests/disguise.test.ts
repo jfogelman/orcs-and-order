@@ -12,6 +12,8 @@ import {
   uncover,
   wearDisguise,
 } from '../src/sim/disguise';
+import { afterEach } from 'vitest';
+import { ARRIVALS } from '../src/sim/arrivals';
 import { deserialize, serialize } from '../src/persist/save';
 import type { GameState } from '../src/model/types';
 
@@ -25,8 +27,24 @@ import type { GameState } from '../src/model/types';
  * through it, and a slice that changes what is *shown* and not what is *true*
  * can be checked by finding the truth unmoved.
  */
-/** Three sides on the board, so "somebody else" is a real third party. */
+afterEach(() => {
+  ARRIVALS.enabled = true;
+});
+
+/**
+ * Three sides on the board, so "somebody else" is a real third party.
+ *
+ * This used to be got by playing as the Hive, which seated all three at turn
+ * one because `startsOnMap` was a fact about the faction. **Section 139 made
+ * arrival a fact about the slot**, so that now seats two and the comment
+ * above would have become a quiet lie -- the file went on passing, because
+ * nothing here had ever actually asserted the third side existed.
+ *
+ * It asks for what it means instead: everybody on the map at once, which is
+ * what the `ARRIVALS` lever is for.
+ */
 function board(): GameState {
+  ARRIVALS.enabled = false;
   const state = createGame({ seed: 31, width: 30, height: 20, playerFaction: 'hivekin' });
   state.terrain.fill('grass');
   state.units.length = 0;
@@ -135,6 +153,10 @@ describe('a unit that is not what it appears to be', () => {
     const sides = couldWear(state, spy);
     expect(sides).toContain(0);
     expect(sides).toContain(1);
+    // And the third, which is the whole reason this board has three sides.
+    // It never said so before, so the fixture's third seat was decoration.
+    expect(state.players, 'the board should have a third party on it').toHaveLength(3);
+    expect(sides, 'a spy may pass for any side it could have met').toContain(2);
   });
 
   it('survives a save and a load, both halves of it', () => {
