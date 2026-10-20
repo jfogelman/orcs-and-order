@@ -260,6 +260,16 @@ TECH_ICONS = [
     # the third time that has cost something. `tests/art-present.test.ts` now
     # catches it from the other end, by checking the model against `public/`.
     "always-this-many", "assumed-fewer",
+    # Section 142: the Wandering Folk's fork. All thirteen, including
+    # `caravan-building`, `mystic-exorcism` and `nowhere-left-but-up`, whose
+    # rules are not written yet -- banked with the rest, the way section 136's
+    # spy icons were, because a hand-maintained list is only safe if the art
+    # goes in the day it arrives. `art-present.test.ts` caught this: ten
+    # advances existed in `techs.ts` with no picture.
+    "first-wanderers", "caravan-building",
+    "tier-skirmisher", "tier-warband", "tier-slinger", "tier-outcast", "tier-brute",
+    "signature-mystic", "mystic-exorcism", "signature-champion",
+    "signature-bonebound", "signature-drake", "nowhere-left-but-up",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -289,6 +299,11 @@ BUILDING_ICONS = [
     "moltingChamber", "secondFeeding", "secondQueenShell",
     "oldQueensShell", "broodwarmth", "undercity",
     "princess-bonus",
+    # Section 142, same story one list down.
+    "circledWagons", "sharedFire", "bigTent", "hiredPost", "routeBook",
+    "knottedRecord", "strongboxWagon", "tollPost", "waystation", "wagerRing",
+    # Drawn and banked: the first folly and the three ending works.
+    "firstCaravan", "lastMap", "standingOrder", "circlingCaravan",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the

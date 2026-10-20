@@ -27,9 +27,12 @@ function game(opts: { playerFaction?: FactionId; opponents?: FactionId[] } = {})
 describe('who is in the game', () => {
   it('faces everybody else when nobody has chosen', () => {
     const state = game();
-    expect(opponentsOf(state)).toEqual(['human', 'hivekin']);
+    // Section 142 added a fourth side, so "everybody else" is three of them.
+    // The shape of the rule is what is pinned here, not the count: one on the
+    // map, the rest on the clock.
+    expect(opponentsOf(state)).toEqual(['human', 'hivekin', 'wandering']);
     expect(opponentsAtStart(state)).toEqual(['human']);
-    expect(latecomers(state)).toEqual(['hivekin']);
+    expect(latecomers(state)).toEqual(['hivekin', 'wandering']);
   });
 
   it('is the game a hundred sections were measured on, identically', () => {
@@ -112,7 +115,7 @@ describe('the staggered clock', () => {
     ARRIVALS.enabled = false;
     try {
       const state = game();
-      expect(opponentsAtStart(state)).toEqual(['human', 'hivekin']);
+      expect(opponentsAtStart(state)).toEqual(['human', 'hivekin', 'wandering']);
       expect(latecomers(state)).toEqual([]);
     } finally {
       ARRIVALS.enabled = true;

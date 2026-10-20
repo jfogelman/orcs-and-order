@@ -111,7 +111,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: ['outpost', 'depot', 'theForwardBurrow'],
+    buildings: ['outpost', 'depot', 'theForwardBurrow', 'waystation'],
     flags: ['bridges'],
     flavor: 'Walking around the swamp was, in hindsight, a choice.',
   },
@@ -122,7 +122,7 @@ export const TECHS: TechDef[] = [
     cost: 75,
     prereqs: ['bridge-building'],
     units: [],
-    buildings: ['walls', 'catapult', 'theNarrowing'],
+    buildings: ['walls', 'catapult', 'theNarrowing', 'circledWagons'],
     flags: [],
     flavor:
       'A bridge, but standing up and unwelcoming. The Horde attends the same ' +
@@ -135,7 +135,7 @@ export const TECHS: TechDef[] = [
     cost: 115,
     prereqs: ['wall-building'],
     units: [],
-    buildings: ['bigVault', 'exchange', 'yellingWall', 'theGreaterRendering'],
+    buildings: ['bigVault', 'exchange', 'yellingWall', 'theGreaterRendering', 'tollPost'],
     flags: ['watchtower', 'channels'],
     flavor: 'A wall, but taller and lonelier.',
   },
@@ -146,7 +146,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: ['treasury', 'market', 'firstLedger', 'theRenderingPit'],
+    buildings: ['treasury', 'market', 'firstLedger', 'theRenderingPit', 'strongboxWagon'],
     flags: [],
     flavor:
       'The same coin keeps turning up. Eventually somebody scratches a number ' +
@@ -159,7 +159,7 @@ export const TECHS: TechDef[] = [
     cost: 85,
     prereqs: ['not-you-again'],
     units: [],
-    buildings: ['thinkingRock', 'scriptorium', 'unfinishedCathedral', 'theScentRecord'],
+    buildings: ['thinkingRock', 'scriptorium', 'unfinishedCathedral', 'theScentRecord', 'routeBook'],
     flags: [],
     flavor:
       'It emerges you can build a place specifically for thinking in. The ' +
@@ -172,7 +172,7 @@ export const TECHS: TechDef[] = [
     cost: 65,
     prereqs: ['tree-hugging'],
     units: [],
-    buildings: ['totem', 'chapel', 'theHum'],
+    buildings: ['totem', 'chapel', 'theHum', 'sharedFire'],
     flags: [],
     flavor: 'Morale is discovered, immediately weaponised, and then regulated.',
   },
@@ -236,7 +236,7 @@ export const TECHS: TechDef[] = [
     cost: 150,
     prereqs: ['happiness'],
     units: [],
-    buildings: ['bigTotem', 'cathedral', 'longPeaceMonument', 'theDeeperHum'],
+    buildings: ['bigTotem', 'cathedral', 'longPeaceMonument', 'theDeeperHum', 'bigTent'],
     flags: ['berserk'],
     flavor: 'Happiness, taken one step further than anyone recommended.',
   },
@@ -970,6 +970,130 @@ export const TECHS: TechDef[] = [
       'Somebody worked out that a soldier is a person, and that a person who is paid ' +
       'once a season can be paid twice. The second payment is the interesting one, and ' +
       'nobody has yet found the argument against it.',
+  },
+  // ----------------------------------------------- section 142: the Wandering Folk
+  //
+  // Taken verbatim from `WANDERERS_PLAN.md`'s table -- ids, names, costs,
+  // prerequisites and flavour are all Jeremy's. The fork sits on the shared
+  // spine exactly as the orc and human trees do.
+  //
+  // **Two of the bible's thirteen are not here yet.** `caravan-building`
+  // grants the Caravan and `nowhere-left-but-up` grants the three ending
+  // works, and neither building exists; an advance that unlocks nothing would
+  // be an empty box in the tree. They arrive with their buildings.
+  {
+    id: 'first-wanderers',
+    name: 'Whoever Was Left',
+    faction: 'wandering',
+    cost: 0,
+    prereqs: [],
+    units: ['wanderer'],
+    buildings: [],
+    flags: [],
+    flavor: 'There was no homeland to begin from. This turned out not to matter.',
+  },
+  {
+    id: 'tier-skirmisher',
+    name: 'The First Ones Who Stayed',
+    faction: 'wandering',
+    cost: 20,
+    prereqs: ['first-wanderers'],
+    units: ['wf-skirmisher'],
+    buildings: [],
+    flags: [],
+    flavor: 'They were not asked to leave. They left anyway. Close enough.',
+  },
+  {
+    id: 'tier-warband',
+    name: 'A Proper Line',
+    faction: 'wandering',
+    cost: 45,
+    prereqs: ['tier-skirmisher'],
+    units: ['warband'],
+    buildings: ['hiredPost'],
+    flags: [],
+    flavor: 'Ordinary people, mostly. The paperwork was the only unusual part.',
+  },
+  {
+    id: 'tier-slinger',
+    name: 'Aim, Borrowed',
+    faction: 'wandering',
+    cost: 50,
+    prereqs: ['tier-skirmisher'],
+    units: ['slinger'],
+    buildings: [],
+    flags: [],
+    flavor: 'Nobody remembers whose technique this originally was. It works regardless.',
+  },
+  {
+    id: 'tier-outcast',
+    name: 'Exile, Reclassified',
+    faction: 'wandering',
+    cost: 85,
+    prereqs: ['tier-warband'],
+    units: ['outcast'],
+    buildings: ['wagerRing'],
+    flags: [],
+    flavor: 'The word "outcast" was already accurate. It was simply adopted.',
+  },
+  {
+    id: 'tier-brute',
+    name: 'The One-Headed Sort',
+    faction: 'wandering',
+    cost: 95,
+    prereqs: ['tier-outcast'],
+    units: ['wf-brute'],
+    buildings: [],
+    flags: [],
+    flavor: 'One head was, elsewhere, considered a defect. Here it is simply a head count.',
+  },
+  {
+    id: 'signature-mystic',
+    name: 'Taught By Watching',
+    faction: 'wandering',
+    cost: 100,
+    prereqs: ['tier-warband'],
+    units: ['mystic'],
+    buildings: ['knottedRecord'],
+    flags: [],
+    flavor: 'No institution agreed to teach this. It was learned regardless, from a distance.',
+  },
+  {
+    id: 'signature-champion',
+    name: 'An Order Of One',
+    faction: 'wandering',
+    cost: 125,
+    prereqs: ['tier-outcast'],
+    units: ['champion'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'Nobody else was going to found the order. This was considered sufficient reason ' +
+      'to do it personally.',
+  },
+  {
+    id: 'signature-bonebound',
+    name: 'A Guide, Picked Up',
+    faction: 'wandering',
+    cost: 130,
+    prereqs: ['tier-brute'],
+    units: ['bonebound'],
+    buildings: [],
+    flags: [],
+    flavor: 'Where it was found has not been disclosed. This is generally considered wise.',
+  },
+  {
+    id: 'signature-drake',
+    name: 'Caught, Not Bred',
+    faction: 'wandering',
+    cost: 185,
+    prereqs: ['signature-bonebound'],
+    units: ['drake'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'The drake was not purchased. The drake was convinced. There is a difference, and ' +
+      'it involved considerably more fish.',
   },
   {
     // Section 138: the last rung, and the one that is a different question.

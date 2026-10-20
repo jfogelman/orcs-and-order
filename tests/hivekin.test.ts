@@ -319,14 +319,18 @@ describe('a side that does come to the table, and is still not like you', () => 
     expect(hostile(state, 1, hive)).toBe(true);
   });
 
-  it('leaves every side two rivals it could in principle sign with', () => {
-    expect(rivalFactions('orc')).toEqual(['human', 'hivekin']);
-    // Two, where this said one until slice 3b -- which is exactly why
-    // `rival()` picking "the first other talker" had to stop being a function
-    // that returns one side.
-    expect(rivalFactions('orc').filter(talks)).toEqual(['human', 'hivekin']);
-    expect(rivalFactions('human').filter(talks)).toEqual(['orc', 'hivekin']);
-    expect(rivalFactions('hivekin').filter(talks)).toEqual(['orc', 'human']);
+  it('leaves every side more than one rival it could in principle sign with', () => {
+    // One until slice 3b, two after it, three since section 142 -- which is
+    // exactly why `rival()` picking "the first other talker" had to stop
+    // being a function that returns one side. Asserted as *everybody else*
+    // rather than as a list, so the next faction does not come back here.
+    for (const id of FACTION_IDS) {
+      const rivals = rivalFactions(id);
+      expect(rivals, `${id} should face everybody else`).toEqual(
+        FACTION_IDS.filter((f) => f !== id),
+      );
+      expect(rivals.filter(talks).length, `${id} has nobody to sign with`).toBeGreaterThan(1);
+    }
   });
 });
 
@@ -434,8 +438,11 @@ describe('three sides, counted', () => {
     expect(dominanceShare(4)).toBeCloseTo(0.5, 5);
   });
 
-  it('knows three factions and gives each one a full definition', () => {
-    expect(FACTION_IDS).toHaveLength(3);
+  it('gives every faction it knows a full definition', () => {
+    // The count is the incidental half: the subject is that **every** side in
+    // the table is complete, which is what stops a faction shipping with
+    // eleven city names and a settler that belongs to somebody else.
+    expect(FACTION_IDS.length).toBeGreaterThanOrEqual(4);
     for (const id of FACTION_IDS) {
       const def = FACTIONS[id];
       expect(def.cityNames.length, `${id} names`).toBe(24);
@@ -455,7 +462,7 @@ describe('three sides, counted', () => {
    * 0, and a Hive player simply faces both empires.
    */
   it('is offered as a side to play, while still not starting on the map', () => {
-    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin']);
+    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin', 'wandering']);
     // Still false, and that still means what it always meant: in a game
     // somebody else is playing, the Hive is not there until it emerges.
     expect(FACTIONS.hivekin.startsOnMap).toBe(false);
@@ -473,7 +480,8 @@ describe('three sides, counted', () => {
     const theirs = createGame({ seed: 7, width: 30, height: 20, playerFaction: 'hivekin' });
     expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc']);
     // Still two rivals, and the second is on a clock rather than cancelled.
-    expect(latecomers(theirs)).toEqual(['human']);
+    // Section 142: and the Wandering Folk behind them, on their own clock.
+    expect(latecomers(theirs)).toEqual(['human', 'wandering']);
     expect(arrivalTurnFor(theirs, 0)).toBeGreaterThan(1);
   });
 
@@ -485,7 +493,9 @@ describe('three sides, counted', () => {
     // hashed so that the first latecomer gets exactly what section 125 drew.
     const ours = createGame({ seed: 7, width: 30, height: 20 });
     expect(ours.players.map((p) => p.faction)).toEqual(['orc', 'human']);
-    expect(latecomers(ours)).toEqual(['hivekin']);
+    // The Hive is still the *first* latecomer, which is the half that has to
+    // not move: its arrival turn is drawn for index 0 exactly as before.
+    expect(latecomers(ours)).toEqual(['hivekin', 'wandering']);
     expect(hiveArrivalTurn(ours)).toBe(arrivalTurnFor(ours, 0));
   });
 

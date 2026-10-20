@@ -129,6 +129,32 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
       yard: [64, 98],
     },
   },
+  // Section 142. **Not yet marked off the real art.**
+  //
+  // Every other chassis here was measured by hand off a pixel grid of its own
+  // `public/palace/<faction>-base.png`. The Wandering Folk's base art exists
+  // -- `art_src/factions/wanderers/palace/Base chassis - The Standing
+  // Caravan.jpg` -- but `prepare_art.py` keeps its own hand-maintained palace
+  // list, and nothing has processed it yet, so there is no grid to read.
+  //
+  // These are the Horde's points, borrowed. The two chassis are not the same
+  // shape and this will be visibly wrong when the art lands: a caravan is
+  // wider and lower than a warcamp hall, so the tower and the banner will sit
+  // too high and the wing too far left. It is wrong in a way nobody loses a
+  // game to -- Civic Pride pieces do nothing whatsoever -- and it is better
+  // than a faction that cannot be compiled.
+  //
+  // **To finish: process the palace art, then re-mark these five points.**
+  wandering: {
+    width: 0.58,
+    points: {
+      door: [37, 103],
+      tower: [63, 116],
+      side: [0, 85],
+      roof: [37, 48],
+      yard: [64, 116],
+    },
+  },
   // Section 125. Marked the same way the other two were -- by hand, off a pixel
   // grid of `public/palace/hivekin-base.png`, which is 128 by 88. A mound has
   // no corners, so the two points that mean "corner" elsewhere are read as the
@@ -222,6 +248,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Dirt Yard', 'Cobbled Courtyard', 'Manicured Garden'],
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
       hivekin: ['Packed Earth', 'Scoured Apron', 'Tended Brood-Beds'],
+      wandering: ['Ground, On Credit', 'Ground, Paid Up', 'Ground, Owned Outright'],
     },
     // Centred a little behind the near corner, so the hall's foundation is
     // drawn over the yard's back edge: ground the hall stands in, not a rug.
@@ -243,6 +270,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Shrine Annex', 'Stained-Glass Chapel', 'Cathedral Wing'],
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
       hivekin: ['Brood Annex', 'Brood Hall', 'Royal Gallery'],
+      wandering: ['Wing, On Credit', 'Wing, Paid Up', 'Wing, Owned Outright'],
     },
     // Behind the chassis, its nearest corner on the hall's left-hand corner: the
     // hall is drawn over the blank wall it joins by.
@@ -276,6 +304,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Wooden Lookout', 'Stone Tower', 'Gilded Spire'],
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
       hivekin: ['Low Vent', 'Watch Spire', 'High Spire'],
+      wandering: ['Watch, On Credit', 'Watch, Paid Up', 'Watch, Owned Outright'],
     },
     // Sizes are shares of the box at tier two: twice the chassis's drawn height
     // -- 0.58 x 117/128 of the box for the Warcamp, 0.58 x 99/128 for the Grand
@@ -304,6 +333,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Simple Wooden Gate', 'Reinforced Stone Gate', 'Ornamental Grand Gate'],
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
       hivekin: ['Open Tunnel', 'Chitin Valve', 'Sealed Valve'],
+      wandering: ['Gate, On Credit', 'Gate, Paid Up', 'Gate, Owned Outright'],
     },
     at: { point: 'door', anchor: 'mid', size: 0.23 },
     per: { hivekin: { size: 0.3, nudge: [0, 2] } },
@@ -316,6 +346,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       human: ['Single Cloth Banner', 'Matched Banner Set', 'Gold-Trimmed Heraldry'],
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
       hivekin: ['Pheromone Stalk', 'Paired Stalks', 'Crowned Stalks'],
+      wandering: ['Banner, On Credit', 'Banner, Paid Up', 'Banner, Owned Outright'],
     },
     at: { point: 'roof', anchor: 'foot', size: 0.19 },
     // The Horde's are drawn facing the other way, towards the gate below them.

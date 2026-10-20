@@ -52,6 +52,7 @@ const REPORT_TITLE: Record<FactionId, string> = {
   orc: 'Horde Report',
   human: 'Kingdom Survey',
   hivekin: 'The State Of The Hive',
+  wandering: 'The Running Total',
 };
 
 export function empireIncome(state: GameState, playerId: number) {
