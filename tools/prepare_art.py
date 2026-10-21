@@ -2845,11 +2845,12 @@ def main() -> int:
     failed_cities.extend(failed_hives)
     # Section 102's posts are drawn in code until somebody draws them, so the
     # folder is allowed not to exist yet. `ART_PROMPTS.md` has the two prompts.
-    posts, missing_posts, failed_posts = 0, ["orc", "human"], []
+    POSTS = {f: f for f in ("orc", "human", "hivekin", "wandering")}
+    posts, missing_posts, failed_posts = 0, list(POSTS), []
     if (SRC / "posts").exists():
         print("Garrison posts:")
         posts, missing_posts, failed_posts = process_aliased(
-            "posts", {"orc": "orc", "human": "human", "hivekin": "hivekin"}, force, ICON_SIZE
+            "posts", POSTS, force, ICON_SIZE
         )
     print("Capital parts:")
     palace, missing_palace, failed_palace = process_palace(force)

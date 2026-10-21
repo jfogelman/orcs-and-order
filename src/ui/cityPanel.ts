@@ -44,7 +44,7 @@ import {
 import { bar, closeModal, escapeHtml, openModal } from './dom';
 import { splitTrade } from '../sim/research';
 import { openPedia } from './pedia';
-import { CITIZEN_BY_ID, CITIZEN_MOODS } from '../model/citizens';
+import { CITIZEN_BY_ID, MOOD_LADDER, moodAt, moodTally } from '../model/citizens';
 import { unitType } from '../model/units';
 import { workBanked } from '../sim/endings';
 
@@ -256,21 +256,23 @@ function productionIcon(item: ProductionItem): string {
   return `<img class="build-icon" src="${src}" alt="" />`;
 }
 
-/** Turns remaining on the current build, or null when it will never finish. */
 /**
- * How the people here feel, from 0 (delighted) to 3 (furious).
+ * What one citizen's hover says. Section 143.
  *
- * Rioting is its own answer. Otherwise it is how much room the city has left
- * before it stops being content: plenty of room and everyone is pleased,
- * standing at the limit and they are not.
+ * Three things, in the order somebody hovering wants them: who this is, how
+ * they feel, and **why** -- which is the part that was not anywhere in the
+ * interface before. A town showed "Content up to 7" and seven faces, and
+ * working out that the seventh face was the one the 7 did not cover was left
+ * as an exercise.
+ *
+ * Written as one line, because the pop-up collapses whitespace.
  */
-function moodOf(city: City, limit: number): number {
-  if (city.disorder) return CITIZEN_MOODS - 1;
-  const headroom = limit - city.size;
-  if (headroom >= 3) return 0;
-  if (headroom >= 2) return 1;
-  if (headroom >= 1) return 2;
-  return CITIZEN_MOODS - 1;
+function citizenTip(name: string, blurb: string, mood: number, n: number, city: City, limit: number): string {
+  const feeling = MOOD_LADDER[mood].name;
+  const why = city.disorder
+    ? 'the city is rioting'
+    : `citizen ${n} of ${city.size}, content up to ${limit}`;
+  return `${name}, ${feeling} — ${why}. ${blurb}`;
 }
 
 /**
@@ -278,21 +280,29 @@ function moodOf(city: City, limit: number): number {
  *
  * The roster is filled in on demand rather than required to exist, so a city
  * from an older save simply acquires people the first time it is opened.
+ *
+ * Section 143: each face now shows **its own** mood rather than the city's,
+ * and carries the hover that says which one it is. See `moodAt` for why that
+ * is a drawing change and not a rules change.
  */
 function citizenFaces(state: GameState, city: City, limit: number): string {
   const folk = syncCitizens(state, city);
-  const mood = moodOf(city, limit);
   const base = import.meta.env.BASE_URL;
   const root = base.endsWith('/') ? base : `${base}/`;
   return folk
     .map((raceId, i) => {
       const race = CITIZEN_BY_ID[raceId];
       const name = race ? race.name : raceId;
+      const mood = moodAt(!!city.disorder, limit, i + 1);
       // Alternate the two sheets where a race has both, so a crowd is not
       // uniformly one or the other.
       const variant = race?.hasFemale && i % 2 === 1 ? `${raceId}-female` : raceId;
+      // `title` and `data-tip` carry the same words on purpose: the styled
+      // pop-up reads the second, and the first is what is left if its script
+      // never ran. `installOverflowTips` folds two identical ones into one.
+      const tip = escapeHtml(citizenTip(name, race?.blurb ?? '', mood, i + 1, city, limit));
       return (
-        `<span class="citizen" title="${escapeHtml(name)}${race ? ` — ${escapeHtml(race.blurb)}` : ''}" ` +
+        `<span class="citizen" title="${tip}" data-tip="${tip}" ` +
         `style="background-image:url('${root}citizens/${variant}.png');` +
         `background-position:-${mood * CITIZEN_FACE}px 0"></span>`
       );
@@ -300,6 +310,40 @@ function citizenFaces(state: GameState, city: City, limit: number): string {
     .join('');
 }
 
+/**
+ * The town's whole mood as one bar. Section 143.
+ *
+ * The faces above say how each person feels and the bar says how the town
+ * does, which is the thing you actually steer by -- a wall of green means
+ * there is room to grow, and red creeping in from the right is the warning
+ * that the next citizen born here is the one who tips it over.
+ *
+ * Each rung gets `flex-grow` equal to its headcount, so the bar is a count
+ * rather than a picture of one: six delighted and two furious is three
+ * quarters green, and you can read the 2 off it.
+ */
+function moodBar(city: City, limit: number): string {
+  const tally = moodTally(!!city.disorder, limit, city.size);
+  const words = tally
+    .map((n, m) => (n > 0 ? `${n} ${MOOD_LADDER[m].name}` : ''))
+    .filter(Boolean)
+    .join(' · ');
+  const tip = city.disorder
+    ? `Rioting — nothing is produced and nothing is collected until it stops.`
+    : `${words}. The city is content up to ${limit}.`;
+  const segments = tally
+    .map((n, m) =>
+      n > 0
+        ? `<span class="mood-seg" style="flex-grow:${n};background:${MOOD_LADDER[m].color}"></span>`
+        : '',
+    )
+    .join('');
+  return `
+          <div class="mood-bar" title="${escapeHtml(tip)}" data-tip="${escapeHtml(tip)}">${segments}</div>
+          <div class="mood-legend${city.disorder ? ' k-bad' : ''}">${escapeHtml(city.disorder ? 'Rioting' : words)}</div>`;
+}
+
+/** Turns remaining on the current build, or null when it will never finish. */
 function turnsLeft(state: GameState, city: City, perTurn: number): number | null {
   const cost = productionCost(city.producing);
   // None of the standing choices finishes, so none of them has a countdown.
@@ -402,6 +446,7 @@ export function openCityPanel(
           <div class="stat-row"><span class="label">Citizens</span><span class="value">${city.size}${city.disorder ? ' <span class="k-bad">(disorder)</span>' : ''}</span></div>
           <div class="stat-row"><span class="label">Content up to</span><span class="value">${limit}</span></div>
           <div class="citizen-row">${citizenFaces(state, city, limit)}</div>
+          ${moodBar(city, limit)}
           <div class="crop-head">
             <span class="label">Land worked</span>
             ${

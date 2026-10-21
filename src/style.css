@@ -1147,6 +1147,31 @@ button.small.rush[disabled] {
   background-repeat: no-repeat;
   image-rendering: pixelated;
   border-radius: 3px;
+  cursor: help;
+}
+
+/* Section 143: the whole town's mood as one bar, a rung per colour, each as
+   wide as the number of people standing on it. */
+.mood-bar {
+  display: flex;
+  gap: 1px;
+  height: 7px;
+  margin: 3px 0 2px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: help;
+}
+
+.mood-seg {
+  display: block;
+  min-width: 2px;
+}
+
+.mood-legend {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The per-city standing order sits under the production bar. */

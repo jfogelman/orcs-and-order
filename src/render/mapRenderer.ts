@@ -3,7 +3,7 @@ import { seenBy } from '../sim/burrow';
 import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
 import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
-import { FACTIONS } from '../model/factions';
+import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
@@ -165,7 +165,12 @@ export class MapRenderer {
     this.sprites.installRoadArt((frames) => {
       this.roadFrames = frames;
     });
-    for (const faction of ['orc', 'human']) {
+    // Every side, derived -- section 102 wrote `['orc', 'human']` here when
+    // there were two, and that is the fifth hand-maintained list this project
+    // has been bitten by. `public/posts/hivekin.png` has shipped since section
+    // 125 and was never once requested: the Hive's posts have been drawing the
+    // three-shape placeholder hut, and the Wandering Folk would have too.
+    for (const faction of FACTION_IDS) {
       this.sprites.installPostArt(faction, (img) => this.postArt.set(faction, img));
     }
     for (const name of ['irrigation', 'mine']) {

@@ -400,6 +400,15 @@ export function palaceLayout(
   standing: Array<{ module: PalaceModuleDef; tier: number }>,
   box: number,
 ): PalaceLayout {
+  // Section 143: a side whose capital has not been through the art pipeline
+  // yet draws no capital, rather than taking the city panel down with it.
+  //
+  // `PALACE_ART` is generated from whatever `npm run art` has processed, and
+  // the Wandering Folk's palace art had not been -- so `arrange` read `.w` off
+  // `undefined` and **opening your own capital threw**, which is the one city
+  // every game has. Found by opening one. An empty frame is a placeholder; a
+  // thrown exception is a blank panel and a console nobody is reading.
+  if (!PALACE_ART[`${faction}-base`]) return { pieces: [], width: box, height: 0 };
   const worst = arrange(
     faction,
     PALACE_MODULES.map((module) => ({ module, tier: PALACE_TIERS })),

@@ -18,6 +18,7 @@ import type { City, FactionId, GameState } from '../src/model/types';
 import { runAiTurn } from '../src/ai/ai';
 import { CIVIC_PRIDE, assignWorkers, buildOptions, civicPride } from '../src/sim/city';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
+import { FACTION_IDS } from '../src/model/factions';
 import { PRIDE, playerScore, prideDue } from '../src/sim/turn';
 import { deserialize, serialize } from '../src/persist/save';
 
@@ -315,5 +316,48 @@ describe('how the capital is put together', () => {
       }
     }
     expect(PALACE_BY_ID.get('grounds')!.behind).toBe(true);
+  });
+});
+
+/**
+ * Section 143: a capital for every side, or at least not a crash.
+ *
+ * `PALACE_ART` is generated from whatever `npm run art` has processed, and the
+ * Wandering Folk's palace art had not been -- so `arrange` read `.w` off
+ * `undefined` and **opening your own capital threw**. The city panel draws the
+ * capital for the seat of the empire, which is a city every game has, so as
+ * that faction the panel was simply dead.
+ *
+ * Nothing caught it, for the usual reason: every palace test named the three
+ * factions that had art. This one sweeps `FACTION_IDS`, so the next faction
+ * added without its art drawn gets an empty frame rather than an exception.
+ */
+describe('every side can have its capital laid out', () => {
+  it('lays out, or declines to, without throwing', () => {
+    for (const faction of FACTION_IDS) {
+      const standing = PALACE_MODULES.map((module) => ({ module, tier: 1 }));
+      expect(() => palaceLayout(faction, standing, 210), faction).not.toThrow();
+      expect(() => palaceLayout(faction, [], 210), `${faction}, nothing built`).not.toThrow();
+    }
+  });
+
+  it('gives back a frame of real numbers either way', () => {
+    for (const faction of FACTION_IDS) {
+      const layout = palaceLayout(faction, [], 210);
+      expect(Number.isFinite(layout.width), `${faction} width`).toBe(true);
+      expect(Number.isFinite(layout.height), `${faction} height`).toBe(true);
+      for (const piece of layout.pieces) {
+        expect(Number.isFinite(piece.left) && Number.isFinite(piece.width), piece.art).toBe(true);
+      }
+    }
+  });
+
+  /**
+   * A record of work outstanding rather than a bar: the art is Jeremy's to
+   * drop in, and this says out loud which sides are still waiting for it.
+   */
+  it('names the sides still waiting for palace art', () => {
+    const without = FACTION_IDS.filter((f) => !PALACE_ART[`${f}-base`]);
+    expect(without, 'drawn now? then this list is just out of date').toEqual(['wandering']);
   });
 });

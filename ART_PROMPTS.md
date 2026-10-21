@@ -658,7 +658,7 @@ should be conspicuously one stall selling one thing.
 
 ---
 
-## Garrison posts — 2 of 2 done
+## Garrison posts — all 4 done
 
 Section 102's answer to the Posting: a hut on a tile, out on a city's own land,
 that a soldier stands in. It is **drawn on the map**, over the terrain and beside
@@ -666,9 +666,20 @@ the roads, so it wants the same treatment roads got rather than the icon
 treatment: a small structure seen from the same angle as everything else on the
 map, not a picture of one on a card.
 
-Two of them, one a side, at `art_src/posts/<faction>.png` — `orc.png` and
-`human.png`. Until they exist the game draws a placeholder hut with three canvas
-shapes, which is legible and obviously temporary.
+One a side, at `art_src/posts/<faction>.<ext>` — the file is named for the
+**faction id**, so `orc`, `human`, `hivekin` and `wandering`. Until one exists
+the game draws a placeholder hut with three canvas shapes, which is legible and
+obviously temporary.
+
+⚠️ **The renderer asked for two of these until section 143.** `mapRenderer`
+looped over a hand-written `['orc', 'human']`, so `public/posts/hivekin.png` —
+which has shipped since section 125 — was never once requested, and the Hive's
+posts drew the placeholder hut for eighteen sections. It reads `FACTION_IDS`
+now, so a new faction's post is picked up by existing.
+
+That first Hivekin file was also the only sprite in the drop with **no `art_src`
+source**, which is the likeliest reason it was the weakest: it could not be
+re-rolled, only replaced. It has one now, and both are fixed.
 
 **Size and framing.** House style: **Map stamps — one motif, no ground**, taking its
 documented exception on framing — 64×64 in the top-down map view rather than face-on,
@@ -687,11 +698,33 @@ into the sprite will sit on a desert.
 |---|---|---|
 | `orc` | orc | a crude lashed-log lean-to with a hide roof, a spear leaning against one post and a skull on a stake beside it |
 | `human` | human | a tidy timber guardhouse with a shingled roof, a shuttered window and a spear leaning against the wall |
+| `hivekin` | hivekin | a hunched shelter of pale bone-white shell plates grown up out of the ground like a cupped hand, one dark arched opening in its front face with a faint amber glow inside it |
+| `wandering` | wandering | a single battered cart with its wheels chocked and a patched canvas lean-to roped off one side, a spear leaning against the wheel |
 
-**The joke is the difference in tidiness, not the difference in menace**: both are
-one soldier's worth of shelter, and the Kingdom's has been built properly while
-the Horde's has been built quickly. Keep them the same *size* — a post is a post,
-and the rule pays both sides the same.
+**Two clauses the Hivekin one needs**, both of them failures this file had
+already recorded once, and both of which the first roll of it made. Say **"seen
+from above at a three-quarter angle, so the front opening and one side are both
+visible"** — the Hive's subjects are round, a round subject drawn down its own
+axis comes out as concentric circles, and five building icons were lost to
+exactly that. And name the **value** — *pale bone-white shell*, never
+"chitinous" — because near-black brown on transparency turns to a blob when it
+is shrunk.
+
+The version those two clauses replaced was a brown lumpy dome seen straight
+down, which at 32 pixels was a very small Hivekin *city* — and "must not look
+like a city" is the one hard requirement this sprite has. **Do not draw a mound
+with a tunnel in it**: that is the city. A shelter big enough for one soldier,
+grown rather than dug. The pale value is what carries it, because the city it
+has to be told apart from is brown.
+
+The Wandering Folk's is the fourth answer to the same question: the Kingdom
+built it properly, the Horde built it quickly, nobody built the Hive's at all,
+and the Wanderers **did not build one** — they parked. It should look like it
+could leave in the morning, which is the only one of the four that could.
+
+**The joke is the difference in tidiness, not the difference in menace**: each is
+one soldier's worth of shelter, and the rule pays every side the same. Keep them
+the same *size* — a post is a post.
 
 **What matters for the game**, in order: it must read at 32 pixels; it must not
 look like a city (cities are the other structure on the map, and confusing the

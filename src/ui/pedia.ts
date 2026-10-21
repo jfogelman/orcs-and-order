@@ -27,7 +27,8 @@ import { SABOTAGE } from '../sim/sabotage';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
-import { CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
+import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
+import { MOOD_LADDER } from '../model/citizens';
 import { ALT_VICTORY } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
 import { TERRAFORM, jobName } from '../sim/terraform';
@@ -1478,6 +1479,29 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         </p>`
             : ''
         }` },
+      { title: 'Who is content, and who is not', body: `<p class="flavor">
+          A town is <strong>content up to a number</strong> &mdash; ${CALM.base} to begin
+          with, and more for every structure, posting and advance that calms it. The
+          people are counted against that number <em>in order</em>, so the question is
+          never whether a town is unhappy but <strong>which of them</strong> the number
+          does not reach. The ${MOOD_LADDER.length} moods run
+          ${MOOD_LADDER.map((m) => `<strong>${escapeHtml(m.name)}</strong>`).join(', ')}: three
+          places to spare and a citizen is the first, one place and they are the third,
+          and past the number they are the last. <strong>Grow past it far enough and the
+          town riots</strong>, which is everybody at once &mdash; nothing is built and
+          nothing is collected until it stops.
+        </p>
+        <p class="flavor">
+          The city view draws all of this. Every face wears <em>its own</em> mood, so a
+          crowd shades from content at the front to furious at the back; <strong>hover a
+          face</strong> and it says who they are, how they feel and why. Under them is a
+          bar of the same colours, as wide in each as the number of people standing on
+          it &mdash; green across the whole thing means room to grow, and red arriving at
+          the right-hand end means the next citizen born here will be the one who tips
+          it over. ${seeTopic('buildings', 'Every structure, by name', 'The structures that raise the number')}
+          are listed below; ${seeTopic('controls', 'City markers', 'the map itself')}
+          flies a marker over a town already rioting.
+        </p>` },
       { title: 'Every structure, by name', body: `<div class="pedia-rows">${buildingList}</div>` },
     ],
   );
