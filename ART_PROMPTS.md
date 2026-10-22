@@ -2509,3 +2509,34 @@ top-down exception and the new clause above:
 > with one light source from the upper left, mid-1990s fantasy strategy game
 > city-view style, no text, no logos, no border, no characters, no background
 > scenery, no ground shadow.
+
+---
+
+## The Wandering Folk's last two advances (section 146) — 0 of 2
+
+`WANDERERS_PLAN.md` carries an advance-icon table of thirteen, and it was
+written before the same document's naval and siege section added two more
+advances. So `tier-corsair` and `tier-collector` have no prompt anywhere, and
+they are the only two Wandering Folk advances without an icon.
+
+House style: **Flat icons — one object, no scene**, the same block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `tier-corsair` | A Fee, Negotiated | A coiled iron boarding hook with a small paper tag tied to its shank |
+| `tier-collector` | The Debt Comes Due | A short wooden tally stick snapped cleanly in two, the notches on both halves still matching |
+
+**The tally stick is the one worth insisting on.** A split tally is literally
+how a debt was recorded — both parties hold a half, and the notches have to
+line up — so it says *debt* without a coin, a chain or a fist in the picture,
+and it is the same object the Debt Collector has a ledger nailed to its frame
+for. Avoid anything that reads as money: this faction is owed things, not paid.
+
+Drop them at `art_src/factions/wanderers/advances/<id>.jpg`. Both ids are
+already in `TECH_ICONS`, so `npm run art` takes them as they land.

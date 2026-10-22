@@ -182,12 +182,26 @@ HIVEKIN_SPECIALS = {
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
 # The Hivekin's three are named for what they are rather than for the size they
-# stand in for, so they need the translation the other two do not.
-HIVEKIN_CITIES = {
+# stand in for, so they need the translation the other two do not. Section 147
+# adds the Wandering Folk, whose three are named for their tier the same way --
+# and which had sat in `art_src/` unprocessed since the faction drop, because
+# `CITIES` above is built from a hand-written tuple of two faction names.
+#
+# **That is the seventh hand-maintained list this project has been caught by**,
+# and it is the one a player meets first: every Wandering Folk settlement on
+# the map was drawing the fallback.
+FACTION_CITIES = {
     "hivekin_1": "hive-tier1",
     "hivekin_4": "hive-tier2",
     "hivekin_8": "hive-tier3",
+    "wandering_1": "wandering-tier1",
+    "wandering_4": "wandering-tier2",
+    "wandering_8": "wandering-tier3",
 }
+
+# Kept under the old name too: it is referenced below and a rename that misses
+# one call site is exactly the shape of bug this file keeps producing.
+HIVEKIN_CITIES = FACTION_CITIES
 
 # Badges a settlement wears on the map, keyed by the state they mean rather
 # than by the filename they arrived under. Drawn as small markers in a corner
@@ -270,6 +284,10 @@ TECH_ICONS = [
     "tier-skirmisher", "tier-warband", "tier-slinger", "tier-outcast", "tier-brute",
     "signature-mystic", "mystic-exorcism", "signature-champion",
     "signature-bonebound", "signature-drake", "nowhere-left-but-up",
+    # Section 146's two, added in 147 after I stated they were already here and
+    # they were not. See `tests/art-manifest.test.ts`: this is the list the
+    # audit exists to stop anybody from having to remember.
+    "tier-corsair", "tier-collector",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -303,7 +321,9 @@ BUILDING_ICONS = [
     "circledWagons", "sharedFire", "bigTent", "hiredPost", "routeBook",
     "knottedRecord", "strongboxWagon", "tollPost", "waystation", "wagerRing",
     # Drawn and banked: the first folly and the three ending works.
-    "firstCaravan", "lastMap", "standingOrder", "circlingCaravan",
+    # Section 146 adds the other two follies, and `headCount` landed a day later.
+    "firstCaravan", "unnamedMarker", "headCount",
+    "lastMap", "standingOrder", "circlingCaravan",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the
@@ -334,6 +354,15 @@ ADVISOR_PORTRAITS = {
     "cultivator": "the cultivator",
     "heir": "the heir",
     "harvester": "the harvester",
+    # Section 147: the Wandering Folk's six, which have been drawn since the
+    # faction drop and were never processed, because this map is keyed by
+    # advisor id and the faction had no advisors to be keyed by.
+    "reclaimer": "the reclaimer",
+    "campkeeper": "the campkeeper",
+    "broker": "the broker",
+    "self-taught": "the self-taught",
+    "self-sworn": "the self-sworn",
+    "fair-dealer": "the fair dealer",
 }
 
 # Section 46's talking cycles, one per advisor, in `advisors/Talking Cycles/`.
@@ -358,6 +387,12 @@ ADVISOR_TALKING = {
     "cultivator": "the cultivator talking",
     "heir": "the heir talking",
     "harvester": "the harvester talking",
+    "reclaimer": "the reclaimer talking",
+    "campkeeper": "the campkeeper talking",
+    "broker": "the broker talking",
+    "self-taught": "the self-taught talking",
+    "self-sworn": "the self-sworn talking",
+    "fair-dealer": "the fair dealer talking",
 }
 
 # Big enough to read a face at, small enough that twelve of them are not a
@@ -747,6 +782,10 @@ FACTION_FOLDER_ALIASES: dict[str, list[str]] = {
     # Section 125 slice B, when the Hivekin's three terrain resources become
     # ordinary specials. The art is already filed; nothing asks for it yet.
     "specials": ["terrain"],
+    # Section 145. The flat layout files tile overlays under `terrain/`, which
+    # is where irrigation and the mine came from; a faction folder has no
+    # `terrain` to nest them in and simply calls the folder what it holds.
+    "terrain/improvements": ["terrain/improvements", "improvements"],
 }
 
 
@@ -865,6 +904,22 @@ def process_aliased(
     return done, missing, failed
 
 
+# Section 146. Other names a piece of art may have arrived under.
+#
+# Every file in `advances/` is named for its advance **id** -- `tier-brute`,
+# `signature-drake` -- except two, which arrived named for what the advance is
+# *called*: "A Fee, Negotiated" and "The Debt Comes Due". Both are perfectly
+# reasonable names for a picture, and renaming somebody's drop only works
+# until the next one is generated the same way.
+#
+# So the id keeps its alias instead. Looked up only when the id itself finds
+# nothing, so an id-named file always wins and this can never shadow one.
+SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
+    "tier-corsair": ("a fee, negotiated",),
+    "tier-collector": ("the debt comes due",),
+}
+
+
 def process_cutouts(
     folder: str,
     names: list[str],
@@ -882,6 +937,11 @@ def process_cutouts(
 
     for name in names:
         path = find_source(src, name)
+        if path is None:
+            for alias in SOURCE_ALIASES.get(name, ()):
+                path = find_source(src, alias)
+                if path is not None:
+                    break
         if path is None:
             if not quiet_missing:
                 missing.append(name)
@@ -1124,7 +1184,10 @@ def centre_square(img: Image.Image) -> Image.Image:
 
 
 # Section 112's two overlays, drawn over the terrain like the roads.
-IMPROVEMENT_OVERLAYS = ("irrigation", "mine")
+# Section 145 adds the Caravan, which is an overlay drawn on a tile in exactly
+# the way these two are, and is filed with them rather than with the buildings
+# the draft tech entry mistook it for.
+IMPROVEMENT_OVERLAYS = ("irrigation", "mine", "caravan")
 
 
 def process_improvements(force: bool) -> tuple[int, list[str]]:

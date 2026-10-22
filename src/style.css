@@ -672,6 +672,46 @@ button.small {
   color: var(--muted);
 }
 
+/* Section 147: a side's diplomat on the setup screen -- the one of the six
+   whose whole job is being the face somebody else meets. */
+.choice-card.faction {
+  padding-left: 76px;
+  min-height: 78px;
+  position: relative;
+}
+
+.choice-face {
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: #15110c;
+  /* The side's own colour, so the card reads as theirs before the name does. */
+  box-shadow: 0 0 0 1px var(--side, transparent) inset;
+}
+
+.choice-card.opponent {
+  padding-left: 44px;
+  position: relative;
+}
+
+.choice-face.small {
+  width: 30px;
+  height: 30px;
+  left: 8px;
+  top: 8px;
+}
+
+/* No portrait: hold the space rather than let the text jump left, so a
+   faction without one looks unfinished instead of looking different. */
+.choice-face.empty {
+  opacity: 0.25;
+}
+
 .choice-blurb {
   font-size: 11.5px;
   overflow-wrap: anywhere;

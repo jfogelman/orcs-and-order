@@ -222,6 +222,8 @@ export type UnitOrder =
   | 'skip'
   | 'road'
   | 'post'
+  // Section 145: planting a Caravan, which is a post that asks questions.
+  | 'caravan'
   | 'improve'
   // Section 125: underground, and not there as far as anybody else can tell.
   // An order rather than a status because it is a stance held until something
@@ -298,6 +300,13 @@ export interface Unit {
    * Rock. Absent means none, so every older save and fixture loads unchanged.
    */
   drilled?: number;
+  /**
+   * Section 146: extra movement this unit keeps for good, because the city
+   * that built it holds the Unnamed Marker. Stored on the unit rather than
+   * recomputed, exactly as `drilled` is, so it survives the city changing
+   * hands or being sacked -- what was issued was issued.
+   */
+  strides?: number;
   /**
    * Tiles of extra reach, from the city it was built in -- section 111's Rumbling
    * Archive. A ranged unit may strike from its own range or up to this much
@@ -407,6 +416,15 @@ export interface Unit {
    * three sweeps in a row have failed to answer.
    */
   boughtFrom?: number;
+  /**
+   * Section 145: who this unit belonged to before the Wandering Folk asked.
+   *
+   * Kept for measurement in the same way `boughtFrom` is, and for the same
+   * reason -- a sweep wants to know how much of an army was recruited rather
+   * than built, and the unit itself no longer carries any sign of it once it
+   * has renormalised.
+   */
+  recruitedFrom?: number;
   /**
    * Sides that have seen through the disguise, by player id.
    *
@@ -543,6 +561,21 @@ export type DamageKind = 'physical' | 'magic';
  */
 export type BroodBonus = 'shields' | 'calm' | 'beakers' | 'gold' | 'pending';
 
+/**
+ * The roads out of the game that are *built* rather than fought for.
+ *
+ * **One type, in the model, since section 146.** This union was written out by
+ * hand in four places -- twice in `buildings.ts`, twice in `advisors.ts` --
+ * besides `EndingKind` in `sim/endings.ts` and its entry in `VictoryKind`
+ * below. Adding the Wandering Folk's road meant four separate compile errors
+ * in three files, each one a copy somebody had to find.
+ *
+ * Here rather than in `sim/endings.ts` because the model cannot import from
+ * the simulation; `sim/endings.ts` re-exports it as `EndingKind`, which is the
+ * name the rest of the simulation has always called it.
+ */
+export type BuiltEnding = 'portal' | 'object' | 'hive' | 'circle';
+
 export type VictoryKind =
   | 'conquest'
   | 'dominance'
@@ -551,7 +584,9 @@ export type VictoryKind =
   | 'portal'
   | 'object'
   // Section 125: the Hivekin's Second Queen's Shell.
-  | 'hive';
+  | 'hive'
+  // Section 146: the Wandering Folk's Circling Caravan.
+  | 'circle';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }
@@ -810,6 +845,24 @@ export interface GameState {
   irrigation?: number[];
   /** 0/1 per tile: mined by a worker (section 112). The same arrangement. */
   mines?: number[];
+  /**
+   * 0/1 per tile: a Wandering Folk Caravan (section 145). The same arrangement
+   * again, and for the same reason -- a save from before them loads as a map
+   * without any.
+   *
+   * No owner is stored, exactly as a post and a road store none. Only one side
+   * can use a Caravan at all, so "whose" has a single answer and keeping it on
+   * the tile would be a field that can only ever hold one value.
+   */
+  caravans?: number[];
+  /**
+   * Which turn each Caravan last asked somebody, by tile index. Section 145.
+   *
+   * A Caravan gets one attempt a turn, which is the limiter Recruit has in
+   * place of the spy's movement -- there is no agent to spend, so the reach
+   * itself is what runs out. Keyed by tile because that is all a Caravan is.
+   */
+  caravanAsked?: Record<number, number>;
   /**
    * How many times a worker has changed the ground itself -- a forest or swamp
    * cleared to grassland. Part of the key the map picture is cached under, so the

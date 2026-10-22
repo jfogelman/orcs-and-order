@@ -27,6 +27,7 @@ import { SABOTAGE } from '../sim/sabotage';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
+import { CARAVANS } from '../sim/caravans';
 import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
 import { MOOD_LADDER } from '../model/citizens';
 import { ALT_VICTORY } from '../sim/endings';
@@ -1535,6 +1536,60 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           to ${POSTS.maxPerCity} posts a city. It is somewhere to stand that is not the city gate,
           which matters because only one unit fits on a tile &mdash; two soldiers watching a city now
           need two huts, which is what the old Posting always meant and could never arrange.
+        </p>` },
+      { title: 'Caravans', body: `<p class="flavor">
+          The Wandering Folk's own structure, and nobody else's. Once they know
+          <strong>Somewhere To Ask From</strong>, one of their workers can raise a
+          <strong>Caravan</strong> on any dry tile (<kbd>Q</kbd>, ${CARAVANS.turns} turns): a ring of
+          parked wagons, permanent once it stands. It is not a city and it grows nothing.
+          What it does is <em>see</em> &mdash; ${CARAVANS.sight} tiles in every direction &mdash;
+          and anybody else's soldier that comes within that ring can be asked to change sides.
+        </p>
+        <p class="flavor">
+          So where a Caravan stands is the whole of their strategy: near a border, near the
+          ground armies walk over, near wherever somebody is about to lose a fight. It is also
+          a thing on the map that everybody can see, and
+          ${seeTopic('terrain', 'Pillaging', 'anybody standing on it can tear it down')}
+          exactly as they would a road or a post. A Caravan planted where the asking is good is
+          usually planted where it is hard to keep.
+        </p>` },
+      { title: 'Recruiting', body: `<p class="flavor">
+          What the Caravans are <em>for</em>, and the one thing no other side can do.
+          Anybody else's soldier standing inside a Caravan's ring can be <strong>asked to
+          change sides</strong> for gold. It is always cheaper than paying to have the same
+          unit now &mdash; which is the trade, because the Wandering Folk build everything at
+          a quarter more than anybody else pays.
+        </p>
+        <p class="flavor">
+          <strong>The price and the odds move together.</strong> Somebody already beaten up is
+          cheaper <em>and</em> likelier to come; so is somebody standing in a crowd of yours,
+          up to a point. <strong>Raiders cost more, not less</strong> &mdash; there is no
+          dissatisfaction to work with, so the whole pitch has to be built from nothing. The
+          gold goes whether they come or not, and each Caravan can ask once a day.
+        </p>
+        <p class="flavor">
+          Whoever arrives <strong>becomes one of yours properly</strong>: a Knight joins as an
+          Outcast, at an Outcast's health, with nobody else's decorations. That cuts both ways
+          &mdash; no veteran arrives better than you could build, and nobody arrives
+          half-dead. Four will never come at all: <em>Dragons, Paladins, Death Knights and
+          Mages</em> are too bonded, too trained and too specific to walk over, and there is
+          nothing of yours to make of them.
+        </p>
+        <p class="flavor">
+          <strong>The Hive is a different sort of asking.</strong> A caste was grown for a job
+          and is doing the job; there is nobody in there to make an offer to. What there is,
+          is something shiny, put where it will be followed &mdash; so the lower castes come
+          <em>cheap</em> and come <em>unreliably</em>, which is the opposite of a raider in
+          both directions. Whoever arrives does not appear to have noticed. The
+          <em>Broodlord</em>, <em>Princess</em>, <em>Warden</em> and the <em>Queen</em> were
+          built loyal, and no shiny thing moves them.
+        </p>
+        <p class="flavor">
+          <strong>And they see you doing it.</strong> Asking where the other side can watch is
+          a hostile act whether or not it works: they think worse of you for it, and an empire
+          that thinks worse of you walks at your towns sooner.
+          ${seeTopic('terrain', 'Caravans', 'The Caravan itself')} is where all of this
+          reaches from.
         </p>` },
       { title: 'Pillaging', body: `<p class="flavor">
           Any soldier standing on a road &mdash; yours or theirs, since a

@@ -24,6 +24,8 @@ export type TechFlag =
   | 'mapmaking'
   /** Forest and swamp cost one movement point instead of two. */
   | 'bridges'
+  /** Section 145: a Wandering Folk worker may plant a Caravan where it stands. */
+  | 'caravans'
   /** +1 sight for cities, and cities see through forest. */
   | 'watchtower'
   /** +1 content citizen in every city. */
@@ -88,7 +90,7 @@ export const TECHS: TechDef[] = [
     prereqs: [],
     // One ship a side. The filter that decides what a city may build asks the
     // unit's own faction, so a shared advance can hand all three their boat.
-    units: ['raft', 'barge', 'tidecaste'],
+    units: ['raft', 'barge', 'tidecaste', 'ferrycontract'],
     buildings: [],
     flags: ['mapmaking'],
     flavor: 'The world turns out to have a shape. Everyone is a little put out about it.',
@@ -992,6 +994,29 @@ export const TECHS: TechDef[] = [
     flags: [],
     flavor: 'There was no homeland to begin from. This turned out not to matter.',
   },
+  // ------------------------------------------------------------ section 145
+  //
+  // Held back in section 142 with a note saying its building did not exist,
+  // which was true and was also the wrong way round: the Caravan is not a
+  // building. It is a **terrain improvement**, filed in the bible beside the
+  // irrigation and mine overlays, and what it needed was `sim/caravans.ts`.
+  //
+  // Verbatim from `WANDERERS_PLAN.md` apart from `buildings`, which the draft
+  // gave as `['caravan']` and which is the slip that kept this advance out of
+  // the game for three sections. Nothing is built in a city here. The advance
+  // unlocks an order a worker can be given, the way Bridge Building unlocks
+  // laying a road, and `canBuildCaravan` is what reads it.
+  {
+    id: 'caravan-building',
+    name: 'Somewhere To Ask From',
+    faction: 'wandering',
+    cost: 80,
+    prereqs: ['first-wanderers', 'wall-building'],
+    units: [],
+    buildings: ['firstCaravan'],
+    flags: ['caravans'],
+    flavor: 'A fort, more or less, except the point of it is conversation.',
+  },
   {
     id: 'tier-skirmisher',
     name: 'The First Ones Who Stayed',
@@ -1043,7 +1068,7 @@ export const TECHS: TechDef[] = [
     cost: 95,
     prereqs: ['tier-outcast'],
     units: ['wf-brute'],
-    buildings: [],
+    buildings: ['headCount'],
     flags: [],
     flavor: 'One head was, elsewhere, considered a defect. Here it is simply a head count.',
   },
@@ -1078,7 +1103,7 @@ export const TECHS: TechDef[] = [
     cost: 130,
     prereqs: ['tier-brute'],
     units: ['bonebound'],
-    buildings: [],
+    buildings: ['unnamedMarker'],
     flags: [],
     flavor: 'Where it was found has not been disclosed. This is generally considered wise.',
   },
@@ -1095,6 +1120,57 @@ export const TECHS: TechDef[] = [
       'The drake was not purchased. The drake was convinced. There is a difference, and ' +
       'it involved considerably more fish.',
   },
+  // ------------------------------------------------------------ section 146
+  //
+  // The fourth road out. Held back in section 142 for the same reason
+  // `caravan-building` was -- its buildings did not exist -- and this time
+  // that was simply true rather than a misreading: the three works are real
+  // city buildings and had to be written.
+  //
+  // Costs are `WANDERERS_PLAN.md`'s: 300, 300 and 400, a thousand shields
+  // against the Hive's six hundred and the empires' thousand. The Wandering
+  // Folk pay the full empire price for their ending *and* a quarter more for
+  // every soldier, which is the trade Recruit is supposed to be worth.
+  {
+    id: 'nowhere-left-but-up',
+    name: 'Nowhere Left But Up',
+    faction: 'wandering',
+    cost: 200,
+    prereqs: ['caravan-building', 'signature-champion'],
+    units: [],
+    buildings: ['lastMap', 'standingOrder', 'circlingCaravan'],
+    flags: ['ending'],
+    flavor:
+      'Everyone has joined. There is nowhere further to go and no one left to ' +
+      'ask. The caravan keeps moving because stopping was never on the ' +
+      'schedule, and one enterprising young beastkin has begun pointing ' +
+      'straight up.',
+  },
+  // Section 146: the attack ship and the siege engine, each behind one
+  // advance of its own, which is the pattern the reference units set. The
+  // transport needs only shared Mapmaking and so has no advance here.
+  {
+    id: 'tier-corsair',
+    name: 'A Fee, Negotiated',
+    faction: 'wandering',
+    cost: 70,
+    prereqs: ['tier-warband'],
+    units: ['corsair'],
+    buildings: [],
+    flags: [],
+    flavor: 'The toll was boarding. This was explained in advance, mostly for legal reasons.',
+  },
+  {
+    id: 'tier-collector',
+    name: 'The Debt Comes Due',
+    faction: 'wandering',
+    cost: 90,
+    prereqs: ['tier-outcast'],
+    units: ['collector'],
+    buildings: [],
+    flags: [],
+    flavor: 'Every debt is owed to somebody. This one was finally owed to the right people.',
+  },
   {
     // Section 138: the last rung, and the one that is a different question.
     //
@@ -1109,7 +1185,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 160,
     prereqs: ['a-word-in-the-wrong-ear'],
-    units: ['nobody', 'intelligencer', 'hollow'],
+    units: ['nobody', 'intelligencer', 'hollow', 'offbooks'],
     buildings: [],
     flags: ['unseen'],
     flavor:
@@ -1123,7 +1199,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 60,
     prereqs: ['mapmaking'],
-    units: ['skulker', 'factor', 'mimic'],
+    units: ['skulker', 'factor', 'mimic', 'tagalong'],
     buildings: [],
     flags: [],
     flavor:

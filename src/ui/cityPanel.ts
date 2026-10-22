@@ -76,6 +76,7 @@ const POSTURE: Record<UnitOrder, string> = {
   road: 'laying a road',
   improve: 'working the land',
   post: 'building a post',
+  caravan: 'raising a Caravan',
 };
 
 /**

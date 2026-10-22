@@ -122,6 +122,7 @@ const FLAG_LABELS: Record<TechFlag, string> = {
   coordination: 'Big groups stop losing a movement point',
   mapmaking: '+1 sight for every unit',
   bridges: 'Forest and swamp cost 1 movement; workers can lay roads',
+  caravans: 'Wandering Folk workers can plant a Caravan',
   watchtower: 'Cities see one tile further',
   contentment: '+1 content citizen everywhere',
   berserk: '+25% attack, -25% defence, army-wide',

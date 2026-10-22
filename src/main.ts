@@ -3,6 +3,16 @@ import './style.css';
 
 import { runAiTurn } from './ai/ai';
 import { POSTS, canBuildPost, startPost } from './sim/posts';
+import { CARAVANS, canBuildCaravan, startCaravan } from './sim/caravans';
+import {
+  canRecruit,
+  poachingSeen,
+  recruitFailOdds,
+  recruitPrice,
+  recruitTargets,
+  recruitUnit,
+  recruitsAs,
+} from './sim/recruiting';
 import {
   canBuildRoad,
   canLayRoads,
@@ -1322,6 +1332,74 @@ class App {
     this.selectNextIdle();
   }
 
+  /** Plant a Caravan where the worker stands. Section 145. */
+  private orderCaravan(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const check = canBuildCaravan(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    delete unit.roadTo;
+    startCaravan(this.state, unit);
+    this.selectNextIdle();
+  }
+
+  /**
+   * Everybody the Caravans can ask today. Section 145.
+   *
+   * **Not hung off a selected agent**, because Recruit has no agent: the
+   * Caravan is the reach, so the offer belongs to the empire rather than to
+   * whatever is standing nearby. It renders beside whatever unit happens to
+   * be in hand, which is the one place a player is always looking.
+   *
+   * Price and odds are both shown, because the bible makes them move
+   * together and a player who can see only one of them is being told half of
+   * a rule.
+   */
+  private caravanAsks(): string {
+    if (this.state.players[this.viewerId]?.faction !== 'wandering') return '';
+    const targets = recruitTargets(this.state, this.viewerId);
+    if (targets.length === 0) return '';
+    const rows = targets
+      .slice(0, 6)
+      .map((u) => {
+        const price = recruitPrice(this.state, this.viewerId, u);
+        const fail = Math.round(recruitFailOdds(this.state, this.viewerId, u) * 100);
+        const becomes = unitType(recruitsAs(u)!).name;
+        const seen = poachingSeen(this.state, u) ? ' &middot; they are watching' : '';
+        return `<button class="small" data-act="recruit" data-unit="${u.id}"
+                  title="They would join as a ${escapeHtml(becomes)}. The gold goes whether they come or not${
+                    poachingSeen(this.state, u) ? ', and they can see us asking' : ''
+                  }.">Ask ${escapeHtml(
+          unitType(appearsTo(u, this.viewerId).type).name,
+        )} &middot; <span class="risk">${price}g, ${fail}% refuse${seen}</span></button>`;
+      })
+      .join('');
+    return `<div class="panel-title">The Caravans</div><div class="button-row">${rows}</div>`;
+  }
+
+  /** Ask somebody else's soldier to come and work here. Section 145. */
+  private orderRecruit(unitId: number): void {
+    const target = this.state.units.find((u) => u.id === unitId);
+    if (!target || isOver(this.state)) return;
+    const refused = canRecruit(this.state, this.viewerId, target);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not now.');
+      return;
+    }
+    const out = recruitUnit(this.state, this.viewerId, target);
+    if (out.kind === 'blocked') {
+      this.flash(out.reason);
+      return;
+    }
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+  }
+
   /**
    * Tear up the road underfoot. Section 96.
    *
@@ -1605,7 +1683,13 @@ class App {
     } else {
       audio.play('move');
       this.playLogCues();
-      if (unit.moves <= 0 || unit.order === 'road' || unit.order === 'post') this.selectNextIdle();
+      if (
+        unit.moves <= 0 ||
+        unit.order === 'road' ||
+        unit.order === 'post' ||
+        unit.order === 'caravan'
+      )
+        this.selectNextIdle();
     }
     this.refreshOverlays();
     this.refreshSidebar();
@@ -2676,9 +2760,32 @@ class App {
         this.orderSkip();
         break;
       case 'g':
-        // Section 125. Shift for the one that asks where, matching Road To.
-        if (e.shiftKey) this.orderBurrow();
-        else this.orderSink();
+        // **Three things have wanted this key, and two of them were dead.**
+        //
+        // Section 102 put Build Post in the `default:` branch below, which only
+        // runs when no `case` matched. Section 125 then added this `case 'g'`
+        // for the Hive's burrowing -- and a third `case 'g'`, the grid toggle,
+        // sat further down the same switch where JavaScript could never reach
+        // it, because a duplicate case label is unreachable code.
+        //
+        // So the button said "Build Post (G)", the Orcpedia said G, and the key
+        // sank a Burrower or did nothing at all. Measured in the running game
+        // before changing it: a Peon standing on legal ground, pressing G,
+        // started no post and did not toggle the grid.
+        //
+        // Dispatched by what the selected unit can actually do, worst-specific
+        // first, with the view toggle as the fallback for when no unit claims
+        // it. Shift still asks where, matching Road To.
+        if (unit && canBuildPost(this.state, unit).ok) {
+          this.orderPost();
+          return;
+        }
+        if (unit && unit.owner === this.viewerId && burrows(unit)) {
+          if (e.shiftKey) this.orderBurrow();
+          else this.orderSink();
+          return;
+        }
+        this.overlay.showGrid = !this.overlay.showGrid;
         return;
       case 'f':
         this.orderFortify();
@@ -2700,9 +2807,6 @@ class App {
         break;
       case 't':
         openTechPanel(this.state, this.state.players[this.viewerId], () => this.refreshHud());
-        break;
-      case 'g':
-        this.overlay.showGrid = !this.overlay.showGrid;
         break;
       case 'v':
         // Section 117: each side's land, on or off.
@@ -2794,6 +2898,14 @@ class App {
         // ability uses G, and no soldier can build one anyway.
         if (pressed === 'g' && canBuildPost(this.state, unit).ok) {
           this.orderPost();
+          break;
+        }
+        // Q raises a Caravan. **Not V**, which was the first choice and would
+        // have been a fourth dead shortcut: `case 'v'` toggles borders above,
+        // and this branch only runs when no case matched. Q is claimed by no
+        // case and no ability, which is the whole of the test.
+        if (pressed === 'q' && canBuildCaravan(this.state, unit).ok) {
+          this.orderCaravan();
           break;
         }
         // P tears up a road. Free on every unit that can do it: no soldier has an
@@ -2910,6 +3022,8 @@ class App {
       const canRoadTo = unit.owner === this.viewerId && canLayRoads(this.state, unit).ok;
       const canWreck = unit.owner === this.viewerId && canPillage(this.state, unit).ok;
       const canPost = unit.owner === this.viewerId && canBuildPost(this.state, unit).ok;
+      const canCaravan =
+        unit.owner === this.viewerId && canBuildCaravan(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -3000,13 +3114,18 @@ class App {
               : ''
           }
           ${
-            unit.order === 'road' || unit.order === 'post' || unit.order === 'improve'
+            unit.order === 'road' ||
+            unit.order === 'post' ||
+            unit.order === 'caravan' ||
+            unit.order === 'improve'
               ? `<div class="chip">${
                   unit.order === 'road'
                     ? 'laying a road'
                     : unit.order === 'post'
                       ? 'building a post'
-                      : escapeHtml(
+                      : unit.order === 'caravan'
+                        ? 'raising a Caravan'
+                        : escapeHtml(
                           jobName(
                             unit.job ?? 'irrigate',
                             this.state.players[unit.owner].faction,
@@ -3115,6 +3234,11 @@ class App {
               : ''
           }
           ${
+            canCaravan
+              ? `<button class="small" data-act="caravan" title="A ring of parked wagons. Anybody else's soldier that comes within sight of it can be asked to join you.">Raise Caravan (Q) &middot; ${CARAVANS.turns} turns</button>`
+              : ''
+          }
+          ${
             canWreck
               ? '<button class="small" data-act="pillage" title="Tear up this road. Costs the rest of this turn.">Pillage (P)</button>'
               : ''
@@ -3178,6 +3302,7 @@ class App {
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
+          ${this.caravanAsks()}
         </div>`;
       panel.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
         link.addEventListener('click', (e) => {
@@ -3227,6 +3352,9 @@ class App {
             case 'offer':
               this.orderOffer(Number(btn.dataset.unit));
               break;
+            case 'recruit':
+              this.orderRecruit(Number(btn.dataset.unit));
+              break;
             case 'ask':
               this.orderAsk(Number(btn.dataset.city));
               break;
@@ -3244,6 +3372,9 @@ class App {
               break;
             case 'post':
               this.orderPost();
+              break;
+            case 'caravan':
+              this.orderCaravan();
               break;
             case 'halt':
               this.orderHalt();
@@ -3483,6 +3614,7 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   portal: 'The Demonic Portal — held open long enough for something to come through',
   object: 'The Mysterious Object — somebody pressed the button',
   hive: "The Second Queen's Shell — there are two of her now, and nobody has reacted",
+  circle: 'The Circling Caravan — there was nowhere left, so the circle became the destination',
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;

@@ -15,8 +15,27 @@ import {
   saveToSlot,
 } from '../persist/save';
 import { escapeHtml, openModal } from './dom';
+import { advisorsFor } from '../model/advisors';
+import { portraitPath } from './advisors';
 
 /** Setup and save menus. */
+
+/**
+ * A face for a side, on the setup screen. Section 147.
+ *
+ * **Their diplomat**, which is the one of the six whose entire job is being
+ * the side somebody else meets -- so it is the right face for a screen about
+ * choosing who to sit down against, and it is the one that already knows how
+ * to look at the reader.
+ *
+ * Returns nothing rather than a broken image when a faction has no portrait.
+ * That used to be every Wandering Folk advisor, which is how section 147
+ * found out they had none at all.
+ */
+function factionFace(id: FactionId): string | null {
+  const diplomat = advisorsFor(id).find((a) => a.role === 'diplomacy');
+  return diplomat ? portraitPath(diplomat.id) : null;
+}
 
 export function openNewGameMenu(
   current: FactionId,
@@ -24,9 +43,16 @@ export function openNewGameMenu(
 ): void {
   const factionCards = STARTING_FACTIONS.map((id) => {
     const f = FACTIONS[id];
+    const face = factionFace(id);
     return `
-      <label class="choice-card${id === current ? ' selected' : ''}" data-faction="${id}">
+      <label class="choice-card faction${id === current ? ' selected' : ''}" data-faction="${id}"
+             style="--side:${f.color}">
         <input type="radio" name="faction" value="${id}" ${id === current ? 'checked' : ''} />
+        ${
+          face
+            ? `<img class="choice-face" src="${escapeHtml(face)}" alt="" loading="lazy" />`
+            : '<span class="choice-face empty"></span>'
+        }
         <span class="choice-name" style="color:${f.color}">${escapeHtml(f.civName)}</span>
         <span class="choice-sub">${escapeHtml(f.leader)}</span>
         <span class="choice-blurb">${escapeHtml(f.blurb)}</span>
@@ -45,9 +71,15 @@ export function openNewGameMenu(
    */
   const opponentCards = FACTION_IDS.map((id) => {
     const f = FACTIONS[id];
+    const face = factionFace(id);
     return `
-      <label class="choice-card opponent" data-opponent="${id}">
+      <label class="choice-card opponent" data-opponent="${id}" style="--side:${f.color}">
         <input type="checkbox" name="opponent" value="${id}" checked />
+        ${
+          face
+            ? `<img class="choice-face small" src="${escapeHtml(face)}" alt="" loading="lazy" />`
+            : '<span class="choice-face small empty"></span>'
+        }
         <span class="choice-name" style="color:${f.color}">${escapeHtml(f.civName)}</span>
         <span class="choice-sub">${escapeHtml(f.leader)}</span>
       </label>`;
