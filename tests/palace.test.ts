@@ -353,11 +353,17 @@ describe('every side can have its capital laid out', () => {
   });
 
   /**
-   * A record of work outstanding rather than a bar: the art is Jeremy's to
-   * drop in, and this says out loud which sides are still waiting for it.
+   * A record of work outstanding rather than a bar, and **empty since section
+   * 144**: the Wandering Folk were listed here for exactly one section, and
+   * the entry came off the moment `prepare_art.py` learned their sixteen
+   * files existed. The art had been on disk the whole time.
+   *
+   * Left in place rather than deleted. An empty list is the state this should
+   * normally be in, and the next faction added without its capital drawn gets
+   * an empty frame and a line here instead of a crash.
    */
   it('names the sides still waiting for palace art', () => {
     const without = FACTION_IDS.filter((f) => !PALACE_ART[`${f}-base`]);
-    expect(without, 'drawn now? then this list is just out of date').toEqual(['wandering']);
+    expect(without, 'add them here with a reason, or draw the art').toEqual([]);
   });
 });

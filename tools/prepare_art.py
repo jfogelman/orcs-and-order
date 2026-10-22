@@ -2581,7 +2581,83 @@ PALACE: dict[str, str] = {
     "hivekin-banners-1": "pheromone stalk",
     "hivekin-banners-2": "paired stalks",
     "hivekin-banners-3": "crowned stalks",
+    # Section 144. Named `<Module>, <Tier>` rather than one unique name a
+    # tier, because this faction's tiers are the *same three words* across all
+    # five modules -- "On Credit", "Paid Up", "Owned Outright", which is the
+    # joke and is also why they have to be module-qualified or they collide.
+    # `src/model/palace.ts` carries the same strings, so the art and the names
+    # a player reads are one thing.
+    #
+    # All sixteen files arrived with the faction in section 141 and sat here
+    # unprocessed for three sections, because **this dict is hand-written**.
+    # That made `PALACE_ART['wandering-base']` undefined, and opening your own
+    # capital as the Wandering Folk threw -- see section 143. The art was never
+    # the thing that was missing.
+    "wandering-base": "base chassis — the standing caravan",
+    "wandering-tower-1": "watch, on credit",
+    "wandering-tower-2": "watch, paid up",
+    "wandering-tower-3": "watch, owned outright",
+    "wandering-gate-1": "gate, on credit",
+    "wandering-gate-2": "gate, paid up",
+    "wandering-gate-3": "gate, owned outright",
+    "wandering-wing-1": "wing, on credit",
+    "wandering-wing-2": "wing, paid up",
+    "wandering-wing-3": "wing, owned outright",
+    "wandering-grounds-1": "ground, on credit",
+    "wandering-grounds-2": "ground, paid up",
+    "wandering-grounds-3": "ground, owned outright",
+    "wandering-banners-1": "banner, on credit",
+    "wandering-banners-2": "banner, paid up",
+    "wandering-banners-3": "banner, owned outright",
 }
+
+
+# Section 144. Pieces whose art came out facing the wrong way, mirrored here
+# rather than re-rolled.
+#
+# Every palace module has a handedness the compositor relies on: a wing's flat
+# unfinished wall has to face the hall it joins, a gate's wall stubs have to
+# run along the front. The Wandering Folk's wings were all drawn with the open
+# face to the right where the Horde's and the Kingdom's have it on the left,
+# and two of the three gates disagreed with their own tier one.
+#
+# A horizontal flip is lossless and exact, where a re-roll is a new picture
+# that then has to be checked for everything else as well. The Hive's chassis
+# already set the precedent -- it is processed from a deliberately flipped
+# source, for the same kind of reason.
+#
+# **Per id, not per module**, because the call was `gate-2` and `gate-3` and
+# specifically *not* `gate-1`, which was already right. A per-faction flag in
+# `palace.ts` could not have said that.
+# Section 144. **The palace keeps the strict `MAX_REMOVED`, deliberately**, and
+# this comment is here so the next person does not loosen it again.
+#
+# The Regalia arrived drawn small on their frames -- a banner on a pole alone on
+# a 1024-square image -- and two of the three were refused as runaway fills at
+# 0.971 and 0.945 removed, both of them correct cut-outs. The obvious fix was a
+# palace ceiling of 0.98 beside `STATUS_MAX_REMOVED`, and it worked.
+#
+# It was the wrong fix, because the two failures are not symmetric. **A false
+# refusal is loud**: the file is flagged "needs a re-roll" and somebody looks at
+# it. **A false acceptance is silent** -- a sprite whose fill really did escape
+# ships looking wrecked and nothing says so. Loosening the guard trades the loud
+# failure for the quiet one, and at 0.98 a genuine runaway on a small subject
+# (which leaves only the outline, around 0.985) would pass.
+#
+# Re-rolled to fill their frames the way every other faction's banners do, the
+# same three pieces remove 0.80, 0.63 and 0.48 -- clear of the strict ceiling by
+# a mile. The refusals were the art telling us something true, and the ceiling
+# was the messenger. `ART_PROMPTS.md` records the frame-fill expectation that
+# keeps it that way.
+
+
+PALACE_MIRROR: frozenset[str] = frozenset({
+    "wandering-gate-2",
+    "wandering-gate-3",
+    "wandering-wing-1",
+    "wandering-wing-2",
+    "wandering-wing-3",
+})
 
 
 def palace_stand(img: "Image.Image") -> tuple[float, float]:
@@ -2750,6 +2826,8 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
             continue
         img = Image.open(path)
         img, cut_out = remove_background(img)
+        if out_id in PALACE_MIRROR:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
         # What share of its own frame the piece filled, before it was trimmed.
         # The art is drawn one subject to a frame at a fixed scale, so this is
         # the only record of how big these things are *relative to each other* --
@@ -2762,6 +2840,8 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
         img = fit_within(img, PALACE_SIZE)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        if out_id in PALACE_MIRROR:
+            flag += "   (mirrored)"
         print(f"  palace/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
         if not cut_out:
             failed.append(out_id)

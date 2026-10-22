@@ -2381,3 +2381,131 @@ right*. Drawn left to right consistently, because the renderer rotates the sprit
 toward its target and a projectile drawn head-on cannot be rotated into anything.
 The **Bloat-caste** needs no effect of its own — it is artillery, and reusing
 `bolt` is right for it.
+
+---
+
+## The Wandering Folk's capital (section 144) — 16 of 16 done
+
+The sixteen pieces arrived with the faction in section 141 and were processed in
+section 144, three sections later, because `prepare_art.py` keeps its palace
+sources in a **hand-written dict** and nobody had added them. The art was never
+what was missing. `NEW_FACTION_ART_PROMPTS.md` holds the original prompts; this
+section holds only what has to change, and why.
+
+### What was already right
+
+Thirteen of sixteen cut out cleanly and composite correctly. The chassis points
+are marked off `public/palace/wandering-base.png` (128×91) and the Watchtower
+carries a faction size override — its art is drawn **128×126 where the Horde's
+is 104×128**, and `size` sets a module's *height* with the width following its
+own shape, so the same number made it half again broader and the fit shrank the
+whole capital to make room for it.
+
+### Five pieces were mirrored, and none of them needs a re-roll
+
+Every module has a handedness the compositor relies on: a wing's flat unfinished
+wall must face the hall it joins, and a gate's stubs must run along the front.
+All three Wandering Folk wings were drawn with the open face to the **right**,
+where the Horde's and the Kingdom's have it on the left; and `Gate, Paid Up` and
+`Gate, Owned Outright` disagreed with their own tier one.
+
+`PALACE_MIRROR` in `prepare_art.py` flips them at process time. **A horizontal
+flip is lossless and exact**, where a re-roll is a new picture that then has to
+be checked for everything else as well — and the Hive's chassis already set the
+precedent, being processed from a deliberately flipped source. The list is
+per *id* rather than per module, because the call was gate 2 and 3 and
+specifically **not** gate 1, which was already right.
+
+### The three Regalia pieces: one real fault, then one false alarm
+
+**The first roll was a real fault**, and the reason was on this page already:
+the cloth was blue-violet on magenta, so `remove_background` refused the job
+rather than eat the subject. Re-rolled on **solid green (`#00FF00`)**, which is
+the documented answer for anything violet.
+
+**Then two of the three were refused again, and that one was mine.** The guard
+keeps the original whenever a fill removes more than `MAX_REMOVED` of the frame,
+on the theory that it has escaped into the subject. A banner on a pole, alone on
+a 1024×1024 frame, legitimately *is* almost all background. Measured:
+
+| Piece | Removed | Verdict at 0.93 |
+|---|---|---|
+| Banner, On Credit | **0.971** | refused |
+| Banner, Paid Up | **0.945** | refused |
+| Banner, Owned Outright | 0.914 | kept |
+
+All three were correct cut-outs, refused for being small; the third passed only
+because it is a *pair* of banners and therefore bigger.
+
+**The first answer was to raise the ceiling, and that was the wrong answer.**
+The deeper cause was scale: every other faction's banners fill 0.77 to 0.98 of
+their frame and these filled 0.35 to 0.54. `frame` is the pipeline's only record
+of how big pieces are *relative to each other*, so the compositor honoured it
+faithfully — and the regalia rendered at **0.23 of its chassis against the
+Horde's 0.30 and the Hive's 0.36**, a quarter small.
+
+Re-rolled filling the frame, the same three pieces remove **0.80, 0.63 and
+0.48** and clear the strict ceiling by a mile, and the banner renders at 0.31.
+One line fixed both:
+
+> *…a single centred object **filling the frame**, solid green background (#00FF00)…*
+
+So the palace keeps `MAX_REMOVED` at its default, deliberately. The two failure
+modes are not symmetric: **a false refusal is loud** — the file is flagged
+"needs a re-roll" and somebody looks at it — while **a false acceptance is
+silent**, shipping a wrecked sprite that nothing complains about. The refusals
+were the art telling us something true, and the ceiling was only the messenger.
+
+**Draw palace pieces filling their frames.** That is the rule those two
+refusals were really enforcing.
+
+### The three Grounds pieces needed a re-roll, and it was the prompt's fault
+
+The originals asked for *"neat rows of staked tents and a small cookfire"* and
+*"permanent stalls and a well"*. Both describe **a camp** — which is exactly
+what the base chassis already is, a ring of wagons and staked tents. Composited,
+the grounds sit behind the Standing Caravan and you cannot tell which part is
+the capital; the yard swallows the building standing on it.
+
+Compare the other two. The Horde's yard is props on dirt and the Hive's is moss
+beds in plan view. **Grounds are ground.** The rule the re-roll turns on:
+
+> Nothing on a grounds piece may rise above knee height, and nothing on it may
+> be a tent, a wagon, a cart, a lean-to or anything else with a roof — those are
+> the chassis's job, and a second camp drawn under the first reads as neither.
+
+The progression carries the faction's one joke, which for a people with no
+homeland lands harder on the ground itself than on anything built on it: the
+ground is borrowed, then settled for, then finally theirs.
+
+| Tier | Name | Prompt |
+|---|---|---|
+| 1 | Ground, On Credit | *A patch of bare trampled earth with two deep cart-wheel ruts worn across it, the ruts reaching the edges of the patch and stopping there, a scatter of empty peg-holes and one cold ash-mark, no edging and no boundary of any kind, [grounds style block]* |
+| 2 | Ground, Paid Up | *A levelled dirt yard with the old wheel ruts raked flat, a ring of fire-blackened stones set flush into the ground, and a boundary of short driven stakes with rope slung between them at ankle height, [grounds style block]* |
+| 3 | Ground, Owned Outright | *A gravelled yard edged with set stone kerbing and a flush stone well-head level with the ground, with one pair of old cart-wheel ruts worn permanently into the gravel and deliberately left there, [grounds style block]* |
+
+**The ruts are the throughline.** Tier one is ground somebody is passing over,
+tier three is ground they paid for and kept the ruts in — which is the whole
+faction in one detail, and it costs the picture nothing.
+
+⚠️ **Tier one's first roll said "running straight across it and out of frame
+on both sides", and that is a sentence this generator takes at its word.** It
+drew the ruts continuing past the dirt as two raised bars, which cut the patch
+into three slabs joined only at the ends, pushed the piece's bounding box well
+past the yard, and read as rails rather than as grooves. The wording above keeps
+the ruts inside the patch, and the clause in the style block — *one unbroken
+patch with nothing extending beyond its edge* — is there for the same reason
+and is load bearing.
+
+**[grounds style block]**, which is the isometric block with the palace bible's
+top-down exception and the new clause above:
+
+> 64x64 pixel art, plain solid magenta background (#FF00FF), a single patch of
+> ground centred and filling the frame, seen in top-down plan view rather than at
+> the isometric angle, designed to lie flat in front of a larger building, one
+> unbroken patch with nothing extending beyond its edge, nothing rising above
+> knee height, no tents, no wagons, no carts, no lean-tos and no
+> roofed structures of any kind, thick dark outline, limited palette, flat shading
+> with one light source from the upper left, mid-1990s fantasy strategy game
+> city-view style, no text, no logos, no border, no characters, no background
+> scenery, no ground shadow.
