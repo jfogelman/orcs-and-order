@@ -80,8 +80,11 @@ export function canBuildCaravan(
   if (!hasFlag(owner, 'caravans')) {
     return { ok: false, reason: 'Somewhere To Ask From has not been worked out yet.' };
   }
-  if (!worksGround(unitType(unit.type))) {
-    return { ok: false, reason: 'Only workers build Caravans.' };
+  // Section 148: a worker always, and after *Somewhere To Ask From* anybody
+  // at all. A garrison post is built and a ring of parked wagons is only
+  // stopped, so there was never much reason a soldier could not stop.
+  if (!worksGround(unitType(unit.type)) && !hasFlag(owner, 'anyone-parks')) {
+    return { ok: false, reason: 'Only workers can park one, for now.' };
   }
   const i = idx(unit.x, unit.y, state.width);
   if (TERRAIN[state.terrain[i]].water) return { ok: false, reason: 'Not on water.' };

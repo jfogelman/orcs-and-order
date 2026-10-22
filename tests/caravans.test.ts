@@ -10,7 +10,7 @@ import {
   withinAsking,
 } from '../src/sim/caravans';
 import { canPillage, pillage } from '../src/sim/roads';
-import { RECRUIT, recruitFailOdds, recruitUnit } from '../src/sim/recruiting';
+import { RECRUIT, recruitFailOdds, recruitPrice, recruitUnit } from '../src/sim/recruiting';
 import { buildOptions, foundCity } from '../src/sim/city';
 import { TERRAIN, TERRAIN_IDS } from '../src/model/terrain';
 import { fatCrossIndices, idx } from '../src/engine/grid';
@@ -71,12 +71,19 @@ beforeEach(() => {
 });
 
 describe('raising a Caravan', () => {
-  it('needs the advance', () => {
+  /**
+   * **Section 148 moved this gate.** It used to read "needs
+   * `caravan-building`"; the faction now reaches its own mechanic on turn
+   * one, so what is tested is the flag rather than the advance that happens
+   * to carry it -- which is also what `canBuildCaravan` asks.
+   */
+  it('needs somebody who has heard of them', () => {
     const u = wanderer();
-    state.players[0].techs = ['first-wanderers'];
+    state.players[0].techs = [];
     expect(canBuildCaravan(state, u).ok).toBe(false);
-    state.players[0].techs = ['first-wanderers', 'caravan-building'];
-    expect(canBuildCaravan(state, u).ok).toBe(true);
+    state.players[0].techs = ['first-wanderers'];
+    expect(canBuildCaravan(state, u).ok, 'from the first advance, with no research')
+      .toBe(true);
   });
 
   /**
@@ -92,9 +99,13 @@ describe('raising a Caravan', () => {
     expect(check.reason).toMatch(/Wandering Folk/);
   });
 
-  it('is refused to a soldier', () => {
-    const soldier = spawnUnit(state, 0, 'goblin', land(1).x, land(1).y);
+  it('is refused to a soldier until the advance says otherwise', () => {
+    const soldier = spawnUnit(state, 0, 'wf-skirmisher', land(1).x, land(1).y);
+    state.players[0].techs = ['first-wanderers'];
     expect(canBuildCaravan(state, soldier).ok).toBe(false);
+    // Section 148: *Somewhere To Ask From* lets anybody park one.
+    state.players[0].techs = ['first-wanderers', 'caravan-building'];
+    expect(canBuildCaravan(state, soldier).ok).toBe(true);
   });
 
   it('takes its full count of worker-turns and then stands', () => {
@@ -431,6 +442,92 @@ describe('a side can do something with its first town', () => {
         buildable.has(FACTIONS[faction].starterUnit),
         `${faction} starts with a ${FACTIONS[faction].starterUnit} it cannot build`,
       ).toBe(true);
+    }
+  });
+});
+
+/**
+ * Section 148: the shape of the Wandering Folk's opening, after playtest.
+ *
+ * Three changes, and two of them are advances **repurposed rather than
+ * deleted** -- which matters because both are load-bearing in the tree:
+ * `tier-skirmisher` is a prereq of the Warband and Slinger lines, and
+ * `caravan-building` is a prereq of the ending.
+ *
+ * - `first-wanderers` grants the Skirmisher *and* Caravans, so the faction
+ *   can reach its own mechanic on turn one. Jeremy's reasoning for needing
+ *   no research gate: **gold is a premium early game**, so a Caravan they
+ *   cannot afford to use is the brake.
+ * - `tier-skirmisher` makes asking cheaper, which is what its name always
+ *   described.
+ * - `caravan-building` lets anybody park one, not only a worker.
+ */
+describe('the opening, after playtest', () => {
+  function opener(): GameState {
+    const s = createGame({ seed: 5, width: 30, height: 20, playerFaction: 'wandering' });
+    s.players[0].techs = ['first-wanderers'];
+    s.players[0].gold = 5000;
+    return s;
+  }
+
+  it('can raise a Caravan from the first turn, with no research at all', () => {
+    const s = opener();
+    const w = spawnUnit(s, 0, 'wanderer', 10, 10);
+    // Wherever `land()` would put it; the check is the gate, not the ground.
+    const spot = (() => {
+      for (let y = 2; y < s.height - 2; y++)
+        for (let x = 2; x < s.width - 2; x++)
+          if (!TERRAIN[s.terrain[idx(x, y, s.width)]].water) return { x, y };
+      throw new Error('no dry ground');
+    })();
+    w.x = spot.x;
+    w.y = spot.y;
+    expect(canBuildCaravan(s, w).ok, canBuildCaravan(s, w).reason).toBe(true);
+  });
+
+  it('keeps a soldier out of it until the advance says otherwise', () => {
+    const s = opener();
+    const soldier = spawnUnit(s, 0, 'wf-skirmisher', 10, 10);
+    const spot = { x: soldier.x, y: soldier.y };
+    for (let y = 2; y < s.height - 2 && TERRAIN[s.terrain[idx(spot.x, spot.y, s.width)]].water; y++) {
+      soldier.y = y;
+      spot.y = y;
+    }
+    expect(canBuildCaravan(s, soldier).ok).toBe(false);
+    s.players[0].techs.push('caravan-building');
+    expect(canBuildCaravan(s, soldier).ok, canBuildCaravan(s, soldier).reason).toBe(true);
+  });
+
+  it('makes asking cheaper once the first ones have stayed', () => {
+    const s = opener();
+    const here = (() => {
+      for (let y = 4; y < s.height - 4; y++)
+        for (let x = 4; x < s.width - 4; x++)
+          if (!TERRAIN[s.terrain[idx(x, y, s.width)]].water) return { x, y };
+      throw new Error('no dry ground');
+    })();
+    const w = spawnUnit(s, 0, 'wanderer', here.x, here.y);
+    startCaravan(s, w);
+    for (let t = 0; t < CARAVANS.turns; t++) advanceCaravanWork(s, w);
+    const them = spawnUnit(s, 1, 'footman', here.x, here.y + 1);
+    const before = recruitPrice(s, 0, them);
+    s.players[0].techs.push('tier-skirmisher');
+    const after = recruitPrice(s, 0, them);
+    expect(after).toBeLessThan(before);
+  });
+
+  /**
+   * Neither repurposed advance may end up granting nothing, which is the
+   * fault that started this. `tech-useful.test.ts` sweeps the whole tree for
+   * it; this says so by name for the two that changed.
+   */
+  it('leaves no repurposed advance granting nothing', () => {
+    for (const id of ['tier-skirmisher', 'caravan-building']) {
+      const t = TECHS.find((x) => x.id === id)!;
+      expect(
+        t.units.length + t.buildings.length + t.flags.length,
+        `${id} grants nothing`,
+      ).toBeGreaterThan(0);
     }
   });
 });

@@ -5,6 +5,7 @@ import { log, withRng } from './gamestate';
 import { adjustStanding } from './diplomacy';
 import { CARAVANS, caravansOf, hasCaravan } from './caravans';
 import { cityFollyBonus, empireBonus } from './follyEffects';
+import { hasFlag } from './rules';
 import { fatCrossIndices } from '../engine/grid';
 
 /**
@@ -100,6 +101,24 @@ export const RECRUIT = {
    */
   shiny: 0.55,
   shinyFail: 1.5,
+  /**
+   * What *The First Ones Who Stayed* takes off the price, empire-wide.
+   *
+   * Section 148, and the split it rests on: **this advance makes asking
+   * cheaper and the First Caravan folly makes it likelier to work.** Two
+   * levers on one mechanic that do not overlap, so a player who has both
+   * feels both, and a player with one can tell which.
+   *
+   * The reasoning in the faction's own terms: the price is what somebody
+   * asks to leave a job, and it falls once word has got round that the
+   * people who went across are still there. That is a fact about reputation
+   * rather than about this particular soldier, which is why it is empire-wide
+   * and flat rather than scaled by anything on the target.
+   *
+   * Not measured. Twelve per cent is a first guess at "worth twenty beakers
+   * early and never decisive", and the sweep is what settles it.
+   */
+  staying: 0.12,
   /**
    * The chance an attempt simply fails, and the band it is held inside.
    *
@@ -289,6 +308,8 @@ export function recruitPrice(state: GameState, playerId: number, target: Unit): 
   }
   if (isOutsider(state, target)) price *= RECRUIT.outsider;
   if (isCaste(state, target)) price *= RECRUIT.shiny;
+  // Section 148: and what the empire has learned about keeping people.
+  if (hasFlag(state.players[playerId], 'staying')) price *= 1 - RECRUIT.staying;
   return Math.max(1, Math.round(price));
 }
 

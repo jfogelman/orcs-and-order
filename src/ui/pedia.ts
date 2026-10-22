@@ -1538,10 +1538,13 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           need two huts, which is what the old Posting always meant and could never arrange.
         </p>` },
       { title: 'Caravans', body: `<p class="flavor">
-          The Wandering Folk's own structure, and nobody else's. Once they know
-          <strong>Somewhere To Ask From</strong>, one of their workers can raise a
-          <strong>Caravan</strong> on any dry tile (<kbd>Q</kbd>, ${CARAVANS.turns} turns): a ring of
-          parked wagons, permanent once it stands. It is not a city and it grows nothing.
+          The Wandering Folk's own structure, and nobody else's. One of their workers can
+          raise a <strong>Caravan</strong> on any dry tile from the very first turn
+          (<kbd>Q</kbd>, ${CARAVANS.turns} turns): a ring of parked wagons, permanent once it
+          stands. Nothing has to be researched first &mdash; what limits them early is the
+          gold to actually ask anybody. Later, <strong>Somewhere To Ask From</strong> lets
+          <em>any</em> of their units park one, so the army plants them wherever it has got
+          to rather than walking a worker out. It is not a city and it grows nothing.
           What it does is <em>see</em> &mdash; ${CARAVANS.sight} tiles in every direction &mdash;
           and anybody else's soldier that comes within that ring can be asked to change sides.
         </p>
@@ -1566,6 +1569,8 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           up to a point. <strong>Raiders cost more, not less</strong> &mdash; there is no
           dissatisfaction to work with, so the whole pitch has to be built from nothing. The
           gold goes whether they come or not, and each Caravan can ask once a day.
+          <strong>The First Ones Who Stayed</strong> brings every price down once word has
+          got round that the people who came across are still there.
         </p>
         <p class="flavor">
           Whoever arrives <strong>becomes one of yours properly</strong>: a Knight joins as an

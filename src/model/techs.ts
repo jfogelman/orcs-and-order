@@ -26,6 +26,10 @@ export type TechFlag =
   | 'bridges'
   /** Section 145: a Wandering Folk worker may plant a Caravan where it stands. */
   | 'caravans'
+  /** Section 148: word has got round that people stay, so recruits ask less. */
+  | 'staying'
+  /** Section 148: anybody at all may park a Caravan, not only a worker. */
+  | 'anyone-parks'
   /** +1 sight for cities, and cities see through forest. */
   | 'watchtower'
   /** +1 content citizen in every city. */
@@ -1004,9 +1008,20 @@ export const TECHS: TechDef[] = [
     // chosen, because `FACTIONS.wandering.starterUnit` names one.
     //
     // Reported from the first game played as them, exactly as the Hive's was.
+    // **And a Caravan from turn one**, which is the `caravans` flag below.
+    // Section 148, from playtest. Asking a faction to research eighty beakers
+    // before it may do the single thing that distinguishes it is the same
+    // shape of mistake as a town that can build nothing: the mechanic exists
+    // and the player cannot reach it.
+    //
+    // Jeremy's argument for why this needs no research gate, and it is the
+    // better brake: **gold is a premium early game.** A Caravan on turn one
+    // is a Caravan they cannot afford to use, so the cost of asking paces
+    // Recruit rather than a wall in front of it -- and that is a tension a
+    // player can feel and act on, where a tech wall is only a wait.
     units: ['wanderer', 'wf-skirmisher'],
     buildings: [],
-    flags: [],
+    flags: ['caravans'],
     flavor: 'There was no homeland to begin from. This turned out not to matter.',
   },
   // ------------------------------------------------------------ section 145
@@ -1022,6 +1037,24 @@ export const TECHS: TechDef[] = [
   // unlocks an order a worker can be given, the way Bridge Building unlocks
   // laying a road, and `canBuildCaravan` is what reads it.
   {
+    // ---------------------------------------------------------- section 148
+    //
+    // **Repurposed, for the same reason `tier-skirmisher` was.** This used to
+    // be the gate on Caravans themselves, and that gate moved to
+    // `first-wanderers` so the faction can reach its own mechanic on turn
+    // one. Deleting the advance was never an option -- it is a prereq of
+    // `nowhere-left-but-up`, so the whole ending hangs off it.
+    //
+    // What it buys instead is **Jeremy's idea, and a better one than the
+    // reach bump I had drafted**: every unit can park a Caravan, not only a
+    // worker. That changes how the faction is played rather than a number on
+    // it. Early, a Caravan costs a Wanderer's time and has to be planted on
+    // purpose; after this, the army plants them where the army already is --
+    // which is exactly where there is anybody to ask.
+    //
+    // It suits what a Caravan *is*, too. A garrison post is built; a ring of
+    // parked wagons is only stopped. There was never a good reason a soldier
+    // could not stop.
     id: 'caravan-building',
     name: 'Somewhere To Ask From',
     faction: 'wandering',
@@ -1029,18 +1062,37 @@ export const TECHS: TechDef[] = [
     prereqs: ['first-wanderers', 'wall-building'],
     units: [],
     buildings: ['firstCaravan'],
-    flags: ['caravans'],
+    flags: ['anyone-parks'],
     flavor: 'A fort, more or less, except the point of it is conversation.',
   },
   {
+    // ---------------------------------------------------------- section 148
+    //
+    // **Repurposed, not deleted.** This granted the Skirmisher, which moved to
+    // `first-wanderers` when playtest found that a Wandering Folk town could
+    // build nothing at all on turn one. That left this advance granting
+    // nothing -- and deleting it was the wrong answer twice over: the whole
+    // fork hangs off it (`tier-warband` and `tier-slinger` both name it as a
+    // prereq), and the AI's tech priority leads with it.
+    //
+    // It needed no new name. *"The First Ones Who Stayed -- they were not
+    // asked to leave. They left anyway."* is a line about **recruits**, not
+    // about a unit tier, and it has been sitting on the wrong thing since
+    // section 142.
+    //
+    // It answers the bible's own open question -- *"worth confirming whether
+    // Wandering Folk should get their own reliability-improving advances"* --
+    // and splits cleanly from the First Caravan folly, which is the other
+    // thing that touches Recruit: **the advance makes asking cheaper, the
+    // folly makes it likelier to work.** Two levers, two prices, no overlap.
     id: 'tier-skirmisher',
     name: 'The First Ones Who Stayed',
     faction: 'wandering',
     cost: 20,
     prereqs: ['first-wanderers'],
-    units: ['wf-skirmisher'],
+    units: [],
     buildings: [],
-    flags: [],
+    flags: ['staying'],
     flavor: 'They were not asked to leave. They left anyway. Close enough.',
   },
   {
