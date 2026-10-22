@@ -989,7 +989,22 @@ export const TECHS: TechDef[] = [
     faction: 'wandering',
     cost: 0,
     prereqs: [],
-    units: ['wanderer'],
+    // **The Skirmisher from the first turn**, and this is section 136's note
+    // on `first-hivekin` repeated word for word, because section 142 wrote
+    // this entry straight out of `WANDERERS_PLAN.md` without reading it.
+    //
+    // The bible's draft gives this advance `units: ['wanderer']` and puts the
+    // Skirmisher behind `tier-skirmisher` at twenty beakers. Every other side
+    // opens with a settler **and** something that can hold a tile -- a peon
+    // and a goblin, a peasant and a footman, a grub and a fodder. The
+    // Wandering Folk opened with a Wanderer and nothing else, and a city of
+    // one is not offered a settler at all (`SETTLER.minCitySize`), so their
+    // first town could build **nothing whatsoever**: the Units list was empty
+    // and the production box was set to a Skirmisher nobody could have
+    // chosen, because `FACTIONS.wandering.starterUnit` names one.
+    //
+    // Reported from the first game played as them, exactly as the Hive's was.
+    units: ['wanderer', 'wf-skirmisher'],
     buildings: [],
     flags: [],
     flavor: 'There was no homeland to begin from. This turned out not to matter.',

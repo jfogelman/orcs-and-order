@@ -11,13 +11,14 @@ import {
 } from '../src/sim/caravans';
 import { canPillage, pillage } from '../src/sim/roads';
 import { RECRUIT, recruitFailOdds, recruitUnit } from '../src/sim/recruiting';
-import { foundCity } from '../src/sim/city';
+import { buildOptions, foundCity } from '../src/sim/city';
 import { TERRAIN, TERRAIN_IDS } from '../src/model/terrain';
 import { fatCrossIndices, idx } from '../src/engine/grid';
-import type { GameState, Unit } from '../src/model/types';
-import { FACTION_IDS } from '../src/model/factions';
+import type { FactionId, GameState, Unit } from '../src/model/types';
+import { FACTION_IDS, FACTIONS } from '../src/model/factions';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
+import { unlockedUnits } from '../src/sim/research';
 import { endingFor, isEndingPiece } from '../src/sim/endings';
 
 /**
@@ -369,6 +370,67 @@ describe('the Wandering Folk follies', () => {
     } finally {
       RECRUIT.failBase = was;
       RECRUIT.failFloor = wasFloor;
+    }
+  });
+});
+
+/**
+ * Section 148: every side can build something on turn one.
+ *
+ * **The third time this exact gap has shipped.** Section 136 found it for the
+ * Hivekin -- *"turn one offered a choice between a Grub it could not afford
+ * and research"* -- and left a note on `first-hivekin` saying every side opens
+ * with a settler *and* something that can hold a tile. Section 142 then wrote
+ * `first-wanderers` straight out of the bible, which grants the Wanderer
+ * alone, and the note was not read.
+ *
+ * What a player saw: a first town with an **empty Units list**, and a
+ * production box already set to a Skirmisher they could not have chosen,
+ * because `FACTIONS.wandering.starterUnit` names one and nothing checks that
+ * the start advance unlocks it.
+ *
+ * So this is the rule rather than the instance, swept over `FACTION_IDS`.
+ */
+describe('a side can do something with its first town', () => {
+  function opening(faction: FactionId): GameState {
+    const s = createGame({ seed: 3, width: 30, height: 20, playerFaction: faction });
+    s.players[0].techs = [FACTIONS[faction].startTech];
+    return s;
+  }
+
+  it('offers every faction something to build in a city of one', () => {
+    for (const faction of FACTION_IDS) {
+      const s = opening(faction);
+      const town = foundCity(s, spawnUnit(s, 0, FACTIONS[faction].settlerUnit, 10, 10));
+      expect(town, `${faction} could not found`).toBeTruthy();
+      town!.size = 1;
+      const options = buildOptions(s, town!);
+      expect(
+        options.units.length + options.buildings.length,
+        `${faction} opens with nothing it can build`,
+      ).toBeGreaterThan(0);
+      // And specifically something that can hold a tile, which is the half
+      // section 136 had to say out loud.
+      expect(
+        options.units.some((u) => u.attack > 0 || u.defense > 1),
+        `${faction} opens with nothing that can hold ground`,
+      ).toBe(true);
+    }
+  });
+
+  /**
+   * The other half of the same bug: the unit a faction is *placed* with has
+   * to be one it could also build, or the production box opens on something
+   * the player cannot choose again after switching away from it.
+   */
+  it('lets every faction build the unit it is given to start with', () => {
+    for (const faction of FACTION_IDS) {
+      const s = opening(faction);
+      const buildable = new Set(unlockedUnits(s.players[0]).map((u) => u.id));
+      expect(
+        buildable.has(FACTIONS[faction].starterUnit),
+        `${faction} starts with a ${FACTIONS[faction].starterUnit} it cannot build`,
+      ).toBe(true);
     }
   });
 });
