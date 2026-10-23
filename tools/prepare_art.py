@@ -182,12 +182,26 @@ HIVEKIN_SPECIALS = {
 CITIES = [f"{faction}_{tier}" for faction in ("orc", "human") for tier in (1, 4, 8)]
 
 # The Hivekin's three are named for what they are rather than for the size they
-# stand in for, so they need the translation the other two do not.
-HIVEKIN_CITIES = {
+# stand in for, so they need the translation the other two do not. Section 147
+# adds the Wandering Folk, whose three are named for their tier the same way --
+# and which had sat in `art_src/` unprocessed since the faction drop, because
+# `CITIES` above is built from a hand-written tuple of two faction names.
+#
+# **That is the seventh hand-maintained list this project has been caught by**,
+# and it is the one a player meets first: every Wandering Folk settlement on
+# the map was drawing the fallback.
+FACTION_CITIES = {
     "hivekin_1": "hive-tier1",
     "hivekin_4": "hive-tier2",
     "hivekin_8": "hive-tier3",
+    "wandering_1": "wandering-tier1",
+    "wandering_4": "wandering-tier2",
+    "wandering_8": "wandering-tier3",
 }
+
+# Kept under the old name too: it is referenced below and a rename that misses
+# one call site is exactly the shape of bug this file keeps producing.
+HIVEKIN_CITIES = FACTION_CITIES
 
 # Badges a settlement wears on the map, keyed by the state they mean rather
 # than by the filename they arrived under. Drawn as small markers in a corner
@@ -270,6 +284,10 @@ TECH_ICONS = [
     "tier-skirmisher", "tier-warband", "tier-slinger", "tier-outcast", "tier-brute",
     "signature-mystic", "mystic-exorcism", "signature-champion",
     "signature-bonebound", "signature-drake", "nowhere-left-but-up",
+    # Section 146's two, added in 147 after I stated they were already here and
+    # they were not. See `tests/art-manifest.test.ts`: this is the list the
+    # audit exists to stop anybody from having to remember.
+    "tier-corsair", "tier-collector",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -303,7 +321,9 @@ BUILDING_ICONS = [
     "circledWagons", "sharedFire", "bigTent", "hiredPost", "routeBook",
     "knottedRecord", "strongboxWagon", "tollPost", "waystation", "wagerRing",
     # Drawn and banked: the first folly and the three ending works.
-    "firstCaravan", "lastMap", "standingOrder", "circlingCaravan",
+    # Section 146 adds the other two follies, and `headCount` landed a day later.
+    "firstCaravan", "unnamedMarker", "headCount",
+    "lastMap", "standingOrder", "circlingCaravan",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the
@@ -334,6 +354,15 @@ ADVISOR_PORTRAITS = {
     "cultivator": "the cultivator",
     "heir": "the heir",
     "harvester": "the harvester",
+    # Section 147: the Wandering Folk's six, which have been drawn since the
+    # faction drop and were never processed, because this map is keyed by
+    # advisor id and the faction had no advisors to be keyed by.
+    "reclaimer": "the reclaimer",
+    "campkeeper": "the campkeeper",
+    "broker": "the broker",
+    "self-taught": "the self-taught",
+    "self-sworn": "the self-sworn",
+    "fair-dealer": "the fair dealer",
 }
 
 # Section 46's talking cycles, one per advisor, in `advisors/Talking Cycles/`.
@@ -358,6 +387,12 @@ ADVISOR_TALKING = {
     "cultivator": "the cultivator talking",
     "heir": "the heir talking",
     "harvester": "the harvester talking",
+    "reclaimer": "the reclaimer talking",
+    "campkeeper": "the campkeeper talking",
+    "broker": "the broker talking",
+    "self-taught": "the self-taught talking",
+    "self-sworn": "the self-sworn talking",
+    "fair-dealer": "the fair dealer talking",
 }
 
 # Big enough to read a face at, small enough that twelve of them are not a
@@ -747,6 +782,10 @@ FACTION_FOLDER_ALIASES: dict[str, list[str]] = {
     # Section 125 slice B, when the Hivekin's three terrain resources become
     # ordinary specials. The art is already filed; nothing asks for it yet.
     "specials": ["terrain"],
+    # Section 145. The flat layout files tile overlays under `terrain/`, which
+    # is where irrigation and the mine came from; a faction folder has no
+    # `terrain` to nest them in and simply calls the folder what it holds.
+    "terrain/improvements": ["terrain/improvements", "improvements"],
 }
 
 
@@ -865,6 +904,22 @@ def process_aliased(
     return done, missing, failed
 
 
+# Section 146. Other names a piece of art may have arrived under.
+#
+# Every file in `advances/` is named for its advance **id** -- `tier-brute`,
+# `signature-drake` -- except two, which arrived named for what the advance is
+# *called*: "A Fee, Negotiated" and "The Debt Comes Due". Both are perfectly
+# reasonable names for a picture, and renaming somebody's drop only works
+# until the next one is generated the same way.
+#
+# So the id keeps its alias instead. Looked up only when the id itself finds
+# nothing, so an id-named file always wins and this can never shadow one.
+SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
+    "tier-corsair": ("a fee, negotiated",),
+    "tier-collector": ("the debt comes due",),
+}
+
+
 def process_cutouts(
     folder: str,
     names: list[str],
@@ -882,6 +937,11 @@ def process_cutouts(
 
     for name in names:
         path = find_source(src, name)
+        if path is None:
+            for alias in SOURCE_ALIASES.get(name, ()):
+                path = find_source(src, alias)
+                if path is not None:
+                    break
         if path is None:
             if not quiet_missing:
                 missing.append(name)
@@ -1124,7 +1184,10 @@ def centre_square(img: Image.Image) -> Image.Image:
 
 
 # Section 112's two overlays, drawn over the terrain like the roads.
-IMPROVEMENT_OVERLAYS = ("irrigation", "mine")
+# Section 145 adds the Caravan, which is an overlay drawn on a tile in exactly
+# the way these two are, and is filed with them rather than with the buildings
+# the draft tech entry mistook it for.
+IMPROVEMENT_OVERLAYS = ("irrigation", "mine", "caravan")
 
 
 def process_improvements(force: bool) -> tuple[int, list[str]]:
@@ -2581,7 +2644,83 @@ PALACE: dict[str, str] = {
     "hivekin-banners-1": "pheromone stalk",
     "hivekin-banners-2": "paired stalks",
     "hivekin-banners-3": "crowned stalks",
+    # Section 144. Named `<Module>, <Tier>` rather than one unique name a
+    # tier, because this faction's tiers are the *same three words* across all
+    # five modules -- "On Credit", "Paid Up", "Owned Outright", which is the
+    # joke and is also why they have to be module-qualified or they collide.
+    # `src/model/palace.ts` carries the same strings, so the art and the names
+    # a player reads are one thing.
+    #
+    # All sixteen files arrived with the faction in section 141 and sat here
+    # unprocessed for three sections, because **this dict is hand-written**.
+    # That made `PALACE_ART['wandering-base']` undefined, and opening your own
+    # capital as the Wandering Folk threw -- see section 143. The art was never
+    # the thing that was missing.
+    "wandering-base": "base chassis — the standing caravan",
+    "wandering-tower-1": "watch, on credit",
+    "wandering-tower-2": "watch, paid up",
+    "wandering-tower-3": "watch, owned outright",
+    "wandering-gate-1": "gate, on credit",
+    "wandering-gate-2": "gate, paid up",
+    "wandering-gate-3": "gate, owned outright",
+    "wandering-wing-1": "wing, on credit",
+    "wandering-wing-2": "wing, paid up",
+    "wandering-wing-3": "wing, owned outright",
+    "wandering-grounds-1": "ground, on credit",
+    "wandering-grounds-2": "ground, paid up",
+    "wandering-grounds-3": "ground, owned outright",
+    "wandering-banners-1": "banner, on credit",
+    "wandering-banners-2": "banner, paid up",
+    "wandering-banners-3": "banner, owned outright",
 }
+
+
+# Section 144. Pieces whose art came out facing the wrong way, mirrored here
+# rather than re-rolled.
+#
+# Every palace module has a handedness the compositor relies on: a wing's flat
+# unfinished wall has to face the hall it joins, a gate's wall stubs have to
+# run along the front. The Wandering Folk's wings were all drawn with the open
+# face to the right where the Horde's and the Kingdom's have it on the left,
+# and two of the three gates disagreed with their own tier one.
+#
+# A horizontal flip is lossless and exact, where a re-roll is a new picture
+# that then has to be checked for everything else as well. The Hive's chassis
+# already set the precedent -- it is processed from a deliberately flipped
+# source, for the same kind of reason.
+#
+# **Per id, not per module**, because the call was `gate-2` and `gate-3` and
+# specifically *not* `gate-1`, which was already right. A per-faction flag in
+# `palace.ts` could not have said that.
+# Section 144. **The palace keeps the strict `MAX_REMOVED`, deliberately**, and
+# this comment is here so the next person does not loosen it again.
+#
+# The Regalia arrived drawn small on their frames -- a banner on a pole alone on
+# a 1024-square image -- and two of the three were refused as runaway fills at
+# 0.971 and 0.945 removed, both of them correct cut-outs. The obvious fix was a
+# palace ceiling of 0.98 beside `STATUS_MAX_REMOVED`, and it worked.
+#
+# It was the wrong fix, because the two failures are not symmetric. **A false
+# refusal is loud**: the file is flagged "needs a re-roll" and somebody looks at
+# it. **A false acceptance is silent** -- a sprite whose fill really did escape
+# ships looking wrecked and nothing says so. Loosening the guard trades the loud
+# failure for the quiet one, and at 0.98 a genuine runaway on a small subject
+# (which leaves only the outline, around 0.985) would pass.
+#
+# Re-rolled to fill their frames the way every other faction's banners do, the
+# same three pieces remove 0.80, 0.63 and 0.48 -- clear of the strict ceiling by
+# a mile. The refusals were the art telling us something true, and the ceiling
+# was the messenger. `ART_PROMPTS.md` records the frame-fill expectation that
+# keeps it that way.
+
+
+PALACE_MIRROR: frozenset[str] = frozenset({
+    "wandering-gate-2",
+    "wandering-gate-3",
+    "wandering-wing-1",
+    "wandering-wing-2",
+    "wandering-wing-3",
+})
 
 
 def palace_stand(img: "Image.Image") -> tuple[float, float]:
@@ -2750,6 +2889,8 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
             continue
         img = Image.open(path)
         img, cut_out = remove_background(img)
+        if out_id in PALACE_MIRROR:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
         # What share of its own frame the piece filled, before it was trimmed.
         # The art is drawn one subject to a frame at a fixed scale, so this is
         # the only record of how big these things are *relative to each other* --
@@ -2762,6 +2903,8 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
         img = fit_within(img, PALACE_SIZE)
         img.save(target, optimize=True)
         flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        if out_id in PALACE_MIRROR:
+            flag += "   (mirrored)"
         print(f"  palace/{out_id}.png  {target.stat().st_size // 1024}KB{flag}")
         if not cut_out:
             failed.append(out_id)
@@ -2845,11 +2988,12 @@ def main() -> int:
     failed_cities.extend(failed_hives)
     # Section 102's posts are drawn in code until somebody draws them, so the
     # folder is allowed not to exist yet. `ART_PROMPTS.md` has the two prompts.
-    posts, missing_posts, failed_posts = 0, ["orc", "human"], []
+    POSTS = {f: f for f in ("orc", "human", "hivekin", "wandering")}
+    posts, missing_posts, failed_posts = 0, list(POSTS), []
     if (SRC / "posts").exists():
         print("Garrison posts:")
         posts, missing_posts, failed_posts = process_aliased(
-            "posts", {"orc": "orc", "human": "human", "hivekin": "hivekin"}, force, ICON_SIZE
+            "posts", POSTS, force, ICON_SIZE
         )
     print("Capital parts:")
     palace, missing_palace, failed_palace = process_palace(force)

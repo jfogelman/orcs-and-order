@@ -3,6 +3,7 @@ import { TERRAIN, TERRAIN_IDS } from '../src/model/terrain';
 import { TECHS } from '../src/model/techs';
 import { CREATURES } from '../src/model/units';
 import { BUILDINGS } from '../src/model/buildings';
+import { FACTION_IDS } from '../src/model/factions';
 
 /**
  * Art that exists in `art_src/` but was never run through the pipeline is art
@@ -80,6 +81,9 @@ const NOT_DRAWN_YET = {
   // counting rungs were listed when this test was written and drawn an hour
   // later, and the entry below caught them still being listed. An empty list
   // is the state this should normally be in.
+  // Empty, and worth leaving here rather than deleting: section 146's two
+  // naval and siege advances were listed for a day and drawn the next, and
+  // the stale-entry check below is what made somebody come back and say so.
   advances: [] as string[],
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is
@@ -126,5 +130,42 @@ describe('everything the model offers has a picture', () => {
       ...NOT_DRAWN_YET.buildings.filter((id) => names(BUILDING_ART).has(id)),
     ];
     expect(drawn, 'these have art now and should come off the list').toEqual([]);
+  });
+});
+
+/**
+ * Section 102's garrison posts, one a side.
+ *
+ * This is here because of the way the Hive's went missing, which is the most
+ * expensive shape of all of them: **the file was there**. It was drawn in
+ * section 125, committed, and shipped. `mapRenderer` looped over a
+ * hand-written `['orc', 'human']` and never asked for it, so for eighteen
+ * sections the Hive's posts drew the three-shape placeholder hut and the art
+ * sat in `public/` being correct and unread. No test could fail: the picture
+ * existed and the game was not broken, only wrong.
+ *
+ * The loop reads `FACTION_IDS` now, so the renderer side is structural. This
+ * covers the other half -- that a side the picker offers has a post to draw --
+ * and it is a control rather than a bar, for the same reason the list above is.
+ */
+const POST_ART = import.meta.glob('../public/posts/*.png', { eager: true });
+
+/** Sides whose post is not drawn yet, each with its reason. */
+const NO_POST_YET: string[] = [
+  // Empty, and left here deliberately: the Wandering Folk's was listed when
+  // this test was written and drawn the same afternoon, which is the state an
+  // outstanding-work list should normally be in.
+];
+
+describe('every side has a garrison post', () => {
+  const have = names(POST_ART);
+
+  it('has a picture for each faction the game offers', () => {
+    const missing = FACTION_IDS.filter((f) => !have.has(f) && !NO_POST_YET.includes(f));
+    expect(missing, 'see Garrison posts in ART_PROMPTS.md').toEqual([]);
+  });
+
+  it('keeps no stale entries in the not-drawn-yet list', () => {
+    expect(NO_POST_YET.filter((f) => have.has(f))).toEqual([]);
   });
 });

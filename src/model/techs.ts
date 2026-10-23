@@ -24,6 +24,12 @@ export type TechFlag =
   | 'mapmaking'
   /** Forest and swamp cost one movement point instead of two. */
   | 'bridges'
+  /** Section 145: a Wandering Folk worker may plant a Caravan where it stands. */
+  | 'caravans'
+  /** Section 148: word has got round that people stay, so recruits ask less. */
+  | 'staying'
+  /** Section 148: anybody at all may park a Caravan, not only a worker. */
+  | 'anyone-parks'
   /** +1 sight for cities, and cities see through forest. */
   | 'watchtower'
   /** +1 content citizen in every city. */
@@ -88,7 +94,7 @@ export const TECHS: TechDef[] = [
     prereqs: [],
     // One ship a side. The filter that decides what a city may build asks the
     // unit's own faction, so a shared advance can hand all three their boat.
-    units: ['raft', 'barge', 'tidecaste'],
+    units: ['raft', 'barge', 'tidecaste', 'ferrycontract'],
     buildings: [],
     flags: ['mapmaking'],
     flavor: 'The world turns out to have a shape. Everyone is a little put out about it.',
@@ -987,20 +993,106 @@ export const TECHS: TechDef[] = [
     faction: 'wandering',
     cost: 0,
     prereqs: [],
-    units: ['wanderer'],
+    // **The Skirmisher from the first turn**, and this is section 136's note
+    // on `first-hivekin` repeated word for word, because section 142 wrote
+    // this entry straight out of `WANDERERS_PLAN.md` without reading it.
+    //
+    // The bible's draft gives this advance `units: ['wanderer']` and puts the
+    // Skirmisher behind `tier-skirmisher` at twenty beakers. Every other side
+    // opens with a settler **and** something that can hold a tile -- a peon
+    // and a goblin, a peasant and a footman, a grub and a fodder. The
+    // Wandering Folk opened with a Wanderer and nothing else, and a city of
+    // one is not offered a settler at all (`SETTLER.minCitySize`), so their
+    // first town could build **nothing whatsoever**: the Units list was empty
+    // and the production box was set to a Skirmisher nobody could have
+    // chosen, because `FACTIONS.wandering.starterUnit` names one.
+    //
+    // Reported from the first game played as them, exactly as the Hive's was.
+    // **And a Caravan from turn one**, which is the `caravans` flag below.
+    // Section 148, from playtest. Asking a faction to research eighty beakers
+    // before it may do the single thing that distinguishes it is the same
+    // shape of mistake as a town that can build nothing: the mechanic exists
+    // and the player cannot reach it.
+    //
+    // Jeremy's argument for why this needs no research gate, and it is the
+    // better brake: **gold is a premium early game.** A Caravan on turn one
+    // is a Caravan they cannot afford to use, so the cost of asking paces
+    // Recruit rather than a wall in front of it -- and that is a tension a
+    // player can feel and act on, where a tech wall is only a wait.
+    units: ['wanderer', 'wf-skirmisher'],
     buildings: [],
-    flags: [],
+    flags: ['caravans'],
     flavor: 'There was no homeland to begin from. This turned out not to matter.',
   },
+  // ------------------------------------------------------------ section 145
+  //
+  // Held back in section 142 with a note saying its building did not exist,
+  // which was true and was also the wrong way round: the Caravan is not a
+  // building. It is a **terrain improvement**, filed in the bible beside the
+  // irrigation and mine overlays, and what it needed was `sim/caravans.ts`.
+  //
+  // Verbatim from `WANDERERS_PLAN.md` apart from `buildings`, which the draft
+  // gave as `['caravan']` and which is the slip that kept this advance out of
+  // the game for three sections. Nothing is built in a city here. The advance
+  // unlocks an order a worker can be given, the way Bridge Building unlocks
+  // laying a road, and `canBuildCaravan` is what reads it.
   {
+    // ---------------------------------------------------------- section 148
+    //
+    // **Repurposed, for the same reason `tier-skirmisher` was.** This used to
+    // be the gate on Caravans themselves, and that gate moved to
+    // `first-wanderers` so the faction can reach its own mechanic on turn
+    // one. Deleting the advance was never an option -- it is a prereq of
+    // `nowhere-left-but-up`, so the whole ending hangs off it.
+    //
+    // What it buys instead is **Jeremy's idea, and a better one than the
+    // reach bump I had drafted**: every unit can park a Caravan, not only a
+    // worker. That changes how the faction is played rather than a number on
+    // it. Early, a Caravan costs a Wanderer's time and has to be planted on
+    // purpose; after this, the army plants them where the army already is --
+    // which is exactly where there is anybody to ask.
+    //
+    // It suits what a Caravan *is*, too. A garrison post is built; a ring of
+    // parked wagons is only stopped. There was never a good reason a soldier
+    // could not stop.
+    id: 'caravan-building',
+    name: 'Somewhere To Ask From',
+    faction: 'wandering',
+    cost: 80,
+    prereqs: ['first-wanderers', 'wall-building'],
+    units: [],
+    buildings: ['firstCaravan'],
+    flags: ['anyone-parks'],
+    flavor: 'A fort, more or less, except the point of it is conversation.',
+  },
+  {
+    // ---------------------------------------------------------- section 148
+    //
+    // **Repurposed, not deleted.** This granted the Skirmisher, which moved to
+    // `first-wanderers` when playtest found that a Wandering Folk town could
+    // build nothing at all on turn one. That left this advance granting
+    // nothing -- and deleting it was the wrong answer twice over: the whole
+    // fork hangs off it (`tier-warband` and `tier-slinger` both name it as a
+    // prereq), and the AI's tech priority leads with it.
+    //
+    // It needed no new name. *"The First Ones Who Stayed -- they were not
+    // asked to leave. They left anyway."* is a line about **recruits**, not
+    // about a unit tier, and it has been sitting on the wrong thing since
+    // section 142.
+    //
+    // It answers the bible's own open question -- *"worth confirming whether
+    // Wandering Folk should get their own reliability-improving advances"* --
+    // and splits cleanly from the First Caravan folly, which is the other
+    // thing that touches Recruit: **the advance makes asking cheaper, the
+    // folly makes it likelier to work.** Two levers, two prices, no overlap.
     id: 'tier-skirmisher',
     name: 'The First Ones Who Stayed',
     faction: 'wandering',
     cost: 20,
     prereqs: ['first-wanderers'],
-    units: ['wf-skirmisher'],
+    units: [],
     buildings: [],
-    flags: [],
+    flags: ['staying'],
     flavor: 'They were not asked to leave. They left anyway. Close enough.',
   },
   {
@@ -1043,7 +1135,7 @@ export const TECHS: TechDef[] = [
     cost: 95,
     prereqs: ['tier-outcast'],
     units: ['wf-brute'],
-    buildings: [],
+    buildings: ['headCount'],
     flags: [],
     flavor: 'One head was, elsewhere, considered a defect. Here it is simply a head count.',
   },
@@ -1078,7 +1170,7 @@ export const TECHS: TechDef[] = [
     cost: 130,
     prereqs: ['tier-brute'],
     units: ['bonebound'],
-    buildings: [],
+    buildings: ['unnamedMarker'],
     flags: [],
     flavor: 'Where it was found has not been disclosed. This is generally considered wise.',
   },
@@ -1095,6 +1187,57 @@ export const TECHS: TechDef[] = [
       'The drake was not purchased. The drake was convinced. There is a difference, and ' +
       'it involved considerably more fish.',
   },
+  // ------------------------------------------------------------ section 146
+  //
+  // The fourth road out. Held back in section 142 for the same reason
+  // `caravan-building` was -- its buildings did not exist -- and this time
+  // that was simply true rather than a misreading: the three works are real
+  // city buildings and had to be written.
+  //
+  // Costs are `WANDERERS_PLAN.md`'s: 300, 300 and 400, a thousand shields
+  // against the Hive's six hundred and the empires' thousand. The Wandering
+  // Folk pay the full empire price for their ending *and* a quarter more for
+  // every soldier, which is the trade Recruit is supposed to be worth.
+  {
+    id: 'nowhere-left-but-up',
+    name: 'Nowhere Left But Up',
+    faction: 'wandering',
+    cost: 200,
+    prereqs: ['caravan-building', 'signature-champion'],
+    units: [],
+    buildings: ['lastMap', 'standingOrder', 'circlingCaravan'],
+    flags: ['ending'],
+    flavor:
+      'Everyone has joined. There is nowhere further to go and no one left to ' +
+      'ask. The caravan keeps moving because stopping was never on the ' +
+      'schedule, and one enterprising young beastkin has begun pointing ' +
+      'straight up.',
+  },
+  // Section 146: the attack ship and the siege engine, each behind one
+  // advance of its own, which is the pattern the reference units set. The
+  // transport needs only shared Mapmaking and so has no advance here.
+  {
+    id: 'tier-corsair',
+    name: 'A Fee, Negotiated',
+    faction: 'wandering',
+    cost: 70,
+    prereqs: ['tier-warband'],
+    units: ['corsair'],
+    buildings: [],
+    flags: [],
+    flavor: 'The toll was boarding. This was explained in advance, mostly for legal reasons.',
+  },
+  {
+    id: 'tier-collector',
+    name: 'The Debt Comes Due',
+    faction: 'wandering',
+    cost: 90,
+    prereqs: ['tier-outcast'],
+    units: ['collector'],
+    buildings: [],
+    flags: [],
+    flavor: 'Every debt is owed to somebody. This one was finally owed to the right people.',
+  },
   {
     // Section 138: the last rung, and the one that is a different question.
     //
@@ -1109,7 +1252,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 160,
     prereqs: ['a-word-in-the-wrong-ear'],
-    units: ['nobody', 'intelligencer', 'hollow'],
+    units: ['nobody', 'intelligencer', 'hollow', 'offbooks'],
     buildings: [],
     flags: ['unseen'],
     flavor:
@@ -1123,7 +1266,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 60,
     prereqs: ['mapmaking'],
-    units: ['skulker', 'factor', 'mimic'],
+    units: ['skulker', 'factor', 'mimic', 'tagalong'],
     buildings: [],
     flags: [],
     flavor:

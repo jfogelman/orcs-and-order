@@ -1,4 +1,4 @@
-import type { FactionId } from './types';
+import type { BuiltEnding, FactionId } from './types';
 
 /**
  * The six people who will tell you what to do, per side.
@@ -157,7 +157,7 @@ export interface Situation {
    *
    * Optional so a situation written before the endings existed still holds.
    */
-  ending?: { turnsLeft: number; theirs: boolean; kind: 'portal' | 'object' | 'hive' } | null;
+  ending?: { turnsLeft: number; theirs: boolean; kind: BuiltEnding } | null;
   /**
    * How far this empire is along the road to its own ending, before it is built:
    * the advance can be researched, the build can be started, or the capital is
@@ -174,7 +174,7 @@ export interface Situation {
    * The other side has begun work towards its ending, and which ending. Null once
    * anything is counting down, when `ending` says so more urgently. Section 110.
    */
-  rivalEnding?: 'portal' | 'object' | 'hive' | null;
+  rivalEnding?: BuiltEnding | null;
   /**
    * The deadline, once it is close enough to be worth planning around.
    *
@@ -1929,7 +1929,317 @@ const HIVE: AdvisorDef[] = [
   },
 ];
 
-export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE, ...HIVE];
+/**
+ * Section 147: the Wandering Folk's six, in the same roles as everybody else's.
+ *
+ * `ADVISORS` was `[...KINGDOM, ...HORDE, ...HIVE]` and this faction had
+ * **nobody** -- so `advisorsFor('wandering')` returned an empty array, the
+ * Advisors panel opened blank, and six finished portraits sat unprocessed in
+ * `art_src/` because the art list is keyed by advisor id and there were no
+ * ids. Found by building a faction-select screen that wanted to show each
+ * side's diplomat.
+ *
+ * One register throughout, and `WANDERERS_PLAN.md` names it: **pragmatic and
+ * transactional, dry rather than mournful.** Loyalty is a topic everybody here
+ * discusses openly, in the same tone they would use about grain, and that is
+ * the running joke across all six.
+ *
+ * The rule that breaks it: *sentiment*. These people left somewhere. They are
+ * not sad about it and they are not defiant about it either -- it was a
+ * transaction that went a particular way. A line that mourns, or that boasts
+ * about not mourning, belongs to somebody else.
+ */
+const WANDERING: AdvisorDef[] = [
+  {
+    id: 'reclaimer',
+    name: 'The Reclaimer',
+    role: 'military',
+    faction: 'wandering',
+    blurb:
+      'A scarred Warband veteran in patchwork plate. Discusses losses the way a quartermaster ' +
+      'discusses stock.',
+    concerns: [
+      {
+        when: (s) => s.army === 0 && s.enemiesSeen > 0,
+        say: () =>
+          'We have nobody in the field and somebody else does. That is not a crisis, it is an ' +
+          'order of business. We should place it near the top.',
+      },
+      {
+        when: (s) => s.undefended > 0,
+        say: (s) =>
+          `${sentence(count(s.undefended, 'town'))} with nobody standing in ${
+            s.undefended === 1 ? 'it' : 'them'
+          }. Everyone here was somebody else's loss once. I would rather not add to the total.`,
+      },
+      {
+        when: (s) => s.enemiesSeen > 2 && s.army < s.enemiesSeen,
+        say: (s) =>
+          `${sentence(count(s.enemiesSeen, 'of theirs'))} in sight against ${count(s.army, 'of ours')}. ` +
+          'We lost four last month. We recruited six. The arithmetic works out eventually, but ' +
+          'not on its own.',
+      },
+      {
+        when: (s) => s.barracks === 0 && s.cities > 2,
+        say: () =>
+          'Nowhere to drill anybody. Recruits arrive knowing whatever they knew, which varies ' +
+          'more than you would like.',
+      },
+      {
+        when: (s) => s.rankAndFile > 6,
+        say: (s) =>
+          `${sentence(count(s.rankAndFile, 'under arms'))}. Most of them used to be under ` +
+          'somebody else. Nobody has raised it, which is how I prefer it.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'We lost four. We will recruit six. The maths works out, eventually.',
+      'Everyone in this camp was a loss on somebody else’s ledger first. It is not a sad fact, ' +
+        'it is a sourcing one.',
+      'Stock is adequate. I will tell you plainly when it is not.',
+    ],
+  },
+  {
+    id: 'campkeeper',
+    name: 'The Campkeeper',
+    role: 'domestic',
+    faction: 'wandering',
+    blurb:
+      'A Gnome Wanderer bustling between mismatched tents. Treats contentment as a resource to ' +
+      'manage, not a feeling to soothe.',
+    concerns: [
+      {
+        when: (s) => s.rioting > 0,
+        say: (s) =>
+          `${sentence(count(s.rioting, 'camp'))} has stopped working. They are unhappy because ` +
+          'they miss somewhere that is not here. Nothing to be done about that specifically. ' +
+          'More stew, maybe.',
+      },
+      {
+        when: (s) => s.starving > 0,
+        say: (s) =>
+          `${sentence(count(s.starving, 'camp'))} is eating more than it grows. That one does ` +
+          'solve itself, in the direction you would not choose.',
+      },
+      {
+        when: (s) => s.restless > 1,
+        say: (s) =>
+          `${sentence(count(s.restless, 'camp'))} close to packing up in protest. Contentment ` +
+          'is a supply like any other. We are short of it.',
+      },
+      {
+        when: (s) => s.calmBuildings === 0 && s.cities > 2,
+        say: () =>
+          'Nothing built anywhere for keeping people settled. We have been relying on the ' +
+          'weather being pleasant, which it will not always be.',
+      },
+      {
+        when: (s) => s.cities > 4,
+        say: (s) =>
+          `${sentence(count(s.cities, 'place'))} that have stopped moving. I am not sentimental ` +
+          'about it. It does make the stew easier.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'They are unhappy because they miss somewhere that is not here. Nothing to be done about ' +
+        'that specifically. More stew, maybe.',
+      'Everyone is fed and nobody is shouting. I will not call that good. I will call it today.',
+      'Half this camp arrived last season. They have stopped asking when we move on, which is ' +
+        'the nearest thing to settled I measure.',
+    ],
+  },
+  {
+    id: 'broker',
+    name: 'The Broker',
+    role: 'diplomacy',
+    faction: 'wandering',
+    blurb:
+      'An Elf Slinger with arms crossed, appraising. Says the terms everybody else would only ' +
+      'think.',
+    concerns: [
+      {
+        when: (s) => s.peaceLeft !== undefined && s.peaceLeft > 0,
+        say: (s) =>
+          `The arrangement has ${count(s.peaceLeft!, 'turn')} left on it. Arrangements end. ` +
+          'That is what distinguishes them from friendships, which we also do not have.',
+      },
+      {
+        when: (s) => s.theyBroke === true,
+        say: () =>
+          'They broke terms. I would like it noted that I quoted them a price and they chose ' +
+          'the other thing. People do.',
+      },
+      {
+        when: (s) => s.ashamed === true,
+        say: () =>
+          'We broke terms. Our own camps have opinions about that, which is new and which I ' +
+          'did price in, for what it is worth.',
+      },
+      {
+        when: (s) => s.enemiesSeen > 0 && s.gold > 150,
+        say: (s) =>
+          `${sentence(count(s.gold, 'coin'))} in hand and somebody else's soldiers within ` +
+          'sight of a Caravan. They will ally with us for grain. Everyone allies with us for ' +
+          'grain. It is not complicated.',
+      },
+      {
+        when: (s) => s.dominance?.theirs === true,
+        say: (s) =>
+          `They hold most of it, with ${count(s.dominance!.turnsLeft, 'turn')} to run. I can ` +
+          'open a conversation. I cannot open a good one.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'They will ally with us for grain. Everyone allies with us for grain. It is not complicated.',
+      'Nobody is talking to anybody. That is cheaper than the alternative and I will take it.',
+      'Everything is negotiable. People say that as a warning. I have never understood why.',
+    ],
+  },
+  {
+    id: 'self-taught',
+    name: 'The Self-Taught',
+    role: 'arcane',
+    faction: 'wandering',
+    blurb: 'The Dwarf Mystic, staff in hand. Openly admits nobody trained them for this.',
+    concerns: [
+      {
+        when: (s) => s.magicUnits === 0 && s.turn > 40,
+        say: () =>
+          'Nobody here is doing any of this. I have been doing all of it. I would like that to ' +
+          'be a smaller share of the total.',
+      },
+      {
+        when: (s) => s.beakersPerTurn < 3 && s.turn > 30,
+        say: (s) =>
+          `${sentence(count(s.beakersPerTurn, 'beaker'))} a turn. I learned by watching. It is ` +
+          'slower than being taught, and this is slower than that.',
+      },
+      {
+        when: (s) => s.researching === null,
+        say: () =>
+          'Nothing is being worked out. I am not sure that has ever improved a situation, ' +
+          'though I admit I am mostly guessing.',
+      },
+      {
+        when: (s) => s.magicUnits > 2,
+        say: (s) =>
+          `${sentence(count(s.magicUnits, 'of us'))} now. We compare notes. The notes do not ` +
+          'always agree, which I am told is normal and which nobody can confirm.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'I am mostly guessing. It has worked so far. That is not nothing.',
+      'Nobody trained me. I watched somebody who had been trained, until they stopped.',
+      'It worked again. I will write down what I did, in case that was the reason.',
+    ],
+  },
+  {
+    id: 'self-sworn',
+    name: 'The Self-Sworn',
+    role: 'faith',
+    faction: 'wandering',
+    blurb:
+      'The Half-orc Champion, hand-painted heraldry at the chest. Sincere about an order of one.',
+    concerns: [
+      {
+        when: (s) => s.ashamed === true,
+        say: () =>
+          'We gave our word and then we did not keep it. Nobody swore me in, so nobody can ' +
+          'release me from minding about that.',
+      },
+      {
+        when: (s) => s.rioting > 0,
+        say: () =>
+          'People are shouting. I have been down there. They are not wrong, which is the part ' +
+          'that needs answering.',
+      },
+      {
+        when: (s) => s.paladins === 0 && s.turn > 60,
+        say: () =>
+          'There is one of me. I had assumed that was temporary. I am increasingly treating it ' +
+          'as the arrangement.',
+      },
+      {
+        when: (s) => s.army > 8,
+        say: (s) =>
+          `${sentence(count(s.army, 'under arms'))}, and most of them came to us from ` +
+          'somewhere. I ask each of them once whether they meant it. They always say yes.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'Nobody else swore me in. I did it myself. That does not make the oath less real.',
+      'An order of one is still an order. The paperwork is simply shorter.',
+      'I painted the heraldry. It is not inherited. I would say that is the point of it.',
+    ],
+  },
+  {
+    id: 'fair-dealer',
+    name: 'The Fair Dealer',
+    role: 'trade',
+    faction: 'wandering',
+    blurb:
+      'A patchwork trader with a well-used ledger. Discusses the economics of recruiting people ' +
+      'without any euphemism at all.',
+    concerns: [
+      {
+        when: (s) => s.gold < 20 && s.turn > 25,
+        say: (s) =>
+          `${sentence(count(s.gold, 'coin'))} in the box. Recruiting is cheaper than building. ` +
+          'Neither is free, and one of them needs the box.',
+      },
+      {
+        when: (s) => s.coinBuildings === 0 && s.cities > 2,
+        say: () =>
+          'Nothing anywhere that turns the day into money. We are carrying everything we own, ' +
+          'which is traditional and is not a strategy.',
+      },
+      {
+        // `roadsKnown` first, or this asks a side that cannot lay a road why
+        // it has not laid one. Every other advisor in this file carries the
+        // same guard, and a test sweeps all of them for it.
+        when: (s) => s.roadsKnown && s.unlinkedGoldCities > 0,
+        say: (s) =>
+          `${sentence(count(s.unlinkedGoldCities, 'counting-house'))} with no road to anywhere. ` +
+          'A route that nobody can walk is a column of noughts.',
+      },
+      {
+        when: (s) => s.gold > 300,
+        say: (s) =>
+          `${sentence(count(s.gold, 'coin'))} sitting still. Recruiting is cheaper. Building ` +
+          'from nothing is safer. Pick your risk, but pick one.',
+      },
+      {
+        when: (s) => s.routeGold > 0,
+        say: (s) =>
+          `The roads bring in ${count(s.routeGold, 'coin')} a turn. Nobody had to be talked ` +
+          'into any of it, which makes it my favourite line in the book.',
+      },
+    ],
+    retorts: {},
+    idle: [
+      'Recruiting is cheaper. Building from nothing is safer. Pick your risk.',
+      'Everything in this ledger was somebody else’s first. That is not a confession, it is a ' +
+        'supply chain.',
+      'The books balance. They balance in a slightly unusual way, but they balance.',
+    ],
+  },
+];
+
+/**
+ * Everybody, in table order.
+ *
+ * Section 147 added the Wandering Folk, who had **no entry here at all** --
+ * `advisorsFor` returned nothing for them and the panel opened blank. The
+ * list is still written out, because each faction's set is a `const` in this
+ * file and there is nothing to derive it from; the test that catches the next
+ * omission sweeps `FACTION_IDS` instead.
+ */
+export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE, ...HIVE, ...WANDERING];
 
 export function advisorsFor(faction: FactionId): AdvisorDef[] {
   return ADVISORS.filter((a) => a.faction === faction);

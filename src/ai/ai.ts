@@ -89,6 +89,8 @@ import {
 } from '../sim/movement';
 import { canLayRoads, connectedByRoad, pillage } from '../sim/roads';
 import { POSTS, startPost } from '../sim/posts';
+import { CARAVANS, caravansOf, startCaravan } from '../sim/caravans';
+import { aiAsks, canRecruit, recruitUnit } from '../sim/recruiting';
 import { TRADE_STEPS, researchableTechs, setResearch, techCost } from '../sim/research';
 import { isFolly } from '../sim/follyEffects';
 import { TERRAFORM } from '../sim/terraform';
@@ -1441,6 +1443,88 @@ function takePostJob(state: GameState, unit: Unit): boolean {
   return startPost(state, unit);
 }
 
+/**
+ * How many Caravans this side would like standing, by how many towns it holds.
+ *
+ * One per town and never fewer than two, because a Caravan is useless where
+ * nobody walks and the point of a second one is to cover a different road.
+ * Not measured yet; the obvious first thing a sweep should push on.
+ */
+export const CARAVAN_WANT = { perCity: 1, least: 2, cap: 6 };
+
+/** Whether this side still wants another Caravan. */
+function wantsCaravan(state: GameState, playerId: number): boolean {
+  if (state.players[playerId]?.faction !== 'wandering') return false;
+  if (!hasFlag(state.players[playerId], 'caravans')) return false;
+  const want = Math.min(
+    CARAVAN_WANT.cap,
+    Math.max(CARAVAN_WANT.least, playerCities(state, playerId).length * CARAVAN_WANT.perCity),
+  );
+  return caravansOf(state, playerId).length < want;
+}
+
+/**
+ * Give a worker a Caravan to raise: out towards whoever is nearest, since a
+ * Caravan nobody walks past is a Caravan that never asks anybody anything.
+ *
+ * Deliberately *not* beside our own towns the way a post is. A post is for a
+ * city of ours to feel calmer about; this is for somebody else's soldier to
+ * wander into.
+ */
+function takeCaravanJob(state: GameState, unit: Unit): boolean {
+  if (!unitType(unit.type).works) return false;
+  if (unit.order === 'caravan') return true;
+  if (!wantsCaravan(state, unit.owner)) return false;
+  // Somewhere between our nearest town and the nearest thing that is not ours,
+  // which is where traffic is.
+  const seat = capitalOf(state, unit.owner);
+  const toward = nearestEnemyTarget(state, unit.owner, unit);
+  const aim = toward ?? (seat ? { x: seat.x, y: seat.y } : null);
+  if (!aim) return false;
+  const spot = DIRS8.concat([[0, 0]])
+    .map(([dx, dy]) => ({ x: unit.x + dx, y: unit.y + dy }))
+    .filter((t) => {
+      if (t.x < 0 || t.y < 0 || t.x >= state.width || t.y >= state.height) return false;
+      const i = idx(t.x, t.y, state.width);
+      if (TERRAIN[state.terrain[i]].water || state.caravans?.[i] === 1) return false;
+      if (state.cities.some((c) => c.x === t.x && c.y === t.y)) return false;
+      // Not on top of another of ours: two Caravans a tile apart see the same
+      // ground and the second one is paid for twice.
+      return !caravansOf(state, unit.owner).some((j) => {
+        const cx = j % state.width;
+        const cy = Math.floor(j / state.width);
+        return Math.max(Math.abs(cx - t.x), Math.abs(cy - t.y)) <= CARAVANS.sight;
+      });
+    })
+    .sort((a, b) => distance(a.x, a.y, aim.x, aim.y) - distance(b.x, b.y, aim.x, aim.y))[0];
+  if (!spot) return false;
+  if (unit.x !== spot.x || unit.y !== spot.y) {
+    if (!routeTo(state, unit, spot.x, spot.y)) return false;
+    moveToward(state, unit, spot.x, spot.y);
+    if (unit.x !== spot.x || unit.y !== spot.y) return true;
+  }
+  return startCaravan(state, unit);
+}
+
+/**
+ * Section 145: the Wandering Folk ask, once per Caravan, best first.
+ *
+ * `askFromCaravans` rather than `askAround`, which section 136 already uses
+ * for a spy asking around in a town. Two functions of that name in one file
+ * would be a mix-up waiting to be made.
+ *
+ * Run at the top of their turn rather than off a unit, because Recruit has no
+ * agent -- the Caravan is the reach, and `canRecruit` is what stops one
+ * Caravan asking twice.
+ */
+function askFromCaravans(state: GameState, playerId: number): void {
+  if (state.players[playerId]?.faction !== 'wandering') return;
+  for (const mark of aiAsks(state, playerId)) {
+    if (!canRecruit(state, playerId, mark).ok) continue;
+    recruitUnit(state, playerId, mark);
+  }
+}
+
 function roadWorkToDo(state: GameState, playerId: number): boolean {
   const seat = capitalOf(state, playerId);
   if (!seat) return false;
@@ -1962,6 +2046,11 @@ function actSettler(state: GameState, unit: Unit, personality: AiPersonality): v
     if (unit.order === 'post') return;
     if (takePostJob(state, unit)) return;
   }
+  // Section 145: and for the Wandering Folk, a Caravan -- which is not an
+  // improvement to the land but the whole of how they raise an army. Asked
+  // **before** the land jobs rather than after them, because a side that
+  // irrigates first is a side that never recruits anybody.
+  if (CARAVANS.enabled && takeCaravanJob(state, unit)) return;
   // Section 112: with the roads laid and the posts up, the land itself -- which is
   // what section 107's diggers were standing around for.
   if (TERRAFORM.enabled && cities >= personality.targetCities) {
@@ -2896,6 +2985,11 @@ export function runAiTurn(state: GameState, playerId: number): void {
     city.producing = chooseProduction(state, city, personality);
   }
   if (AI_TUNING.rushBuying) spendGold(state, player);
+  // Section 145: and before the army moves, the Caravans ask. Here rather than
+  // in a unit's turn because there is no unit doing it -- and after
+  // `spendGold`, so rush-buying gets first call on the purse and asking takes
+  // what is left rather than the other way round.
+  askFromCaravans(state, playerId);
 
   // Last turn's requests for a boat have been heard by the yards above. Each
   // unit asks again this turn if it still needs to.

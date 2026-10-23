@@ -165,7 +165,11 @@ export function canPillage(state: GameState, unit: Unit): { ok: boolean; reason?
     state.roads?.[i] !== 1 &&
     state.posts?.[i] !== 1 &&
     state.irrigation?.[i] !== 1 &&
-    state.mines?.[i] !== 1
+    state.mines?.[i] !== 1 &&
+    // Section 145. Jeremy's call on the question his own bible left open --
+    // a Caravan is destroyed by pillaging, like a post, rather than captured
+    // or attacked down. So a forward Caravan is a real risk with no new rule.
+    state.caravans?.[i] !== 1
   ) {
     return { ok: false, reason: 'There is nothing here to tear up.' };
   }
@@ -188,15 +192,18 @@ export function pillage(state: GameState, unit: Unit): boolean {
   const hadRoad = state.roads?.[i] === 1;
   const hadDitch = state.irrigation?.[i] === 1;
   const hadMine = state.mines?.[i] === 1;
+  const hadCaravan = state.caravans?.[i] === 1;
   if (hadRoad) state.roads![i] = 0;
   if (hadPost) state.posts![i] = 0;
   if (hadDitch) state.irrigation![i] = 0;
   if (hadMine) state.mines![i] = 0;
+  if (hadCaravan) state.caravans![i] = 0;
   const wrecked = [
     hadRoad ? 'the road' : null,
     hadPost ? 'the garrison post' : null,
     hadDitch ? 'the ditches' : null,
     hadMine ? 'the mine' : null,
+    hadCaravan ? 'the Caravan' : null,
   ].filter((w): w is string => w !== null);
   const list =
     wrecked.length === 1

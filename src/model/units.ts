@@ -1746,6 +1746,154 @@ export const CREATURES: CreatureDef[] = [
       'Not a defector at all, and the one entry on this roster with no "why they left" ' +
       'story: nobody asked it to leave anywhere. It was simply caught.',
   },
+  // ------------------------------------------------------------ section 147
+  //
+  // The two spies, and **they were missing entirely** -- every other side has
+  // a low tier that wears somebody else's colours and a high tier nobody can
+  // see at all, and the Wandering Folk had neither, so espionage was simply
+  // unavailable to them. Both sprites have been on disk since the faction
+  // drop. Found by the art audit in `tests/art-manifest.test.ts`, which is
+  // the first thing in this project to ask the question the other way round:
+  // not "does this id have a picture" but "does this picture have an id".
+  //
+  // Names and reasoning are `NEW_FACTION_SPIES.md`'s. Stats are the Hive's
+  // equivalents unchanged, deliberately, for the reason section 142 gave
+  // about the buildings: a faction written later must not be quietly
+  // stronger for it. The quarter-more premium does not apply, as with the
+  // ships and the engine, because a spy cannot be Recruited either.
+  {
+    id: 'tagalong',
+    name: 'Tag-Along',
+    plural: 'Tag-Alongs',
+    faction: 'wandering',
+    spy: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#c0a882',
+    trim: '#5a4430',
+    blurb:
+      'Every band picks people up along the way, and nobody remembers formally admitting ' +
+      'any of them. This one is no different, which is the whole of the method.',
+  },
+  {
+    id: 'offbooks',
+    name: 'Off The Books',
+    plural: 'Off The Books',
+    faction: 'wandering',
+    spy: true,
+    hidden: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 55,
+    sight: 3,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#9d8468',
+    trim: '#403224',
+    blurb:
+      'A faction that thinks in ledgers has exactly one person who was never entered in ' +
+      'one. Nothing written down is nothing to trace back.',
+  },
+  // ------------------------------------------------------------ section 146
+  //
+  // Two naval and one siege, finishing the roster. Stats are
+  // `WANDERERS_PLAN.md`'s tables unchanged -- including the costs, which are
+  // the one place the faction's quarter-more premium is **not** applied,
+  // because the bible prices these three itself rather than giving a "rough
+  // equivalent" to mark up. A Ferry Contract at 35 is cheaper than the
+  // Committee Barge at 40; a Corsair at 55 undercuts the Frigate at 60.
+  //
+  // That is not an oversight to correct. These are the only units this
+  // faction cannot Recruit -- there is no ship or engine in `RECRUIT_AS`,
+  // because renormalising a frigate into a nomad makes no sense -- so they
+  // are the only ones it must always build, and the premium would be charged
+  // twice if it landed here too.
+  {
+    id: 'ferrycontract',
+    name: 'The Ferry Contract',
+    plural: 'Ferry Contracts',
+    faction: 'wandering',
+    role: 'naval',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 3,
+    cost: 35,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    carries: 3,
+    artScale: 1.3,
+    silhouette: 'ship',
+    body: '#a98a5e',
+    trim: '#b5683a',
+    blurb:
+      'Everyone aboard has signed something. Nobody remembers reading it closely. The ' +
+      'crossing happens on schedule regardless, and the paperwork is filed somewhere on ' +
+      'the far bank.',
+  },
+  {
+    id: 'corsair',
+    name: 'Corsair',
+    plural: 'Corsairs',
+    faction: 'wandering',
+    role: 'naval',
+    attack: 4,
+    defense: 3,
+    hp: 12,
+    move: 3,
+    cost: 55,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    artScale: 1.4,
+    silhouette: 'ship',
+    body: '#8f6a4a',
+    trim: '#b5683a',
+    blurb:
+      'Passage was offered. The alternative was also offered, clearly and up front. Most ' +
+      'parties, on reflection, choose passage.',
+  },
+  {
+    id: 'collector',
+    range: 2,
+    // Five, as both the other engines carry. The bible gives this one no
+    // magazine of its own, and picking a different number would be inventing
+    // a balance decision in a unit meant to sit beside the Ballista.
+    ammo: 5,
+    reloadsBy: 'labour',
+    name: 'Debt Collector',
+    plural: 'Debt Collectors',
+    faction: 'wandering',
+    role: 'siege',
+    attack: 7,
+    defense: 1,
+    hp: 12,
+    move: 1,
+    cost: 40,
+    sight: 1,
+    counts: [1],
+    siegeBonus: 2,
+    artScale: 1.08,
+    silhouette: 'engine',
+    body: '#8a6a44',
+    trim: '#4a3526',
+    blurb:
+      'The debt was the wall. The debt has now been collected in full, and a receipt has ' +
+      'been left where the gate used to be.',
+  },
 ];
 
 // ------------------------------------------------------- generated types

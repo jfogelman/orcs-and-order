@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
 import { TECHS, TECHS_BY_ID } from '../src/model/techs';
+import { FACTION_IDS } from '../src/model/factions';
 import type { City, GameState } from '../src/model/types';
 import { deserialize, serialize } from '../src/persist/save';
 import { runAiTurn } from '../src/ai/ai';
@@ -65,9 +66,8 @@ afterEach(() => {
 });
 
 describe('the roster', () => {
-  it('has fifteen: four shared, four a side, three for the Hive, each on exactly one advance', () => {
+  it('gives every side its own, on exactly one advance each', () => {
     const all = follies();
-    expect(all).toHaveLength(15);
     expect(all.filter((b) => b.folly === 'world' && b.faction === 'both')).toHaveLength(4);
     expect(all.filter((b) => b.folly === 'faction' && b.faction === 'orc')).toHaveLength(4);
     expect(all.filter((b) => b.folly === 'faction' && b.faction === 'human')).toHaveLength(4);
@@ -75,6 +75,20 @@ describe('the roster', () => {
     // and the Hivekin have not noticed. It is a balance lever, not an oversight
     // -- see HIVEKIN_PLAN.md -- so the number is asserted rather than assumed.
     expect(all.filter((b) => b.folly === 'faction' && b.faction === 'hivekin')).toHaveLength(3);
+    // Section 146: and three for the Wandering Folk, the same deliberate
+    // three rather than four. `WANDERERS_PLAN.md` asks for one civ-wide and
+    // two city-wide, which does not halve evenly and lands 1/2.
+    expect(all.filter((b) => b.folly === 'faction' && b.faction === 'wandering')).toHaveLength(3);
+    // **Every side is covered, rather than a total that has to be retyped.**
+    // This used to assert fifteen, and a fifteen is a number somebody has to
+    // remember to change -- which is the same hand-maintained-list shape that
+    // has caught this project six times now.
+    for (const f of FACTION_IDS) {
+      expect(all.some((b) => b.faction === f), `${f} has no follies`).toBe(true);
+    }
+    expect(all).toHaveLength(
+      4 + FACTION_IDS.reduce((n: number, f) => n + all.filter((b) => b.faction === f).length, 0),
+    );
     for (const b of all) {
       expect(TECHS.filter((t) => t.buildings.includes(b.id)), b.id).toHaveLength(1);
     }

@@ -3,6 +3,16 @@ import './style.css';
 
 import { runAiTurn } from './ai/ai';
 import { POSTS, canBuildPost, startPost } from './sim/posts';
+import { CARAVANS, canBuildCaravan, startCaravan } from './sim/caravans';
+import {
+  canRecruit,
+  poachingSeen,
+  recruitFailOdds,
+  recruitPrice,
+  recruitTargets,
+  recruitUnit,
+  recruitsAs,
+} from './sim/recruiting';
 import {
   canBuildRoad,
   canLayRoads,
@@ -198,6 +208,24 @@ class App {
    * look is owed, and paid once the animator is finished.
    */
   private owedLook = false;
+  /**
+   * The earliest the owed look may be paid back, as a timestamp.
+   *
+   * **Section 149, reported from a played game**: a Goblin attacked a Wanderer
+   * that was part-way through raising a Caravan, and the view never moved.
+   *
+   * It did move. `playLogCues` turned the camera to the fight exactly as it
+   * should -- and `owedLook` handed it straight back on the very next frame,
+   * because the pay-back waits on `animator.busy` and **a defence that holds
+   * spawns no animation at all**. There was nothing playing, so "once it has
+   * finished playing" was true immediately. The camera arrived and left inside
+   * one frame.
+   *
+   * So the animation is a floor on the dwell rather than the whole of it. If
+   * the cue camera moved, the view stays on what it moved to for at least
+   * `LOOK_DWELL`, whether or not anything is being drawn there.
+   */
+  private lookHeldUntil = 0;
   private dragMoved = 0;
   private lastPointer: { x: number; y: number } | null = null;
   /** Turn on which the battle theme may give way to the world theme again. */
@@ -266,6 +294,28 @@ class App {
    * So: whatever is in hand, else the seat of government, else anything of ours
    * at all. The point is that a turn begins somewhere deliberate.
    */
+  /**
+   * Whether the borrowed look may be handed back yet. Section 149.
+   *
+   * **A method rather than a condition inline in the frame loop**, because a
+   * test cannot reach the frame loop -- and the first test written for this
+   * re-implemented the condition beside it, which meant deleting the fix from
+   * the game did not fail it. A test that passes against its own copy of the
+   * rule is not a test.
+   */
+  private lookIsDue(): boolean {
+    if (!this.owedLook) return false;
+    // Something is still playing where the camera was sent.
+    if (this.renderer.animator.busy) return false;
+    // Or nothing is, and it has not been there long enough to be seen. An
+    // animation is the floor on the dwell, not the whole of it: a defence
+    // that holds draws nothing at all, and used to be handed back before a
+    // single frame of it had been looked at.
+    if (performance.now() < this.lookHeldUntil) return false;
+    // The end-of-turn questions are asked over the piece of map they concern.
+    return !isModalOpen();
+  }
+
   private lookAtTheNewTurn(): void {
     const held = this.selected;
     if (held && this.state.units.includes(held)) {
@@ -1322,6 +1372,74 @@ class App {
     this.selectNextIdle();
   }
 
+  /** Plant a Caravan where the worker stands. Section 145. */
+  private orderCaravan(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const check = canBuildCaravan(this.state, unit);
+    if (!check.ok) {
+      this.flash(check.reason ?? 'Not here.');
+      return;
+    }
+    delete unit.roadTo;
+    startCaravan(this.state, unit);
+    this.selectNextIdle();
+  }
+
+  /**
+   * Everybody the Caravans can ask today. Section 145.
+   *
+   * **Not hung off a selected agent**, because Recruit has no agent: the
+   * Caravan is the reach, so the offer belongs to the empire rather than to
+   * whatever is standing nearby. It renders beside whatever unit happens to
+   * be in hand, which is the one place a player is always looking.
+   *
+   * Price and odds are both shown, because the bible makes them move
+   * together and a player who can see only one of them is being told half of
+   * a rule.
+   */
+  private caravanAsks(): string {
+    if (this.state.players[this.viewerId]?.faction !== 'wandering') return '';
+    const targets = recruitTargets(this.state, this.viewerId);
+    if (targets.length === 0) return '';
+    const rows = targets
+      .slice(0, 6)
+      .map((u) => {
+        const price = recruitPrice(this.state, this.viewerId, u);
+        const fail = Math.round(recruitFailOdds(this.state, this.viewerId, u) * 100);
+        const becomes = unitType(recruitsAs(u)!).name;
+        const seen = poachingSeen(this.state, u) ? ' &middot; they are watching' : '';
+        return `<button class="small" data-act="recruit" data-unit="${u.id}"
+                  title="They would join as a ${escapeHtml(becomes)}. The gold goes whether they come or not${
+                    poachingSeen(this.state, u) ? ', and they can see us asking' : ''
+                  }.">Ask ${escapeHtml(
+          unitType(appearsTo(u, this.viewerId).type).name,
+        )} &middot; <span class="risk">${price}g, ${fail}% refuse${seen}</span></button>`;
+      })
+      .join('');
+    return `<div class="panel-title">The Caravans</div><div class="button-row">${rows}</div>`;
+  }
+
+  /** Ask somebody else's soldier to come and work here. Section 145. */
+  private orderRecruit(unitId: number): void {
+    const target = this.state.units.find((u) => u.id === unitId);
+    if (!target || isOver(this.state)) return;
+    const refused = canRecruit(this.state, this.viewerId, target);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not now.');
+      return;
+    }
+    const out = recruitUnit(this.state, this.viewerId, target);
+    if (out.kind === 'blocked') {
+      this.flash(out.reason);
+      return;
+    }
+    this.playLogCues();
+    this.refreshHud();
+    this.refreshOverlays();
+    this.refreshSidebar();
+  }
+
   /**
    * Tear up the road underfoot. Section 96.
    *
@@ -1605,7 +1723,13 @@ class App {
     } else {
       audio.play('move');
       this.playLogCues();
-      if (unit.moves <= 0 || unit.order === 'road' || unit.order === 'post') this.selectNextIdle();
+      if (
+        unit.moves <= 0 ||
+        unit.order === 'road' ||
+        unit.order === 'post' ||
+        unit.order === 'caravan'
+      )
+        this.selectNextIdle();
     }
     this.refreshOverlays();
     this.refreshSidebar();
@@ -1646,7 +1770,13 @@ class App {
     // left it, and the camera arrived to show the aftermath: a unit already
     // dead, a fight already over. The thing worth watching had happened off
     // screen every time.
-    if (look) this.camera.centerOnTile(look[0], look[1]);
+    if (look) {
+      this.camera.centerOnTile(look[0], look[1]);
+      // Section 149: and hold it there long enough to be seen. Only when the
+      // camera actually moved -- an event already on screen needs no dwell,
+      // and adding one would freeze the view for no reason.
+      this.lookHeldUntil = performance.now() + LOOK_DWELL;
+    }
 
     for (const entry of entries) {
       // Sound is addressed: you hear about your own empire.
@@ -2676,9 +2806,32 @@ class App {
         this.orderSkip();
         break;
       case 'g':
-        // Section 125. Shift for the one that asks where, matching Road To.
-        if (e.shiftKey) this.orderBurrow();
-        else this.orderSink();
+        // **Three things have wanted this key, and two of them were dead.**
+        //
+        // Section 102 put Build Post in the `default:` branch below, which only
+        // runs when no `case` matched. Section 125 then added this `case 'g'`
+        // for the Hive's burrowing -- and a third `case 'g'`, the grid toggle,
+        // sat further down the same switch where JavaScript could never reach
+        // it, because a duplicate case label is unreachable code.
+        //
+        // So the button said "Build Post (G)", the Orcpedia said G, and the key
+        // sank a Burrower or did nothing at all. Measured in the running game
+        // before changing it: a Peon standing on legal ground, pressing G,
+        // started no post and did not toggle the grid.
+        //
+        // Dispatched by what the selected unit can actually do, worst-specific
+        // first, with the view toggle as the fallback for when no unit claims
+        // it. Shift still asks where, matching Road To.
+        if (unit && canBuildPost(this.state, unit).ok) {
+          this.orderPost();
+          return;
+        }
+        if (unit && unit.owner === this.viewerId && burrows(unit)) {
+          if (e.shiftKey) this.orderBurrow();
+          else this.orderSink();
+          return;
+        }
+        this.overlay.showGrid = !this.overlay.showGrid;
         return;
       case 'f':
         this.orderFortify();
@@ -2700,9 +2853,6 @@ class App {
         break;
       case 't':
         openTechPanel(this.state, this.state.players[this.viewerId], () => this.refreshHud());
-        break;
-      case 'g':
-        this.overlay.showGrid = !this.overlay.showGrid;
         break;
       case 'v':
         // Section 117: each side's land, on or off.
@@ -2794,6 +2944,14 @@ class App {
         // ability uses G, and no soldier can build one anyway.
         if (pressed === 'g' && canBuildPost(this.state, unit).ok) {
           this.orderPost();
+          break;
+        }
+        // Q raises a Caravan. **Not V**, which was the first choice and would
+        // have been a fourth dead shortcut: `case 'v'` toggles borders above,
+        // and this branch only runs when no case matched. Q is claimed by no
+        // case and no ability, which is the whole of the test.
+        if (pressed === 'q' && canBuildCaravan(this.state, unit).ok) {
+          this.orderCaravan();
           break;
         }
         // P tears up a road. Free on every unit that can do it: no soldier has an
@@ -2910,6 +3068,8 @@ class App {
       const canRoadTo = unit.owner === this.viewerId && canLayRoads(this.state, unit).ok;
       const canWreck = unit.owner === this.viewerId && canPillage(this.state, unit).ok;
       const canPost = unit.owner === this.viewerId && canBuildPost(this.state, unit).ok;
+      const canCaravan =
+        unit.owner === this.viewerId && canBuildCaravan(this.state, unit).ok;
       const cityHere = cityAt(this.state, unit.x, unit.y);
       // Left-clicking one of your own cities opens it, so there was no obvious
       // gesture for "go and stand in it". Right-click always did; this says so.
@@ -3000,13 +3160,18 @@ class App {
               : ''
           }
           ${
-            unit.order === 'road' || unit.order === 'post' || unit.order === 'improve'
+            unit.order === 'road' ||
+            unit.order === 'post' ||
+            unit.order === 'caravan' ||
+            unit.order === 'improve'
               ? `<div class="chip">${
                   unit.order === 'road'
                     ? 'laying a road'
                     : unit.order === 'post'
                       ? 'building a post'
-                      : escapeHtml(
+                      : unit.order === 'caravan'
+                        ? 'raising a Caravan'
+                        : escapeHtml(
                           jobName(
                             unit.job ?? 'irrigate',
                             this.state.players[unit.owner].faction,
@@ -3115,6 +3280,11 @@ class App {
               : ''
           }
           ${
+            canCaravan
+              ? `<button class="small" data-act="caravan" title="A ring of parked wagons. Anybody else's soldier that comes within sight of it can be asked to join you.">Raise Caravan (Q) &middot; ${CARAVANS.turns} turns</button>`
+              : ''
+          }
+          ${
             canWreck
               ? '<button class="small" data-act="pillage" title="Tear up this road. Costs the rest of this turn.">Pillage (P)</button>'
               : ''
@@ -3178,6 +3348,7 @@ class App {
           <button class="small" data-act="sentry">Sentry (S)</button>
           <button class="small" data-act="skip">Skip (Space)</button>
           <button class="small" data-act="next">Next (N)</button>
+          ${this.caravanAsks()}
         </div>`;
       panel.querySelectorAll<HTMLElement>('[data-pedia]').forEach((link) => {
         link.addEventListener('click', (e) => {
@@ -3227,6 +3398,9 @@ class App {
             case 'offer':
               this.orderOffer(Number(btn.dataset.unit));
               break;
+            case 'recruit':
+              this.orderRecruit(Number(btn.dataset.unit));
+              break;
             case 'ask':
               this.orderAsk(Number(btn.dataset.city));
               break;
@@ -3244,6 +3418,9 @@ class App {
               break;
             case 'post':
               this.orderPost();
+              break;
+            case 'caravan':
+              this.orderCaravan();
               break;
             case 'halt':
               this.orderHalt();
@@ -3414,7 +3591,7 @@ class App {
     // Pay back the look the cue camera borrowed, once the thing worth watching
     // has finished playing. Not while a dialog is up: the end-of-turn questions
     // are asked over the piece of map they are about.
-    if (this.owedLook && !this.renderer.animator.busy && !isModalOpen()) {
+    if (this.lookIsDue()) {
       this.owedLook = false;
       this.lookAtTheNewTurn();
     }
@@ -3428,6 +3605,19 @@ class App {
  * What each ranged creature throws. Keyed on the base creature, so Two Archers
  * loose the same arrow as one.
  */
+
+/**
+ * How long the view rests on something the cue camera turned to look at.
+ *
+ * Section 149. Long enough to register as "something happened over there"
+ * and short enough that a turn with news in it does not feel paused. The
+ * animator usually outlasts it -- a swing and an explosion run longer than
+ * this -- so in the common case this changes nothing at all. It is the
+ * floor for the events that draw nothing: a defence that holds, a unit
+ * that starves, a building finished somewhere you were not looking.
+ */
+const LOOK_DWELL = 1400;
+
 const PROJECTILES: Record<string, { effect: EffectId; sound: SfxId } | undefined> = {
   archer: { effect: 'arrow', sound: 'arrow' },
   ballista: { effect: 'bolt', sound: 'siege' },
@@ -3483,6 +3673,7 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   portal: 'The Demonic Portal — held open long enough for something to come through',
   object: 'The Mysterious Object — somebody pressed the button',
   hive: "The Second Queen's Shell — there are two of her now, and nobody has reacted",
+  circle: 'The Circling Caravan — there was nowhere left, so the circle became the destination',
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;

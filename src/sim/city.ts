@@ -22,7 +22,7 @@ import { recordLandmark } from './history';
 import { hostile, shameContent } from './diplomacy';
 import { bankWork, endingOffered, isEndingPiece, pieceFinished, portalOpen } from './endings';
 import { follyFinished, follyOffered } from './follies';
-import { cityFollyBonus, empireBonus, isFolly } from './follyEffects';
+import { STRIDERS, cityFollyBonus, empireBonus, isFolly } from './follyEffects';
 import { improvementYield } from './terraform';
 import { handicapContent, handicapCost } from './difficulty';
 
@@ -1257,6 +1257,12 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
           if (drilled > 0) unit.drilled = drilled;
           const reach = unitType(item.id).base === 'mage' ? cityFollyBonus(city, (b) => b.builtReach) : 0;
           if (reach > 0) unit.reach = reach;
+          // Section 146: and an Unnamed Marker sends a Bonebound or a Drake
+          // out quicker than one built anywhere else, for good.
+          const strides = STRIDERS.has(unitType(item.id).base)
+            ? cityFollyBonus(city, (b) => b.builtMoves)
+            : 0;
+          if (strides > 0) unit.strides = strides;
           unit.homeCity = city.id;
           // Section 138: counted here rather than inferred from the board at the
           // end, because a hidden agent that is built and killed on turn 40
