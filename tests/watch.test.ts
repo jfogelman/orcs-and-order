@@ -35,20 +35,51 @@ describe('what the camera turns to look at', () => {
     // Reported from play: the log said raiders had been spotted and the camera
     // stayed where it was, which raises the fair question of how we spotted
     // them. A sighting is new information you cannot answer without seeing --
-    // so above ordinary news, and below a city of yours burning, which has
-    // already happened to you.
+    // so above a fight merely happening nearby, and below a city of yours
+    // burning, which has already happened to you.
     const state = board();
     const sighting = entry({ kind: 'bad', player: 0, at: [12, 8], subject: SIGHTING });
     const loss = entry({ kind: 'bad', player: 0, at: [30, 20] });
-    const news = entry({ kind: 'combat', player: 0, at: [4, 4] });
+    const nearby = entry({ kind: 'combat', player: 1, at: [4, 4] });
 
     expect(watchRank(state, 0, sighting)).toBe(WATCH.sighting);
-    expect(WATCH.sighting).toBeGreaterThan(watchRank(state, 0, news));
+    expect(WATCH.sighting).toBeGreaterThan(watchRank(state, 0, nearby));
     expect(WATCH.sighting).toBeLessThan(watchRank(state, 0, loss));
 
     // And it is the tile the camera actually goes to, over the earlier news.
-    expect(chooseFocus(state, 0, [news, sighting], everywhere, nowhere)).toEqual([12, 8]);
+    expect(chooseFocus(state, 0, [nearby, sighting], everywhere, nowhere)).toEqual([12, 8]);
     expect(chooseFocus(state, 0, [sighting, loss], everywhere, nowhere)).toEqual([30, 20]);
+  });
+
+  /**
+   * Section 149, and Jeremy's ruling from a played game: **any attack should
+   * get focus, and a near miss is still missable if you did not see it.**
+   *
+   * This test used to assert the opposite -- it called a fight one of your
+   * units was standing in "ordinary news" and put a sighting above it, which
+   * is how a Goblin swinging at a Wanderer lost the camera to a raiding band
+   * on the far side of the map.
+   */
+  it('turns to one of yours being swung at, over anything short of losing one', () => {
+    const state = board();
+    // Exactly the entry `movement.ts` writes when a defence holds: addressed
+    // to the defender, at the defender's tile. Nothing has to be standing
+    // there for the rank -- a message written *for you* is ranked off who it
+    // is for, which is the whole reason a death can still be ranked after the
+    // unit has been spliced out of the list.
+    const held = entry({ kind: 'combat', player: 0, at: [4, 4] });
+    const sighting = entry({ kind: 'bad', player: 0, at: [12, 8], subject: SIGHTING });
+    const loss = entry({ kind: 'bad', player: 0, at: [30, 20] });
+
+    expect(watchRank(state, 0, held)).toBe(WATCH.yourFight);
+    expect(WATCH.yourFight).toBeGreaterThan(WATCH.sighting);
+    expect(WATCH.yourFight).toBeLessThan(WATCH.yourLoss);
+
+    // The camera goes to the fight, not to the band somebody spotted.
+    expect(chooseFocus(state, 0, [held, sighting], everywhere, nowhere)).toEqual([4, 4]);
+    expect(chooseFocus(state, 0, [sighting, held], everywhere, nowhere)).toEqual([4, 4]);
+    // But a unit actually lost still outranks a unit that survived.
+    expect(chooseFocus(state, 0, [held, loss], everywhere, nowhere)).toEqual([30, 20]);
   });
 
   it('will not turn to a sighting of something in the fog, which is a contradiction', () => {

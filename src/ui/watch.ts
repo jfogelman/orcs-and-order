@@ -14,28 +14,49 @@ import { SIGHTING } from '../sim/barbarians';
  * unit standing beside, because the fight is still there to look at afterwards
  * and the unit is not. Among equals the **most recent** wins: the earlier one
  * is in the log, and what you want to be looking at is where things ended up.
+ *
+ * Section 149 moved one rung and renamed it. **A fight one of yours is in now
+ * outranks a sighting**, on Jeremy's ruling from a played game: any attack
+ * should get the camera, because a near miss is exactly the thing you will
+ * never know happened if you did not see it.
  */
 
 export const WATCH: {
   yourLoss: number;
+  yourFight: number;
   sighting: number;
-  yours: number;
   beside: number;
   no: number;
 } = {
   /** Something of yours was destroyed, burned, drained, or starved. */
   yourLoss: 4,
   /**
+   * **One of yours was in a fight and came out of it.** Section 149.
+   *
+   * This used to be called `yours` and sat *below* a sighting, which is how a
+   * Goblin attacking a Wanderer lost the camera to a raiding band somebody had
+   * spotted on the other side of the map. Reported from a played game, and
+   * Jeremy's ruling on it is the reason this moved: **any attack should get
+   * focus, and a near miss is still missable if you did not see it.**
+   *
+   * He is right, and the old name was carrying the mistake. Nothing but combat
+   * ever reached this rung -- `watchRank` returns `no` for every kind except
+   * `combat` and `bad`, and `bad` goes to `yourLoss` above -- so "something
+   * else of yours, addressed to you" was never what it meant. It has always
+   * been a fight one of your units was standing in.
+   *
+   * Below an outright loss, because a unit that survived is still there to
+   * look at and a unit that did not is not.
+   */
+  yourFight: 3,
+  /**
    * You have just laid eyes on something that belongs to nobody.
    *
-   * Above ordinary news because you cannot answer what you have not seen, and
-   * the whole point of the message is that it is new. Below a loss because a
-   * band on the horizon is a thing to deal with and a burning city is a thing
-   * that has already happened to you.
+   * Above a fight merely happening nearby, because you cannot answer what you
+   * have not seen. Below one of yours being swung at: a band on the horizon
+   * is a thing that might happen, and a spear in your settler already has.
    */
-  sighting: 3,
-  /** Something else of yours, addressed to you. */
-  yours: 2,
+  sighting: 2,
   /** Somebody else's fight, close enough to one of your things to matter. */
   beside: 1,
   /** Not worth moving the camera for. */
@@ -48,7 +69,9 @@ export function watchRank(state: GameState, viewerId: number, entry: LogEntry): 
 
   if (entry.player === viewerId) {
     if (entry.subject === SIGHTING) return WATCH.sighting;
-    return entry.kind === 'bad' ? WATCH.yourLoss : WATCH.yours;
+    // Only `combat` and `bad` get this far, so the second of these is always
+    // a fight one of yours was standing in rather than general news.
+    return entry.kind === 'bad' ? WATCH.yourLoss : WATCH.yourFight;
   }
 
   // A message addressed to somebody else can still be about us: an enemy
