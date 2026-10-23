@@ -5,6 +5,7 @@ import { foundCity } from '../../src/sim/city';
 import { FACTIONS } from '../../src/model/factions';
 import { UNIT_TYPES } from '../../src/model/units';
 import { beginPlayerTurn } from '../../src/sim/turn';
+import { closeModal, isModalOpen } from '../../src/ui/dom';
 import type { GameState, Unit } from '../../src/model/types';
 
 /**
@@ -449,5 +450,77 @@ describe('the last unit to spend itself', () => {
     // `selected` derives from the overlay id, so a cleared selection reads
     // undefined rather than null.
     expect(app.selected ?? null, 'nothing of ours is waiting on a decision').toBeNull();
+  });
+});
+
+/**
+ * Section 149: the camera must stay long enough to be seen.
+ *
+ * Reported from a played game: *"goblin attacked my wanderer settler but the
+ * focus didn't shift."* It did shift. `playLogCues` turned the view to the
+ * fight exactly as it should, and `owedLook` handed it straight back on the
+ * next frame -- because the pay-back waits on `animator.busy`, and **a
+ * defence that holds spawns no animation at all**. "Once it has finished
+ * playing" was true immediately, so the camera arrived and left inside one
+ * frame and the player saw nothing.
+ *
+ * The save was turn 36 of a Wandering Folk game: a Wanderer on 3 hp, part-way
+ * through raising a Caravan, with no idle units anywhere to draw the eye.
+ */
+describe('the cue camera rests on what it turned to look at', () => {
+  /**
+   * **The game's own decision**, not a copy of it.
+   *
+   * The first version of this helper re-implemented the condition here, and
+   * deleting the fix from `main.ts` did not fail a single test -- it was
+   * asserting against itself. `lookIsDue` exists so there is one place that
+   * decides and one place to test.
+   */
+  function payable(a: typeof app): boolean {
+    return (a as unknown as { lookIsDue(): boolean }).lookIsDue();
+  }
+
+  it('will not hand the view back the instant nothing is animating', () => {
+    const state = board();
+    const mine = spawnUnit(state, 0, 'goblin', 12, 8);
+    app.adopt(state);
+    // A fight of ours, somewhere the camera is not pointing, that draws
+    // nothing -- which is the case that used to be invisible.
+    state.log.push({
+      turn: state.turn,
+      player: 0,
+      kind: 'combat',
+      at: [mine.x, mine.y],
+      text: 'Wanderer holds against Goblin.',
+    });
+    app.camera.centerOnTile(0, 0);
+    // **Nothing else may be the reason it is held.** A modal open here would
+    // make `lookIsDue` false on its own, and the first draft of this test
+    // passed with the dwell deleted for exactly that reason.
+    closeModal();
+    (app as unknown as { soundedLogEntries: number }).soundedLogEntries = state.log.length - 1;
+    app.playLogCues();
+    (app as unknown as { owedLook: boolean }).owedLook = true;
+
+    expect(
+      (app as unknown as { renderer: { animator: { busy: boolean } } }).renderer.animator.busy,
+      'this event draws nothing, which is the whole point of the case',
+    ).toBe(false);
+    expect(isModalOpen(), 'nothing else may be holding it').toBe(false);
+    expect(
+      (app as unknown as { lookHeldUntil: number }).lookHeldUntil,
+      'the cue camera moved, so a dwell should have been recorded',
+    ).toBeGreaterThan(performance.now());
+    expect(payable(app), 'the look was handed back before it could be seen').toBe(false);
+  });
+
+  it('hands it back once the dwell is over', () => {
+    const state = board();
+    app.adopt(state);
+    closeModal();
+    (app as unknown as { owedLook: boolean }).owedLook = true;
+    // Nothing was looked at, so nothing is owed a dwell.
+    (app as unknown as { lookHeldUntil: number }).lookHeldUntil = 0;
+    expect(payable(app), 'nothing playing and no dwell left: hand it back').toBe(true);
   });
 });
