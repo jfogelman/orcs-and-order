@@ -538,11 +538,33 @@ eventually nobody there recalls it being optional.
 | `archon-tech` | 220 | the-ankh, tier-jinn | Archon |
 | `arrangement-permanent` | 200 | archon-tech | Ending |
 
-Note `anchor-totem`'s prereq (`tier-yaksha`) is a placeholder choice, not
-a settled one — it just needed *some* mid-tier prereq to sit at the right
-depth ahead of The Ankh; no particular story reason ties Anchor Totem to
-Yaksha specifically the way Sigil-Bound's tie to Retrieval Circle was
-already established. Worth a second look.
+~~Note `anchor-totem`'s prereq is a placeholder~~ — **settled, section 151.
+It stays `tier-yaksha`, and the reason it was missing is this:**
+
+> The yaksha is the *guardian-of-treasure* spirit — the one kind that stays
+> where it is put, indefinitely, holding on to a thing. An Anchor Totem
+> holds a spirit in place. **You learn to anchor a spirit from the one that
+> already anchors itself.**
+
+Three alternatives were weighed and put to Jeremy, who kept this one:
+
+- **`tier-jinn`** is the most literal tie — the roster calls it a
+  *"deceptive, binding spirit"*, and binding is the faction's whole
+  vocabulary. Against it: `tier-jinn` is already a prereq of `archon-tech`,
+  so the late tree would funnel everything through one 90-beaker advance.
+- **`retrieval-circle`** has the strongest building story, since the Totem
+  is plainly the better Circle. It **collapses the fork**: both branches
+  would root in the same advance, making The Ankh two siblings rather than
+  two kinds of knowledge.
+- **`sigil-bound`** makes the reform line one straight chain, which this
+  document already rules out as *"just a longer chain"*.
+
+What the depth was protecting turns out to be the point. The Ankh wants two
+branches *different in kind* — the shared Folly's pyromancy-and-cryomancy
+shape — and this is what gives it one: `retrieval-circle → sigil-bound` is
+the **ritual** line and `anchor-totem` hangs off the **spirit** line, so
+closing the fork means having developed both your rites and your dead. The
+placeholder had the right shape and the wrong tier's worth of reasoning.
 
 **Not yet covered**: the placeholder Folly ("The First Binding") isn't
 attached to a real advance here yet, and Naiad's water-adjacency bonus

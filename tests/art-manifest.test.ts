@@ -285,8 +285,9 @@ describe('the design documents against the art', () => {
 
   /** Ids still waiting to be drawn, each with a reason. */
   const NOT_DRAWN_YET: Record<string, string> = {
-    // Its prompt is in `ART_PROMPTS.md`; the unit sprite exists already.
-    'bone-speaker': 'the Horde advance no bible has an icon table for',
+    // Empty. `bone-speaker` was listed here for one section and drawn the
+    // next, which is the state an outstanding-work list should normally be
+    // in -- and the stale check below is what makes somebody cross it off.
   };
 
   function namedIn(doc: string): string[] {

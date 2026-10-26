@@ -2543,7 +2543,7 @@ already in `TECH_ICONS`, so `npm run art` takes them as they land.
 
 ---
 
-## The Bone-Speaker's advance (section 150) — 0 of 1
+## The Bone-Speaker's advance (section 150) — done
 
 The Horde's exorcist, and the one advance in the game whose icon is written
 down nowhere. `UNBOUND_PLAN.md` gives the unit sprite and the `TechDef` in
