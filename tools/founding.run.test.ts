@@ -121,8 +121,8 @@ function measure(seeds: number[]): { sides: [Side, Side]; games: number; checkpo
         }
       }
     });
-    sides[0].finalCities += outcome.cities[0];
-    sides[1].finalCities += outcome.cities[1];
+    sides[0].finalCities += outcome.cities.orc ?? 0;
+    sides[1].finalCities += outcome.cities.human ?? 0;
   }
   return { sides, games: seeds.length, checkpoints };
 }

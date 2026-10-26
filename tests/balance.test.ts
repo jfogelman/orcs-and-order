@@ -60,18 +60,18 @@ describe('faction balance across seeds', () => {
         `seed ${String(o.seed).padStart(9)} T${String(o.turns).padStart(4)} ` +
         `win=${o.winner === null ? '-' : o.winner} fights=${String(o.combats).padStart(4)} ` +
         `caps=${String(o.captures).padStart(2)} ` +
-        `| orc c${o.cities[0]} p${o.population[0]} u${o.units[0]} t${o.techs[0]} max×${o.ladder[0]} ` +
-        `| human c${o.cities[1]} p${o.population[1]} u${o.units[1]} t${o.techs[1]} max×${o.ladder[1]}`,
+        `| orc c${o.cities.orc ?? 0} p${o.population.orc ?? 0} u${o.units.orc ?? 0} t${o.techs.orc ?? 0} max×${o.ladder.orc ?? 0} ` +
+        `| human c${o.cities.human ?? 0} p${o.population.human ?? 0} u${o.units.human ?? 0} t${o.techs.human ?? 0} max×${o.ladder.human ?? 0}`,
     );
     const avg = (pick: (o: Outcome) => number) =>
       (outcomes.reduce((s, o) => s + pick(o), 0) / outcomes.length).toFixed(1);
     console.log(
       [
         ...rows,
-        `AVG  orc:   cities ${avg((o) => o.cities[0])} pop ${avg((o) => o.population[0])} ` +
-          `units ${avg((o) => o.units[0])} techs ${avg((o) => o.techs[0])}`,
-        `AVG  human: cities ${avg((o) => o.cities[1])} pop ${avg((o) => o.population[1])} ` +
-          `units ${avg((o) => o.units[1])} techs ${avg((o) => o.techs[1])}`,
+        `AVG  orc:   cities ${avg((o) => o.cities.orc ?? 0)} pop ${avg((o) => o.population.orc ?? 0)} ` +
+          `units ${avg((o) => o.units.orc ?? 0)} techs ${avg((o) => o.techs.orc ?? 0)}`,
+        `AVG  human: cities ${avg((o) => o.cities.human ?? 0)} pop ${avg((o) => o.population.human ?? 0)} ` +
+          `units ${avg((o) => o.units.human ?? 0)} techs ${avg((o) => o.techs.human ?? 0)}`,
         `wins: orc ${outcomes.filter((o) => o.winner === 0).length} / human ${outcomes.filter((o) => o.winner === 1).length}`,
         `avg city captures per game: ${avg((o) => o.captures)}`,
         `reached the turn limit: ${outcomes.filter((o) => o.turns > 300).length}/${outcomes.length}`,
@@ -132,9 +132,9 @@ describe('faction balance across seeds', () => {
    * catch a side being crushed, not to pin a balance nobody has agreed to.
    */
   it.each([
-    ['cities', (o: Outcome) => o.cities[0], (o: Outcome) => o.cities[1]],
-    ['population', (o: Outcome) => o.population[0], (o: Outcome) => o.population[1]],
-    ['advances', (o: Outcome) => o.techs[0], (o: Outcome) => o.techs[1]],
+    ['cities', (o: Outcome) => o.cities.orc ?? 0, (o: Outcome) => o.cities.human ?? 0],
+    ['population', (o: Outcome) => o.population.orc ?? 0, (o: Outcome) => o.population.human ?? 0],
+    ['advances', (o: Outcome) => o.techs.orc ?? 0, (o: Outcome) => o.techs.human ?? 0],
   ])('leaves neither faction hopeless on %s', (what, orcOf, humanOf) => {
     const orc = meanOf(orcOf);
     const human = meanOf(humanOf);
@@ -158,7 +158,10 @@ describe('faction balance across seeds', () => {
   });
 
   it('gets somebody meaningfully up the counting ladder', () => {
-    const best = Math.max(...outcomes.flatMap((o) => o.ladder));
+    // Section 140: `ladder` is keyed by faction now, so the values rather
+    // than the tuple -- and this way it covers every side in the game rather
+    // than the two that used to be the only ones there could be.
+    const best = Math.max(...outcomes.flatMap((o) => Object.values(o.ladder)));
     expect(best, 'nobody ever fielded a group larger than a pair').toBeGreaterThanOrEqual(3);
   });
 });

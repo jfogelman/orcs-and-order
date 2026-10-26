@@ -11522,6 +11522,59 @@ asserts the third side as the comment always implied it did.
   3.38) was ruled out of scope for section 138 pending this decision. It is
   now decidable, and has not been looked at.
 
+## 140. The sweep report was two-sided, and losing the third side entirely
+
+Flagged at the end of section 139 as a limit on *measuring* multi-faction
+games. It turned out to be worse than that: it had been losing data for
+fourteen sections.
+
+Every per-side figure in `Outcome` and `Summary` was `[number, number]` —
+seat 0 and seat 1, which meant the Horde and the Kingdom for as long as those
+were the only seats there could be. Two things had since broken that.
+
+**Section 139 made the sides a choice.** Seat 1 is now whoever was picked
+first, so a column headed `hum` reporting seat 1 would have been wrong without
+ever looking wrong. The same assumption was in `hiveWins`, which counted
+`winner > 1` — "anything past seat one is the Hive". Pick the Hive as the
+first opponent and it sits in seat 1, where that test credits its wins to the
+Kingdom.
+
+**And the Hivekin have been in the game since section 125** with no columns at
+all. The report showed their wins and nothing else: not their cities, not
+their population, not their units, not their advances. Every sweep since
+section 125 has had a third economy on the board and off the page.
+
+### What it is now
+
+`PerSide = Partial<Record<FactionId, number>>` throughout. A missing key means
+that side was not in the game, which is not the same as a side that was in it
+and ended with nothing — and the averages count only the games a side
+actually played, or a faction present in half an arm reports at half its real
+size and reads as weak rather than rare.
+
+The report is a compact game-level table plus **one block per side that
+appeared**. A block rather than more columns: the old row was already 180
+characters wide with two sides on it, and five are coming.
+
+`rawRows` now generates its own header from the same list it generates the
+rows from.
+
+### The thing the old header cost
+
+It was written out by hand in `sweep.run.test.ts`, some distance from the code
+that produced the columns, and it had drifted. It called the deepest-group
+pair `orcL/humL`, and there was **no units column at all** — so section 138's
+prediction about "Kingdom units" was written against a column that did not
+exist and could not be tested. There is a units column now, and the header
+cannot drift again because nobody writes it.
+
+### Still open
+
+- The per-arm statistics (McNemar, paired t) are still done by hand in a
+  throwaway script each time. Now that the columns are named, that script
+  could be a tool rather than something retyped per sweep — and retyping it is
+  how section 138 came to reference a column that was not there.
+
 ## 141. The Wandering Folk and the Unbound: the designs arrive
 
 Jeremy handed over two complete faction bibles and 229 art files. Copied
