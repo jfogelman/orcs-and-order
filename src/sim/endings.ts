@@ -1,6 +1,6 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
-import type { City, FactionId, GameState, ProductionItem } from '../model/types';
+import type { BuiltEnding, City, FactionId, GameState, ProductionItem } from '../model/types';
 import { contenders, log, playerCities } from './gamestate';
 
 /**
@@ -38,7 +38,8 @@ export const ALT_VICTORY = {
   objectTurns: 15,
 };
 
-export type EndingKind = 'portal' | 'object' | 'hive';
+/** The built roads out, named as the simulation has always named them. */
+export type EndingKind = BuiltEnding;
 
 /**
  * The ending this side is building towards, if it has one.
@@ -79,6 +80,16 @@ const BEGUN: Record<EndingKind, { yours: string; theirs: (name: string) => strin
     theirs: (name) =>
       `${name} has begun growing a second Queen. Two lesser works come first, and the Shell ` +
       'will stand in a Hive holding one of them. They do not appear to think this is unusual.',
+  },
+  circle: {
+    yours:
+      'Work has begun towards the Circling Caravan. Nobody is entirely sure who agreed to ' +
+      'it, and the schedule has been posted anyway. Two works in any settlement, then the ' +
+      'Caravan itself where one of them stands.',
+    theirs: (name) =>
+      `${name} has begun work towards something called a Circling Caravan. Two lesser works ` +
+      'come first, and it will stand where one of them does. Nobody has been able to get a ' +
+      'straight answer about where it is going.',
   },
 };
 
@@ -210,7 +221,12 @@ export function portalOpen(city: City): boolean {
 export function endingTurnsLeft(state: GameState, city: City): number | null {
   const built = endingIn(city);
   if (!built || city.endingSince === undefined) return null;
-  const wait = built.victory === 'portal' ? ALT_VICTORY.portalTurns : ALT_VICTORY.objectTurns;
+  // Section 146: a fourth road, and the same wait as every other. The works
+  // are dearer for the Wandering Folk -- 1000 shields against the Hive's 600
+  // -- and that is where their premium is paid, not in holding the place
+  // longer once it stands.
+  const wait =
+    built.victory === 'portal' ? ALT_VICTORY.portalTurns : ALT_VICTORY.objectTurns;
   return Math.max(0, wait - (state.turn - city.endingSince));
 }
 

@@ -27,7 +27,9 @@ import { SABOTAGE } from '../sim/sabotage';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
-import { CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
+import { CARAVANS } from '../sim/caravans';
+import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
+import { MOOD_LADDER } from '../model/citizens';
 import { ALT_VICTORY } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
 import { TERRAFORM, jobName } from '../sim/terraform';
@@ -1478,6 +1480,29 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         </p>`
             : ''
         }` },
+      { title: 'Who is content, and who is not', body: `<p class="flavor">
+          A town is <strong>content up to a number</strong> &mdash; ${CALM.base} to begin
+          with, and more for every structure, posting and advance that calms it. The
+          people are counted against that number <em>in order</em>, so the question is
+          never whether a town is unhappy but <strong>which of them</strong> the number
+          does not reach. The ${MOOD_LADDER.length} moods run
+          ${MOOD_LADDER.map((m) => `<strong>${escapeHtml(m.name)}</strong>`).join(', ')}: three
+          places to spare and a citizen is the first, one place and they are the third,
+          and past the number they are the last. <strong>Grow past it far enough and the
+          town riots</strong>, which is everybody at once &mdash; nothing is built and
+          nothing is collected until it stops.
+        </p>
+        <p class="flavor">
+          The city view draws all of this. Every face wears <em>its own</em> mood, so a
+          crowd shades from content at the front to furious at the back; <strong>hover a
+          face</strong> and it says who they are, how they feel and why. Under them is a
+          bar of the same colours, as wide in each as the number of people standing on
+          it &mdash; green across the whole thing means room to grow, and red arriving at
+          the right-hand end means the next citizen born here will be the one who tips
+          it over. ${seeTopic('buildings', 'Every structure, by name', 'The structures that raise the number')}
+          are listed below; ${seeTopic('controls', 'City markers', 'the map itself')}
+          flies a marker over a town already rioting.
+        </p>` },
       { title: 'Every structure, by name', body: `<div class="pedia-rows">${buildingList}</div>` },
     ],
   );
@@ -1511,6 +1536,65 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           to ${POSTS.maxPerCity} posts a city. It is somewhere to stand that is not the city gate,
           which matters because only one unit fits on a tile &mdash; two soldiers watching a city now
           need two huts, which is what the old Posting always meant and could never arrange.
+        </p>` },
+      { title: 'Caravans', body: `<p class="flavor">
+          The Wandering Folk's own structure, and nobody else's. One of their workers can
+          raise a <strong>Caravan</strong> on any dry tile from the very first turn
+          (<kbd>Q</kbd>, ${CARAVANS.turns} turns): a ring of parked wagons, permanent once it
+          stands. Nothing has to be researched first &mdash; what limits them early is the
+          gold to actually ask anybody. Later, <strong>Somewhere To Ask From</strong> lets
+          <em>any</em> of their units park one, so the army plants them wherever it has got
+          to rather than walking a worker out. It is not a city and it grows nothing.
+          What it does is <em>see</em> &mdash; ${CARAVANS.sight} tiles in every direction &mdash;
+          and anybody else's soldier that comes within that ring can be asked to change sides.
+        </p>
+        <p class="flavor">
+          So where a Caravan stands is the whole of their strategy: near a border, near the
+          ground armies walk over, near wherever somebody is about to lose a fight. It is also
+          a thing on the map that everybody can see, and
+          ${seeTopic('terrain', 'Pillaging', 'anybody standing on it can tear it down')}
+          exactly as they would a road or a post. A Caravan planted where the asking is good is
+          usually planted where it is hard to keep.
+        </p>` },
+      { title: 'Recruiting', body: `<p class="flavor">
+          What the Caravans are <em>for</em>, and the one thing no other side can do.
+          Anybody else's soldier standing inside a Caravan's ring can be <strong>asked to
+          change sides</strong> for gold. It is always cheaper than paying to have the same
+          unit now &mdash; which is the trade, because the Wandering Folk build everything at
+          a quarter more than anybody else pays.
+        </p>
+        <p class="flavor">
+          <strong>The price and the odds move together.</strong> Somebody already beaten up is
+          cheaper <em>and</em> likelier to come; so is somebody standing in a crowd of yours,
+          up to a point. <strong>Raiders cost more, not less</strong> &mdash; there is no
+          dissatisfaction to work with, so the whole pitch has to be built from nothing. The
+          gold goes whether they come or not, and each Caravan can ask once a day.
+          <strong>The First Ones Who Stayed</strong> brings every price down once word has
+          got round that the people who came across are still there.
+        </p>
+        <p class="flavor">
+          Whoever arrives <strong>becomes one of yours properly</strong>: a Knight joins as an
+          Outcast, at an Outcast's health, with nobody else's decorations. That cuts both ways
+          &mdash; no veteran arrives better than you could build, and nobody arrives
+          half-dead. Four will never come at all: <em>Dragons, Paladins, Death Knights and
+          Mages</em> are too bonded, too trained and too specific to walk over, and there is
+          nothing of yours to make of them.
+        </p>
+        <p class="flavor">
+          <strong>The Hive is a different sort of asking.</strong> A caste was grown for a job
+          and is doing the job; there is nobody in there to make an offer to. What there is,
+          is something shiny, put where it will be followed &mdash; so the lower castes come
+          <em>cheap</em> and come <em>unreliably</em>, which is the opposite of a raider in
+          both directions. Whoever arrives does not appear to have noticed. The
+          <em>Broodlord</em>, <em>Princess</em>, <em>Warden</em> and the <em>Queen</em> were
+          built loyal, and no shiny thing moves them.
+        </p>
+        <p class="flavor">
+          <strong>And they see you doing it.</strong> Asking where the other side can watch is
+          a hostile act whether or not it works: they think worse of you for it, and an empire
+          that thinks worse of you walks at your towns sooner.
+          ${seeTopic('terrain', 'Caravans', 'The Caravan itself')} is where all of this
+          reaches from.
         </p>` },
       { title: 'Pillaging', body: `<p class="flavor">
           Any soldier standing on a road &mdash; yours or theirs, since a

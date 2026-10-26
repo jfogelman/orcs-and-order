@@ -78,6 +78,17 @@ export const MOUNTED = new Set(['outrider', 'knight', 'paladin']);
  */
 export const SHELL_CASTES = new Set(['princess', 'broodlord']);
 
+/**
+ * The two the Unnamed Marker quickens. Section 146.
+ *
+ * The bible names them: *"Bonebound and Drake trained or Recruited in this
+ * settlement get +1 movement."* Neither can be recruited -- both are
+ * Create-only signature units with nothing to poach -- so in practice the
+ * clause only ever means trained, and that is not a gap in the folly so much
+ * as a sentence written before the roster was finished.
+ */
+export const STRIDERS = new Set(['bonebound', 'drake']);
+
 /** Whether this unit is one the Old Queen's Shell has an opinion about. */
 export function isShellCaste(unit: Unit): boolean {
   return SHELL_CASTES.has(unitType(unit.type).base);

@@ -11,13 +11,19 @@
  * - something around it clips it: a panel with `overflow: hidden`, or the window
  *   edge itself, which is what cuts the top bar.
  *
- * Only then. A tooltip on every button would be noise; this appears exactly when a
+ * Only then -- **or** when the element carries a `data-tip` of its own, which is
+ * a thing saying outright that it has more to tell than it can show. That is how
+ * a citizen portrait gets one: it is 32 pixels of face with no text at all, so
+ * the overflow rule could never fire on it.
+ *
+ * A tooltip on every button would be noise; this appears exactly when a
  * player cannot read what is there. An element with its own native `title` has it
- * folded in and held back while the pop-up shows, so there are never two.
+ * folded in and held back while the pop-up shows, so there are never two -- and
+ * where the two say the same thing, as the citizens' do, only one is shown.
  */
 
 /** What counts as a thing with a label worth reading. */
-const CANDIDATES = 'button, a, .stat, .chip, .panel-title, .build-option, [data-tip]';
+const CANDIDATES = 'button, a, .stat, .chip, .panel-title, .build-option, .citizen, [data-tip]';
 
 /** Whether any of this element's text is out of sight. */
 function isCutShort(el: HTMLElement): boolean {
@@ -65,7 +71,12 @@ export function installOverflowTips(): void {
     const el = (e.target as Element | null)?.closest<HTMLElement>(CANDIDATES) ?? null;
     if (el === current) return;
     hide();
-    if (!el || !isCutShort(el)) return;
+    // Section 143: an element that **declares** a tip always has one, where
+    // everything else has to have lost text to earn it. The rule above is
+    // "you cannot read what is there", and a 32px citizen portrait has no
+    // text to cut short -- it is unreadable in the other direction, by being
+    // a picture. `isCutShort` would never have fired on one.
+    if (!el || (el.dataset.tip === undefined && !isCutShort(el))) return;
     const full = (el.dataset.tip ?? el.innerText).replace(/\s+/g, ' ').trim();
     if (!full) return;
     current = el;

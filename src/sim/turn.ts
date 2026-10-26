@@ -38,6 +38,7 @@ import { clearAmbush } from './burrow';
 import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
+import { advanceCaravanWork } from './caravans';
 import { updateTradeLinks } from './trade';
 import { prideOffer } from '../model/palace';
 import { addBeakers, techCost } from './research';
@@ -140,7 +141,11 @@ function refreshUnits(state: GameState, player: Player): void {
     // damage; halving is a real cost that leaves it playing. Never below one,
     // so a one-move unit is slowed rather than frozen in place forever.
     const full =
-      effectiveMove(player, unit.type) + (march > 0 && onOwnLand(state, player.id, unit.x, unit.y) ? march : 0);
+      effectiveMove(player, unit.type) +
+      (march > 0 && onOwnLand(state, player.id, unit.x, unit.y) ? march : 0) +
+      // Section 146: the Unnamed Marker, which is a fact about the unit and
+      // goes with it everywhere, unlike the Long March above.
+      (unit.strides ?? 0);
     unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
     if (unit.order === 'skip') unit.order = 'none';
     // Digging carries on at the top of the owner's turn, and a road is laid the
@@ -157,6 +162,17 @@ function refreshUnits(state: GameState, player: Player): void {
         log(
           state,
           `${unitType(unit.type).name} finishes a garrison post.`,
+          'good',
+          player.id,
+          undefined,
+          [unit.x, unit.y],
+        );
+      }
+    } else if (unit.order === 'caravan') {
+      if (advanceCaravanWork(state, unit) === 'done') {
+        log(
+          state,
+          `${unitType(unit.type).name} finishes a Caravan.`,
           'good',
           player.id,
           undefined,

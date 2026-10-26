@@ -3,7 +3,7 @@ import { seenBy } from '../sim/burrow';
 import { DIRS8, fatCrossIndices, idx } from '../engine/grid';
 import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
-import { FACTIONS } from '../model/factions';
+import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
@@ -133,6 +133,8 @@ export class MapRenderer {
   private roadFrames: HTMLCanvasElement[] | null = null;
   /** Section 102's posts, per faction, once somebody draws them. */
   private postArt = new Map<string, HTMLImageElement>();
+  /** Section 145's Caravan overlay, if anybody has drawn one. */
+  private caravanArt: HTMLImageElement | null = null;
   /** Section 112's irrigation and mine overlays, once drawn. */
   private improvementArt = new Map<string, HTMLImageElement>();
   /** Section 123: a ruin per ground, and the overlay for a disturbed one. */
@@ -165,9 +167,17 @@ export class MapRenderer {
     this.sprites.installRoadArt((frames) => {
       this.roadFrames = frames;
     });
-    for (const faction of ['orc', 'human']) {
+    // Every side, derived -- section 102 wrote `['orc', 'human']` here when
+    // there were two, and that is the fifth hand-maintained list this project
+    // has been bitten by. `public/posts/hivekin.png` has shipped since section
+    // 125 and was never once requested: the Hive's posts have been drawing the
+    // three-shape placeholder hut, and the Wandering Folk would have too.
+    for (const faction of FACTION_IDS) {
       this.sprites.installPostArt(faction, (img) => this.postArt.set(faction, img));
     }
+    this.sprites.installImprovementArt('caravan', (img) => {
+      this.caravanArt = img;
+    });
     for (const name of ['irrigation', 'mine']) {
       this.sprites.installImprovementArt(name, (img) => this.improvementArt.set(name, img));
     }
@@ -421,6 +431,58 @@ export class MapRenderer {
   }
 
   /**
+   * Section 145's Caravans: a ring of wagons, on a tile, that asks questions.
+   *
+   * The same bargain as the garrison posts above -- real art the moment
+   * `terrain/improvements/caravan.png` exists, and a drawing until then that is
+   * legible and obviously temporary. Not owner-keyed, because a Caravan has one
+   * possible owner and `state.caravans` therefore stores no owner at all.
+   */
+  private drawCaravans(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    viewer: Player,
+    cam: Camera,
+    size: number,
+  ): void {
+    const vans = state.caravans;
+    if (!vans) return;
+    const w = state.width;
+    const { x0, y0, x1, y1 } = cam.visibleTileRange();
+    for (let y = Math.max(0, y0); y <= Math.min(state.height - 1, y1); y++) {
+      for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
+        const i = idx(x, y, w);
+        if (vans[i] !== 1 || !viewer.explored[i]) continue;
+        const s = cam.tileToScreen(x, y);
+        if (this.caravanArt) {
+          ctx.drawImage(this.caravanArt, s.x, s.y, size, size);
+          continue;
+        }
+        const u = size / 8;
+        const cx = s.x + size / 2;
+        const cy = s.y + size / 2 + u * 0.4;
+        // Three wagons drawn as a ring seen from above at an angle: a dark
+        // ellipse of ground with pale canvas tops set around its edge. The
+        // ring is the read -- one wagon is a cart, three in a circle is a camp.
+        ctx.fillStyle = '#4a3b26';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, u * 2.6, u * 1.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#cdbb93';
+        for (const [dx, dy] of [
+          [-2.4, 0],
+          [1.2, -1.3],
+          [1.2, 1.3],
+        ]) {
+          ctx.beginPath();
+          ctx.ellipse(cx + dx * u, cy + dy * u, u * 1.05, u * 0.72, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  /**
    * Irrigation and mines, section 112. Real art if it has been drawn, and two
    * plain shapes if not: furrows with a line of water through them, and the dark
    * mouth of a hole with a prop over it. Remembered on explored ground, like roads.
@@ -590,6 +652,7 @@ export class MapRenderer {
     // Over the road, because a post beside a crossroads should read as standing
     // on it rather than under it.
     if (state.posts) this.drawPosts(ctx, state, viewer, cam, size);
+    if (state.caravans) this.drawCaravans(ctx, state, viewer, cam, size);
 
     // --- ruins -----------------------------------------------------------
     // Over the ground and under everything that walks on it: a ruin has been

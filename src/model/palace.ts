@@ -129,30 +129,42 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
       yard: [64, 98],
     },
   },
-  // Section 142. **Not yet marked off the real art.**
+  // Section 144. Marked off the real art at last, which section 142 could not
+  // do because `prepare_art.py` keeps its own hand-written palace list and the
+  // sixteen files had never been processed. The grid is
+  // `public/palace/wandering-base.png`, 128 by 91.
   //
-  // Every other chassis here was measured by hand off a pixel grid of its own
-  // `public/palace/<faction>-base.png`. The Wandering Folk's base art exists
-  // -- `art_src/factions/wanderers/palace/Base chassis - The Standing
-  // Caravan.jpg` -- but `prepare_art.py` keeps its own hand-maintained palace
-  // list, and nothing has processed it yet, so there is no grid to read.
-  //
-  // These are the Horde's points, borrowed. The two chassis are not the same
-  // shape and this will be visibly wrong when the art lands: a caravan is
-  // wider and lower than a warcamp hall, so the tower and the banner will sit
-  // too high and the wing too far left. It is wrong in a way nobody loses a
-  // game to -- Civic Pride pieces do nothing whatsoever -- and it is better
-  // than a faction that cannot be compiled.
-  //
-  // **To finish: process the palace art, then re-mark these five points.**
+  // **This chassis is not a building.** The Standing Caravan is a *ring* of
+  // wagons and tents around an open compound, so the three points that mean
+  // "a corner of a hall" have no corner to mean. Read the way the Hive's mound
+  // was -- the nearest and left-most places the shape meets the ground -- with
+  // one difference that is the faction rather than the geometry: a camp's
+  // middle is a middle, so the regalia stands **in** the compound rather than
+  // on a roof there is none of.
   wandering: {
-    width: 0.58,
+    // The art is 128 by 91, the widest and lowest of the four. Matched on
+    // drawn area, the way the Hive's was after matching width and then height
+    // both went wrong in opposite directions.
+    width: 0.62,
     points: {
-      door: [37, 103],
-      tower: [63, 116],
-      side: [0, 85],
-      roof: [37, 48],
-      yard: [64, 116],
+      // The front rim, left of centre, where the Horde's and the Kingdom's
+      // doors both sit (0.29 and 0.30 across). A ring has no doorway, so this
+      // is the arc of it a gate would be dragged across.
+      door: [46, 82],
+      // The nearest point the ring meets the ground, which is what "nearest
+      // corner" means on something round.
+      tower: [78, 88],
+      // The left extreme, at x of 0 between y 52 and 61 -- on an ellipse the
+      // widest point *is* the ground line, so this is lower than a hall's
+      // left corner would be and that is correct rather than an error.
+      side: [2, 60],
+      // Not a roof. A pole in the middle of the circled wagons, set back so
+      // it does not stand in the yard -- which is the one place every member
+      // of this faction can see it from, and the nearest thing they have to a
+      // capital building.
+      roof: [64, 50],
+      // The near rim, as the tower: the yard is centred just in front of it.
+      yard: [78, 88],
     },
   },
   // Section 125. Marked the same way the other two were -- by hand, off a pixel
@@ -323,6 +335,14 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       // was measured against the Kingdom's corner tower and not against how
       // little room a 0.76 chassis leaves beside it.
       hivekin: { size: 0.46, nudge: [-26, 6] },
+      // Section 144, and the cause is the art's aspect rather than its tier.
+      // `size` sets a module's **height** and the width follows its own
+      // shape, so a watchtower drawn 128 by 126 comes out 1.22 times as wide
+      // as it is tall where the Horde's, drawn 104 by 128, comes out 0.81 --
+      // half again broader for the same number. At 0.914 it was 1.7 times the
+      // caravan's width, against the Horde's tower standing at 1.0 of its
+      // hall, and the fit shrank the whole capital to make room for it.
+      wandering: { size: 0.53 },
     },
     blurb: 'For seeing trouble coming, and for being seen having seen it.',
   },
@@ -400,6 +420,15 @@ export function palaceLayout(
   standing: Array<{ module: PalaceModuleDef; tier: number }>,
   box: number,
 ): PalaceLayout {
+  // Section 143: a side whose capital has not been through the art pipeline
+  // yet draws no capital, rather than taking the city panel down with it.
+  //
+  // `PALACE_ART` is generated from whatever `npm run art` has processed, and
+  // the Wandering Folk's palace art had not been -- so `arrange` read `.w` off
+  // `undefined` and **opening your own capital threw**, which is the one city
+  // every game has. Found by opening one. An empty frame is a placeholder; a
+  // thrown exception is a blank panel and a console nobody is reading.
+  if (!PALACE_ART[`${faction}-base`]) return { pieces: [], width: box, height: 0 };
   const worst = arrange(
     faction,
     PALACE_MODULES.map((module) => ({ module, tier: PALACE_TIERS })),

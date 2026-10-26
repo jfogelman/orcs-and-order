@@ -1,4 +1,4 @@
-import type { BuildingId, FactionId } from './types';
+import type { BuildingId, BuiltEnding, FactionId } from './types';
 
 export interface BuildingDef {
   id: BuildingId;
@@ -84,12 +84,12 @@ export interface BuildingDef {
    * the game is over if it is still standing in its builder's hands when its
    * clock runs out. See `sim/endings.ts`.
    */
-  victory?: 'portal' | 'object' | 'hive';
+  victory?: BuiltEnding;
   /**
    * One of the two lesser works an ending needs before its final work can be
    * begun. Any city, one per empire, never for gold. See `sim/endings.ts`.
    */
-  endingPart?: 'portal' | 'object' | 'hive';
+  endingPart?: BuiltEnding;
   /**
    * Section 111: a folly, of which there is only one. `'world'` once in the whole
    * game, and a race between both sides; `'faction'` once per empire. Never for
@@ -126,6 +126,24 @@ export interface BuildingDef {
   casteAttack?: number;
   /** Sight added to every one of the holder's units. */
   unitSight?: number;
+  /**
+   * Section 146: added to a unit's movement for good, where the city that
+   * built it holds this and the creature is one of `STRIDERS`.
+   *
+   * Restricted to named creatures the way `mountedDefense` is, and for the
+   * same reason: a folly that quickened the whole roster would be a different
+   * and much larger thing than one that quickened two of it.
+   */
+  builtMoves?: number;
+  /**
+   * Section 146: taken off the chance a Recruit simply fails, empire-wide.
+   *
+   * A share rather than a count, because that is what the odds are. The
+   * bible resolves its own open question in favour of this over a Create
+   * discount, *"since that's the half of the faction's whole identity this
+   * building's flavor is actually about"*.
+   */
+  recruitOdds?: number;
   /**
    * Shields this city makes on top of what its land does. Section 125.
    *
@@ -530,6 +548,57 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'enough and the shapes decide there was only ever the one Hive after all.',
   },
 
+  // ------------------------------------------------------------ section 146
+  //
+  // The Wandering Folk's road out, and the fourth side to have one. Same
+  // three-work pattern as the other three, with the costs `WANDERERS_PLAN.md`
+  // gives -- 300, 300, 400, which is dearer than anybody else's and the one
+  // place this faction's quarter-more premium is written into the works
+  // themselves rather than into the units.
+  //
+  // The bible lists this twice and disagrees with itself. Its open-questions
+  // section says the trigger *"isn't defined yet"* and wonders about a share
+  // of the map's units being recruited; its ending-buildings section then
+  // specifies the ordinary pattern exactly, down to prereqs and costs. The
+  // concrete one wins -- and it is also the right answer, because an ending
+  // that fires off a recruitment count would be a second victory rule nobody
+  // else plays by, on top of a mechanic that is already theirs alone.
+  lastMap: {
+    id: 'lastMap',
+    name: 'The Last Map',
+    faction: 'wandering',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'circle',
+    blurb:
+      'Every corner has a mark on it now. Nobody has needed to draw a new line in some ' +
+      'time. One of two works the Circling Caravan needs.',
+  },
+  standingOrder: {
+    id: 'standingOrder',
+    name: 'The Standing Order',
+    faction: 'wandering',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'circle',
+    blurb:
+      'A contract that never ends, because there was never a place to end it at. Everyone ' +
+      'still gets paid on schedule regardless. One of two works the Circling Caravan needs.',
+  },
+  circlingCaravan: {
+    id: 'circlingCaravan',
+    name: 'The Circling Caravan',
+    faction: 'wandering',
+    cost: 400,
+    upkeep: 0,
+    victory: 'circle',
+    blurb:
+      'Everywhere there was to reach has been reached. Without anywhere left, the whole ' +
+      'caravan starts moving in a slow, permanent circle instead. Only in a settlement ' +
+      'holding the Last Map or the Standing Order, once both stand. Hold it long enough ' +
+      'and everyone simply agrees the circle is the destination.',
+  },
+
   // Section 111: the follies. One of each, ever -- shared ones once in the whole
   // game, the rest once per empire. Priced by how deep the advance they ride on
   // sits: 150 behind one of 45 to 85 beakers, 200 behind 100 to 130, 250 beyond.
@@ -582,6 +651,55 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     blurb:
       'Fire and cold were each mastered separately and immediately turned on each other. The ' +
       'weather has held a grudge ever since.',
+  },
+  // ------------------------------------------------------------ section 146
+  //
+  // The Wandering Folk's three, and the split the bible asks for: one civ,
+  // two city. Each rides on an advance they would learn anyway, which is the
+  // convention section 111 set.
+  //
+  // All three are about Recruit rather than about building, deliberately --
+  // the bible resolves its own open question that way, *"since that's the
+  // half of the faction's whole identity this building's flavor is actually
+  // about"*.
+  firstCaravan: {
+    id: 'firstCaravan',
+    name: 'The First Caravan',
+    faction: 'wandering',
+    cost: 150,
+    upkeep: 0,
+    folly: 'faction',
+    recruitOdds: 0.15,
+    blurb:
+      'The original route the founders walked, before there was a name for what they were ' +
+      'doing. It is walked still, though never on purpose: every Caravan since has somehow ' +
+      'ended up sitting on part of it.',
+  },
+  headCount: {
+    id: 'headCount',
+    name: 'The Head Count',
+    faction: 'wandering',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    builtRanks: 1,
+    blurb:
+      'One head, properly counted, is worth more than outsiders expect. This has now been ' +
+      'formally recorded, in this settlement specifically, for the benefit of anyone still ' +
+      'doubting it.',
+  },
+  unnamedMarker: {
+    id: 'unnamedMarker',
+    name: 'The Unnamed Marker',
+    faction: 'wandering',
+    cost: 250,
+    upkeep: 0,
+    folly: 'faction',
+    builtMoves: 1,
+    blurb:
+      'Where the guide was found still is not written down anywhere. A marker was raised ' +
+      'regardless, pointing at nothing in particular, which everyone involved agrees is ' +
+      'roughly accurate.',
   },
   loudestRock: {
     id: 'loudestRock',

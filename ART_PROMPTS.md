@@ -658,7 +658,7 @@ should be conspicuously one stall selling one thing.
 
 ---
 
-## Garrison posts — 2 of 2 done
+## Garrison posts — all 4 done
 
 Section 102's answer to the Posting: a hut on a tile, out on a city's own land,
 that a soldier stands in. It is **drawn on the map**, over the terrain and beside
@@ -666,9 +666,20 @@ the roads, so it wants the same treatment roads got rather than the icon
 treatment: a small structure seen from the same angle as everything else on the
 map, not a picture of one on a card.
 
-Two of them, one a side, at `art_src/posts/<faction>.png` — `orc.png` and
-`human.png`. Until they exist the game draws a placeholder hut with three canvas
-shapes, which is legible and obviously temporary.
+One a side, at `art_src/posts/<faction>.<ext>` — the file is named for the
+**faction id**, so `orc`, `human`, `hivekin` and `wandering`. Until one exists
+the game draws a placeholder hut with three canvas shapes, which is legible and
+obviously temporary.
+
+⚠️ **The renderer asked for two of these until section 143.** `mapRenderer`
+looped over a hand-written `['orc', 'human']`, so `public/posts/hivekin.png` —
+which has shipped since section 125 — was never once requested, and the Hive's
+posts drew the placeholder hut for eighteen sections. It reads `FACTION_IDS`
+now, so a new faction's post is picked up by existing.
+
+That first Hivekin file was also the only sprite in the drop with **no `art_src`
+source**, which is the likeliest reason it was the weakest: it could not be
+re-rolled, only replaced. It has one now, and both are fixed.
 
 **Size and framing.** House style: **Map stamps — one motif, no ground**, taking its
 documented exception on framing — 64×64 in the top-down map view rather than face-on,
@@ -687,11 +698,33 @@ into the sprite will sit on a desert.
 |---|---|---|
 | `orc` | orc | a crude lashed-log lean-to with a hide roof, a spear leaning against one post and a skull on a stake beside it |
 | `human` | human | a tidy timber guardhouse with a shingled roof, a shuttered window and a spear leaning against the wall |
+| `hivekin` | hivekin | a hunched shelter of pale bone-white shell plates grown up out of the ground like a cupped hand, one dark arched opening in its front face with a faint amber glow inside it |
+| `wandering` | wandering | a single battered cart with its wheels chocked and a patched canvas lean-to roped off one side, a spear leaning against the wheel |
 
-**The joke is the difference in tidiness, not the difference in menace**: both are
-one soldier's worth of shelter, and the Kingdom's has been built properly while
-the Horde's has been built quickly. Keep them the same *size* — a post is a post,
-and the rule pays both sides the same.
+**Two clauses the Hivekin one needs**, both of them failures this file had
+already recorded once, and both of which the first roll of it made. Say **"seen
+from above at a three-quarter angle, so the front opening and one side are both
+visible"** — the Hive's subjects are round, a round subject drawn down its own
+axis comes out as concentric circles, and five building icons were lost to
+exactly that. And name the **value** — *pale bone-white shell*, never
+"chitinous" — because near-black brown on transparency turns to a blob when it
+is shrunk.
+
+The version those two clauses replaced was a brown lumpy dome seen straight
+down, which at 32 pixels was a very small Hivekin *city* — and "must not look
+like a city" is the one hard requirement this sprite has. **Do not draw a mound
+with a tunnel in it**: that is the city. A shelter big enough for one soldier,
+grown rather than dug. The pale value is what carries it, because the city it
+has to be told apart from is brown.
+
+The Wandering Folk's is the fourth answer to the same question: the Kingdom
+built it properly, the Horde built it quickly, nobody built the Hive's at all,
+and the Wanderers **did not build one** — they parked. It should look like it
+could leave in the morning, which is the only one of the four that could.
+
+**The joke is the difference in tidiness, not the difference in menace**: each is
+one soldier's worth of shelter, and the rule pays every side the same. Keep them
+the same *size* — a post is a post.
 
 **What matters for the game**, in order: it must read at 32 pixels; it must not
 look like a city (cities are the other structure on the map, and confusing the
@@ -2348,3 +2381,162 @@ right*. Drawn left to right consistently, because the renderer rotates the sprit
 toward its target and a projectile drawn head-on cannot be rotated into anything.
 The **Bloat-caste** needs no effect of its own — it is artillery, and reusing
 `bolt` is right for it.
+
+---
+
+## The Wandering Folk's capital (section 144) — 16 of 16 done
+
+The sixteen pieces arrived with the faction in section 141 and were processed in
+section 144, three sections later, because `prepare_art.py` keeps its palace
+sources in a **hand-written dict** and nobody had added them. The art was never
+what was missing. `NEW_FACTION_ART_PROMPTS.md` holds the original prompts; this
+section holds only what has to change, and why.
+
+### What was already right
+
+Thirteen of sixteen cut out cleanly and composite correctly. The chassis points
+are marked off `public/palace/wandering-base.png` (128×91) and the Watchtower
+carries a faction size override — its art is drawn **128×126 where the Horde's
+is 104×128**, and `size` sets a module's *height* with the width following its
+own shape, so the same number made it half again broader and the fit shrank the
+whole capital to make room for it.
+
+### Five pieces were mirrored, and none of them needs a re-roll
+
+Every module has a handedness the compositor relies on: a wing's flat unfinished
+wall must face the hall it joins, and a gate's stubs must run along the front.
+All three Wandering Folk wings were drawn with the open face to the **right**,
+where the Horde's and the Kingdom's have it on the left; and `Gate, Paid Up` and
+`Gate, Owned Outright` disagreed with their own tier one.
+
+`PALACE_MIRROR` in `prepare_art.py` flips them at process time. **A horizontal
+flip is lossless and exact**, where a re-roll is a new picture that then has to
+be checked for everything else as well — and the Hive's chassis already set the
+precedent, being processed from a deliberately flipped source. The list is
+per *id* rather than per module, because the call was gate 2 and 3 and
+specifically **not** gate 1, which was already right.
+
+### The three Regalia pieces: one real fault, then one false alarm
+
+**The first roll was a real fault**, and the reason was on this page already:
+the cloth was blue-violet on magenta, so `remove_background` refused the job
+rather than eat the subject. Re-rolled on **solid green (`#00FF00`)**, which is
+the documented answer for anything violet.
+
+**Then two of the three were refused again, and that one was mine.** The guard
+keeps the original whenever a fill removes more than `MAX_REMOVED` of the frame,
+on the theory that it has escaped into the subject. A banner on a pole, alone on
+a 1024×1024 frame, legitimately *is* almost all background. Measured:
+
+| Piece | Removed | Verdict at 0.93 |
+|---|---|---|
+| Banner, On Credit | **0.971** | refused |
+| Banner, Paid Up | **0.945** | refused |
+| Banner, Owned Outright | 0.914 | kept |
+
+All three were correct cut-outs, refused for being small; the third passed only
+because it is a *pair* of banners and therefore bigger.
+
+**The first answer was to raise the ceiling, and that was the wrong answer.**
+The deeper cause was scale: every other faction's banners fill 0.77 to 0.98 of
+their frame and these filled 0.35 to 0.54. `frame` is the pipeline's only record
+of how big pieces are *relative to each other*, so the compositor honoured it
+faithfully — and the regalia rendered at **0.23 of its chassis against the
+Horde's 0.30 and the Hive's 0.36**, a quarter small.
+
+Re-rolled filling the frame, the same three pieces remove **0.80, 0.63 and
+0.48** and clear the strict ceiling by a mile, and the banner renders at 0.31.
+One line fixed both:
+
+> *…a single centred object **filling the frame**, solid green background (#00FF00)…*
+
+So the palace keeps `MAX_REMOVED` at its default, deliberately. The two failure
+modes are not symmetric: **a false refusal is loud** — the file is flagged
+"needs a re-roll" and somebody looks at it — while **a false acceptance is
+silent**, shipping a wrecked sprite that nothing complains about. The refusals
+were the art telling us something true, and the ceiling was only the messenger.
+
+**Draw palace pieces filling their frames.** That is the rule those two
+refusals were really enforcing.
+
+### The three Grounds pieces needed a re-roll, and it was the prompt's fault
+
+The originals asked for *"neat rows of staked tents and a small cookfire"* and
+*"permanent stalls and a well"*. Both describe **a camp** — which is exactly
+what the base chassis already is, a ring of wagons and staked tents. Composited,
+the grounds sit behind the Standing Caravan and you cannot tell which part is
+the capital; the yard swallows the building standing on it.
+
+Compare the other two. The Horde's yard is props on dirt and the Hive's is moss
+beds in plan view. **Grounds are ground.** The rule the re-roll turns on:
+
+> Nothing on a grounds piece may rise above knee height, and nothing on it may
+> be a tent, a wagon, a cart, a lean-to or anything else with a roof — those are
+> the chassis's job, and a second camp drawn under the first reads as neither.
+
+The progression carries the faction's one joke, which for a people with no
+homeland lands harder on the ground itself than on anything built on it: the
+ground is borrowed, then settled for, then finally theirs.
+
+| Tier | Name | Prompt |
+|---|---|---|
+| 1 | Ground, On Credit | *A patch of bare trampled earth with two deep cart-wheel ruts worn across it, the ruts reaching the edges of the patch and stopping there, a scatter of empty peg-holes and one cold ash-mark, no edging and no boundary of any kind, [grounds style block]* |
+| 2 | Ground, Paid Up | *A levelled dirt yard with the old wheel ruts raked flat, a ring of fire-blackened stones set flush into the ground, and a boundary of short driven stakes with rope slung between them at ankle height, [grounds style block]* |
+| 3 | Ground, Owned Outright | *A gravelled yard edged with set stone kerbing and a flush stone well-head level with the ground, with one pair of old cart-wheel ruts worn permanently into the gravel and deliberately left there, [grounds style block]* |
+
+**The ruts are the throughline.** Tier one is ground somebody is passing over,
+tier three is ground they paid for and kept the ruts in — which is the whole
+faction in one detail, and it costs the picture nothing.
+
+⚠️ **Tier one's first roll said "running straight across it and out of frame
+on both sides", and that is a sentence this generator takes at its word.** It
+drew the ruts continuing past the dirt as two raised bars, which cut the patch
+into three slabs joined only at the ends, pushed the piece's bounding box well
+past the yard, and read as rails rather than as grooves. The wording above keeps
+the ruts inside the patch, and the clause in the style block — *one unbroken
+patch with nothing extending beyond its edge* — is there for the same reason
+and is load bearing.
+
+**[grounds style block]**, which is the isometric block with the palace bible's
+top-down exception and the new clause above:
+
+> 64x64 pixel art, plain solid magenta background (#FF00FF), a single patch of
+> ground centred and filling the frame, seen in top-down plan view rather than at
+> the isometric angle, designed to lie flat in front of a larger building, one
+> unbroken patch with nothing extending beyond its edge, nothing rising above
+> knee height, no tents, no wagons, no carts, no lean-tos and no
+> roofed structures of any kind, thick dark outline, limited palette, flat shading
+> with one light source from the upper left, mid-1990s fantasy strategy game
+> city-view style, no text, no logos, no border, no characters, no background
+> scenery, no ground shadow.
+
+---
+
+## The Wandering Folk's last two advances (section 146) — 0 of 2
+
+`WANDERERS_PLAN.md` carries an advance-icon table of thirteen, and it was
+written before the same document's naval and siege section added two more
+advances. So `tier-corsair` and `tier-collector` have no prompt anywhere, and
+they are the only two Wandering Folk advances without an icon.
+
+House style: **Flat icons — one object, no scene**, the same block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `tier-corsair` | A Fee, Negotiated | A coiled iron boarding hook with a small paper tag tied to its shank |
+| `tier-collector` | The Debt Comes Due | A short wooden tally stick snapped cleanly in two, the notches on both halves still matching |
+
+**The tally stick is the one worth insisting on.** A split tally is literally
+how a debt was recorded — both parties hold a half, and the notches have to
+line up — so it says *debt* without a coin, a chain or a fist in the picture,
+and it is the same object the Debt Collector has a ledger nailed to its frame
+for. Avoid anything that reads as money: this faction is owed things, not paid.
+
+Drop them at `art_src/factions/wanderers/advances/<id>.jpg`. Both ids are
+already in `TECH_ICONS`, so `npm run art` takes them as they land.

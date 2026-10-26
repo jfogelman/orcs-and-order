@@ -6,6 +6,7 @@ import { appearsTo, canDisguise, uncover, wearDisguise } from '../src/sim/disgui
 import { SPY, searchFrom } from '../src/sim/spying';
 import { UNSEEN, goesUnseen, hiddenFrom, townNotice, unseenOdds } from '../src/sim/unseen';
 import { noticeStrangers } from '../src/sim/noticing';
+import { FACTION_IDS } from '../src/model/factions';
 import { beginPlayerTurn } from '../src/sim/turn';
 import { checkContacts, haveMet } from '../src/sim/contact';
 import { reachableTiles, tryStep, visibleEnemies } from '../src/sim/movement';
@@ -50,7 +51,11 @@ afterEach(() => {
 describe('the three that are never drawn', () => {
   it('exists one per side, and every side can reach one', () => {
     const hidden = CREATURES.filter((c) => UNIT_TYPES[c.id].hidden);
-    expect(hidden.map((c) => c.faction).sort()).toEqual(['hivekin', 'human', 'orc']);
+    // **Every side, derived.** This named three, and section 147 found that
+    // the Wandering Folk had neither of their two spies -- so espionage was
+    // simply unavailable to them, and a test that listed the sides it knew
+    // about could never have said so. One a side, whoever the sides are.
+    expect(hidden.map((c) => c.faction).sort()).toEqual([...FACTION_IDS].sort());
     // And an advance actually unlocks each, or they are three creatures with
     // art and no way into the game -- which is how `nobody-in-particular` sat
     // in ART_PROMPTS for two sections.
