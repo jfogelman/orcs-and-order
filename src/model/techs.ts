@@ -30,6 +30,8 @@ export type TechFlag =
   | 'staying'
   /** Section 148: anybody at all may park a Caravan, not only a worker. */
   | 'anyone-parks'
+  /** Section 150: the Mystic learns to send a spirit back rather than scatter it. */
+  | 'exorcism'
   /** +1 sight for cities, and cities see through forest. */
   | 'watchtower'
   /** +1 content citizen in every city. */
@@ -446,6 +448,31 @@ export const TECHS: TechDef[] = [
     buildings: ['bargainStone'],
     flags: ['bargain'],
     flavor: 'A finding delivered with unusual confidence and no supporting evidence.',
+  },
+  // ------------------------------------------------------------ section 150
+  //
+  // Verbatim from `UNBOUND_PLAN.md`, which writes this advance out in full and
+  // says plainly where it belongs: *"Bone-Speaker's tech entry belongs in the
+  // orc tree (`techs.ts`), not here -- same as how Warden-caste's tech lives
+  // inside Hivekin's own tree."* So it is here, in the Horde's magic line,
+  // behind the advance that got the Horde into this sort of thing to begin
+  // with.
+  //
+  // It ships **before the faction it answers**. Every side needs its exorcist
+  // standing before the Unbound arrive, or there is a stretch of sections in
+  // which one side cannot be permanently beaten by anybody.
+  {
+    id: 'bone-speaker',
+    name: 'The Unpopular Sort',
+    faction: 'orc',
+    cost: 140,
+    prereqs: ['dead-messed-up'],
+    units: ['orc-shaman'],
+    buildings: [],
+    flags: [],
+    flavor:
+      'Someone has to send them back. This has never been a popular job. ' +
+      'It has always, nonetheless, been a job.',
   },
   {
     id: 'full-of-fire',
@@ -1149,6 +1176,28 @@ export const TECHS: TechDef[] = [
     buildings: ['knottedRecord'],
     flags: [],
     flavor: 'No institution agreed to teach this. It was learned regardless, from a distance.',
+  },
+  // Section 150. `WANDERERS_PLAN.md` puts this in their tree -- *"an upgrade
+  // tech (same linear-upgrade shape as Burrower's) later grants the Mystic
+  // exorcism capability"* -- and its icon has been drawn and processed since
+  // the faction drop, waiting for the advance to exist.
+  //
+  // The only one of the four exorcists that has to be **taught**. The other
+  // three can do it by being what they are; the Mystic is self-taught, and
+  // learns this the way it learned everything else, which is by watching
+  // somebody and then trying it.
+  {
+    id: 'mystic-exorcism',
+    name: 'Sending Them Back',
+    faction: 'wandering',
+    cost: 90,
+    prereqs: ['signature-mystic'],
+    units: [],
+    buildings: [],
+    flags: ['exorcism'],
+    flavor:
+      'Nobody taught me this one either. It seems to work, and the alternative ' +
+      'is that it keeps happening.',
   },
   {
     id: 'signature-champion',

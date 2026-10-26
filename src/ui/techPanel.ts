@@ -125,6 +125,7 @@ const FLAG_LABELS: Record<TechFlag, string> = {
   caravans: 'Wandering Folk workers can plant a Caravan',
   staying: 'Recruiting costs less, everywhere',
   'anyone-parks': 'Any unit can raise a Caravan, not only a worker',
+  exorcism: 'Mystics send spirits back instead of scattering them',
   watchtower: 'Cities see one tile further',
   contentment: '+1 content citizen everywhere',
   berserk: '+25% attack, -25% defence, army-wide',

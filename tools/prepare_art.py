@@ -288,6 +288,9 @@ TECH_ICONS = [
     # they were not. See `tests/art-manifest.test.ts`: this is the list the
     # audit exists to stop anybody from having to remember.
     "tier-corsair", "tier-collector",
+    # Section 150: the Horde's exorcist, filed with the Unbound because they
+    # are the reason it exists.
+    "bone-speaker",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like

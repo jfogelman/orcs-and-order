@@ -281,7 +281,7 @@ relevant to ships that weren't expecting company.
   faction: 'unbound',
   cost: 85,
   prereqs: ['tier-naiad'],
-  units: ['drowned'],
+  units: ['ub-drowned'],  // not `drowned`: see the warning below
   buildings: [],
   flags: [],
   flavor: 'The water had residents before it had traffic. This was inevitable.',
@@ -295,7 +295,16 @@ glowing units.
 | id | Sprite subject | Background |
 |---|---|---|
 | `ferrymansdue` | a low flat spectral barge, faint blue-white glow along its waterline, no visible crew | green (#00FF00) |
-| `drowned` | a waterlogged translucent hull trailing wisps, faint cold glow at the bow | green (#00FF00) |
+| `ub-drowned` | a waterlogged translucent hull trailing wisps, faint cold glow at the bow | green (#00FF00) |
+
+> ⚠️ **`drowned` is taken**, and this is the second time it has come up.
+> `drowned` is the Kingdom's **Drowned Sailor**, from the Sunken Legion.
+> Section 141 found the collision when the art drop overwrote
+> `drowned_hurt.png` -- shipped art, destroyed, and noticed only because the
+> file appeared as *modified* in a commit that was otherwise all additions --
+> and renamed the source files to `ub-drowned`. The id in this document was
+> never updated, so a roster written straight out of it would collide again.
+> **Use `ub-drowned`**, which is what the art is filed and processed under.
 
 ---
 
@@ -690,16 +699,39 @@ and that's the tell.
 - **Archon's own production cost** — needs to be high enough that the
   "pay to rebuild after exorcism" penalty actually stings, but that's a
   real balance pass, not a design decision to make blind.
-- **Ending mechanics**, not just flavor — the new flavor text implies a
-  clearer shape than the placeholder did: not "death stops working" in the
-  abstract, but the living actually joining the Unbound's own condition
-  (no need for food or drink, presumably some flavor-appropriate downside
-  like reduced production or happiness to go with "endless droning
-  conversations"). Still needs a real trigger condition and scope — does
-  it convert every living unit on the map, end the game outright the way
-  the other two endings do, or apply only to the researching faction's own
-  units — but the flavor at least points at what the mechanic should be
-  now, rather than leaving it fully open.
+- ~~**Ending mechanics**, not just flavor~~ — **settled, section 150.**
+
+  The *trigger* was never actually open: the Ending buildings section above
+  specifies the ordinary three-work pattern down to costs and prereqs, and
+  that stands. What was open is whether the Spirit Party also **does**
+  something, since the flavour promises the living join the Unbound's own
+  condition and nothing would have happened.
+
+  Four shapes were put to Jeremy — flavour only; the hold converts the
+  world; the hold converts what it kills; or it converts only the
+  researching side — and he chose **converts what it kills**:
+
+  > While the Spirit Party is standing and counting down, anything that
+  > dies near it comes back as Unbound.
+
+  It is the only one of the four that is an **extension of this faction's
+  own identity** rather than a new system bolted beside it: dispersal and
+  reform already bring their units back, and the ending turns that on
+  everybody else's. It is answerable without a new rule to learn — fight
+  further off, or take the city — and it is roughly a quarter the surface
+  of a map-wide conversion, which would have meant a new per-unit *and*
+  per-city condition touching all five factions fifteen turns before the
+  game ends.
+
+  The trigger stays standard in every case, deliberately. An ending that
+  fired off a bespoke counter would be a second victory rule nobody else
+  plays by, which is the reasoning that settled the Wandering Folk's
+  identical question in section 146.
+
+  **Still to specify when the roster exists**: what each dying unit comes
+  back *as*. Renormalising to an Unbound tier is the obvious answer and is
+  the shape the Wandering Folk's Recruit already uses, but it cannot be
+  written until there are tiers to name.
 - **Folly is placeholder-only**, same caveat as Hivekin's and Wandering
   Folk's — wants a real tech-tree attachment once Unbound's advances
   actually exist.

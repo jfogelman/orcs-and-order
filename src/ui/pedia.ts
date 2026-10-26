@@ -28,6 +28,7 @@ import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
 import { CARAVANS } from '../sim/caravans';
+import { EXORCISTS, couldExorcise } from '../sim/exorcism';
 import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
 import { MOOD_LADDER } from '../model/citizens';
 import { ALT_VICTORY } from '../sim/endings';
@@ -179,6 +180,17 @@ function feedsWhat(def: UnitTypeDef): string[] {
 export function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
+  // Section 150. On the card rather than in a pane of its own, deliberately:
+  // nothing disperses yet, so a topic explaining what exorcism is *for* would
+  // describe a rule a player cannot watch happen. What is true today is that
+  // this particular unit can do it, and that belongs where the unit is.
+  if (couldExorcise(def.id)) {
+    notes.push(
+      EXORCISTS[def.base] === null
+        ? 'sends spirits back rather than scattering them, which not everything can'
+        : 'can be taught to send spirits back rather than scatter them',
+    );
+  }
   // Section 136: and the one that digs is not always the one that founds.
   if (def.works) notes.push('builds roads and improves the ground');
   // Section 137: **a spy's card said nothing a spy does.** Eight rungs of

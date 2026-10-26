@@ -694,6 +694,62 @@ export const CREATURES: CreatureDef[] = [
     trim: '#7f3fbf',
     blurb: 'Formerly a person. Currently a policy.',
   },
+  // ------------------------------------------------------------ section 150
+  //
+  // The Bone-Speaker: the Horde's answer to a thing that does not stay dead.
+  //
+  // `UNBOUND_PLAN.md` describes it and deliberately leaves its `TechDef` to
+  // the orc tree, *"same as how Warden-caste's tech lives inside Hivekin's own
+  // tree"*. It gives the art, the advance and the reasoning, and **no stats at
+  // all** -- so the numbers below are mine, derived rather than invented.
+  //
+  // Derived from the Death Knight directly above it, which the bible names as
+  // its opposite: *"living, not armored-undead, marked as doing the unpopular
+  // 'send them back' job rather than the 'command them' one."* Same tier, same
+  // tree, same role, same magic damage. What differs is what the two are for.
+  // The Death Knight executes and drains; this one trades a point of attack
+  // for a point of defence, because its value is being **present** when the
+  // Unbound are and surviving to be present again, not winning the exchange.
+  //
+  // No `executeChance`: finishing the wounded is the other one's trick, and
+  // giving both to both would make this a better Death Knight than the Death
+  // Knight. Priced a shade above it for the same reason the Paladin is priced
+  // above a Knight -- the exorcism is the premium, and it is not on the line.
+  {
+    id: 'orc-shaman',
+    // Sending something back is not a weapon blow.
+    damageKind: 'magic',
+    // **And no `magicResist`, deliberately.** The first draft copied the Death
+    // Knight's 0.3 on the reasoning that magical things are hard to do magic
+    // to -- which is true, and is the reason it does not apply here. The
+    // bible is explicit that this one is *"living, not armored-undead"*: its
+    // blow is an exorcism, but the thing swinging it is an orc with a rattle.
+    // `tests/status.test.ts` caught it, and that list is a recorded decision
+    // -- death knights, mages and dragons -- rather than an oversight, so the
+    // right fix was the unit and not the test.
+    // **Id is the art's, name is the bible's.** The drop filed this under
+    // `orc-shaman` -- in the Unbound's folder, because they are its whole
+    // reason for existing -- and all four sprites are processed under that
+    // name. The advance is `bone-speaker`, which is what the Horde calls it.
+    name: 'Bone-Speaker',
+    plural: 'Bone-Speakers',
+    faction: 'orc',
+    role: 'caster',
+    attack: 5,
+    defense: 4,
+    hp: 15,
+    move: 2,
+    cost: 54,
+    sight: 2,
+    counts: [1],
+    artScale: 1.1,
+    silhouette: 'robed',
+    body: '#b8ae94',
+    trim: '#6e5a3c',
+    blurb:
+      'Somebody has to send them back. This has never been a popular job, and ' +
+      'has never stopped being a job.',
+  },
   {
     id: 'dragon',
     // Breath, not bite.

@@ -254,3 +254,82 @@ describe('every file that was drawn can be found', () => {
     }
   });
 });
+
+/**
+ * The third direction: **the bible against the art.** Section 150.
+ *
+ * The two audits above ask whether the *model* and the *files* agree. Neither
+ * can see the design documents, and those are where a faction starts: an id
+ * named in a prompt table and never drawn is a piece of the faction nobody
+ * has made yet, and an id the bible gives that the art was filed under a
+ * *different* name is worse -- it is a trap for whoever writes the roster.
+ *
+ * Both have already happened:
+ *
+ * - `bone-speaker`, the Horde's exorcist advance, is named in no icon table
+ *   anywhere, because `UNBOUND_PLAN.md` covers the Unbound's twelve and says
+ *   outright that this advance belongs to the Horde.
+ * - **`drowned`, `skirmisher` and `brute`** were all collisions with existing
+ *   ids. Section 141 found them when the art drop **overwrote shipped art**
+ *   and renamed the source files `ub-` and `wf-`. The bibles were not
+ *   updated, so a roster written straight out of either one would have
+ *   collided a second time -- which is exactly what nearly happened here.
+ */
+describe('the design documents against the art', () => {
+  /** Every id a prompt table names, which is how the bibles list their art. */
+  const BIBLES: Array<[string, string, Record<string, unknown>]> = [
+    ['UNBOUND_PLAN.md', 'unbound', import.meta.glob('../UNBOUND_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+    ['WANDERERS_PLAN.md', 'wanderers', import.meta.glob('../WANDERERS_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+    ['HIVEKIN_PLAN.md', 'hivekin', import.meta.glob('../HIVEKIN_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+  ];
+
+  /** Ids still waiting to be drawn, each with a reason. */
+  const NOT_DRAWN_YET: Record<string, string> = {
+    // Its prompt is in `ART_PROMPTS.md`; the unit sprite exists already.
+    'bone-speaker': 'the Horde advance no bible has an icon table for',
+  };
+
+  function namedIn(doc: string): string[] {
+    const out = new Set<string>();
+    for (const line of doc.split('\n')) {
+      const m = /^\|\s*`([a-zA-Z0-9_-]+)`\s*\|/.exec(line);
+      if (m) out.add(m[1]);
+    }
+    return [...out];
+  }
+
+  for (const [name, folder, loaded] of BIBLES) {
+    const doc = Object.values(loaded)[0] as string | undefined;
+    const files = Object.keys(SOURCES).filter((p) =>
+      p.startsWith(`../art_src/factions/${folder}/`),
+    );
+
+    it(`has art for everything ${name} names`, () => {
+      if (!doc || files.length === 0) return; // no bible, or no drops here
+      const drawn = new Set<string>();
+      for (const f of files) {
+        const stem = f.replace(/^.*\//, '').replace(/\.[a-z0-9]+$/i, '').toLowerCase();
+        drawn.add(stem);
+        drawn.add(stem.replace(VARIANT_WORDS, '').replace(/\s+/g, ' ').trim());
+      }
+      const missing = namedIn(doc)
+        .filter((id) => !drawn.has(id.toLowerCase()))
+        .filter((id) => !(id in NOT_DRAWN_YET));
+      expect(missing.sort(), `named in ${name}, drawn nowhere`).toEqual([]);
+    });
+  }
+
+  it('keeps no stale entries in the not-drawn-yet list', () => {
+    const drawn = new Set(
+      Object.keys(SOURCES).map((p) =>
+        p.replace(/^.*\//, '').replace(/\.[a-z0-9]+$/i, '').toLowerCase(),
+      ),
+    );
+    if (drawn.size === 0) return;
+    expect(Object.keys(NOT_DRAWN_YET).filter((id) => drawn.has(id))).toEqual([]);
+  });
+});
+
+/** Shared with the folder audit above; see the note on variants there. */
+const VARIANT_WORDS =
+  /\b(weakened|attack|hurt|talking|damaged|female|flipped|trapezoid|magenta|bg|v2|v3|redo|reroll|new)\b/gi;

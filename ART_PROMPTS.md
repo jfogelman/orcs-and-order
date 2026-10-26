@@ -2540,3 +2540,41 @@ for. Avoid anything that reads as money: this faction is owed things, not paid.
 
 Drop them at `art_src/factions/wanderers/advances/<id>.jpg`. Both ids are
 already in `TECH_ICONS`, so `npm run art` takes them as they land.
+
+---
+
+## The Bone-Speaker's advance (section 150) — 0 of 1
+
+The Horde's exorcist, and the one advance in the game whose icon is written
+down nowhere. `UNBOUND_PLAN.md` gives the unit sprite and the `TechDef` in
+full, and says outright that the advance *"belongs in the orc tree, not
+here"* — so its twelve-icon table covers the Unbound's own advances and not
+this one. The Horde's table predates the unit entirely.
+
+The **unit** sprite exists and is processed, under `orc-shaman`: it was filed
+in the Unbound's folder, because they are its whole reason for existing.
+
+House style: **Flat icons — one object, no scene**, the block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `bone-speaker` | The Unpopular Sort | A short wooden staff with a rattling bundle of small bones and pale feathers bound to its head with cord |
+
+**The staff rather than the mask**, deliberately. The unit art already carries
+a carved bone mask pushed up on the forehead, and an icon of the same mask
+would read as a portrait of the unit rather than as the idea. The rattle is
+the *tool the job is done with*, it is an object no other orc advance uses,
+and it reads at 48 pixels as something you shake at a thing to make it leave.
+
+Nothing skull-shaped: that is the Death Knight's half of this tree, and these
+two are written as opposites on purpose.
+
+Drop at `art_src/factions/unbound/advances/bone-speaker.jpg` beside the unit —
+the Unbound's folder is where its sprite already lives, and the pipeline reads
+every faction folder for every kind.

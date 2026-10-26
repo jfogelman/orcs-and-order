@@ -130,10 +130,19 @@ nothing to poach:
 | id | Role | Race | Rough equivalent |
 |---|---|---|---|
 | `wanderer` | Founds Caravans, weakest | Gnome | Peon / Peasant |
-| `skirmisher` | Cheap, spammable | Goblin | Goblin / early Footman |
+| `wf-skirmisher` | Cheap, spammable | Goblin | Goblin / early Footman |
 | `warband` | Standard line trooper | Human | Orc / Footman |
 | `outcast` | Stronger melee | Orc | Troll / Knight |
-| `brute` | Heavy melee | Ogre | Ogre |
+| `wf-brute` | Heavy melee | Ogre | Ogre |
+
+> ⚠️ **`skirmisher` and `brute` were both taken**, which is why the ids above
+> carry the `wf-` prefix. Section 141's art drop collided with the wilds on
+> three ids at once -- these two and the Unbound's `drowned` -- and
+> **overwrote shipped art**: `brute_attack.png`, `skirmisher_attack.png` and
+> `drowned_hurt.png` were all destroyed, and it was noticed only because
+> `brute_attack.png` appeared as *modified* in a commit that was otherwise
+> entirely additions. The sources were renamed then; this document was not.
+> The game uses `wf-skirmisher` and `wf-brute`.
 | `slinger` | Ranged | Elf | Axethrower / Archer |
 | `mystic` | Signature caster, Create-only | Dwarf | Mage |
 | `champion` | Signature elite, Create-only | Half-orc | Paladin |
@@ -634,10 +643,10 @@ one generic look repeated with different silhouettes.
 | id | Race | Prompt subject |
 |---|---|---|
 | `wanderer` | Gnome | A small gnome with an oversized nose and ears, patched layered traveler's clothing far too big in places, leading a pack animal by a rope |
-| `skirmisher` | Goblin | A small hunched green goblin in mismatched scavenged leather armor pieces, a simple curved blade, a few charms tied to a shoulder strap |
+| `wf-skirmisher` | Goblin | A small hunched green goblin in mismatched scavenged leather armor pieces, a simple curved blade, a few charms tied to a shoulder strap |
 | `warband` | Human | A sturdy human fighter in patchwork plate and leather, a battered shield bearing several painted-over old symbols, a plain sword |
 | `outcast` | Orc | A green orc with filed tusks in salvaged heavier armor mixing at least two different origins of plating, a two-handed weapon |
-| `brute` | Ogre | A single-headed ogre, noticeably lopsided where a second head would sit on others of its kind, wrapped in furs and scavenged plate, a massive improvised weapon of bound scrap and stone |
+| `wf-brute` | Ogre | A single-headed ogre, noticeably lopsided where a second head would sit on others of its kind, wrapped in furs and scavenged plate, a massive improvised weapon of bound scrap and stone |
 | `slinger` | Elf | A lean elf in a patched hooded cloak over fine but faded traveling clothes, a simple recurve bow, a bandolier of mismatched arrows |
 | `mystic` | Dwarf | A dwarf in layered ragged robes over a stout frame, a braided beard threaded with small hand-stitched protective charms instead of iron rings, a gnarled walking staff |
 | `champion` | Half-orc | A fighter with a human face and faint tusks, mismatched but well-maintained plate pieces, a hand-painted heraldic symbol of their own design on the chest, a plain well-kept sword raised |
