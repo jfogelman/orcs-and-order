@@ -80,8 +80,8 @@ describe('a Hive that starts on the map', () => {
             HIVEKIN.enabled = arm !== 'two sides';
             const out = playGame(seed);
             turns += out.turns;
-            seatCities += out.cities[0];
-            rivalCities += out.cities[1];
+            seatCities += out.cities.orc ?? 0;
+            rivalCities += out.cities.human ?? 0;
             if (out.winner === 0) seatWon++;
             else if (out.winner === 1) rivalWon++;
             else unfinished++;
