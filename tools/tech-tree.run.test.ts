@@ -21,11 +21,20 @@ import { TECH_ESCALATION } from '../src/sim/research';
  *   npx vitest run --config vitest.sweep.config.ts tools/tech-tree.run.test.ts
  */
 
-const SIDE_NAME: Record<FactionId, string> = { orc: 'Horde', human: 'Kingdom', hivekin: 'Hive' };
+const SIDE_NAME: Record<FactionId, string> = {
+  orc: 'Horde',
+  human: 'Kingdom',
+  hivekin: 'Hive',
+  wandering: 'Wandering Folk',
+};
 const ENDING: Record<FactionId, string> = {
   orc: 'somebody-knocked',
   human: 'do-not-touch',
   hivekin: 'all-is-the-hive',
+  // Section 142: not built yet. `nowhere-left-but-up` arrives with the three
+  // works it unlocks, and an advance that unlocks nothing would be an empty
+  // box in the tree this tool draws.
+  wandering: '',
 };
 
 const nameOf = (id: string) => TECHS_BY_ID[id]?.name ?? id;

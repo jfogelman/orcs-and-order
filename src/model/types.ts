@@ -17,7 +17,7 @@
  * `otherFaction`, a single global peace, and the handful of `=== 'orc'` branches
  * that meant "orc, else human". Those are listed in `HIVEKIN_PLAN.md`.
  */
-export type FactionId = 'orc' | 'human' | 'hivekin';
+export type FactionId = 'orc' | 'human' | 'hivekin' | 'wandering';
 export type TerrainId =
   | 'deep'
   | 'water'

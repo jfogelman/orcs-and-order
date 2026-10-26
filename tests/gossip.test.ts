@@ -176,7 +176,10 @@ describe('what the report is worth', () => {
       barbarians: false,
       playerFaction: 'hivekin',
     });
-    expect(state.players, 'three sides, or there is no third party').toHaveLength(3);
+    // At least three: the rung is about somebody who is not in the room, and
+    // sides 1 and 2 are the two it needs. Section 142 made it four, and a
+    // census assertion would send this test to every faction's build slice.
+    expect(state.players.length, 'no third party to have an opinion about').toBeGreaterThan(2);
     state.terrain.fill('grass');
     state.units.length = 0;
     state.cities.length = 0;

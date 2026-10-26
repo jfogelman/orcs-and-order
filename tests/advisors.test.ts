@@ -159,11 +159,18 @@ describe('who wants the endings', () => {
     orc: 'portal',
     human: 'object',
     hivekin: 'hive',
+    // Section 142: the Wandering Folk's own ending (`nowhere-left-but-up`)
+    // arrives with the three works it unlocks, so until then they have none.
+    // Any of the three serves as "somebody else's" for the lines under test,
+    // which is the same arbitrariness the Hive's note above describes --
+    // except that for these it is arbitrary on *both* rows rather than one.
+    wandering: 'portal',
   };
   const THEIRS: Record<FactionId, 'portal' | 'object' | 'hive'> = {
     orc: 'object',
     human: 'portal',
     hivekin: 'portal',
+    wandering: 'object',
   };
 
   const wakes = (advisor: (typeof ADVISORS)[number], extra: Partial<Situation>) => {

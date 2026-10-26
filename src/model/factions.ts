@@ -182,9 +182,95 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
       'The Last One For Now',
     ],
   },
+  // ------------------------------------------------------------ section 142
+  //
+  // The Wandering Folk. Orcs answer "how many", humans "how organised",
+  // Hivekin "what grows next"; these answer **"whoever's left standing"**.
+  //
+  // `WANDERERS_PLAN.md` has the whole design. What is not in it, and is
+  // therefore mine rather than Jeremy's, is marked where it appears: the
+  // civ name, the leader, the colour and the city names. All four are
+  // drafted in the bible's own register -- pragmatic, transactional, dry
+  // rather than mournful -- and all four are the easiest things in this
+  // file to overwrite.
+  wandering: {
+    id: 'wandering',
+    name: 'Wandering Folk',
+    // Mine. The bible names the faction and never names its nation, which for
+    // this lot is the joke: the closest thing they have to a country is an
+    // agreed meeting point.
+    civName: 'The Agreed Meeting Point',
+    leader: 'Whoever Was Holding The Ledger',
+    // Mine. A dusty road-brown: warm enough to read against the Hive's amber
+    // at a glance, and deliberately the least martial colour on the map --
+    // it is the one faction whose banner is a tarpaulin. Checked against the
+    // raiders' tan (#a8894e), which is lighter and greyer, and against the
+    // Kingdom's blue, which it shares no hue with at all.
+    color: '#b5683a',
+    shade: '#5a2d16',
+    startTech: 'first-wanderers',
+    // Section 139 made this a fact about the slot rather than the faction, so
+    // this only decides whether they are offered as a side that *can* open on
+    // the map. They can: there is nothing about them that has to arrive late.
+    startsOnMap: true,
+    playable: true,
+    settlerUnit: 'wanderer',
+    starterUnit: 'wf-skirmisher',
+    blurb:
+      'No homeland, no birthright, and no particular feelings about either. ' +
+      'Whatever they have, somebody agreed to hand over.',
+    // Mine. Every name is a transaction, a direction, or a thing nobody got
+    // round to deciding -- which between them is the whole faction.
+    cityNames: [
+      'The Agreed Meeting Point',
+      'Second Meeting Point',
+      'Where The Carts Stopped',
+      'Good Enough Crossing',
+      'The Long Stay',
+      'Three Weeks Camp',
+      'Still Three Weeks Camp',
+      'The Paid-Up Field',
+      'Somebody Else’s Hill',
+      'Formerly Somebody Else’s Hill',
+      'The Open Ledger',
+      'Halfway To Anywhere',
+      'The Mended Wheel',
+      'Last Water Before The Dry',
+      'First Water After It',
+      'The Place With The Big Tent',
+      'The Place With The Other Tent',
+      'Nobody’s Road',
+      'The Short Contract',
+      'The Long Contract',
+      'Owed And Settled',
+      'The Turning Place',
+      'Far Pitch',
+      'We Will Move On Shortly',
+    ],
+  },
 };
 
-export const FACTION_IDS: FactionId[] = ['orc', 'human', 'hivekin'];
+/**
+ * Every side in the game, in table order.
+ *
+ * **Derived, not written out.** Section 142 added the Wandering Folk to
+ * `FACTIONS` -- which is an exhaustive `Record<FactionId, …>`, so the compiler
+ * demanded every one of a dozen per-faction tables be filled -- and then the
+ * faction was *invisible to the entire game*, because this one array had not
+ * been edited. It had units, a tech fork, a palace, perks and advisor lines,
+ * and nothing offered it: the opponent picker, the Orcpedia's tabs,
+ * `rivalFactions` and `opponentsOf` all read this.
+ *
+ * Nothing failed. Two Orcpedia tests caught it, and only because they sweep
+ * the creature table rather than a list somebody maintains -- which is the
+ * same reason they exist (section 137) and the same hand-maintained-list trap
+ * section 141 hit with the art.
+ *
+ * `Object.keys` keeps insertion order, so this is the order the table is
+ * written in, which is what section 139's "first opponent starts on the map"
+ * reads. Adding a faction to `FACTIONS` now adds it everywhere.
+ */
+export const FACTION_IDS: FactionId[] = Object.keys(FACTIONS) as FactionId[];
 
 /** The sides a new game may be started as, and that begin on the map. */
 export const STARTING_FACTIONS: FactionId[] = FACTION_IDS.filter((f) => FACTIONS[f].playable);

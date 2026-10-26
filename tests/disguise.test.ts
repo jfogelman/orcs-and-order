@@ -155,7 +155,10 @@ describe('a unit that is not what it appears to be', () => {
     expect(sides).toContain(1);
     // And the third, which is the whole reason this board has three sides.
     // It never said so before, so the fixture's third seat was decoration.
-    expect(state.players, 'the board should have a third party on it').toHaveLength(3);
+    // Section 142 made it four. The assertion is about there *being* a third
+    // party, not about the census -- pinning the count is what sent this test
+    // to a faction's build slice twice.
+    expect(state.players.length, 'the board should have a third party on it').toBeGreaterThan(2);
     expect(sides, 'a spy may pass for any side it could have met').toContain(2);
   });
 

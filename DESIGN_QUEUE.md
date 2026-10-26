@@ -11669,3 +11669,74 @@ Suggested order, to be confirmed:
 
 Section 140's n-sided sweep report should merge before any of these is
 measured, or a five-sided sweep reports two of them.
+
+## 142. The Wandering Folk, playable
+
+Jeremy: *"We'll therefore do wanderers first"*, with the Bone-Speaker to join
+the orc tree when the Unbound arrive.
+
+Ten units, ten advances, ten city buildings, a faction entry, a palace, perks,
+advisor lines and an AI personality. They expand, research, build and fight.
+**Their own mechanic — the Caravan and Recruit — is not here**, nor are the
+Caravan and ending advances that unlock buildings which do not exist yet.
+
+### Stats were derived, because the bible gives equivalents
+
+`WANDERERS_PLAN.md` gives every tier a *rough equivalent* on an existing
+roster rather than a stat line, plus one rule: *"Create costs noticeably more
+per tier than the equivalent unit costs either established faction."* So the
+fighting numbers are the equivalent's unchanged, and the cost carries a flat
+quarter on top. One multiplier, written down in `units.ts`, so retuning half
+the faction's identity is one pass rather than thirteen opinions.
+
+Counting ladders are mine — the bible is silent — and follow the Hive's
+pattern: ladders on the cheap tiers, none on the signatures.
+
+Four things the bible does not give and I drafted, all flagged in place and
+all trivially replaceable: the civ name, the leader, the colour and the
+twenty-four city names.
+
+### A faction with everything, invisible to the game
+
+`FACTION_IDS` was a hand-written array. The Wandering Folk had units, a tech
+fork, a palace, perks and advisor lines — and nothing offered them, because
+that one line had not been edited. The opponent picker, the Orcpedia's tabs,
+`rivalFactions` and `opponentsOf` all read it.
+
+Nothing failed. Two Orcpedia tests caught it, and only because they sweep the
+creature table rather than a list somebody maintains. **`FACTION_IDS` is
+derived from `FACTIONS` now** — which is an exhaustive `Record`, so it cannot
+drift again.
+
+### Four tests found four real gaps
+
+- **`tech-useful.test.ts`** reported that the Wandering Folk *"cannot keep a
+  city calm, cannot study, cannot make gold, cannot supply an army abroad,
+  cannot send units out hardened"*. A faction that could fight and never
+  develop. That is what prompted the ten city buildings, whose mechanical
+  fields are copied from the Hive's equivalent slot unchanged so all four
+  sides stay on one economy.
+- **`art-present.test.ts`** caught the advance and building icons — the
+  third and fourth hand-maintained art lists this drop has tripped over.
+
+### The AI personality is the third time of writing this comment
+
+Without one, a faction falls to `PERSONALITIES.orc`, whose every priority is
+an orc advance it cannot research. Measured before the entry existed, sixty
+turns against the Horde: **nine advances to fifteen, three cities to six, and
+the only two unit types ever built were the free one and the twenty-beaker
+one.** With it: six to eight cities, fifteen to seventeen advances, four to
+five unit kinds, and games that finish.
+
+### Open, and wants Jeremy
+
+**The default game is four-sided now.** Section 139's rule is "everybody else
+unless you choose", so every default game gets the Wandering Folk arriving
+around turn 150. That is the honest reading of the rule and it moves the
+baseline every measurement in this project was taken against. Worth deciding
+deliberately rather than inheriting.
+
+Also open: the palace chassis points are the Horde's, borrowed, because the
+Wandering Folk's palace art has not been processed — `prepare_art.py` keeps
+its own list for those too. The tier names match the art's own filenames
+(`Wing, On Credit`), so no art needs renaming.
