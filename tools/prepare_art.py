@@ -299,13 +299,15 @@ TECH_ICONS = [
     # Section 150: the Horde's exorcist, filed with the Unbound because they
     # are the reason it exists.
     "bone-speaker",
-    # Section 152: the Unbound's own eleven. `tier-drowned` and `tier-cairn`
-    # are deliberately absent -- their two advances have no prompt anywhere
-    # yet, exactly as `tier-corsair` and `tier-collector` did not, and the
-    # prompts are in ART_PROMPTS.md waiting to be drawn.
+    # Section 152: the Unbound's own thirteen. `tier-drowned` and `tier-cairn`
+    # were the last two in the game without a picture -- the naval and siege
+    # advances, which the bible's own twelve-icon table predates, exactly as
+    # `tier-corsair` and `tier-collector` were two sections ago. Drawn and
+    # added the same day the prompts went into ART_PROMPTS.md.
     "first-unbound", "tier-revenant", "tier-sylph", "tier-naiad",
     "tier-yaksha", "tier-jinn", "retrieval-circle", "sigil-bound",
     "anchor-totem", "the-ankh", "archon-tech", "arrangement-permanent",
+    "tier-drowned", "tier-cairn",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -2738,9 +2740,11 @@ PALACE: dict[str, str] = {
     "unbound-tower-1": "something is watching",
     "unbound-tower-2": "something is posted",
     "unbound-tower-3": "something permanent",
-    # The three gates are in the bible and not in the drop. Listed anyway, so
-    # the pipeline reports them as missing by name every run -- a piece left
-    # out of this table is a piece nobody is reminded about.
+    # The three gates were the one module the faction drop arrived without,
+    # and were listed here while they were missing so that every run reported
+    # them by name -- a piece left out of this table is a piece nobody is
+    # reminded about. They arrived named by id rather than by tier, which
+    # `find_source` handles: the id is tried before the alias.
     "unbound-gate-1": "unlocked, technically",
     "unbound-gate-2": "attended",
     "unbound-gate-3": "warded",
@@ -2955,7 +2959,23 @@ def process_palace(force: bool) -> tuple[int, list[str], list[str]]:
     shapes: dict[str, tuple[int, int, float, float, tuple[float, float] | None, tuple[float, float] | None]] = {}
     frames: dict[str, tuple[float, float]] = {}
     for out_id, source_name in PALACE.items():
-        path = find_source(src, source_name)
+        # The id first, then the name the generator gave it. Every other
+        # processor in this file works that way round and this one did not:
+        # it only ever looked up the tier name, so section 152's three Unbound
+        # gates -- which arrived named `unbound-gate-1.jpg` rather than
+        # *Unlocked, Technically.jpg* -- were invisible to it and reported as
+        # missing art that was sitting right there.
+        #
+        # Which way a drop is named is not something anybody controls, and
+        # `tools/manifest.ts` already models a piece as *a list of names it
+        # might have arrived under*. This is that, for the one table that
+        # offered a single spelling.
+        path = find_source(src, out_id) or find_source(src, source_name)
+        if path is None:
+            for alias in SOURCE_ALIASES.get(out_id, ()):
+                path = find_source(src, alias)
+                if path is not None:
+                    break
         if path is None:
             missing.append(out_id)
             continue

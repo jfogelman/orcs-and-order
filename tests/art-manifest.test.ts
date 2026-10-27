@@ -36,6 +36,9 @@ const OUT = {
   palace: import.meta.glob('../public/palace/*.png', { eager: true }),
   advisors: import.meta.glob('../public/advisors/*.png', { eager: true }),
   posts: import.meta.glob('../public/posts/*.png', { eager: true }),
+  citizens: import.meta.glob('../public/citizens/*.png', { eager: true }),
+  promotions: import.meta.glob('../public/promotions/*.png', { eager: true }),
+  victory: import.meta.glob('../public/victory/*.{png,jpg}', { eager: true }),
 };
 
 /**
@@ -47,8 +50,12 @@ const OUT = {
  */
 const SOURCES = import.meta.glob('../art_src/factions/**/*', { eager: true, query: '?raw' });
 
+// The extension comes off as well as the folder, and `.jpg` as well as `.png`:
+// the victory screens are the one kind the pipeline leaves as photographs
+// rather than keyed sprites, so a `.png`-only strip reported all ten of them
+// as missing art that was right there.
 const names = (glob: Record<string, unknown>) =>
-  new Set(Object.keys(glob).map((p) => p.replace(/^.*\//, '').replace(/\.png$/, '')));
+  new Set(Object.keys(glob).map((p) => p.replace(/^.*\//, '').replace(/\.(png|jpg)$/, '')));
 
 const manifest = buildManifest();
 
@@ -60,15 +67,36 @@ describe('everything the game asks for has been processed', () => {
       'capital pieces',
       manifest.palace,
       names(OUT.palace),
-      // Section 152: the Unbound's Gate, all three tiers. The one capital
-      // module of theirs with no art -- the other four and the chassis all
-      // arrived in the faction drop and the Gate did not, so their capital
-      // currently has a hole in the front of it. The bible writes all three
-      // prompts out; they are copied into ART_PROMPTS.md.
-      ['unbound-gate-1', 'unbound-gate-2', 'unbound-gate-3'],
+      // Nothing outstanding. Section 146 drew the last of the first four
+      // sides' pieces and section 152 drew the Unbound's Gate, which was the
+      // one module their faction drop arrived without.
+      [],
     ],
     ['advisor portraits', manifest.advisors, names(OUT.advisors), []],
     ['garrison posts', manifest.posts, names(OUT.posts), []],
+    // Section 152 added these three, and `unbound-1` is why. The Unbound's
+    // first promotion mark was drawn, dropped, and silently not processed --
+    // `remove_background` refused it, which the pipeline says out loud and
+    // nothing checked afterwards. **Every other row here was added the same
+    // way**, after something went missing, so the gap was three kinds wide
+    // rather than one: who lives in the towns, the three rungs a side, and
+    // the picture at the end of the game were all unaudited in this
+    // direction.
+    ['citizen sheets', manifest.citizens, names(OUT.citizens), []],
+    [
+      'promotion marks',
+      manifest.promotions,
+      names(OUT.promotions),
+      // The badge fills 5.9% of its frame against its siblings' 26% and 20%,
+      // so keying it removes 94% and `MAX_REMOVED` refuses it at 93%. That
+      // ceiling stays where it is -- section 151 raised it for two Regalia
+      // and put it straight back, because **a false refusal is loud and a
+      // false acceptance is silent**. It wants a re-roll with the badge
+      // filling the frame, which is also what would make it match the other
+      // two to look at.
+      ['unbound-1'],
+    ],
+    ['victory screens', manifest.victory, names(OUT.victory), []],
   ];
 
   for (const [what, pieces, have, allowed] of kinds) {

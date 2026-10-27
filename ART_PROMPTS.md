@@ -2581,10 +2581,13 @@ every faction folder for every kind.
 
 ---
 
-## The Unbound's eight outstanding pieces (section 152) — 0 of 8
+## The Unbound's last eight pieces (section 152) — done
+
+**All eight arrived and are processed.** Kept here as the record of what was
+asked for and why, which is what the rest of this file is.
 
 The faction's art drop was complete for everything `UNBOUND_PLAN.md` wrote a
-prompt for, and the gaps are all in the same place: **pieces the bible's own
+prompt for, and the gaps were all in the same place: **pieces the bible's own
 tables never covered.** Three building icons, two advance icons and the three
 tiers of the Gate module, which the capital bible does write a prompt for and
 which simply were not generated.
@@ -2685,17 +2688,36 @@ add the ids rather than asking for the pieces again.
 |---|---|
 | advance icons | `art_src/factions/unbound/advances/<id>.jpg` |
 | building icons | `art_src/factions/unbound/buildings/<id>.jpg` |
-| capital gates | `art_src/factions/unbound/palace/<tier name>.jpg` |
+| capital gates | `art_src/factions/unbound/palace/<id or tier name>.jpg` |
 
-The three building icons and the three gates are **already listed** in
-`BUILDING_ICONS` and `PALACE`, so `npm run art` takes them the moment they
-land and reports them by name until then. The two advance icons need their ids
-adding to `TECH_ICONS` when they are drawn — the comment there says so.
+The three building icons and the three gates were **already listed** in
+`BUILDING_ICONS` and `PALACE`, so the pipeline took them the moment they
+landed. The two advance icons needed their ids adding to `TECH_ICONS`, which
+is done — and `advances` in `tests/art-present.test.ts` is an empty list
+again, which is the state it should normally be in.
 
-### One re-roll
+The gates arrived named `unbound-gate-1.jpg` rather than *Unlocked,
+Technically.jpg*, and that is fine: `find_source` tries the id before it tries
+the alias, so either spelling works. They came out facing the right way, so
+`PALACE_MIRROR` was not needed.
 
-`unbound-1`, the first Unbound promotion mark, keys badly: the pipeline
-reports *"background would not key"*, which means the magenta does not reach
-the frame's border all the way round. Same fix as the two Regalia pieces in
-section 151 — re-roll it with the badge filling more of the frame and a clean
-unbroken magenta margin.
+### One re-roll, still outstanding
+
+`unbound-1`, the first Unbound promotion mark, is **the one piece of this
+faction still not in the game**. The pipeline reports *"background would not
+key"*, and measuring it says why: the badge fills **5.9% of its frame**,
+against 26% for `unbound-2` and 20% for `unbound-3`. Keying it therefore
+removes 94% of the picture, and `MAX_REMOVED` refuses anything past 93%.
+
+The border is 100% clean magenta, so this is not the margin — it is the size.
+**Re-roll it with the badge filling the frame**, which is also what would make
+it match the other two rungs to look at: as drawn it is about a quarter the
+size of its own tier two.
+
+The ceiling is not the thing to move. Section 151 raised it for two Regalia
+pieces and put it straight back the same afternoon, because **a false refusal
+is loud and a false acceptance is silent** — a run-away fill that is quietly
+accepted eats the subject and nobody notices until the sprite is on the map.
+
+It is listed in `tests/art-manifest.test.ts` with that reason, so the audit
+names it every run until it lands rather than passing over it.
