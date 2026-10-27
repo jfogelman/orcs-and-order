@@ -2701,23 +2701,59 @@ Technically.jpg*, and that is fine: `find_source` tries the id before it tries
 the alias, so either spelling works. They came out facing the right way, so
 `PALACE_MIRROR` was not needed.
 
-### One re-roll, still outstanding
+### One re-roll — done
 
-`unbound-1`, the first Unbound promotion mark, is **the one piece of this
-faction still not in the game**. The pipeline reports *"background would not
-key"*, and measuring it says why: the badge fills **5.9% of its frame**,
-against 26% for `unbound-2` and 20% for `unbound-3`. Keying it therefore
-removes 94% of the picture, and `MAX_REMOVED` refuses anything past 93%.
+`unbound-1`, the first Unbound promotion mark, was the last piece of this
+faction not in the game. The pipeline reported *"background would not key"*,
+and measuring it said why: the badge filled **5.9% of its frame**, against 26%
+for `unbound-2` and 20% for `unbound-3`. Keying it therefore removed 94% of
+the picture, and `MAX_REMOVED` refuses anything past 93%.
 
-The border is 100% clean magenta, so this is not the margin — it is the size.
-**Re-roll it with the badge filling the frame**, which is also what would make
-it match the other two rungs to look at: as drawn it is about a quarter the
-size of its own tier two.
+The border was 100% clean magenta, so it was never the margin — it was the
+size. Redrawn filling the frame it keys at **46%**, which is more room than
+either of its siblings has, and the three now read as the progression the
+bible wrote: a button in smoke, two keepsakes in denser smoke, a solid lump
+with no smoke left.
 
 The ceiling is not the thing to move. Section 151 raised it for two Regalia
 pieces and put it straight back the same afternoon, because **a false refusal
 is loud and a false acceptance is silent** — a run-away fill that is quietly
 accepted eats the subject and nobody notices until the sprite is on the map.
 
-It is listed in `tests/art-manifest.test.ts` with that reason, so the audit
-names it every run until it lands rather than passing over it.
+It was listed in `tests/art-manifest.test.ts` with that reason while it was
+outstanding, so the audit named it every run rather than passing over it.
+
+**The prompt was what needed changing, not the roll.** The bible's was:
+
+> *A single tarnished brass button, barely attached to a wisp of pale smoke,
+> pixel art, thick black outline, flat magenta background, no shadow, centred,
+> 90s fantasy strategy game icon*
+
+A single button is the smallest subject on any promotion-mark list in this
+file, and *barely attached to a wisp* asks for a sparse one on top of that.
+Its two siblings are a pair of fused keepsakes and a solid lump, which is why
+they come out at 26% and 20% of frame and this one does not. Nothing says how
+big to draw it, so the generator drew it small — three times, consistently,
+which is the tell that this is the prompt rather than luck.
+
+So: the same object, the same joke, and the framing said out loud. This is
+what was drawn.
+
+| id | Rank | Prompt |
+|---|---|---|
+| `unbound-1` | first | *A single large tarnished brass button trailing a thin wisp of pale grey smoke from one edge, the button and its wisp together filling the frame edge to edge, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon* |
+
+Three things carried over deliberately:
+
+- **It stays a button and a wisp.** The bible's wisp-to-solid progression --
+  a button in smoke, two keepsakes fused in denser smoke, a solid lump with no
+  smoke left -- is the faction's whole plot in three badges, and the rank-3
+  mark is quietly a preview of The Arrangement Became Permanent. Only the size
+  is wrong.
+- **Pale grey smoke, not pale blue-white.** The bible says so on these
+  specifically, and for the reason the Horde's marks avoid green: the badge is
+  composited on top of a unit of roughly its own colour, and this roster glows
+  pale blue-white.
+- **Well inside the frame even so.** "Filling the frame" and "touching the
+  edge" are different things -- anything that reaches the border loses its
+  outline and turns to mush at a sixth of a tile. Big, with a margin.

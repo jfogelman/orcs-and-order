@@ -87,14 +87,14 @@ describe('everything the game asks for has been processed', () => {
       'promotion marks',
       manifest.promotions,
       names(OUT.promotions),
-      // The badge fills 5.9% of its frame against its siblings' 26% and 20%,
-      // so keying it removes 94% and `MAX_REMOVED` refuses it at 93%. That
-      // ceiling stays where it is -- section 151 raised it for two Regalia
-      // and put it straight back, because **a false refusal is loud and a
-      // false acceptance is silent**. It wants a re-roll with the badge
-      // filling the frame, which is also what would make it match the other
-      // two to look at.
-      ['unbound-1'],
+      // Empty. `unbound-1` was listed here for the length of one re-roll:
+      // the badge filled 5.9% of its frame against its siblings' 26% and
+      // 20%, so keying removed 94% and `MAX_REMOVED` refused it at 93%. The
+      // ceiling was never the thing to move -- section 151 raised it for two
+      // Regalia and put it straight back, because **a false refusal is loud
+      // and a false acceptance is silent**. Redrawn filling the frame it
+      // keys at 46%.
+      [],
     ],
     ['victory screens', manifest.victory, names(OUT.victory), []],
   ];
