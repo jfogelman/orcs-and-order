@@ -181,8 +181,24 @@ describe('a city still being resettled', () => {
  * settled on points.
  */
 describe('a dominance victory', () => {
+  /**
+   * A board with a known share of the world on it, and **nobody else coming**.
+   *
+   * `opponents` is pinned because these tests are about the dominance rule and
+   * nothing else. The helper sets `state.turn` straight to a late number, and
+   * since section 153 made arrivals a short per-level stagger -- about every
+   * twenty turns at Normal -- every latecomer in the game is overdue the
+   * moment the clock is moved. They then pile in one a turn and change the
+   * share the test just built, which is a confound these tests never meant to
+   * have and which used to be hidden by arrivals landing around turn ninety.
+   */
   function board(orcCities: number, humanCities: number, turn: number): GameState {
-    const state = createGame({ seed: 20260822, width: 40, height: 30 });
+    const state = createGame({
+      seed: 20260822,
+      width: 40,
+      height: 30,
+      opponents: ['human'],
+    });
     state.units.length = 0;
     state.cities.length = 0;
     state.turn = turn;

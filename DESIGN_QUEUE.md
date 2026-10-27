@@ -11740,3 +11740,727 @@ Also open: the palace chassis points are the Horde's, borrowed, because the
 Wandering Folk's palace art has not been processed — `prepare_art.py` keeps
 its own list for those too. The tier names match the art's own filenames
 (`Wing, On Credit`), so no art needs renaming.
+
+## 143. How each citizen feels, and four bugs found by asking
+
+Jeremy, after playing the Hivekin: *"we should be able to mouse over a citizen
+and see their contentment, and I think also a small colour heat bar of the
+total contentment count — red is rioting, green joyful. This should help
+especially for ones like the hivekin citizens."*
+
+A city's mood was one number and one word. The panel drew N identical heads
+and said "2 unhappy" underneath, so **which** two was not a thing you could
+find out, and the Hive — whose citizens are castes with different faces —
+made that worse rather than better.
+
+`MOOD_LADDER` in `model/citizens.ts` is the rungs, `moodAt(disorder, limit, n)`
+answers for the nth citizen, and `moodTally` counts the lot. The bar is a
+flex row, one segment per rung, so it reads as a temperature rather than a
+legend.
+
+### The rename that was the whole risk
+
+`MOODS` already existed, in `sim/diplomacy.ts`, meaning the seven names for
+what an empire thinks of you. Two exported `MOODS` in one codebase is a
+`import { MOODS }` away from a very confusing afternoon, so this one is
+`MOOD_LADDER`. Worth recording because the collision was found by looking
+rather than by failing — nothing imports both today, and nothing would have
+told us on the day something did.
+
+### Four bugs found by asking the question
+
+Asking "what does citizen *n* feel" required the panel to know things it had
+never had to know, and each one turned out to be wrong somewhere else too.
+This is the pattern worth keeping: **a feature that reads existing state is a
+test of that state**, and it is a cheaper test than most.
+
+---
+
+## 144. The Wandering Folk's capital, and the sixth hand-maintained list
+
+`PALACE` in `prepare_art.py` is a dict of sixteen pieces a side, mapping the
+id the game asks for to the name the generator gave the file. It is
+hand-written. The Wandering Folk's sixteen had been in `art_src/` since the
+faction drop and **not one had been processed**, so `PALACE_ART['wandering-base']`
+was undefined and opening your own capital as the Wandering Folk threw.
+
+That is the sixth copy of a list the model already holds, and the second
+faction to lose art to this exact shape. The art was never what was missing.
+
+### The chassis points, marked off the real art
+
+Section 142 could not mark them, because there was no processed image to read
+a pixel grid from, so they were the Horde's borrowed. With the art through the
+pipeline they were marked properly — and the lesson is that **a ring is not a
+hall**: the Standing Caravan is wagons around an open compound, so the three
+points that mean "a corner of a building" have no corner to mean, and the
+regalia stands *in* the compound rather than on a roof there is none of.
+
+### The tower's `size`, and why a share is not a share
+
+The Wandering Folk's tower art is 128×126 where the Horde's is 104×128 — wide
+rather than tall. Scaled by the same share it stood a storey too high. This is
+the same lesson section 125 learned on the Hive's mound by matching width and
+then height and getting it wrong in opposite directions: **match on drawn
+area**.
+
+---
+
+## 145–146. The Caravan, Recruit, and the rest of the bible
+
+The Wandering Folk's two signature mechanics, and the first faction rule in
+this game that is about *somebody else's units*.
+
+### The Caravan
+
+`sim/caravans.ts`. A ring of parked wagons on any dry tile, raised by a worker
+in six turns, permanent once it stands, seeing two tiles in every direction.
+Not a city: it grows nothing and holds nothing. What it is for is **reach** —
+it is the thing Recruit asks from.
+
+Jeremy settled two open questions:
+
+- **Destroyed by pillaging.** It is a structure on a tile and the game already
+  has a verb for tearing one of those up.
+- **A Caravan on turn one**, with no advance first. *"The balance is that gold
+  is a premium early game"* — the limit on asking anybody early is the purse,
+  not the technology, which is a better limiter because it is one the player
+  can feel.
+
+Later, `anyone-parks` lets *any* of their units raise one rather than only a
+worker, which he proposed as a way to make the advance flow pay: the army
+plants them where it has got to instead of walking a worker out.
+
+### Recruit
+
+`sim/recruiting.ts`, written as a sibling of `turning.ts`. Anybody else's
+soldier standing inside a Caravan's ring can be asked to change sides for
+gold. It can fail, failure costs the gold anyway, and asking where the other
+side can see it is a hostile act whether or not it works — the diplomacy hit
+**is** the retaliation, which is why there is no separate `provokeRetaliation`
+flag (`ai.ts`'s `grudge()` reads `standing`, so one rule covers it).
+
+### The Hive, and something shiny
+
+The first draft refused the Hivekin outright: a caste was grown for a job and
+there is nobody in there to make an offer to. Jeremy: *"I worry that
+disallowing hivekin from recruitment is problematic from a balance
+perspective — potentially we could have the lower castes be susceptible to
+'something shiny' (i.e. gold), but higher castes are built too loyal
+(literally). Keep it in character, tricking the lower castes into accidentally
+betraying the hive instead of outright buying them."*
+
+So the lower castes come **cheap and unreliable**, which is the opposite of a
+raider in both directions, and whoever arrives does not appear to have noticed
+anything has happened. The Broodlord, Princess, Warden and Queen were built
+loyal and no shiny thing moves them.
+
+### The mistake worth keeping
+
+The test for "cheaper than Create" compared **gold to shields** and passed
+everywhere except the cheapest tier, where it failed and looked like a balance
+problem. It was a units error in the test. Comparing against `rushCost` is the
+comparison that was meant.
+
+---
+
+## 147. The art manifest: closing the hand-maintained list from both ends
+
+Jeremy, after the sixth one: *"How can we avoid this hand maintained for the
+next faction 'unbound'?"*
+
+By section 146 the count was seven lists in `prepare_art.py` — creatures,
+advance icons, building icons, settlement tiers, capital pieces, advisor
+portraits, garrison posts — each a copy of something `src/model/` already
+knew, and **every faction since the second had shipped art that existed, was
+correct, was committed, and was never processed.**
+
+The failure is always silent. Nothing throws: the pipeline simply never looks,
+the game asks for a PNG that is not there, and the renderer draws its
+fallback.
+
+### `tools/manifest.ts`, and what it cannot do
+
+`buildManifest()` derives what the game asks for from the model. A piece is
+`{id, sources[]}` — the name the game wants, and **every name it might
+reasonably have arrived under**, derived rather than typed: its id, its name
+in the game, the tier it stands for. That is what replaces most of the
+aliasing, and what is left is genuinely arbitrary.
+
+What it cannot do is invent the name somebody saved a file under, which is why
+`sources` is a list and not a string.
+
+### Three directions, and the third was Jeremy's
+
+`tests/art-manifest.test.ts` audits:
+
+1. **Model to disk** — everything the game asks for has an output, or is a
+   listed gap with a reason.
+2. **Disk to model** — *every source file is reachable by something*. This is
+   the new direction and the one that mattered, because every failure above
+   was art that existed and was unreachable. A file nobody will ever process
+   is a file drawn for nothing.
+3. **Bible to art** — Jeremy asked for it directly: *"We should also audit the
+   bible vs the art to ensure there's nothing missing."* It parses the
+   `| \`id\` |` rows out of the three plan documents.
+
+It found three real gaps on the first run — the Wandering Folk had **no
+advisor portraits, no settlement sprites and no spy units at all** — and a
+live id collision before it could be repeated.
+
+### The gap it did not close, found five sections later
+
+The model-to-disk direction covered settlements, capitals, advisors and posts
+and stopped there. Promotion marks, citizen sheets and victory screens were
+unaudited in that direction until section 152 lost `unbound-1` silently and
+went looking. All three are in now. **The lesson is that an audit written
+against the failures you have had covers the failures you have had**, and the
+cheap defence is to ask which *kinds* exist rather than which ones have bitten.
+
+---
+
+## 148. The Wandering Folk could not build anything on turn one
+
+Found by playing them. Their first city offered an empty Units list.
+
+`first-wanderers` granted only the Wanderer, which is a settler — and a
+size-1 city filters settlers out, because a city of one cannot send anybody
+away without ceasing to exist. So the list was empty and the town could build
+nothing at all.
+
+**Section 136 had already documented this for the Hive**, and section 142 did
+not read the note. The rule is now stated once, where a faction's first
+advance is written: *a faction's opening advance grants the starter as well as
+the founder.*
+
+### Two advances repurposed rather than deleted
+
+Jeremy: *"let's repurpose tier-skirmisher rather than delete it."* An advance
+whose unit has moved elsewhere becomes the first rung of something else rather
+than a hole in the tree — which is also what happened to the Unbound's
+`tier-revenant` four sections later, for the same reason and with the same
+answer.
+
+## 149. The cue camera arrived and left inside one frame
+
+Jeremy, with a save attached: *"goblin attacked my wanderer settler but the
+focus didn't shift."*
+
+The camera owes you a look at anything that happens to one of yours while you
+are not looking at it. It was paying that debt on the next frame, which for a
+fight that produced no animation was the same frame — the camera arrived and
+left before anything was drawn.
+
+`lookHeldUntil` and `LOOK_DWELL` hold it there. The condition came out into
+`lookIsDue()` as a function, which mattered more than the fix:
+
+### My test did not test the fix
+
+The first test re-implemented the condition locally, so deleting the fix
+failed nothing. Extracted into `lookIsDue()` and asserted through, it **still**
+passed — because a modal was open and the real condition includes
+`!isModalOpen()`. Only after `closeModal()` and an explicit assertion did it
+bite, and then it was broken two ways round to confirm.
+
+Three attempts to write one test, and the general rule is the one from the
+memory: **always check a new test fails against the old code.**
+
+### 149b. An attack on one of yours outranks a sighting
+
+My first reading of Jeremy's report was that the camera should move for a
+fight you *lose*. His correction: *"No, absolutely not — any attack should get
+focus, a near miss is still missable if you didn't see it."*
+
+`WATCH.yours` became `WATCH.yourFight` and moved above `sighting`:
+`yourLoss: 4, yourFight: 3, sighting: 2, beside: 1, no: 0`. A fight you are in
+outranks noticing somebody on a hill, which it did not, and that was the
+actual bug rather than the dwell.
+
+---
+
+## 150. Exorcism, before the thing it answers
+
+The Unbound's whole design rests on one promise: *"there is always a hard
+counter, so 'hard to kill' never quietly becomes 'impossible to kill.'"*
+
+So the counter shipped **first, as its own section, with nothing to counter
+yet.** The alternative was writing dispersal and its answer in one go, and the
+answer is the half that touches every other faction's tree — which would have
+meant a stretch of sections in which one side could not be permanently beaten
+by anybody.
+
+`sim/exorcism.ts` is a table keyed on the creature's **base**, so a group of
+two Paladins exorcises as readily as one. `null` means the unit can do it by
+existing; a flag means it has to be taught.
+
+| side | answer | needs |
+|---|---|---|
+| Kingdom | Paladin | nothing — it was already theirs |
+| Hive | Warden-caste | nothing — grown for standing in front of things |
+| Horde | **Bone-Speaker** | nothing — new, and the reason for this section |
+| Wandering Folk | Mystic | `mystic-exorcism` — self-taught, as it learned everything |
+| Unbound | Archon | nothing — added in 152 with the faction |
+
+The test that matters is not any of the rows. It is *"gives every faction at
+least one exorcist it can reach"*, asked of `FACTION_IDS`, because a faction
+added later with no exorcist is a faction the Unbound can never be permanently
+beaten by — and that cannot be written as a list.
+
+### The Bone-Speaker, and a decision the test remembered
+
+Written as the Death Knight's opposite: living rather than armoured-undead,
+doing the unpopular *send them back* job rather than the popular *command
+them* one. I gave it `magicResist: 0.3` and `status.test.ts` caught it —
+that list is a recorded decision about which creatures are magical, and a
+living shaman is not one. The unit was wrong, not the test.
+
+---
+
+## 151. The Anchor Totem's prereq, and the last outstanding art
+
+Small. `UNBOUND_PLAN.md` left the Anchor Totem's prerequisite open; Jeremy
+settled it as `tier-yaksha` — *you learn to anchor a spirit from the one kind
+that already anchors itself*, which is where the building's whole idea comes
+from.
+
+### The ceiling that was raised and put back the same afternoon
+
+Two Regalia pieces were refused by `remove_background` at 0.971 and 0.945
+removed against a `MAX_REMOVED` of 0.93. Adding a `PALACE_MAX_REMOVED` made
+them work, and was wrong: **a false refusal is loud and a false acceptance is
+silent.** A runaway fill that is quietly accepted eats the subject and nobody
+notices until the sprite is on the map.
+
+Jeremy re-rolled them filling the frame, removal dropped to 0.80/0.63/0.48,
+and the strict default went back. The same argument settled `unbound-1` a
+section later without needing to be had again.
+
+---
+
+## 152. The Unbound, and what happens when they lose
+
+The fifth faction, and the last of the three Jeremy designed. `UNBOUND_PLAN.md`
+has the design; what follows is what building it taught.
+
+### The rule
+
+`sim/dispersal.ts`. Beaten by anything that cannot exorcise, an Unbound unit
+**scatters** rather than dying and gets one attempt, at the top of its own
+next turn, to gather again. It needs a site standing: an Anchor Totem
+anywhere, or a Retrieval Circle in a city with nobody in it. With neither on
+the map the spirit is gone for good.
+
+**What they pay is infrastructure, not arithmetic.** Their stats are the named
+equivalent's unchanged — a Revenant is a Footman at a Footman's price — so the
+cost of coming back is two buildings a town before anything a town is normally
+for. An Unbound empire that never raises a Circle is an ordinary army that is
+slightly worse at scouting.
+
+### The seam, and why it is where it is
+
+The hook is inside `destroyUnit`, which now takes the killer, rather than at
+the two combat call sites in `movement.ts`. That is the one door out of the
+game: a rule installed at the call sites would have been true of a fight and
+false of a blast, a dragon's breath, a fire or a ship going down — and for
+this faction *nobody in particular* is the ordinary case rather than the odd
+one, so "no killer named" has to mean "scatters".
+
+### The three exceptions, each the bible's own
+
+- **The Effigy** is an object and simply dies. The cheapest thing they field
+  is the one thing anybody can just kill, which puts the fairness promise in
+  the power curve rather than in a special case in combat.
+- **The Archon** is unique, is sent to the *nearest* town whole and at once by
+  any ordinary defeat, and is destroyed outright by an exorcist — and is
+  itself an exorcist, which is what stops a war between two Unbound empires
+  being unwinnable by either. Nearest rather than the capital: appearing
+  across the map reads as a retreat rather than as not having been
+  interrupted.
+- **The Naiad** is markedly stronger beside water, on both feet. It lives in
+  `WATERSIDE` rather than in the creature's line, because a conditional bonus
+  written into base stats is a unit that is simply better.
+
+### The ending does something, and the something is derived
+
+Jeremy picked **converts what it kills** from four shapes: while the Spirit
+Party counts down, anything that falls near it joins them. It is the only one
+of the four that extends the faction's own rule rather than bolting a system
+beside it, and it is answerable without learning anything new — fight further
+off, or take the city.
+
+What a guest comes back *as* is `guestAs`, and it is **derived off the model
+rather than tabulated**: the Unbound tier that does the same job for about the
+same money. Section 146's hand-written `RECRUIT_AS` was stale twice over by
+then — once when the Hive's castes arrived and once when this faction did — so
+a sixth faction appears in this one for nothing.
+
+### The probe found the rule had never happened
+
+`tools/unboundprobe.run.test.ts` is an existence check, not a balance pass.
+First run, twelve games:
+
+> `ever had somewhere to gather: 0/12` — `scattered 0.0 a game`
+
+`chooseProduction` ranks buildings on gold, science, defence and a barracks. A
+Retrieval Circle carries none of those, so by every number the AI reads it is
+fifty-five shields of nothing. **Fourth instance**: the Burrower-caste in 125,
+the spy in 136, the unseen agent in 138. The fix is the same standing want
+each time.
+
+| | first run | with the want |
+|---|---|---|
+| games with a reform site | 0/12 | 12/12, first ~turn 48 |
+| scattered / gathered a game | 0.0 / 0.0 | 1.3 / 0.8 |
+| units at the end | 20.8 | 30.8 |
+| ending works standing | 0.2/3 | 0.8/3 |
+
+`PERSONALITIES` is `Record<FactionId, …>` now, so the next faction with no AI
+entry is a compile error rather than a side that quietly plays as the Horde.
+That comment had been written three times.
+
+### Two holes in the art audit, found by losing a file
+
+The gates did not process on the first run: `process_palace` looked a piece up
+by its *tier name* and nothing else, where every other processor tries the id
+first. They had arrived named `unbound-gate-1.jpg`, so they were invisible to
+it and reported as missing art that was sitting right there.
+
+And `unbound-1` went missing **without failing anything**, because the
+model-to-disk audit covered settlements, capitals, advisors and posts and
+stopped there. Promotion marks, citizen sheets and victory screens are in it
+now, each confirmed to bite by deleting a file. `names()` strips `.jpg` too —
+the victory screens are the one kind left as photographs.
+
+### Still open
+
+- Every number in `DISPERSAL`, `GUEST_LIST` and the Unbound's personality is a
+  first answer. **Nothing is measured.**
+- The Archon reaches the board in 1 game of 12. Its road is ~560 beakers and
+  this side researches about 21 advances. That may be right — it is the
+  Dragon's and the Death Knight's slot — or the road may be one advance too
+  long.
+- **No Spirit Party has ever been built**, so the ending's conversion has
+  never fired in a played game. That follows from the works standing at 0.8 of
+  3, not from anything wrong with `inviteIn`.
+- `unbound-gate-2`'s measured standing point is 0.70 across where tiers 1 and
+  3 are ~0.49, so the middle gate sits right of the other two when it
+  upgrades. Cosmetic.
+
+## 153. The stagger is the difficulty, and nothing else
+
+Open since section 142 as *"the default game is four-sided now, and that is
+the honest reading of the rule rather than a decision anybody made."* Section
+152 made it five-sided and the question stopped being philosophical.
+
+### The arithmetic nobody had done
+
+Sections 136 and 139 put the first latecomer in a window at turn 90–120, each
+one after that 60 turns behind, and let difficulty shift the whole schedule
+±60. At two opponents that is a good rule. At four:
+
+| level | four latecomers arrive |
+|---|---|
+| A Picnic | 165, 225, 285, **345** |
+| A Skirmish | 135, 195, 255, **315** |
+| A War | 105, 165, 225, 285 |
+| A Crusade | 80, 140, 200, 260 |
+| Doom | 45, 105, 165, 225 |
+
+The turn limit is **300**. So on the two easiest levels the fifth faction
+**never arrived at all**, and on Normal it turned up on turn 285 and existed
+for fifteen turns. Nothing failed — every test passed, because every test
+either pinned its opponents or did not run long enough to notice.
+
+### Jeremy's rule
+
+> *"No staggered entry except for the difficulty level increasing — meaning
+> hardest level is everyone simultaneously, easiest is staggered slightly."*
+
+So the window and the shift are both gone, and one number per level does the
+whole job: `stagger`, the turns between one arrival and the next.
+
+| level | gap | four latecomers |
+|---|---|---|
+| A Picnic | 40 | 40, 80, 120, 160 |
+| A Skirmish | 30 | 30, 60, 90, 120 |
+| A War | 20 | 20, 40, 60, 80 |
+| A Crusade | 10 | 10, 20, 30, 40 |
+| **Doom** | **0** | nobody is late; everybody is there on turn one |
+
+**Zero is not a very small stagger.** At Doom `opponentsAtStart` returns
+everybody and `latecomers` returns nothing, which is what makes it the hardest
+game rather than merely an expensive one.
+
+Jitter scales with the gap — `min(8, floor(gap / 3))` — because an eight-turn
+jitter on a ten-turn gap is not a stagger, it is a coin toss about who comes
+first.
+
+**The numbers are mine and unmeasured. The shape is Jeremy's.**
+
+### What it costs, said plainly
+
+Section 139 took real trouble to keep the default game bit-identical to what a
+hundred sections had been measured on, and hashed the first latecomer's turn
+specifically so that it drew *exactly* what section 125 drew. **This throws
+that away**, knowingly, because the alternative was a rule that silently
+dropped a whole faction out of the game on half the difficulty levels.
+
+Every balance number in this file older than section 153 was taken on a
+different game. That is the honest statement and it should be read before any
+of them is cited again.
+
+### Four tests failed, and only one of them was the rule
+
+Worth recording because the triage is the interesting part.
+
+- **`disorder.test.ts`** builds a dominance board by hand and sets
+  `state.turn` straight to a late number. With arrivals every twenty turns,
+  every latecomer is overdue the instant the clock moves, so they piled in one
+  a turn and changed the share the test had just built. **The fixture was
+  wrong, not the rule** — these tests are about dominance and never meant to
+  have five factions in them. They pin `opponents` now.
+- **`fixtures.test.ts`** budgets half-turns as `(300 + 10) * 4`, counted for
+  four seats. **Fourth time this trap has been walked into** — two seats broke
+  when the wilds took a slot, three when the Hive did, four when the Unbound
+  did. It reads `FACTION_IDS.length + 1` now, so the next faction costs it
+  some wasted iterations rather than a failure nobody remembers the reason
+  for.
+- **`game.test.ts`** and **`production.test.ts`** are measurements of the
+  two-empire game — army composition, and both empires growing. See below.
+
+### The probe, and the bug in what had just been written
+
+Fifteen games, three seeds at each level, through the shipped loop.
+
+**Doom seated two sides.** `due: nobody is late`, and then `cities orc 6 huma
+6` and nothing else. `createGame` **kept its own copy of the start rule** --
+`const onMap = ARRIVALS.enabled ? chosen.slice(0, 1) : chosen` -- and nothing
+in `src/` called `opponentsAtStart` at all. Teaching the helper about a
+stagger of zero taught the tests and left the game unchanged.
+
+That is the hand-maintained-list failure wearing a function's clothes, and it
+is worth counting as one: the duplicate was a *second definition of a rule*,
+it was silent, and every test passed because every test asked the helper. The
+test that catches it now asks `state.players` instead, and was confirmed by
+putting the old line back.
+
+**And the Wandering Folk are being strangled.** Across the twelve staggered
+games they finish with 0 cities and 1 advance in seven of them, while the
+Unbound in the same games reach 32 advances and nine cities. It is not the
+stagger -- they arrive earlier than they used to -- it is that they arrive
+onto a map two empires have been settling since turn one and find nowhere to
+put a town. The old schedule hid this by making it worse for everybody.
+
+### Still open
+
+- The arrival turns are **not measured**. A sweep should ask whether 20 at
+  Normal is a game or a scrum.
+- **A latecomer with nowhere to go.** The probe above is the evidence and it
+  is the biggest open question this section raises. `arrivals.ts` places a
+  side on "ground nobody has claimed"; what it does not do is check that the
+  ground is worth claiming.
+- **Does a side get strangled on a crowded map?** Pinned out of
+  `production.test.ts` rather than answered: one seed in twelve had the
+  Kingdom build a single kind of fighter in a five-sided game, against nine to
+  twelve kinds in the others.
+- Whether seating everybody at Doom wants a different worldgen. Five starting
+  positions on a 40x28 map is tighter than anything worldgen has been asked
+  for, and it is not obvious it refuses gracefully.
+
+## 154. What I think this game is short of — QUEUED, an analysis
+
+Jeremy asked for *"analysis of potential features to add from you"*, so this is
+mine rather than a list of what is in the bibles. The rule I have held myself
+to is the one this file already uses: **an idea is worth writing down when it
+is a field and a hook**, and worth doing when it answers something that has
+been *measured* rather than something that sounds good.
+
+Everything below is ranked by that second test, which is why the first two
+items are not features at all.
+
+### 1. Gold is still dead, and now it is dead only for the AI
+
+Section 4d measured a Horde that banked **475.6 gold a game into nothing** and
+a Kingdom on 189.6 — the Kingdom's lower because it *spends*. Section 4e gave
+gold a sink (rush-buying) and then measured the AI using it as **the worst
+thing tried that session**, so `AI_TUNING.buyProduction` is off.
+
+That is a half-solved problem wearing the clothes of a solved one. A human
+player has a sink; every AI in the game still accumulates a number that does
+nothing, and the Horde accumulates the most of it.
+
+Section 146 is the existence proof that a *good* gold sink exists: Recruit
+costs gold, the AI uses it, and it is in character. What it is not is
+universal — it belongs to one faction.
+
+**What I would try, cheapest first:**
+
+- **Tribute, both ways.** Diplomacy already has standing and a mood ladder.
+  A side that is much the weaker paying to keep a peace is a gold sink, an AI
+  decision, and a thing a player can accept or refuse. One number on a treaty.
+- **Mercenaries at a Caravan or a post.** Gold buys a unit that is not built,
+  with no shields and no city. This is Recruit's seam with the target swapped
+  from somebody's soldier to nobody's.
+- **Bribing a city** rather than storming it. Expensive, visible, refuseable,
+  and it is the one thing an empire with 475 gold and no army should be able
+  to do.
+
+I would **not** retry rush-buying for the AI. Section 4e's note retires that
+whole class, and the reason is still true: rush-buying scales with how many
+cities you have to spend it in, so it pays the side that is already winning.
+
+### 2. Three quarters of games end on the turn limit
+
+Longstanding (section 3's *"nearly every game reaches the turn limit"*, never
+closed). Four alternative endings now exist and section 152's probe says the
+fifth side builds **0.8 of three works** and reaches its ending advance in half
+its games.
+
+So the endings are not a road most games walk. That is either a price problem
+(1000 shields for the Wandering Folk, 600 for the Hive) or a road problem (the
+Archon sits ~560 beakers deep and is fielded in 1 game of 12). **Both are
+measurable and neither is a feature.** I would measure before building
+anything new, because an ending nobody reaches is content nobody sees, and
+this game now has five of them.
+
+### 3. A unit that survives should become something
+
+Jeremy's own next item, and I agree with it — see section 155 below. The
+argument from this file rather than from the bible: the only thing that
+happens to a unit that lives is a rank and, occasionally, a perk. The counting
+ladder makes units *numerous*; nothing makes one **yours**. Dispersal gave the
+Unbound a version of this by accident — a Revenant that gathers again keeps
+its rank, and it is the first unit in the game anybody has a reason to care
+about individually.
+
+### 4. The things I would not build
+
+Recorded because a queue that only lists what to do is a queue somebody
+re-proposes the same bad idea into.
+
+- **More factions.** Five is already more than the balance work has caught up
+  with; section 152's own numbers are entirely unmeasured.
+- **A tech tree that branches more.** `tech-useful.test.ts` exists because
+  three factions shipped unable to keep a city calm. Width has cost more than
+  it has paid.
+- **Anything that adds a per-turn decision to every city.** The one measured
+  cost in this game that never goes away is the player's attention: section
+  124's play notes are mostly about things that asked too often.
+- **Another faction arriving onto a settled map.** Section 153's probe shows
+  the Wandering Folk finishing with no cities and one advance in seven games
+  of twelve, because they turn up where there is nowhere to go. That is a
+  defect in what already exists, and adding to it is not a feature.
+- **A second resource.** Food, shields, trade, gold and beakers already
+  interact in ways nobody has fully measured. A fifth would not be measured
+  either.
+
+### 5. The structural thing, which is not a feature
+
+Four separate sections have now found the same bug: **a mechanic the AI never
+uses, because `chooseProduction` ranks on numbers the thing does not have.**
+The Burrower-caste (125), the spy (136), the unseen agent (138), the reform
+sites (152). Each was found by a probe, after shipping, and each fix is the
+same standing want.
+
+The general version is a `wants` list on the thing itself rather than a
+branch in the chooser — a building or unit that declares *how many of me a
+side should keep*, with the chooser reading it. That retires the class instead
+of fixing the fifth instance. It is a field and a hook, and it is the one
+piece of refactoring in this file I would argue for on its own merits.
+
+---
+
+## 155. Upgraded units, as an option — QUEUED
+
+Jeremy's, with the design and the art already done: *"Upgraded Units Option
+(similar to barbarians). I already have the full upgrade bible and assets."*
+
+**"Similar to barbarians" is the important half.** Raiders are a checkbox on
+the new-game screen, decided once and kept for the whole game, and they are
+off by default in every measurement. This is asked for the same way, which
+means the balance question is "does it work" rather than "does it move the
+baseline" — the baseline is the box unticked.
+
+### The design, as it stands
+
+One **linear** upgrade per base unit, then **two mutually exclusive branches**
+built on top of it. Twelve base units for the Horde and the Kingdom is 36
+advances; the three newer factions have their own doc.
+
+Sources, all four of them Jeremy's and all complete:
+
+| file | what |
+|---|---|
+| `unit upgrades/unit_upgrades.md` | the orc/human design and sprite prompts |
+| `unit upgrades/unit_upgrade_techs.md` | the 36 `TechDef` entries and icon prompts |
+| `factions/unit_upgrades_new_factions.md` | Hivekin, Wandering Folk, Unbound |
+| `factions/unit_upgrade_techs_new_factions.md` | their advances |
+
+Art, already drawn — about **210 files**:
+
+| folder | files |
+|---|---|
+| `unit upgrades/` | 36 sprites |
+| `unit upgrades/attack animations/` | 30 |
+| `unit upgrades/weakened state/` | 27 |
+| `unit upgrades/tech updates/` | 36 advance icons |
+| `unit upgrades/skeletal versions/` | 13 |
+| `factions/hivekin/units/upgrades/` | 21 |
+| `factions/wanderers/units/upgrades/` | 24 |
+| `factions/unbound/units/upgrades/` | 18 |
+
+Two copies of `unit_upgrades.md` exist and are **byte-identical**, so the
+hazard in `art-src-old-rolls-win` does not apply here — but it is worth saying
+which was read, as section 141 did.
+
+### The question the bible itself raises, and the answer it did not see
+
+`unit_upgrade_techs.md` flags it directly:
+
+> *"Several of these upgrades are combat-rule changes that don't map to any
+> existing `TechFlag`. The current flag enum is army-wide or global — none of
+> it is unit-specific like these need to be. That likely means either new
+> flags per-effect, or a different mechanism entirely (a per-unit perk list
+> rather than a global flag). Worth resolving in code before wiring these."*
+
+**The per-unit perk list already exists.** `src/model/perks.ts` is exactly
+that mechanism, shipped, tested, and already carrying per-unit combat rules
+(`bloodied`, `dug-in`, `better-part-of-valour`, `reputation`, `volatile`). The
+bible is reaching for a thing the game has.
+
+So the shape I would propose, before anything is built:
+
+- An upgrade is a **perk granted on build**, not a new creature. The base
+  creature keeps its id, its art is swapped by variant the way the Ogre's club
+  variants already are, and `UNIT_TYPES` does not grow by 36 entries.
+- The advance grants the perk's *availability*; the branch choice is a
+  per-city or per-empire pick, which is a field.
+- The 36 sprites become variant art on an existing id rather than 36 new
+  creature ids with 36 new rows in every hand-maintained list this project has
+  been caught by.
+
+That last point is the one worth insisting on. **Thirty-six new creature ids
+would be the largest single addition to every list in the game**, and sections
+141, 144, 147 and 152 are all the same story about what that costs.
+
+### What has to be decided before it is built
+
+1. **Jeremy: is an upgrade a choice or a purchase?** The doc says "mutually
+   exclusive branches", which is a choice — but it does not say *who* chooses,
+   or whether a side that researched Branch A can ever field Branch B.
+2. **Does an existing unit upgrade, or only a new one?** A game where
+   researching an advance improves the army you already have is a very
+   different game from one where it improves the next army.
+3. **What the costs are.** The doc says outright: *"costs below are suggested
+   starting points, not final balance."*
+4. **Whether the three newer factions ship with it or follow.** Their own
+   numbers are unmeasured as of section 152, and layering an untested system
+   on an untested faction is two unknowns in one measurement.
+
+### Why it is worth doing
+
+It answers the thing I listed third in section 154: the only thing that
+happens to a unit that survives is a rank. And it is the rare queue item where
+**the design and the art are done and the code is the only part left** —
+which, on this project's record, is the half that goes missing rather than the
+half that goes wrong.

@@ -17,7 +17,6 @@ import { LEGION, RAIDER_GRUNT } from '../sim/wilds';
 import { RUINS, WARDENS } from '../sim/ruins';
 import { COWED } from '../sim/status';
 import { HIVEKIN, QUEEN } from '../sim/hivekin';
-import { ARRIVALS } from '../sim/arrivals';
 import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
@@ -1914,7 +1913,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
                 <td>${d.content === 0 ? 'as measured' : `${Math.abs(d.content)} citizen${Math.abs(d.content) === 1 ? '' : 's'} ${d.content > 0 ? 'later' : 'sooner'}`}</td>
                 <td>${Math.round(d.aiCost * 100)}%</td>
                 <td>from turn ${d.raidNotBefore}, every ${d.raidEvery}</td>
-                <td>${d.hiveArrives === 0 ? 'as measured' : `${Math.abs(d.hiveArrives)} turns ${d.hiveArrives > 0 ? 'later' : 'sooner'}`}</td>
+                <td>${d.stagger === 0 ? 'all here already' : `one every ${d.stagger} turns`}</td>
               </tr>`,
             ).join('')}
           </tbody>
@@ -1929,20 +1928,22 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           the first turn.</strong> Everybody else is coming, and has not arrived yet.
         </p>
         <p class="flavor">
-          A side that is still on its way turns up somewhere around turn
-          ${ARRIVALS.from} to ${ARRIVALS.until}, and each one after that roughly
-          ${ARRIVALS.spacing} turns behind the last &mdash; so a four-sided game is one
-          rival at the start, one in the middle, and one rather late. They appear on
-          <strong>ground nobody has claimed</strong>, well away from anybody's towns,
-          with a couple of settlers and an escort, and for their first
-          ${HIVEKIN.grace} turns they cannot be attacked at all.
+          <strong>The level is the only thing that decides when.</strong> Each one
+          after the first arrives a fixed number of turns behind the one before, and
+          that number is what the difficulty sets: ${DIFFICULTIES.map(
+            (d) => `${escapeHtml(d.name)} ${d.stagger === 0 ? 'none at all' : `${d.stagger}`}`,
+          ).join(', ')}. On <strong>${escapeHtml(
+            DIFFICULTIES[DIFFICULTIES.length - 1].name,
+          )} nobody is late at all</strong> &mdash; the whole world is already there on
+          the first turn, which is what makes it the hardest game rather than merely
+          an expensive one.
         </p>
         <p class="flavor">
-          <strong>The level moves the whole schedule.</strong> Later on an easy game,
-          which is more of the map to yourself before anybody else wants any of it;
-          sooner on a hard one. The exact turn is drawn once, from the map's own seed,
-          and never changes afterwards &mdash; near enough to plan against, not near
-          enough to diarise.
+          They appear on <strong>ground nobody has claimed</strong>, well away from
+          anybody's towns, with a couple of settlers and an escort, and for their
+          first ${HIVEKIN.grace} turns they cannot be attacked at all. The exact turn
+          is drawn once, from the map's own seed, and never changes afterwards &mdash;
+          near enough to plan against, not near enough to diarise.
         </p>
         <p class="flavor">
           <strong>Everybody is told the moment it happens</strong>, wherever they are

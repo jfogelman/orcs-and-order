@@ -7,7 +7,9 @@ import {
   latecomers,
   opponentsAtStart,
   opponentsOf,
+  staggerOf,
 } from '../src/sim/arrivals';
+import { DIFFICULTIES } from '../src/sim/difficulty';
 import { FACTION_IDS } from '../src/model/factions';
 import type { FactionId, GameState } from '../src/model/types';
 
@@ -35,17 +37,48 @@ describe('who is in the game', () => {
     expect(latecomers(state)).toEqual(['hivekin', 'wandering', 'unbound']);
   });
 
-  it('is the game a hundred sections were measured on, identically', () => {
-    // **The one that must not move.** An Orc player facing the Kingdom from
-    // turn one and the Hive around ninety is the configuration every balance
-    // number in this project was taken on. The arrival turn is hashed so the
-    // *first* latecomer draws exactly what section 125 drew -- not merely an
-    // equivalent window, the same number.
+  /**
+   * **This used to be the one that must not move**, and section 153 moved it
+   * on purpose. It pinned the first latecomer to section 125's window -- the
+   * Hive around turn ninety -- because that was the configuration every
+   * balance number in this project had been taken on.
+   *
+   * Four opponents broke it. At the old spacing the fifth faction arrived on
+   * turn 345 of a 300-turn game on A Picnic, which is to say never. Jeremy
+   * made difficulty the only thing that staggers anybody, so the window is
+   * gone and what is pinned now is the shape: the first opponent is on the
+   * map, the rest are on a clock, and the clock is the level's.
+   */
+  it('puts the first opponent on the map and the rest on the level’s clock', () => {
     const state = game();
     expect(state.players.map((p) => p.faction)).toEqual(['orc', 'human']);
+    const { gap, jitter } = staggerOf(state);
     const turn = arrivalTurnFor(state, 0);
-    expect(turn).toBeGreaterThanOrEqual(ARRIVALS.from);
-    expect(turn).toBeLessThanOrEqual(ARRIVALS.until);
+    expect(turn).toBeGreaterThanOrEqual(Math.max(2, gap - jitter));
+    expect(turn).toBeLessThanOrEqual(gap + jitter);
+  });
+
+  /**
+   * The failure that caused section 153, kept as a test because the numbers
+   * that caused it were not obviously wrong to look at -- 90 and 60 are fine
+   * for two opponents and nonsense for four.
+   */
+  it('gets everybody onto the map with room to play, at every level', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const state = createGame({
+        seed: 5,
+        width: 40,
+        height: 28,
+        difficulty: difficulty.id,
+      });
+      const last = latecomers(state).length - 1;
+      if (last < 0) continue;
+      const arrives = arrivalTurnFor(state, last);
+      expect(
+        arrives,
+        `on ${difficulty.name} the last opponent arrives on turn ${arrives} of ${state.settings.maxTurns}`,
+      ).toBeLessThan(state.settings.maxTurns * 0.7);
+    }
   });
 
   it('honours a chosen set, and never seats the player twice', () => {
@@ -78,9 +111,10 @@ describe('who is in the game', () => {
 describe('the staggered clock', () => {
   it('spaces each latecomer behind the one before it', () => {
     const state = game();
+    const { gap, jitter } = staggerOf(state);
     const first = arrivalTurnFor(state, 0);
     const second = arrivalTurnFor(state, 1);
-    expect(second - first).toBeGreaterThanOrEqual(ARRIVALS.spacing - (ARRIVALS.until - ARRIVALS.from));
+    expect(second - first).toBeGreaterThanOrEqual(gap - jitter * 2);
     expect(second).toBeGreaterThan(first);
   });
 
@@ -92,7 +126,9 @@ describe('the staggered clock', () => {
     const offsets = new Set<number>();
     for (const seed of [1, 2, 3, 4, 5]) {
       const state = createGame({ seed, width: 40, height: 28 });
-      offsets.add(arrivalTurnFor(state, 1) - ARRIVALS.spacing - arrivalTurnFor(state, 0));
+      offsets.add(
+        arrivalTurnFor(state, 1) - staggerOf(state).gap - arrivalTurnFor(state, 0),
+      );
     }
     expect(offsets.size, 'every seed put the two arrivals the same distance apart').toBeGreaterThan(1);
   });
@@ -119,6 +155,33 @@ describe('the staggered clock', () => {
       expect(latecomers(state)).toEqual([]);
     } finally {
       ARRIVALS.enabled = true;
+    }
+  });
+
+  /**
+   * Jeremy's rule, asked of **the seats on the board** rather than of
+   * `opponentsAtStart`.
+   *
+   * That distinction is the whole reason this test exists. `createGame` kept
+   * its own copy of "the first opponent stands on the map" and nothing in
+   * `src/` called `opponentsAtStart` at all -- so teaching the helper about a
+   * stagger of zero taught the tests and left the game seating two sides at
+   * Doom. A five-sided probe said so; no test did, because every test asked
+   * the helper.
+   */
+  it('seats everybody at the hardest level, where nobody is late', () => {
+    const state = createGame({ seed: 7, width: 64, height: 48, difficulty: 'hardest' });
+    expect(state.players.map((p) => p.faction)).toEqual([...FACTION_IDS]);
+    expect(latecomers(state)).toEqual([]);
+    expect(opponentsAtStart(state)).toEqual(FACTION_IDS.filter((f) => f !== 'orc'));
+  });
+
+  it('seats one opponent at every level that staggers anybody', () => {
+    for (const d of DIFFICULTIES) {
+      if (d.stagger === 0) continue;
+      const state = createGame({ seed: 7, width: 64, height: 48, difficulty: d.id });
+      expect(state.players, d.id).toHaveLength(2);
+      expect(latecomers(state).length, d.id).toBe(FACTION_IDS.length - 2);
     }
   });
 });

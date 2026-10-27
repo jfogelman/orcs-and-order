@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { City, GameState, TerrainId, Unit, UnitTypeId } from '../src/model/types';
-import { FACTIONS } from '../src/model/factions';
+import { FACTIONS, FACTION_IDS } from '../src/model/factions';
 import { assignWorkers, foodSurplus } from '../src/sim/city';
 import { TERRAIN } from '../src/model/terrain';
 import { playerScore, prideDue } from '../src/sim/turn';
@@ -178,15 +178,17 @@ function lateSnapshots(): { seed: number; snaps: Map<number, GameState> } {
   for (const seed of LATE_SEEDS) {
     tried.push(seed);
     const found = new Map<number, GameState>();
-    // Four seats' worth of half-turns, and this is the third time this exact
-    // trap has been walked into. A budget counted for two seats stopped in the
-    // two hundreds when games acquired a wilds slot (section 123); counted for
-    // three it stops just short of turn 299 now that section 125's Hivekin take
-    // a seat of their own around turn ninety. Counted per seat and generously,
-    // because the cost of overestimating is some wasted loop iterations and the
-    // cost of underestimating is a test that fails a month later for a reason
-    // nobody remembers.
-    playGame(seed, (300 + 10) * 4, (state) => {
+    // **Seats' worth of half-turns, counted rather than written down**, and
+    // this is the fourth time this exact trap has been walked into. A budget
+    // counted for two seats stopped in the two hundreds when games acquired a
+    // wilds slot (section 123); counted for three it stopped short of turn 299
+    // once section 125's Hivekin took a seat; counted for four it stopped
+    // short again when section 152 added a fifth faction.
+    //
+    // So it is read off `FACTION_IDS` now, plus one for the wilds. The next
+    // faction costs this test some wasted loop iterations rather than a
+    // failure a month later for a reason nobody remembers.
+    playGame(seed, (300 + 10) * (FACTION_IDS.length + 1), (state) => {
       // Both of the original empires still standing is the condition every one
       // of the LATE scenarios asserts, so it is the condition the *search* has
       // to ask for. It did not, and the scenarios were quietly relying on the

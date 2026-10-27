@@ -5,12 +5,34 @@ import { runAiTurn } from '../src/ai/ai';
 import { beginPlayerTurn, endPlayerTurn, isOver } from '../src/sim/turn';
 
 /** Everything one side ever put on the board, by base creature. */
+/**
+ * What one side built over `turns` **calendar turns**, whatever the seats.
+ *
+ * The loop counted half-turns, which made the measured window shrink every
+ * time a faction was added -- see the note on `playOut` in `game.test.ts`,
+ * which was caught by the same thing on the same day. The bars below were
+ * measured on a two-seat game, so the call sites carry half their old
+ * numbers: the same game length, honestly counted.
+ *
+ * **And the opponent is pinned**, which is a deliberate narrowing. The bars
+ * below (mean 2.92 before slice 4, 2.67 after) were measured on the two-empire
+ * game; run against section 153's five-sided default the same seeds produce
+ * **1, 9, 7, 8, 6, 9, 10, 7, 12, 8, 7, 6** -- a mean near seven and one seed
+ * at one. A bar calibrated at 2.5 means nothing against those numbers, so it
+ * would be passing by accident rather than measuring anything.
+ *
+ * The one seed at one is a real observation and does not belong here: *does a
+ * side get strangled on a crowded map* is a balance question for a sweep, not
+ * a regression test for the production chooser. It is written up in section
+ * 153's open items.
+ */
 function armyOf(seed: number, playerId: number, turns: number): Map<string, number> {
-  const state = createGame({ seed, width: 40, height: 30 });
+  const state = createGame({ seed, width: 40, height: 30, opponents: ['human'] });
   for (const p of state.players) p.controller = 'ai';
   const seen = new Set<number>();
   const built = new Map<string, number>();
-  for (let t = 0; t < turns && !isOver(state); t++) {
+  const until = state.turn + turns;
+  for (let t = 0; t < turns * 12 && !isOver(state) && state.turn < until; t++) {
     beginPlayerTurn(state, state.activePlayer);
     runAiTurn(state, state.activePlayer);
     endPlayerTurn(state);
@@ -86,7 +108,7 @@ describe('the AI builds an army rather than a single unit type', () => {
   });
 
   it('still prefers the better unit rather than buying at random', () => {
-    const built = armyOf(20260824, 1, 140);
+    const built = armyOf(20260824, 1, 70);
     const total = [...built.values()].reduce((a, b) => a + b, 0);
     const worst = built.get('outrider') ?? 0;
     // The weakest thing on the Kingdom's list should be a minority interest.
@@ -97,8 +119,8 @@ describe('the AI builds an army rather than a single unit type', () => {
   it('is still reproducible from its seed', () => {
     // Weighted choice draws from the seeded RNG, so two runs of the same seed
     // have to agree exactly or every measurement in this project is worthless.
-    const a = armyOf(4242, 0, 60);
-    const b = armyOf(4242, 0, 60);
+    const a = armyOf(4242, 0, 30);
+    const b = armyOf(4242, 0, 30);
     expect([...a.entries()].sort()).toEqual([...b.entries()].sort());
   });
 });

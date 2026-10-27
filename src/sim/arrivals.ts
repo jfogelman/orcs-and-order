@@ -35,24 +35,22 @@ export const ARRIVALS = {
   /** Whether anybody arrives late at all. Off, every opponent starts. */
   enabled: true,
   /**
-   * The window the **first** latecomer arrives in, inclusive.
+   * How far either side of the due turn an arrival may actually land.
    *
-   * These are section 125's `HIVEKIN.from` and `until` under a name that is
-   * not about the Hive. A window rather than a fixed turn so the arrival
-   * cannot be diarised; a narrow one so it can still be planned against,
-   * which is what Jeremy asked of it originally.
+   * A window rather than a fixed turn so the arrival cannot be diarised, and
+   * a narrow one so it can still be planned against -- which is what Jeremy
+   * asked of the original. Scaled to the stagger rather than fixed, because a
+   * ten-turn gap with an eight-turn jitter is not a stagger at all, it is a
+   * coin toss about who comes first.
    */
-  from: 90,
-  until: 120,
-  /**
-   * Turns between one latecomer and the next.
-   *
-   * So a four-sided game is turn one, about ninety, about a hundred and
-   * fifty. Wide enough that two arrivals are separate events rather than one
-   * confusing afternoon.
-   */
-  spacing: 60,
+  jitter: 8,
 };
+
+/** Turns between arrivals at this game's level, and the jitter around each. */
+export function staggerOf(state: GameState): { gap: number; jitter: number } {
+  const gap = difficultyOf(state.settings).stagger;
+  return { gap, jitter: Math.min(ARRIVALS.jitter, Math.floor(gap / 3)) };
+}
 
 /**
  * Everybody in this game but the player, in the order they turn up.
@@ -69,16 +67,24 @@ export function opponentsOf(state: GameState): FactionId[] {
   return list.filter((f) => f !== player && FACTIONS[f] !== undefined);
 }
 
-/** The opponents standing on the map at turn one: the first, and only it. */
+/**
+ * The opponents standing on the map at turn one: the first, and only it --
+ * unless the level staggers nobody, in which case all of them.
+ *
+ * **Doom is everybody at once**, which is section 153's rule and the reason a
+ * stagger of zero is not simply a very small stagger: the hardest game is the
+ * one where the whole world is already there.
+ */
 export function opponentsAtStart(state: GameState): FactionId[] {
   const all = opponentsOf(state);
-  if (!ARRIVALS.enabled) return all;
+  if (!ARRIVALS.enabled || staggerOf(state).gap <= 0) return all;
   return all.slice(0, 1);
 }
 
 /** The opponents who arrive later, in order. */
 export function latecomers(state: GameState): FactionId[] {
-  return ARRIVALS.enabled ? opponentsOf(state).slice(1) : [];
+  if (!ARRIVALS.enabled || staggerOf(state).gap <= 0) return [];
+  return opponentsOf(state).slice(1);
 }
 
 /**
@@ -101,7 +107,11 @@ export function arrivalTurnFor(state: GameState, n: number): number {
   const seen = (state.arrivals ??= {});
   const known = seen[n];
   if (known !== undefined) return known;
-  const span = Math.max(1, ARRIVALS.until - ARRIVALS.from + 1);
+  const { gap, jitter } = staggerOf(state);
+  // Nobody is late at this level. Answered rather than computed, so a caller
+  // that asks anyway gets turn one rather than a negative turn.
+  if (gap <= 0) return (seen[n] = 1);
+  const span = Math.max(1, jitter * 2 + 1);
   let h = (state.seed ^ 0x9e3779b9) >>> 0;
   // The nth latecomer mixes `n` in *after* the first round, so that n = 0 --
   // the only case any existing measurement has -- hashes to exactly what
@@ -111,10 +121,14 @@ export function arrivalTurnFor(state: GameState, n: number): number {
     h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
     if (i === 0 && n > 0) h = (h ^ Math.imul(n, 0x27d4eb2f)) >>> 0;
   }
-  // The level shifts the whole window. Later on an easy game is more of the
-  // map to yourself before anybody else exists; earlier on a hard one is less.
-  const shift = difficultyOf(state.settings).hiveArrives;
-  const turn = Math.max(1, ARRIVALS.from + (h % span) + shift + n * ARRIVALS.spacing);
+  // Section 153: the due turn is the stagger, counted out. The first
+  // latecomer is one gap in, the second two, and the jitter moves each a few
+  // turns either way so the date cannot be written down in advance.
+  //
+  // Floored at two rather than one, because turn one is where the sides that
+  // *start* on the map are: an arrival on turn one is indistinguishable from
+  // not having been staggered at all, which is the one thing Doom is for.
+  const turn = Math.max(2, (n + 1) * gap + (h % span) - jitter);
   seen[n] = turn;
   return turn;
 }

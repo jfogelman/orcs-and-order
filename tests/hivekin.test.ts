@@ -695,21 +695,29 @@ describe('what the Hive pays for its ending (section 136)', () => {
  * yourself -- without changing any number you are playing against.
  */
 describe('when the Hive turns up, by level (section 136)', () => {
-  it('is unchanged at Normal, which every earlier measurement used', () => {
-    expect(DIFFICULTIES.find((d) => d.id === 'normal')!.hiveArrives).toBe(0);
-  });
-
-  it('runs later the easier the game is, and earlier the harder', () => {
+  /**
+   * Section 153 replaced the shift with the stagger itself, so what used to
+   * be "Normal is unchanged, and the others move it" is now "the level is the
+   * only thing that decides". The direction is the same and that is what is
+   * pinned; the Normal-is-zero assertion went with the rule it was about.
+   */
+  it('runs further apart the easier the game is, and closer the harder', () => {
     const order = ['easiest', 'easy', 'normal', 'hard', 'hardest'] as const;
-    const shifts = order.map((id) => DIFFICULTIES.find((d) => d.id === id)!.hiveArrives);
-    for (let i = 1; i < shifts.length; i++) {
-      expect(shifts[i], `${order[i]} against ${order[i - 1]}`).toBeLessThan(shifts[i - 1]);
+    const gaps = order.map((id) => DIFFICULTIES.find((d) => d.id === id)!.stagger);
+    for (let i = 1; i < gaps.length; i++) {
+      expect(gaps[i], `${order[i]} against ${order[i - 1]}`).toBeLessThan(gaps[i - 1]);
     }
   });
 
-  it('never asks for a turn before the first one', () => {
+  /**
+   * Jeremy's rule, and the reason a stagger of zero is not just a small one:
+   * *"hardest level is everyone simultaneously."*
+   */
+  it('puts everybody on the map at once at the hardest level', () => {
+    expect(DIFFICULTIES.find((d) => d.id === 'hardest')!.stagger).toBe(0);
     for (const d of DIFFICULTIES) {
-      expect(HIVEKIN.from + d.hiveArrives, d.id).toBeGreaterThan(-HIVEKIN.until);
+      if (d.id === 'hardest') continue;
+      expect(d.stagger, `${d.id} should stagger somebody`).toBeGreaterThan(0);
     }
   });
 });

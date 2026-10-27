@@ -283,15 +283,25 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   // Section 139: who is in this game, and who of them is here at turn one.
   //
   // **A rule about the slot, not the faction.** The first opponent stands on
-  // the map; the rest arrive on a staggered clock. For an empire with nothing
-  // chosen that is the other empire at turn one and the Hive around ninety,
-  // which is the game a hundred sections were measured on -- so the default
-  // is not merely equivalent to the old `rivalsOnMap`, it is identical.
+  // the map; the rest arrive on the level's clock.
+  //
+  // Section 153: and when that clock has no gap in it -- Doom, where the
+  // stagger is zero -- everybody stands on the map and nobody is late, which
+  // is what makes it the hardest game rather than merely an expensive one.
+  //
+  // **The test was asking the wrong function.** `opponentsAtStart` existed and
+  // said all of this, and nothing in `src/` called it: this line kept its own
+  // copy of the rule, so teaching `opponentsAtStart` about a stagger of zero
+  // taught the tests and not the game. A five-sided probe at Doom reported two
+  // sides on the board. That is the hand-maintained-list failure wearing a
+  // function's clothes, and the fix is the same one: one definition, and the
+  // other caller reads it.
   const chosen: FactionId[] =
     opts.opponents && opts.opponents.length > 0
       ? opts.opponents.filter((f) => f !== playerFaction && FACTIONS[f] !== undefined)
       : FACTION_IDS.filter((f) => f !== playerFaction);
-  const onMap = ARRIVALS.enabled ? chosen.slice(0, 1) : chosen;
+  const staggered = ARRIVALS.enabled && difficultyOf(settings).stagger > 0;
+  const onMap = staggered ? chosen.slice(0, 1) : chosen;
   // Written down rather than left to the default, so a save remembers who was
   // *meant* to be in this game. Without it a game loaded after a faction was
   // added to the table would quietly acquire a new opponent at turn ninety.
