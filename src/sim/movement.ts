@@ -683,7 +683,9 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
       const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
-      destroyUnit(state, occupant, 'is wiped out');
+      // Section 152: the attacker is named, because for the Unbound whether it
+      // could exorcise is the difference between a death and an absence.
+      destroyUnit(state, occupant, 'is wiped out', unit);
       // Killing teaches most. Nothing is awarded for the blast above, which
       // the sapper's victims did not choose to be part of.
       awardXp(state, unit, XP.kill);
@@ -731,7 +733,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // Losing used to mean dying, so this was unconditional. A unit that got
       // away is the first exception, and it must not be buried on its way out.
       if (!withdrawn) {
-        destroyUnit(state, unit, result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking');
+        destroyUnit(
+          state,
+          unit,
+          result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking',
+          occupant,
+        );
         awardXp(state, occupant, XP.kill);
         // A raider that threw itself at a garrison and lost pays the same purse,
         // and a captain that died on somebody's spear still has his crew.

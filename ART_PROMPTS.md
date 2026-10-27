@@ -2578,3 +2578,124 @@ two are written as opposites on purpose.
 Drop at `art_src/factions/unbound/advances/bone-speaker.jpg` beside the unit —
 the Unbound's folder is where its sprite already lives, and the pipeline reads
 every faction folder for every kind.
+
+---
+
+## The Unbound's eight outstanding pieces (section 152) — 0 of 8
+
+The faction's art drop was complete for everything `UNBOUND_PLAN.md` wrote a
+prompt for, and the gaps are all in the same place: **pieces the bible's own
+tables never covered.** Three building icons, two advance icons and the three
+tiers of the Gate module, which the capital bible does write a prompt for and
+which simply were not generated.
+
+This is the same shape as `tier-corsair` and `tier-collector` two sections
+ago, and the same cause: the plan documents were written before the sections
+that added these, so there is nothing stale here to fix — only art to draw.
+
+### Two advance icons
+
+The naval and siege advances, which the bible's twelve-icon advance table
+predates. `tier-drowned` and `tier-cairn` are the only two Unbound advances
+without a picture, and they are **deliberately left out of `TECH_ICONS`**
+until they land, so every run of `npm run art` does not report them as
+missing.
+
+House style: **Flat icons — one object, no scene**, the block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `tier-drowned` | Already Occupied | A single rotted mooring post standing in still water, pale wisping mist curling around its base, a frayed rope hanging from it into the water |
+| `tier-cairn` | What It Guards Now | A squat stack of flat weathered stones, one of them split, faint blue-white glow showing through the gap |
+
+**The mooring post rather than a wreck or a drowned figure.** The Kingdom's
+Drowned Sailor is a different unit on a different roster and the one
+collision this faction has already had was over exactly that word — see the
+note in `UNBOUND_PLAN.md` about `drowned` versus `ub-drowned`. A post with
+nobody on it says *occupied* without drawing an occupant.
+
+**The cairn split rather than toppled.** It is a siege engine now; the joke is
+that it was built as a marker and has been repurposed, so it should look
+intact and slightly wrong rather than ruined.
+
+### Three building icons
+
+Two of the three Spirit Party works, and one tier-two city building. House
+style: **48×48 isometric buildings**, the same block as the faction's other
+fifteen:
+
+> 48x48 pixel art building icon on a plain solid magenta background (#FF00FF),
+> a single structure centred and filling the frame, isometric view at a fixed
+> 30-degree angle, camera facing the same direction in every asset, consistent
+> horizon line, thick dark outline, limited palette, flat shading with one
+> light source from the upper left, mid-1990s fantasy strategy game city-view
+> style, no text, no logos, no border, no characters, no background scenery, no
+> ground shadow.
+
+| id | Building | Prompt subject |
+|---|---|---|
+| `guestList` | The Guest List *(lesser work)* | A tall standing ledger open to a page dense with names, faint pale glow along the ink |
+| `standingInvitation` | The Standing Invitation *(lesser work)* | A single scroll mounted upright on a stand, wax seal broken, faint cold glow escaping the opening |
+| `titheBasin` | The Tithe Basin | A low open stone basin on a short plinth, pale coins and small offerings heaped in it, faint cold glow from beneath the heap |
+
+The first two are the bible's own prompt subjects, copied across unchanged —
+they were written in the building table and never generated. `titheBasin` is
+the tier-one of the Tithe Vault and is **mine**: the Vault's art already
+exists, so this is the smaller, open, unroofed version of the same object,
+the way every other tier-one is the tier-two with less of it.
+
+### The Gate module, all three tiers
+
+The one capital module with no art. `capital_building_bible`'s own table and
+`art_prompts_wandering_unbound.md` both write these out; the other four
+modules and the chassis all arrived and the Gate did not, so the Unbound
+capital currently has a hole in the front of it where the gate attaches.
+
+House style: **Structures seen in place**, 64×64, the same as every other
+capital piece.
+
+| id | Tier | Prompt |
+|---|---|---|
+| `unbound-gate-1` | Unlocked, Technically | A plain gap in a ring of standing stones marked only by two low unconnected posts, short wall stubs extending to either side, designed to attach to the front of a larger building |
+| `unbound-gate-2` | Attended | A narrow stone archway flanked by two carved sentinel figures, faint glow along their carved eyes, short wall stubs extending to either side, designed to attach to the front of a larger building |
+| `unbound-gate-3` | Warded | A heavy stone archway sealed with a faintly glowing sigil-inlaid lattice, short wall stubs extending to either side, designed to attach to the front of a larger building |
+
+**No magenta, hot pink or violet in the art itself**, which the faction's own
+section of `UNBOUND_PLAN.md` says to double-check here specifically: a ghostly
+glow is exactly the detail a generator defaults toward violet on. Keep every
+glow in cool blue-white or pale cyan.
+
+**If they come out facing the wrong way, do not re-roll them.** The Wandering
+Folk's gate and wing both arrived mirrored, which is a generator habit rather
+than a prompt fault, and section 144 added `PALACE_MIRROR` in
+`tools/prepare_art.py` for exactly this: three ids in that set and the pipeline
+flips them on the way through. Two of the Wandering Folk's gates and all three
+of its wings are in there now. Drop whatever arrives, look at the capital, and
+add the ids rather than asking for the pieces again.
+
+### Where each one goes
+
+| Kind | Path |
+|---|---|
+| advance icons | `art_src/factions/unbound/advances/<id>.jpg` |
+| building icons | `art_src/factions/unbound/buildings/<id>.jpg` |
+| capital gates | `art_src/factions/unbound/palace/<tier name>.jpg` |
+
+The three building icons and the three gates are **already listed** in
+`BUILDING_ICONS` and `PALACE`, so `npm run art` takes them the moment they
+land and reports them by name until then. The two advance icons need their ids
+adding to `TECH_ICONS` when they are drawn — the comment there says so.
+
+### One re-roll
+
+`unbound-1`, the first Unbound promotion mark, keys badly: the pipeline
+reports *"background would not key"*, which means the magenta does not reach
+the frame's border all the way round. Same fix as the two Regalia pieces in
+section 151 — re-roll it with the badge filling more of the frame and a clean
+unbroken magenta margin.

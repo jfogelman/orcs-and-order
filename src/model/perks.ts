@@ -47,27 +47,27 @@ export interface PerkDef {
 export const PERKS: PerkDef[] = [
   {
     id: 'bloodied',
-    name: { orc: 'Worked Up', human: 'Commended', hivekin: 'Grown Into It', wandering: 'Paid Extra For' },
+    name: { orc: 'Worked Up', human: 'Commended', hivekin: 'Grown Into It', wandering: 'Paid Extra For' , unbound: 'Noted As Effective' },
     blurb: 'Hits appreciably harder than it used to.',
   },
   {
     id: 'dug-in',
-    name: { orc: 'Stubborn', human: 'Drilled', hivekin: 'Settled', wandering: 'Dug In, Billed Weekly' },
+    name: { orc: 'Stubborn', human: 'Drilled', hivekin: 'Settled', wandering: 'Dug In, Billed Weekly' , unbound: 'Will Not Be Moved' },
     blurb: 'Much harder to shift once it has decided to stay.',
   },
   {
     id: 'quartermaster',
-    name: { orc: 'Knows a Bloke', human: 'Quartermaster', hivekin: 'Provided For', wandering: 'Knows The Route' },
+    name: { orc: 'Knows a Bloke', human: 'Quartermaster', hivekin: 'Provided For', wandering: 'Knows The Route' , unbound: 'Provisioned, Technically' },
     blurb: 'Supply reaches it further out than it reaches anybody else.',
   },
   {
     id: 'field-repairs',
-    name: { orc: 'Licks It Better', human: 'Field Surgeon', hivekin: 'Reseals', wandering: 'Patches Its Own' },
+    name: { orc: 'Licks It Better', human: 'Field Surgeon', hivekin: 'Reseals', wandering: 'Patches Its Own' , unbound: 'Reassembles Slowly' },
     blurb: 'Recovers even beyond the supply line, slowly.',
   },
   {
     id: 'butcher',
-    name: { orc: 'Thorough', human: 'Requisition Order', hivekin: 'Complete', wandering: 'Itemised' },
+    name: { orc: 'Thorough', human: 'Requisition Order', hivekin: 'Complete', wandering: 'Itemised' , unbound: 'Thorough' },
     blurb: 'Takes noticeably more of a city when it takes one.',
   },
   /*
@@ -77,21 +77,21 @@ export const PERKS: PerkDef[] = [
    */
   {
     id: 'fiery-club',
-    name: { orc: 'Fiery Club', human: 'Fiery Club', hivekin: 'Fiery Club', wandering: 'Fiery Club' },
+    name: { orc: 'Fiery Club', human: 'Fiery Club', hivekin: 'Fiery Club', wandering: 'Fiery Club' , unbound: 'Leaves It Burning' },
     blurb: 'Sets fire to whatever it hits, and keeps it that way for a while.',
     only: ['ogre'],
     flag: 'clubs',
   },
   {
     id: 'exploding-club',
-    name: { orc: 'Exploding Club', human: 'Exploding Club', hivekin: 'Exploding Club', wandering: 'Exploding Club' },
+    name: { orc: 'Exploding Club', human: 'Exploding Club', hivekin: 'Exploding Club', wandering: 'Exploding Club' , unbound: 'Comes Apart On Contact' },
     blurb: 'Goes off on impact, catching everything around the target. The ogre included, though it minds less.',
     only: ['ogre'],
     flag: 'clubs',
   },
   {
     id: 'quake-club',
-    name: { orc: 'Quake Club', human: 'Quake Club', hivekin: 'Quake Club', wandering: 'Quake Club' },
+    name: { orc: 'Quake Club', human: 'Quake Club', hivekin: 'Quake Club', wandering: 'Quake Club' , unbound: 'Felt Some Distance Off' },
     blurb: 'Hits the ground so hard that everyone standing near the ogre regrets it.',
     only: ['ogre'],
     flag: 'clubs',
@@ -102,28 +102,28 @@ export const PERKS: PerkDef[] = [
    */
   {
     id: 'mostly-volatile',
-    name: { orc: 'Mostly Volatile', human: 'Mostly Volatile', hivekin: 'Mostly Volatile', wandering: 'Mostly Volatile' },
+    name: { orc: 'Mostly Volatile', human: 'Mostly Volatile', hivekin: 'Mostly Volatile', wandering: 'Mostly Volatile' , unbound: 'Already Been Through That' },
     blurb: 'Survives one killing blow. One. It does not go off that time either.',
     only: ['sapper'],
     flag: 'volatile',
   },
   {
     id: 'better-part-of-valour',
-    name: { orc: 'Better Part of Valour', human: 'Better Part of Valour', hivekin: 'Better Part of Valour', wandering: 'Better Part of Valour' },
+    name: { orc: 'Better Part of Valour', human: 'Better Part of Valour', hivekin: 'Better Part of Valour', wandering: 'Better Part of Valour' , unbound: 'Withdraws, As Agreed' },
     blurb: 'Falls back a step when it attacks something and fails to finish it.',
     only: ['knight'],
     flag: 'valour',
   },
   {
     id: 'swampy-friend',
-    name: { orc: 'Swampy Friend', human: 'Swampy Friend', hivekin: 'Swampy Friend', wandering: 'Swampy Friend' },
+    name: { orc: 'Swampy Friend', human: 'Swampy Friend', hivekin: 'Swampy Friend', wandering: 'Swampy Friend' , unbound: 'There Are Two Now' },
     blurb: 'Alone, and standing in a swamp, it can make another of itself. It costs nearly everything.',
     only: ['troll'],
     flag: 'swampy',
   },
   {
     id: 'dark-bargain',
-    name: { orc: 'Dark Bargain', human: 'Dark Bargain', hivekin: 'Dark Bargain', wandering: 'Dark Bargain' },
+    name: { orc: 'Dark Bargain', human: 'Dark Bargain', hivekin: 'Dark Bargain', wandering: 'Dark Bargain' , unbound: 'Took It From The Nearest' },
     blurb: 'Takes the strength of somebody standing next to it. They are rarely asked.',
     only: ['deathknight'],
     flag: 'bargain',
@@ -131,7 +131,7 @@ export const PERKS: PerkDef[] = [
   },
   {
     id: 'reputation',
-    name: { orc: 'Preceded By Rumour', human: 'Reputation', hivekin: 'Already Known Of', wandering: 'Preceded By Terms' },
+    name: { orc: 'Preceded By Rumour', human: 'Reputation', hivekin: 'Already Known Of', wandering: 'Preceded By Terms' , unbound: 'Known Locally' },
     blurb: 'Townsfolk do not bother throwing things. They have heard.',
   },
 ];

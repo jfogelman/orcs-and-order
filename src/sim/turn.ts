@@ -39,6 +39,7 @@ import { resumeGotoOrders, resumeRoadOrders } from './movement';
 import { advanceRoadWork } from './roads';
 import { advancePostWork } from './posts';
 import { advanceCaravanWork } from './caravans';
+import { reformScattered } from './dispersal';
 import { updateTradeLinks } from './trade';
 import { prideOffer } from '../model/palace';
 import { addBeakers, techCost } from './research';
@@ -830,6 +831,11 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // units get their movement back, so holding it is what earns it rather than
   // walking in and out again.
   claimRuins(state, playerId);
+  // Section 152: and whatever of theirs came apart has a go at gathering
+  // again. Before `refreshUnits`, so a spirit that stood up this morning has
+  // its movement this morning rather than next turn -- it was the *fight* it
+  // missed, not the week.
+  reformScattered(state, playerId);
   refreshUnits(state, player);
   // Passengers get their legs back too, so they can step ashore this turn.
   refreshCargo(state, playerId);

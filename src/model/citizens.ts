@@ -214,7 +214,83 @@ export const CITIZEN_RACES: CitizenRace[] = [
     hasFemale: true,
     blurb: 'Came out to look at the road. Has been looking at it for years.',
   },
+  // --------------------------------------------------------- section 152
+  //
+  // The Unbound, and the joke is none of the other four. The Horde acquires
+  // participants, the Hive grows castes, the Wandering Folk turned up -- and
+  // **these never left**. Every sort here was already living in this place
+  // before it was a city of theirs, which is why none of the blurbs is about
+  // arriving.
+  //
+  // Six sorts, the largest roster in the game, which is the one place the
+  // faction is allowed to be more than the others: a side whose soldiers come
+  // back should have towns that feel crowded with things that are still about.
+  //
+  // The sorts are the art drop's, which is the unit tiers minus the two that
+  // are not people -- no Effigy, because an Effigy is an object somebody made
+  // and not a resident, and no Archon, because there is one. **The weights
+  // and the `needs` gates are mine**: each sort arrives with the tier it
+  // belongs to, and the spread is 4/3/2/2/2/1, which is the Wandering Folk's
+  // 4/3/2/2/1 with the sixth sort slotted in the middle rather than at either
+  // end. The Domovoi is commonest for the same reason the Gnome is -- it is
+  // the one that was here first, and in this faction's case it is the one that
+  // was here before anybody.
+  //
+  // The ids carry the `ub-` prefix the art does, and that prefix is not
+  // cosmetic: section 141 lost three shipped sprites to a `drowned` that two
+  // factions both wanted, and `revenant`, `naiad`, `sylph`, `yaksha` and
+  // `jinn` are all creature ids on this very roster. A citizen sheet and a
+  // unit sprite that share a name are one `npm run art` away from one
+  // overwriting the other.
+  {
+    id: 'ub-domovoi',
+    name: 'Domovoi',
+    faction: 'unbound',
+    weight: 4,
+    blurb: 'Was looking after this place before it was anybody’s. Still is.',
+  },
+  {
+    id: 'ub-revenant',
+    name: 'Revenants',
+    faction: 'unbound',
+    needs: 'tier-revenant',
+    weight: 3,
+    blurb: 'Came back to the same street. Has not explained, and the street has stopped asking.',
+  },
+  {
+    id: 'ub-sylph',
+    name: 'Sylphs',
+    faction: 'unbound',
+    needs: 'tier-sylph',
+    weight: 2,
+    blurb: 'Lives here in the sense that it keeps being here. Nobody can establish where.',
+  },
+  {
+    id: 'ub-naiad',
+    name: 'Naiads',
+    faction: 'unbound',
+    needs: 'tier-naiad',
+    weight: 2,
+    blurb: 'Belongs to the water this town was built beside. The town is the newcomer.',
+  },
+  {
+    id: 'ub-yaksha',
+    name: 'Yakshas',
+    faction: 'unbound',
+    needs: 'tier-yaksha',
+    weight: 2,
+    blurb: 'Guards a corner of the market. Was not asked to and will not be relieved.',
+  },
+  {
+    id: 'ub-jinn',
+    name: 'Jinn',
+    faction: 'unbound',
+    needs: 'tier-jinn',
+    weight: 1,
+    blurb: 'Pays rent. The terms of the tenancy are longer than the building.',
+  },
 ];
+
 
 export const CITIZEN_BY_ID: Record<string, CitizenRace> = Object.fromEntries(
   CITIZEN_RACES.map((r) => [r.id, r]),

@@ -165,12 +165,17 @@ describe('who wants the endings', () => {
     // which is the same arbitrariness the Hive's note above describes --
     // except that for these it is arbitrary on *both* rows rather than one.
     wandering: 'portal',
+    // Section 152, and the same reason again: the Unbound's own ending is
+    // priced and named in the bible but its three works are not built yet,
+    // so like the Wandering Folk above they are arbitrary on both rows.
+    unbound: 'portal',
   };
   const THEIRS: Record<FactionId, 'portal' | 'object' | 'hive'> = {
     orc: 'object',
     human: 'portal',
     hivekin: 'portal',
     wandering: 'object',
+    unbound: 'object',
   };
 
   const wakes = (advisor: (typeof ADVISORS)[number], extra: Partial<Situation>) => {
@@ -181,8 +186,12 @@ describe('who wants the endings', () => {
 
   it('leaves the road to our own ending to the two who want it', () => {
     // Section 125: the Cultivator and the Heir are the Hive's arcane and faith
-    // seats, so they carry the ending the way the other four do.
-    const want = ['death-mage', 'death-knight', 'archmage', 'paladin', 'cultivator'];
+    // seats, so they carry the ending the way the other four do. Section 152:
+    // and the Sigilist is the Unbound's arcane seat, which is the same rule
+    // again -- the one who knows what the thing does is the one who mentions
+    // it. The Wandering Folk are still the exception and still deliberate: all
+    // six of theirs talk about the road rather than the destination.
+    const want = ['death-mage', 'death-knight', 'archmage', 'paladin', 'cultivator', 'sigilist'];
     for (const advisor of ADVISORS) {
       for (const endingRoad of ['researchable', 'buildable', 'building'] as const) {
         const lines = wakes(advisor, { endingRoad });
@@ -192,7 +201,7 @@ describe('who wants the endings', () => {
           // the stones that knock, the Kingdom's Object and its sign, and the
           // Hive's Shell, its two lesser works and the advance itself.
           expect(line).toMatch(
-            /Portal|Object|Knocked|knocking|Do Not Touch|All Is The Hive|Molting Chamber|Second Feeding|Shell/,
+            /Portal|Object|Knocked|knocking|Do Not Touch|All Is The Hive|Molting Chamber|Second Feeding|Shell|Arrangement|Spirit Party|Guest List/,
           );
           expect(line, `${advisor.id} used a digit: ${line}`).not.toMatch(/\d/);
         }
@@ -214,8 +223,13 @@ describe('who wants the endings', () => {
 
   it("sends the soldiers at the other side's", () => {
     // Section 125: the Bladeguard is the Hive's military seat, and reacts to
-    // somebody else's ending exactly as the other two soldiers do.
-    const want = ['blademaster', 'knight-marshal', 'bladeguard'];
+    // somebody else's ending exactly as the other two soldiers do. Section
+    // 152: and the Guardian is the Unbound's. The line started on their
+    // Binder, where it read better and was wrong -- this is the seat that
+    // reacts to somebody else's clock on every council, and a diplomat who
+    // owned it would be a fourth answer to a question three sides already
+    // answer the same way.
+    const want = ['blademaster', 'knight-marshal', 'bladeguard', 'guardian'];
     for (const advisor of ADVISORS) {
       const ending = { turnsLeft: 5, theirs: true, kind: THEIRS[advisor.faction] };
       const lines = wakes(advisor, { ending });

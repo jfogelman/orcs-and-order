@@ -60,8 +60,12 @@ describe('everything the game asks for has been processed', () => {
       'capital pieces',
       manifest.palace,
       names(OUT.palace),
-      // Nothing outstanding. Section 146 drew the last of them.
-      [],
+      // Section 152: the Unbound's Gate, all three tiers. The one capital
+      // module of theirs with no art -- the other four and the chassis all
+      // arrived in the faction drop and the Gate did not, so their capital
+      // currently has a hole in the front of it. The bible writes all three
+      // prompts out; they are copied into ART_PROMPTS.md.
+      ['unbound-gate-1', 'unbound-gate-2', 'unbound-gate-3'],
     ],
     ['advisor portraits', manifest.advisors, names(OUT.advisors), []],
     ['garrison posts', manifest.posts, names(OUT.posts), []],

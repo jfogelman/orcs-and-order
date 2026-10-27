@@ -10,6 +10,7 @@ import { BUILDINGS, buildingsForFaction } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { TERRAIN, specialAt } from '../model/terrain';
 import { postCalm } from './posts';
+import { BOUND, UNIQUE, holdsUnique } from './dispersal';
 import { UNIT_TYPES, holdsGround, unitType } from '../model/units';
 import { availableRaces } from '../model/citizens';
 import type { UnitTypeDef } from '../model/units';
@@ -639,7 +640,14 @@ function baseCostIn(state: GameState, city: City, item: ProductionItem): number 
   // Section 125: the Broodwarmth, a warm place to grow things in. Units only,
   // and only in the Hive it stands in -- a building costs what it costs.
   if (item.kind === 'unit') {
-    const off = cityFollyBonus(city, (b) => b.unitDiscount);
+    // Section 152: and The Read Terms, which is cheaper only for the two that
+    // arrive by arrangement. Summed with the above rather than taken instead,
+    // so a city that somehow held both would honour both -- they belong to
+    // different factions and cannot, but a rule that reads "whichever is
+    // larger" is a rule somebody has to remember.
+    const off =
+      cityFollyBonus(city, (b) => b.unitDiscount) +
+      (BOUND.has(unitType(item.id).base) ? cityFollyBonus(city, (b) => b.boundDiscount) : 0);
     return off > 0 ? Math.max(1, Math.round(base * (1 - off))) : base;
   }
   // Section 136: a Hive ending work costs what the Hive has had time to pay.
@@ -1061,7 +1069,14 @@ export function buildOptions(
   const coastal = isCoastal(state, city);
   const units = (city.size >= SETTLER.minCitySize ? allUnits : allUnits.filter((u) => !u.settler))
     // Ships are built where there is water to launch them into.
-    .filter((u) => !u.sails || coastal);
+    .filter((u) => !u.sails || coastal)
+    // Section 152: there is one Archon. *"World-unique per faction -- only one
+    // can exist at a time; a second can't be built while the first lives."*
+    // Not offered rather than refused on completion, which is how the endings
+    // and the follies above both read, and for the same reason: a city that
+    // spent seventy shields on a unit it was never going to get is a bug the
+    // player experiences as one.
+    .filter((u) => u.id !== UNIQUE || !holdsUnique(state, city.owner));
   // A place still being resettled raises nobody. There is no population here
   // yet that thinks of itself as yours, and conscripting the people who are
   // in the middle of leaving is not a thing an army can do.

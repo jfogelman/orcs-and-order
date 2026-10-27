@@ -17,7 +17,7 @@
  * `otherFaction`, a single global peace, and the handful of `=== 'orc'` branches
  * that meant "orc, else human". Those are listed in `HIVEKIN_PLAN.md`.
  */
-export type FactionId = 'orc' | 'human' | 'hivekin' | 'wandering';
+export type FactionId = 'orc' | 'human' | 'hivekin' | 'wandering' | 'unbound';
 export type TerrainId =
   | 'deep'
   | 'water'
@@ -38,6 +38,24 @@ export type Controller = 'human' | 'ai';
 
 /** Section 113's five levels. Saves before it all say `'normal'`. */
 export type DifficultyId = 'easiest' | 'easy' | 'normal' | 'hard' | 'hardest';
+
+/**
+ * A spirit that is scattered and has not yet tried to come back. Section 152.
+ *
+ * Lives here rather than in `sim/dispersal.ts` because `Player` carries a list
+ * of them, and this file imports nothing -- it is the bottom of the stack, and
+ * a type the state holds belongs in the file that describes the state.
+ */
+export interface Scattered {
+  /** What it was, group variant and all, so it comes back as what it was. */
+  type: UnitTypeId;
+  /** Promotions it had earned. A spirit that reforms has not forgotten. */
+  rank: number;
+  /** The turn it was scattered, so it tries on a later one than it fell. */
+  turn: number;
+  /** Where it fell, for the message and for the camera. */
+  at: readonly [number, number];
+}
 
 export interface Player {
   id: number;
@@ -211,6 +229,18 @@ export interface Player {
    * yet", which at worst re-announces a band already on screen once.
    */
   sightedRaiders?: number[];
+  /**
+   * Spirits of this empire's that are scattered and not yet back. Section 152.
+   *
+   * Only the Unbound ever carry any. Held on the player rather than left on
+   * the board, because a scattered spirit is not anywhere -- it cannot be
+   * seen, stood on, attacked or walked past -- and `sim/dispersal.ts` is the
+   * only thing that reads it.
+   *
+   * Optional so every existing save loads unchanged and means "nothing of
+   * ours is away", which is the truth in any game without this faction in it.
+   */
+  scattered?: Scattered[];
 }
 
 // ---------------------------------------------------------------------- units
@@ -574,7 +604,7 @@ export type BroodBonus = 'shields' | 'calm' | 'beakers' | 'gold' | 'pending';
  * the simulation; `sim/endings.ts` re-exports it as `EndingKind`, which is the
  * name the rest of the simulation has always called it.
  */
-export type BuiltEnding = 'portal' | 'object' | 'hive' | 'circle';
+export type BuiltEnding = 'portal' | 'object' | 'hive' | 'circle' | 'party';
 
 export type VictoryKind =
   | 'conquest'
@@ -586,7 +616,9 @@ export type VictoryKind =
   // Section 125: the Hivekin's Second Queen's Shell.
   | 'hive'
   // Section 146: the Wandering Folk's Circling Caravan.
-  | 'circle';
+  | 'circle'
+  // Section 152: the Unbound's Spirit Party.
+  | 'party';
 
 export type ProductionItem =
   | { kind: 'unit'; id: UnitTypeId }

@@ -32,6 +32,10 @@ export type TechFlag =
   | 'anyone-parks'
   /** Section 150: the Mystic learns to send a spirit back rather than scatter it. */
   | 'exorcism'
+  /** Section 152: a dispersed spirit is likelier to find its way back. */
+  | 'sigil-bound'
+  /** Section 152: likelier again, and it stacks with Sigil-Bound. */
+  | 'the-ankh'
   /** +1 sight for cities, and cities see through forest. */
   | 'watchtower'
   /** +1 content citizen in every city. */
@@ -96,7 +100,7 @@ export const TECHS: TechDef[] = [
     prereqs: [],
     // One ship a side. The filter that decides what a city may build asks the
     // unit's own faction, so a shared advance can hand all three their boat.
-    units: ['raft', 'barge', 'tidecaste', 'ferrycontract'],
+    units: ['raft', 'barge', 'tidecaste', 'ferrycontract', 'ferrymansdue'],
     buildings: [],
     flags: ['mapmaking'],
     flavor: 'The world turns out to have a shape. Everyone is a little put out about it.',
@@ -119,7 +123,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: ['outpost', 'depot', 'theForwardBurrow', 'waystation'],
+    buildings: ['outpost', 'depot', 'theForwardBurrow', 'waystation', 'farDoor'],
     flags: ['bridges'],
     flavor: 'Walking around the swamp was, in hindsight, a choice.',
   },
@@ -130,7 +134,7 @@ export const TECHS: TechDef[] = [
     cost: 75,
     prereqs: ['bridge-building'],
     units: [],
-    buildings: ['walls', 'catapult', 'theNarrowing', 'circledWagons'],
+    buildings: ['walls', 'catapult', 'theNarrowing', 'circledWagons', 'drawnLine'],
     flags: [],
     flavor:
       'A bridge, but standing up and unwelcoming. The Horde attends the same ' +
@@ -143,7 +147,7 @@ export const TECHS: TechDef[] = [
     cost: 115,
     prereqs: ['wall-building'],
     units: [],
-    buildings: ['bigVault', 'exchange', 'yellingWall', 'theGreaterRendering', 'tollPost'],
+    buildings: ['bigVault', 'exchange', 'yellingWall', 'theGreaterRendering', 'tollPost', 'titheVault'],
     flags: ['watchtower', 'channels'],
     flavor: 'A wall, but taller and lonelier.',
   },
@@ -154,7 +158,7 @@ export const TECHS: TechDef[] = [
     cost: 45,
     prereqs: ['mapmaking'],
     units: [],
-    buildings: ['treasury', 'market', 'firstLedger', 'theRenderingPit', 'strongboxWagon'],
+    buildings: ['treasury', 'market', 'firstLedger', 'theRenderingPit', 'strongboxWagon', 'titheBasin'],
     flags: [],
     flavor:
       'The same coin keeps turning up. Eventually somebody scratches a number ' +
@@ -167,7 +171,7 @@ export const TECHS: TechDef[] = [
     cost: 85,
     prereqs: ['not-you-again'],
     units: [],
-    buildings: ['thinkingRock', 'scriptorium', 'unfinishedCathedral', 'theScentRecord', 'routeBook'],
+    buildings: ['thinkingRock', 'scriptorium', 'unfinishedCathedral', 'theScentRecord', 'routeBook', 'wallOfNames'],
     flags: [],
     flavor:
       'It emerges you can build a place specifically for thinking in. The ' +
@@ -180,7 +184,7 @@ export const TECHS: TechDef[] = [
     cost: 65,
     prereqs: ['tree-hugging'],
     units: [],
-    buildings: ['totem', 'chapel', 'theHum', 'sharedFire'],
+    buildings: ['totem', 'chapel', 'theHum', 'sharedFire', 'quietRoom'],
     flags: [],
     flavor: 'Morale is discovered, immediately weaponised, and then regulated.',
   },
@@ -244,7 +248,7 @@ export const TECHS: TechDef[] = [
     cost: 150,
     prereqs: ['happiness'],
     units: [],
-    buildings: ['bigTotem', 'cathedral', 'longPeaceMonument', 'theDeeperHum', 'bigTent'],
+    buildings: ['bigTotem', 'cathedral', 'longPeaceMonument', 'theDeeperHum', 'bigTent', 'longConversation'],
     flags: ['berserk'],
     flavor: 'Happiness, taken one step further than anyone recommended.',
   },
@@ -1236,6 +1240,209 @@ export const TECHS: TechDef[] = [
       'The drake was not purchased. The drake was convinced. There is a difference, and ' +
       'it involved considerably more fish.',
   },
+  // ------------------------------------------------------------ section 152
+  //
+  // The Unbound's fork, verbatim from `UNBOUND_PLAN.md` apart from the two
+  // places noted below. Twelve advances, and the shape that matters is the
+  // **reform chain**: `retrieval-circle` to `sigil-bound` is the ritual line,
+  // `anchor-totem` hangs off the spirit line, and `the-ankh` needs both --
+  // a genuine fork closed from two sides, the shared Folly's
+  // pyromancy-and-cryomancy shape rather than a longer chain.
+  //
+  // Section 151 settled `anchor-totem`'s prereq, which the bible flagged as
+  // a placeholder: it stays `tier-yaksha`, because the yaksha is the spirit
+  // that already stays where it is put.
+  {
+    id: 'first-unbound',
+    name: 'It Did Not Stay Gone',
+    faction: 'unbound',
+    cost: 0,
+    prereqs: [],
+    // The bible gives `['effigy', 'domovoi']`, and section 148 is the reason
+    // the Revenant is here too: every side opens with a settler **and**
+    // something that can hold a tile, or its first town can build nothing at
+    // all. A sweep over `FACTION_IDS` enforces it now.
+    units: ['effigy', 'domovoi', 'revenant'],
+    buildings: [],
+    flags: [],
+    flavor: 'It did not stay gone. Nobody involved has fully explained why.',
+  },
+  {
+    id: 'tier-revenant',
+    name: 'One Who Returns',
+    faction: 'unbound',
+    cost: 25,
+    prereqs: ['first-unbound'],
+    // Its unit moved to the opening advance -- section 148's rule, that a
+    // faction's first advance grants the starter as well as the founder -- so
+    // what this carries instead is **The First Binding**, which the bible
+    // hangs here by name and for a reason worth keeping: *"riding on Revenant
+    // rather than Retrieval Circle specifically because this predates all of
+    // that."* The folly is the proof reform was always possible, arriving
+    // well before anything existed to make it reliable.
+    //
+    // It briefly also carried the `sigil-bound` flag, which was wrong twice
+    // over: the flag belongs to the advance of that name, and a reliability
+    // bonus two advances before the building it reads from would have been a
+    // rung on a ladder that was not there yet.
+    units: [],
+    buildings: ['appointedPlace', 'firstBinding'],
+    flags: [],
+    flavor: 'The name is the whole of the description. It returns.',
+  },
+  {
+    id: 'tier-sylph',
+    name: 'Hard To Pin Down',
+    faction: 'unbound',
+    cost: 45,
+    prereqs: ['first-unbound'],
+    units: ['sylph'],
+    buildings: [],
+    flags: [],
+    flavor: 'Agreed to be somewhere. Has not been there since.',
+  },
+  {
+    id: 'tier-naiad',
+    name: 'Wherever The Water Is',
+    faction: 'unbound',
+    cost: 65,
+    prereqs: ['tier-revenant'],
+    units: ['naiad'],
+    buildings: [],
+    flags: [],
+    flavor: 'It belongs to a stretch of water. The stretch of water has not commented.',
+  },
+  {
+    id: 'tier-yaksha',
+    name: 'What Was Left To Guard',
+    faction: 'unbound',
+    cost: 85,
+    prereqs: ['tier-revenant'],
+    units: ['yaksha'],
+    // And The Standing Watch, which the bible hangs here: the one kind of
+    // spirit that stays where it is put is the one that decides, unprompted,
+    // to stay where a town is.
+    buildings: ['rehearsalFloor', 'standingWatch'],
+    flags: [],
+    flavor: 'The treasure is long gone. The guarding has continued regardless.',
+  },
+  {
+    id: 'tier-jinn',
+    name: 'A Binding, Offered',
+    faction: 'unbound',
+    cost: 90,
+    prereqs: ['tier-revenant'],
+    units: ['jinn'],
+    // And The Read Terms, where the bible puts it: somebody did read them,
+    // once, and the Jinn is the advance about there being terms at all.
+    buildings: ['readTerms'],
+    flags: [],
+    flavor: 'Every offer is binding. This is mentioned, briefly, near the end.',
+  },
+  {
+    id: 'retrieval-circle',
+    name: 'A Place To Call Back To',
+    faction: 'unbound',
+    cost: 55,
+    prereqs: ['first-unbound'],
+    units: [],
+    buildings: ['retrievalCircle'],
+    flags: [],
+    flavor: 'Somewhere to come back to. Empty, ideally, and quiet.',
+  },
+  {
+    id: 'sigil-bound',
+    name: 'Sigil-Bound',
+    faction: 'unbound',
+    cost: 80,
+    prereqs: ['retrieval-circle'],
+    // The bible gives this no units and no buildings -- it is a reliability
+    // advance -- so it carries a flag, which is how `caravan-building` and
+    // `burrower-veteran` express the same thing.
+    units: [],
+    buildings: ['sigilStacks'],
+    flags: ['sigil-bound'],
+    flavor: 'The marks are for the one coming back, not for anybody reading them.',
+  },
+  {
+    id: 'anchor-totem',
+    name: 'Something To Hold Onto',
+    faction: 'unbound',
+    cost: 130,
+    // Section 151: settled rather than placeholder. You learn to anchor a
+    // spirit from the one kind that already anchors itself.
+    prereqs: ['tier-yaksha'],
+    units: [],
+    buildings: ['anchorTotem'],
+    flags: [],
+    flavor: 'Driven in once, properly, and not discussed again.',
+  },
+  {
+    id: 'the-ankh',
+    name: 'The Ankh',
+    faction: 'unbound',
+    cost: 150,
+    prereqs: ['sigil-bound', 'anchor-totem'],
+    units: [],
+    buildings: [],
+    flags: ['the-ankh'],
+    flavor: 'An old symbol for a thing that was never actually a question.',
+  },
+  {
+    id: 'archon-tech',
+    name: 'A Ruler, Assembled',
+    faction: 'unbound',
+    cost: 220,
+    prereqs: ['the-ankh', 'tier-jinn'],
+    units: ['archon'],
+    buildings: [],
+    flags: [],
+    flavor: 'Assembled from the parts of an agreement everybody had forgotten signing.',
+  },
+  // The naval and siege advances, and the transport on shared Mapmaking.
+  {
+    id: 'tier-drowned',
+    name: 'Already Occupied',
+    faction: 'unbound',
+    cost: 85,
+    prereqs: ['tier-naiad'],
+    units: ['ub-drowned'],
+    buildings: [],
+    flags: [],
+    flavor: 'The water had residents before it had traffic. This was inevitable.',
+  },
+  {
+    id: 'tier-cairn',
+    name: 'What It Guards Now',
+    faction: 'unbound',
+    cost: 95,
+    prereqs: ['tier-yaksha'],
+    units: ['cairn'],
+    buildings: [],
+    flags: [],
+    flavor: 'It was built to guard something. It has been given something else to do.',
+  },
+  // The fifth road out, and the last. Held back from section 152's first pass
+  // for the reason section 142 held the Wandering Folk's back: an advance that
+  // grants three buildings that do not exist is an empty box in the tree.
+  //
+  // What it does while it counts down is the one thing this ending has that
+  // the Circling Caravan does not -- see `GUEST_LIST` in `sim/dispersal.ts`.
+  {
+    id: 'arrangement-permanent',
+    name: 'The Arrangement Became Permanent',
+    faction: 'unbound',
+    cost: 200,
+    prereqs: ['archon-tech'],
+    units: [],
+    buildings: ['guestList', 'standingInvitation', 'spiritParty'],
+    flags: ['ending'],
+    flavor:
+      'Death is solved! The spirits embrace their new physical brethren, inviting them to ' +
+      'new Undead parties and enjoying a life filled with a lack of food or drink and ' +
+      'endless, droning conversations. They will all love it, the Unbound knows -- ' +
+      'eventually.',
+  },
   // ------------------------------------------------------------ section 146
   //
   // The fourth road out. Held back in section 142 for the same reason
@@ -1301,7 +1508,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 160,
     prereqs: ['a-word-in-the-wrong-ear'],
-    units: ['nobody', 'intelligencer', 'hollow', 'offbooks'],
+    units: ['nobody', 'intelligencer', 'hollow', 'offbooks', 'unreturned'],
     buildings: [],
     flags: ['unseen'],
     flavor:
@@ -1315,7 +1522,7 @@ export const TECHS: TechDef[] = [
     faction: 'both',
     cost: 60,
     prereqs: ['mapmaking'],
-    units: ['skulker', 'factor', 'mimic', 'tagalong'],
+    units: ['skulker', 'factor', 'mimic', 'tagalong', 'borrowedface'],
     buildings: [],
     flags: [],
     flavor:

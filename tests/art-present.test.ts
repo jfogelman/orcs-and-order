@@ -84,7 +84,16 @@ const NOT_DRAWN_YET = {
   // Empty, and left here rather than deleted: an empty list is the state
   // this should normally be in, and the stale-entry check below is what
   // brings somebody back to cross an item off.
-  advances: [] as string[],
+  advances: [
+    // Section 152. The Unbound's naval and siege advances, which the bible's
+    // own twelve-icon advance table predates -- the same shape as
+    // `tier-corsair` and `tier-collector` two sections ago, and the same
+    // cause: the plan document was written before the section that added
+    // them. Prompts are in ART_PROMPTS.md; nothing here is stale, there is
+    // only art to draw.
+    'tier-drowned',
+    'tier-cairn',
+  ] as string[],
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is
     // false, so neither is offered in any city, and the definitions are kept
@@ -92,6 +101,13 @@ const NOT_DRAWN_YET = {
     // build would be art nobody can see.
     'orcPosting',
     'soldierPosting',
+    // Section 152, and the same story as the advances above: two of the three
+    // Spirit Party works and one tier-two city building that the Unbound's
+    // building table never covered. `titheBasin` is the Tithe Vault's first
+    // tier and is the one of the three that is mine rather than the bible's.
+    'titheBasin',
+    'guestList',
+    'standingInvitation',
   ],
 };
 

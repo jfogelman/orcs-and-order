@@ -1,3 +1,4 @@
+import type { FactionId } from '../src/model/types';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
@@ -161,7 +162,9 @@ const buildArms = (): Arm[] => {
 
   /** The priority lists as they ship, captured before any arm touches them. */
   const asShipped = new Map(
-    Object.entries(PERSONALITIES).map(([k, v]) => [k, [...v.techPriority]] as const),
+    // Keyed as 'FactionId' rather than 'string': `PERSONALITIES` is an
+    // exhaustive record since section 152, and `Object.entries` widens the key.
+    Object.entries(PERSONALITIES).map(([k, v]) => [k as FactionId, [...v.techPriority]] as const),
   );
 
   /**

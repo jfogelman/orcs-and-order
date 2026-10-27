@@ -26,15 +26,18 @@ const SIDE_NAME: Record<FactionId, string> = {
   human: 'Kingdom',
   hivekin: 'Hive',
   wandering: 'Wandering Folk',
+  unbound: 'Unbound',
 };
 const ENDING: Record<FactionId, string> = {
   orc: 'somebody-knocked',
   human: 'do-not-touch',
   hivekin: 'all-is-the-hive',
-  // Section 142: not built yet. `nowhere-left-but-up` arrives with the three
-  // works it unlocks, and an advance that unlocks nothing would be an empty
-  // box in the tree this tool draws.
-  wandering: '',
+  wandering: 'nowhere-left-but-up',
+  // Section 152: not built yet, for the reason section 142 gave about the
+  // Wandering Folk's -- `arrangement-permanent` arrives with the three works
+  // it unlocks, and an advance that unlocks nothing would be an empty box in
+  // the tree this tool draws.
+  unbound: '',
 };
 
 const nameOf = (id: string) => TECHS_BY_ID[id]?.name ?? id;

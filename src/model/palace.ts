@@ -141,6 +141,55 @@ export const PALACE_CHASSIS: Record<FactionId, PalaceChassis> = {
   // one difference that is the faction rather than the geometry: a camp's
   // middle is a middle, so the regalia stands **in** the compound rather than
   // on a roof there is none of.
+  // Section 152. Marked off the real art, which took telling `prepare_art.py`
+  // about the sixteen pieces first -- the points in the first draft were the
+  // Wandering Folk's, borrowed, because the art had never been processed and
+  // there was no pixel grid to read. That is section 142's mistake repeated
+  // and then caught, which is the best this project has managed with that
+  // particular list so far.
+  //
+  // The grid is `public/palace/unbound-base.png`, 128 by 97, and **it is very
+  // nearly a true ellipse**: widest at y of 50 to 63 where it touches x of 0
+  // and 127, tapering to a ten-pixel tip at the top and a twelve-pixel one at
+  // the bottom. The Permanent Circle is a ring of standing stones round a
+  // plain floor, seen from high enough up that the ring reads as an oval.
+  //
+  // So it is read the way the Hive's mound and the Wandering Folk's camp were,
+  // and for the same reason: **there are no corners.** The three points that
+  // mean "a corner of a hall" elsewhere are the nearest and left-most places
+  // the ring meets the ground, and the one that means "a roof" is the middle
+  // of the enclosed floor, because that is the only place on this chassis a
+  // marker could stand at all.
+  unbound: {
+    // Not the Wandering Folk's 0.62 that this borrowed. Matched on **drawn
+    // area**, which is the measure section 125 settled on after matching the
+    // Hive's width and then its height both went wrong in opposite
+    // directions: a filled ellipse draws 9,944 pixels of its 128-by-97 box,
+    // which is nearer the Grand Hall's 10,260 than the Standing Caravan's
+    // 8,273. A ring drawn at the camp's share stood a head taller than
+    // everything hung off it.
+    width: 0.59,
+    points: {
+      // The near arc, left of centre, where the Horde's and the Kingdom's
+      // doors both sit (0.29 and 0.30 across). A ring has no doorway; this is
+      // the stretch of it a gate is set into. At x of 46 the arc reaches y 93.
+      door: [46, 92],
+      // The nearest point the ring meets the ground, which is what "nearest
+      // corner" means on something round: the bottom of the oval, x 64.
+      tower: [64, 95],
+      // The left extreme. x of 0 is reached from y 50 to 63, so this is the
+      // middle of that run -- and on an ellipse the widest point *is* the
+      // ground line there, which is why it sits higher than a hall's left
+      // corner would and is correct rather than an error.
+      side: [1, 57],
+      // Not a roof. The middle of the floor the stones enclose, which is
+      // where a marker that stays lit would be put: the one spot visible from
+      // every side of the ring. The ellipse's own centre.
+      roof: [64, 49],
+      // The near arc, as the tower. The yard lies just inside it.
+      yard: [64, 94],
+    },
+  },
   wandering: {
     // The art is 128 by 91, the widest and lowest of the four. Matched on
     // drawn area, the way the Hive's was after matching width and then height
@@ -261,6 +310,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Trampled Dirt Yard', 'Weapon Racks', 'Forge Yard'],
       hivekin: ['Packed Earth', 'Scoured Apron', 'Tended Brood-Beds'],
       wandering: ['Ground, On Credit', 'Ground, Paid Up', 'Ground, Owned Outright'],
+      unbound: ["Where It Happened", "Where It Happens Now", "Where It Is Expected"],
     },
     // Centred a little behind the near corner, so the hall's foundation is
     // drawn over the yard's back edge: ground the hall stands in, not a rug.
@@ -283,6 +333,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Single Totem', 'Totem Cluster', 'Ritual Altar Wing'],
       hivekin: ['Brood Annex', 'Brood Hall', 'Royal Gallery'],
       wandering: ['Wing, On Credit', 'Wing, Paid Up', 'Wing, Owned Outright'],
+      unbound: ["A Room, Added", "A Hall, Added", "A Wing That Doesn't Leave"],
     },
     // Behind the chassis, its nearest corner on the hall's left-hand corner: the
     // hall is drawn over the blank wall it joins by.
@@ -317,6 +368,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Lashed-Log Lookout', 'Bone-Reinforced Tower', 'Iron-Plated Tower'],
       hivekin: ['Low Vent', 'Watch Spire', 'High Spire'],
       wandering: ['Watch, On Credit', 'Watch, Paid Up', 'Watch, Owned Outright'],
+      unbound: ["Something Is Watching", "Something Is Posted", "Something Permanent"],
     },
     // Sizes are shares of the box at tier two: twice the chassis's drawn height
     // -- 0.58 x 117/128 of the box for the Warcamp, 0.58 x 99/128 for the Grand
@@ -354,6 +406,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Crude Palisade Gate', 'Spiked Iron Gate', 'Trophy-Flanked Warfort Gate'],
       hivekin: ['Open Tunnel', 'Chitin Valve', 'Sealed Valve'],
       wandering: ['Gate, On Credit', 'Gate, Paid Up', 'Gate, Owned Outright'],
+      unbound: ["Unlocked, Technically", "Attended", "Warded"],
     },
     at: { point: 'door', anchor: 'mid', size: 0.23 },
     per: { hivekin: { size: 0.3, nudge: [0, 2] } },
@@ -367,6 +420,7 @@ export const PALACE_MODULES: PalaceModuleDef[] = [
       orc: ['Single Torn Banner', 'Chained Banner Set', 'Blackened War-Banners'],
       hivekin: ['Pheromone Stalk', 'Paired Stalks', 'Crowned Stalks'],
       wandering: ['Banner, On Credit', 'Banner, Paid Up', 'Banner, Owned Outright'],
+      unbound: ["A Marker", "A Pair, Matching", "A Marker That Stays Lit"],
     },
     at: { point: 'roof', anchor: 'foot', size: 0.19 },
     // The Horde's are drawn facing the other way, towards the gate below them.

@@ -160,6 +160,35 @@ export interface BuildingDef {
    * things in, not a tax break. Buildings are priced the same as everywhere.
    */
   unitDiscount?: number;
+  /**
+   * Section 152: taken off the chance a scattered spirit fails to gather
+   * again, empire-wide.
+   *
+   * A share rather than a count, for section 146's `recruitOdds` reason -- it
+   * is what the odds are -- and the bible asks for exactly this stacking:
+   * The First Binding *"reduces reform-failure chance further, faction-wide;
+   * stacks with Sigil-Bound, Anchor Totem, and The Ankh."*
+   */
+  reformOdds?: number;
+  /**
+   * Section 152: defence added, flat, to whoever is standing in this city.
+   *
+   * Flat rather than `defenseMult`, because The Standing Watch is one thing
+   * that has decided to guard this settlement and not a thickening of its
+   * walls: *"+2 defense for the garrison in this settlement"*. A multiplier
+   * would be worth most to whatever was already toughest, which is the
+   * opposite of a sentry turning up for a town that had nobody.
+   */
+  garrisonDefense?: number;
+  /**
+   * Section 152: share off the price of a **bound** creature built here.
+   *
+   * Restricted to named creatures the way `casteAttack` and `mountedDefense`
+   * are, and for the same reason: The Read Terms is a record of one
+   * negotiation, and *"Jinn and Archon reformed or bound in this settlement
+   * cost 15% less"* is a rule about those two.
+   */
+  boundDiscount?: number;
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -546,6 +575,138 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'Two queens should not have been possible. This makes it possible anyway. Only in a Hive ' +
       'holding the Molting Chamber or the Second Feeding, once both stand. Hold the Hive long ' +
       'enough and the shapes decide there was only ever the one Hive after all.',
+  },
+
+  // ------------------------------------------------------------ section 152
+  //
+  // The Unbound's ten, from `NEW_FACTION_BUILDINGS.md`: the same ten slots
+  // every faction since the Hive has had, and the mechanical fields copied
+  // **from the Hive's equivalent slot unchanged**, deliberately, exactly as
+  // section 142 did for the Wandering Folk. All five sides stay on one
+  // economy and a faction cannot be accidentally buffed by being written
+  // last.
+  //
+  // Register is the bible's: *"flat, clinical and faintly bureaucratic about
+  // being dead. Nothing is celebrated; things are simply noted, and kept."*
+  drawnLine: {
+    id: 'drawnLine',
+    name: 'The Drawn Line',
+    faction: 'unbound',
+    cost: 60,
+    upkeep: 1,
+    defenseMult: 2,
+    negatedBySiege: true,
+    blurb: 'A line was drawn. Most things have respected it.',
+  },
+  quietRoom: {
+    id: 'quietRoom',
+    name: 'The Quiet Room',
+    faction: 'unbound',
+    cost: 40,
+    upkeep: 1,
+    contentBonus: 2,
+    blurb: 'Nothing is expected here. This is found restful, by those who find things.',
+  },
+  longConversation: {
+    id: 'longConversation',
+    name: 'The Long Conversation',
+    faction: 'unbound',
+    cost: 90,
+    upkeep: 2,
+    contentBonus: 3,
+    blurb:
+      'It began some time ago. It has not been interrupted, and nobody has ' +
+      'finished a sentence.',
+  },
+  appointedPlace: {
+    id: 'appointedPlace',
+    name: 'The Appointed Place',
+    faction: 'unbound',
+    cost: 30,
+    upkeep: 1,
+    contentBonus: 2,
+    garrisonNeeded: 2,
+    blurb: 'Somewhere to be stood in. It is the same spot every time.',
+  },
+  wallOfNames: {
+    id: 'wallOfNames',
+    name: 'The Wall of Names',
+    faction: 'unbound',
+    cost: 60,
+    upkeep: 1,
+    scienceBonus: 0.5,
+    blurb: 'Every name that has been carried here. Most of them can still be read.',
+  },
+  sigilStacks: {
+    id: 'sigilStacks',
+    name: 'The Sigil Stacks',
+    faction: 'unbound',
+    cost: 130,
+    upkeep: 2,
+    scienceBonus: 0.5,
+    blurb: 'Each mark says which way to come back. There are, by now, a great many.',
+  },
+  titheBasin: {
+    id: 'titheBasin',
+    name: 'The Tithe Basin',
+    faction: 'unbound',
+    cost: 60,
+    upkeep: 1,
+    goldBonus: 1,
+    blurb: 'Left by the living, collected by everyone else.',
+  },
+  titheVault: {
+    id: 'titheVault',
+    name: 'The Tithe Vault',
+    faction: 'unbound',
+    cost: 110,
+    upkeep: 2,
+    goldBonus: 0.5,
+    blurb: 'Larger than the basin, and for the same reason.',
+  },
+  farDoor: {
+    id: 'farDoor',
+    name: 'The Far Door',
+    faction: 'unbound',
+    cost: 50,
+    upkeep: 1,
+    suppliesArmy: true,
+    blurb:
+      'A doorway standing alone in a field. It leads here from somewhere ' +
+      'else, and does not need a wall.',
+  },
+  rehearsalFloor: {
+    id: 'rehearsalFloor',
+    name: 'The Rehearsal Floor',
+    faction: 'unbound',
+    cost: 100,
+    upkeep: 2,
+    startingRank: 2,
+    needs: 'barracks',
+    blurb: 'They have done this before. They are now doing it properly.',
+  },
+  // The two that reform runs on. Not calm, not gold, not study: these exist
+  // so a dispersed spirit has somewhere to come back to, and `dispersal.ts`
+  // is the only thing that reads them.
+  retrievalCircle: {
+    id: 'retrievalCircle',
+    name: 'The Retrieval Circle',
+    faction: 'unbound',
+    cost: 70,
+    upkeep: 1,
+    blurb:
+      'Somewhere to come back to, so long as nobody is standing in it. ' +
+      'This has proved harder to arrange than expected.',
+  },
+  anchorTotem: {
+    id: 'anchorTotem',
+    name: 'The Anchor Totem',
+    faction: 'unbound',
+    cost: 120,
+    upkeep: 2,
+    blurb:
+      'Driven in once, properly. Whatever is coming back will find it, and ' +
+      'does not mind who else is here.',
   },
 
   // ------------------------------------------------------------ section 146
@@ -1074,7 +1235,98 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
       'Hive noticed and extended downward to match, on the theory that unused space is a shape ' +
       'problem like any other.',
   },
+  // Section 152: the Unbound's three follies, one civ-wide and two city-wide,
+  // which is the split the Hive and the Wandering Folk both have. Read through
+  // `empireBonus` and `cityFollyBonus` exactly as the other eleven are.
+  //
+  // All three ride on an advance that already existed, which is the convention
+  // and here also the joke: nothing this faction builds is new, it is a thing
+  // that happened once and was afterwards kept.
+  firstBinding: {
+    id: 'firstBinding',
+    name: 'The First Binding',
+    faction: 'unbound',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    reformOdds: 0.08,
+    blurb:
+      'The very first one that came back, before there was a circle or a sigil or anybody ' +
+      'who could say why it had worked. The stone it was standing beside is worn smoother ' +
+      'than the others, and nobody has established whether that is the cause.',
+  },
+  standingWatch: {
+    id: 'standingWatch',
+    name: 'The Standing Watch',
+    faction: 'unbound',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    garrisonDefense: 2,
+    blurb:
+      'It no longer knows what it was guarding. It has selected this settlement instead, on ' +
+      'its own initiative, and will not be talked out of it.',
+  },
+  readTerms: {
+    id: 'readTerms',
+    name: 'The Read Terms',
+    faction: 'unbound',
+    cost: 200,
+    upkeep: 0,
+    folly: 'faction',
+    boundDiscount: 0.15,
+    blurb:
+      'The terms were read, in full, by somebody. That record is kept here. Nobody has ' +
+      'needed to consult it since, which is either reassuring or exactly the problem.',
+  },
+  // Section 152's three works, the fifth road out. Same pattern as the other
+  // four, and the same reason: section 146 settled that an ending which fired
+  // off a bespoke counter would be a second victory rule nobody else plays by.
+  //
+  // **This one does do something while it counts down**, which the Circling
+  // Caravan does not. Jeremy picked "converts what it kills" from four shapes
+  // and the reasoning is in `UNBOUND_PLAN.md`: it is an extension of the
+  // faction's own rule rather than a new system beside it -- dispersal and
+  // reform already bring their units back, and the ending turns that on
+  // everybody else's. See `GUEST_LIST` in `sim/dispersal.ts`.
+  guestList: {
+    id: 'guestList',
+    name: 'The Guest List',
+    faction: 'unbound',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'party',
+    blurb:
+      'Every name added to it has, eventually, attended. This has not yet failed to be ' +
+      'true. One of two works the Spirit Party needs.',
+  },
+  standingInvitation: {
+    id: 'standingInvitation',
+    name: 'The Standing Invitation',
+    faction: 'unbound',
+    cost: 300,
+    upkeep: 0,
+    endingPart: 'party',
+    blurb:
+      'It was extended once, to the living generally. It has not been possible to retract ' +
+      'since. One of two works the Spirit Party needs.',
+  },
+  spiritParty: {
+    id: 'spiritParty',
+    name: 'The Spirit Party',
+    faction: 'unbound',
+    cost: 400,
+    upkeep: 0,
+    victory: 'party',
+    blurb:
+      'A party thrown for every guest who has ever died, and now, gradually, for those who ' +
+      'have not yet. Only in a settlement holding the Guest List or the Standing ' +
+      'Invitation, once both stand. While it is being thrown, anybody who falls near it ' +
+      'joins the Unbound, which is not considered a condition of attendance. Hold the ' +
+      'settlement long enough and eventually nobody there recalls it being optional.',
+  },
 };
+
 
 export const BUILDING_IDS = Object.keys(BUILDINGS) as BuildingId[];
 

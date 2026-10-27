@@ -462,7 +462,7 @@ describe('three sides, counted', () => {
    * 0, and a Hive player simply faces both empires.
    */
   it('is offered as a side to play, while still not starting on the map', () => {
-    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin', 'wandering']);
+    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin', 'wandering', 'unbound']);
     // Still false, and that still means what it always meant: in a game
     // somebody else is playing, the Hive is not there until it emerges.
     expect(FACTIONS.hivekin.startsOnMap).toBe(false);
@@ -481,7 +481,8 @@ describe('three sides, counted', () => {
     expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc']);
     // Still two rivals, and the second is on a clock rather than cancelled.
     // Section 142: and the Wandering Folk behind them, on their own clock.
-    expect(latecomers(theirs)).toEqual(['human', 'wandering']);
+    // Section 152: and the Unbound behind those.
+    expect(latecomers(theirs)).toEqual(['human', 'wandering', 'unbound']);
     expect(arrivalTurnFor(theirs, 0)).toBeGreaterThan(1);
   });
 
@@ -495,7 +496,7 @@ describe('three sides, counted', () => {
     expect(ours.players.map((p) => p.faction)).toEqual(['orc', 'human']);
     // The Hive is still the *first* latecomer, which is the half that has to
     // not move: its arrival turn is drawn for index 0 exactly as before.
-    expect(latecomers(ours)).toEqual(['hivekin', 'wandering']);
+    expect(latecomers(ours)).toEqual(['hivekin', 'wandering', 'unbound']);
     expect(hiveArrivalTurn(ours)).toBe(arrivalTurnFor(ours, 0));
   });
 

@@ -45,14 +45,20 @@ import { hasFlag } from './rules';
  *   taught: self-taught, so it learns this the way it learned everything
  *   else, by watching and then trying it.
  *
- * The Unbound's own **Archon** joins this table when the faction does. A side
- * that cannot exorcise cannot permanently beat them, and that includes them.
+ * The **Archon** is the Unbound's own, added in section 152 when the faction
+ * arrived. A side that cannot exorcise cannot permanently beat them, and that
+ * includes them: without this entry an Unbound civil war would be unwinnable
+ * by either side, which is the one shape this whole section exists to prevent.
+ * It needs no advance because the advance that unlocks it is already the
+ * gate, and it is the only unit in the table that is also a thing the table
+ * is written against.
  */
 export const EXORCISTS: Record<string, string | null> = {
   paladin: null,
   warden: null,
   'orc-shaman': null,
   mystic: 'exorcism',
+  archon: null,
 };
 
 export const EXORCISM = {

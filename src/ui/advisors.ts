@@ -63,6 +63,7 @@ const COUNCIL_TITLE: Record<FactionId, string> = {
   human: 'The Council',
   hivekin: 'Those Who Report',
   wandering: 'Whoever Is Available',
+  unbound: 'Those Present',
 };
 
 export function portraitPath(id: string): string {

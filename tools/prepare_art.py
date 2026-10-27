@@ -197,6 +197,14 @@ FACTION_CITIES = {
     "wandering_1": "wandering-tier1",
     "wandering_4": "wandering-tier2",
     "wandering_8": "wandering-tier3",
+    # Section 152's, named the same way again. Added the day the faction's
+    # model entry existed rather than the day the art arrived, which is the
+    # only ordering that has ever worked: the art was dropped with the rest of
+    # the Unbound folder and would have sat here unprocessed exactly as the
+    # Wandering Folk's did.
+    "unbound_1": "unbound-tier1",
+    "unbound_4": "unbound-tier2",
+    "unbound_8": "unbound-tier3",
 }
 
 # Kept under the old name too: it is referenced below and a rename that misses
@@ -291,6 +299,13 @@ TECH_ICONS = [
     # Section 150: the Horde's exorcist, filed with the Unbound because they
     # are the reason it exists.
     "bone-speaker",
+    # Section 152: the Unbound's own eleven. `tier-drowned` and `tier-cairn`
+    # are deliberately absent -- their two advances have no prompt anywhere
+    # yet, exactly as `tier-corsair` and `tier-collector` did not, and the
+    # prompts are in ART_PROMPTS.md waiting to be drawn.
+    "first-unbound", "tier-revenant", "tier-sylph", "tier-naiad",
+    "tier-yaksha", "tier-jinn", "retrieval-circle", "sigil-bound",
+    "anchor-totem", "the-ankh", "archon-tech", "arrangement-permanent",
 ]
 
 # Building icons, keyed by id from src/model/buildings.ts. Optional, like
@@ -327,6 +342,17 @@ BUILDING_ICONS = [
     # Section 146 adds the other two follies, and `headCount` landed a day later.
     "firstCaravan", "unnamedMarker", "headCount",
     "lastMap", "standingOrder", "circlingCaravan",
+    # Section 152: the Unbound's twelve. The ten ordinary city slots, the two
+    # reform buildings, the three follies and the three ending works -- all of
+    # them dropped in the faction folder before any of them existed in
+    # `buildings.ts`, which is the right way round and the reason this list
+    # could be filled in one go.
+    "quietRoom", "longConversation", "appointedPlace", "farDoor",
+    "wallOfNames", "titheBasin", "titheVault", "sigilStacks", "drawnLine",
+    "rehearsalFloor",
+    "retrievalCircle", "anchorTotem",
+    "firstBinding", "standingWatch", "readTerms",
+    "guestList", "standingInvitation", "spiritParty",
 ]
 
 # The three standing orders a city can take instead of making a thing: bank the
@@ -366,6 +392,14 @@ ADVISOR_PORTRAITS = {
     "self-taught": "the self-taught",
     "self-sworn": "the self-sworn",
     "fair-dealer": "the fair dealer",
+    # Section 152: the Unbound's six, filed under their names exactly as the
+    # Wandering Folk's are.
+    "guardian": "the guardian",
+    "hearthkeeper": "the hearthkeeper",
+    "binder": "the binder",
+    "sigilist": "the sigilist",
+    "archon": "the archon",
+    "effigy": "the effigy",
 }
 
 # Section 46's talking cycles, one per advisor, in `advisors/Talking Cycles/`.
@@ -396,6 +430,12 @@ ADVISOR_TALKING = {
     "self-taught": "the self-taught talking",
     "self-sworn": "the self-sworn talking",
     "fair-dealer": "the fair dealer talking",
+    "guardian": "the guardian talking",
+    "hearthkeeper": "the hearthkeeper talking",
+    "binder": "the binder talking",
+    "sigilist": "the sigilist talking",
+    "archon": "the archon talking",
+    "effigy": "the effigy talking",
 }
 
 # Big enough to read a face at, small enough that twelve of them are not a
@@ -920,6 +960,11 @@ def process_aliased(
 SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
     "tier-corsair": ("a fee, negotiated",),
     "tier-collector": ("the debt comes due",),
+    # Section 152: the two Unbound buildings whose art arrived hyphenated,
+    # because the bible's own art table writes them that way and the ids in
+    # `buildings.ts` are camel-cased like every other building's.
+    "retrievalCircle": ("retrieval-circle",),
+    "anchorTotem": ("anchor-totem",),
 }
 
 
@@ -2675,6 +2720,33 @@ PALACE: dict[str, str] = {
     "wandering-banners-1": "banner, on credit",
     "wandering-banners-2": "banner, paid up",
     "wandering-banners-3": "banner, owned outright",
+    # Section 152. The Unbound's, and the names are the bible's own rather than
+    # mine -- `art_prompts_wandering_unbound.md` has the table, and the files
+    # in the drop carry exactly these names.
+    #
+    # The chassis is filed as plainly "base chassis", which is the one entry
+    # here that is not distinctive: the Wandering Folk's carries its own name
+    # after an em dash, so the two do not collide, but a sixth faction that
+    # also names it plainly would.
+    "unbound-base": "base chassis",
+    "unbound-grounds-1": "where it happened",
+    "unbound-grounds-2": "where it happens now",
+    "unbound-grounds-3": "where it is expected",
+    "unbound-wing-1": "a room, added",
+    "unbound-wing-2": "a hall, added",
+    "unbound-wing-3": "a wing that doesn't leave",
+    "unbound-tower-1": "something is watching",
+    "unbound-tower-2": "something is posted",
+    "unbound-tower-3": "something permanent",
+    # The three gates are in the bible and not in the drop. Listed anyway, so
+    # the pipeline reports them as missing by name every run -- a piece left
+    # out of this table is a piece nobody is reminded about.
+    "unbound-gate-1": "unlocked, technically",
+    "unbound-gate-2": "attended",
+    "unbound-gate-3": "warded",
+    "unbound-banners-1": "a marker",
+    "unbound-banners-2": "a pair, matching",
+    "unbound-banners-3": "a marker that stays lit",
 }
 
 
@@ -2991,7 +3063,7 @@ def main() -> int:
     failed_cities.extend(failed_hives)
     # Section 102's posts are drawn in code until somebody draws them, so the
     # folder is allowed not to exist yet. `ART_PROMPTS.md` has the two prompts.
-    POSTS = {f: f for f in ("orc", "human", "hivekin", "wandering")}
+    POSTS = {f: f for f in ("orc", "human", "hivekin", "wandering", "unbound")}
     posts, missing_posts, failed_posts = 0, list(POSTS), []
     if (SRC / "posts").exists():
         print("Garrison posts:")

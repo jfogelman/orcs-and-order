@@ -126,6 +126,8 @@ const FLAG_LABELS: Record<TechFlag, string> = {
   staying: 'Recruiting costs less, everywhere',
   'anyone-parks': 'Any unit can raise a Caravan, not only a worker',
   exorcism: 'Mystics send spirits back instead of scattering them',
+  'sigil-bound': 'Scattered spirits reform more reliably',
+  'the-ankh': 'Scattered spirits reform more reliably still',
   watchtower: 'Cities see one tile further',
   contentment: '+1 content citizen everywhere',
   berserk: '+25% attack, -25% defence, army-wide',
