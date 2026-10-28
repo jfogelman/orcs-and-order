@@ -34,6 +34,38 @@ import { fatCrossIndices } from '../engine/grid';
  *   corresponds to, which is what stops a recruited Knight being a better
  *   Knight than anybody could build.
  */
+/**
+ * Counters, for asking whether any of this ever happens. Section 157.
+ *
+ * Section 156 measured the Wandering Folk winning **0 games of 324** and
+ * holding under one city, and two hypotheses were put forward at once -- that
+ * the AI under-uses Recruit, and that they need a better gold supply. Both are
+ * theories about behaviour, and the rule this project keeps is that an extreme
+ * number wants an instrumented probe rather than a story: see
+ * `check-it-exists-before-fixing-it` and `a-zero-explains-nothing`.
+ *
+ * So these count *existence and reach* before anybody tunes anything: were
+ * there targets at all, could they be afforded, were they asked, did they come.
+ * A zero in `targets` and a zero in `asked` mean opposite things.
+ *
+ * Reset by the probe that reads them; nothing in the game clears them, and
+ * nothing reads them in a shipped build.
+ */
+export const RECRUIT_TRACE = {
+  /** Half-turns on which this side had a Caravan standing at all. */
+  withCaravan: 0,
+  /** Somebody else's soldier inside a ring, summed over half-turns. */
+  targets: 0,
+  /** Of those, the ones the AI could actually afford at `aiPurse`. */
+  affordable: 0,
+  /** Asks made, and how they went. */
+  asked: 0,
+  came: 0,
+  refused: 0,
+  /** Gold spent asking, whatever the answer. */
+  spent: 0,
+};
+
 export const RECRUIT = {
   /** The switch, for sweeps. Off is a Wandering Folk who can only Create. */
   enabled: true,
@@ -422,7 +454,11 @@ export function recruitUnit(
     );
   }
 
+  RECRUIT_TRACE.asked++;
+  RECRUIT_TRACE.spent += paid;
   const failed = withRng(state, (rng) => rng.chance(recruitFailOdds(state, playerId, target)));
+  if (failed) RECRUIT_TRACE.refused++;
+  else RECRUIT_TRACE.came++;
   if (failed) {
     log(
       state,
@@ -535,7 +571,16 @@ export function resetAsking(state: GameState, playerId: number): void {
 export function aiAsks(state: GameState, playerId: number): Unit[] {
   if (!RECRUIT.enabled || !RECRUIT.ai) return [];
   const purse = Math.floor((state.players[playerId]?.gold ?? 0) * RECRUIT.aiPurse);
-  return recruitTargets(state, playerId)
+  const targets = recruitTargets(state, playerId);
+  // Section 157: counted here rather than in the probe, because *how many
+  // could it have asked* and *how many could it afford* are the two numbers
+  // that tell a shortage of gold apart from a shortage of anybody to ask.
+  if (caravansOf(state, playerId).length > 0) RECRUIT_TRACE.withCaravan++;
+  RECRUIT_TRACE.targets += targets.length;
+  RECRUIT_TRACE.affordable += targets.filter(
+    (u) => recruitPrice(state, playerId, u) <= purse,
+  ).length;
+  return targets
     .filter((u) => recruitPrice(state, playerId, u) <= purse)
     .filter((u) => 1 - recruitFailOdds(state, playerId, u) >= RECRUIT.aiWorstOdds)
     .sort(

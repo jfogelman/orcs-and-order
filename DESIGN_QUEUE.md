@@ -12569,3 +12569,86 @@ most of how they win at all.
 - `GUEST_LIST.reach` is still unmeasured. Sixteen Spirit Parties is enough
   that an arm would now differ from the control, which it would not have been
   before this sweep.
+
+## 157. The Wandering Folk are not short of gold. They are killed on arrival
+
+Section 156 measured them at **0 wins of 324** and under one city. Jeremy put
+two hypotheses: the AI under-uses Recruit, and they want a better gold supply.
+`tools/wandererprobe.run.test.ts`, eighteen games, says **neither**.
+
+### The answer is bimodal, which is why the averages lied
+
+| | games | founders ever built | cities | advances |
+|---|---|---|---|---|
+| they establish | **5 of 18** | 9 to 23 | 6 to 11 | 12 to 33 |
+| they do not | **13 of 18** | **2** | 1 → 0 | **1** |
+
+Thirteen games in eighteen end with `founders 2` -- the two they *arrived*
+with, meaning they never built a single unit -- `techs 1`, meaning they never
+finished one advance, and `gold 50 -> 50`, meaning they never earned or spent
+anything. They are not playing badly. **They are dead by about turn fifty.**
+
+And in the five games they survive they are **fine**: seed 7920 ends with
+eleven cities and thirty-three advances, which is better than the Hive's
+average. There is nothing wrong with the faction once it is standing up.
+
+### Both hypotheses are symptoms, and the numbers say so directly
+
+- **Gold.** 145 at their best, and in the dead games exactly the 50 they
+  arrived with. A side with no city earns no trade; the gold is the
+  consequence.
+- **Recruit.** 1,690 targets stood inside a ring over the run, **310 of them
+  affordable**, and the AI asked 124 times and got 57. It asks when it can
+  afford to. What it cannot do is afford much, because it has no cities --
+  again the consequence.
+- **Room.** The one that could have been terrain: **70.2 legal founding sites
+  within six tiles of where they appeared**, ranging 26 to 146. There was
+  nowhere near a shortage of ground.
+
+### The cause: the arrival package was measured for the Hive
+
+A latecomer arrives with `HIVEKIN.founders` founders and `HIVEKIN.escort`
+escort -- **two and two** -- and the escort is that faction's `starterUnit`.
+Those counts were measured in section 125, carefully, *"over five packages and
+ten seeds"*. They were measured for **one faction**, whose starter is a
+Fodder-caste.
+
+| faction | escort unit | A/D/HP | how they do |
+|---|---|---|---|
+| Hivekin | Fodder-caste | **3/2/12** | wins 42% of games |
+| Unbound | Revenant | **2/3/12** | arrives last, 4.5 cities |
+| Wandering Folk | Skirmisher | **1/1/10** | dies in 13 of 18 |
+
+The Wandering Folk arrive behind the weakest escort in the game, on a map
+forty turns settled, and their founder costs 25 where everybody else's costs
+20 -- the quarter-dearer premium that is their whole faction identity,
+applied at the one moment they have nothing to spend.
+
+**The count was measured; the strength was inherited.** That is the same shape
+as every hand-maintained list in this file: a number that was right for the
+case it was taken on, copied to cases nobody re-measured.
+
+### What to do about it is open
+
+Three shapes, cheapest first, and none of them measured:
+
+1. **Budget the package in shields rather than units.** `founders: 2, escort:
+   2` becomes "about 90 shields of escort", so a side with a cheap starter
+   gets more of it and the next faction needs no entry at all. Retires the
+   class rather than fixing the instance.
+2. **Scale the grace by how weak the arrival is.** `HIVEKIN.grace` is flat.
+   A side that lands with 1/1/10s plainly needs longer than one that lands
+   with 3/2/12s.
+3. **Give them a better escort unit specifically.** Cheapest to write, and the
+   one that will be wrong again for faction six.
+
+Whichever is picked wants a re-run of this probe and then the section 156
+sweep, because it moves a side that currently wins nothing.
+
+### Instrumentation added
+
+`RECRUIT_TRACE` in `sim/recruiting.ts` counts targets, affordability, asks and
+outcomes. It exists because *"the AI does not use Recruit"* and *"the AI
+cannot afford Recruit"* and *"there is nobody to ask"* are three different
+claims that all look like a low win rate, and only one of them was testable
+before this.
