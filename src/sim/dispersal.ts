@@ -53,10 +53,17 @@ export const DISPERSAL = {
   enabled: true,
   /**
    * The flat chance a reform simply fails, with a site standing and nothing
-   * learned. **Unmeasured**, and the first number a sweep should take apart:
-   * the bible says only *"exact percentages on both are a balance question for
-   * later"*, and a third is a guess at "often enough to notice, rarely enough
-   * to build around".
+   * learned. The bible says only *"exact percentages on both are a balance
+   * question for later"*, and a third was a guess at "often enough to notice,
+   * rarely enough to build around".
+   *
+   * **Measured in section 156, and it is not a lever.** An arm with this and
+   * `failFloor` at zero -- a spirit with a site *always* comes back -- was
+   * within noise of the shipped value on every column in both seed sets. A
+   * second arm found that with no site anywhere, scattering and dying are
+   * byte-identical. So the mechanic is **binary**: what matters is whether a
+   * Retrieval Circle exists at all, and the roll on top is decoration.
+   * Tuning this further would be measuring noise.
    */
   failBase: 0.35,
   /** Taken off by Sigil-Bound. */

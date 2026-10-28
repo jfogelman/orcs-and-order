@@ -12139,9 +12139,11 @@ the victory screens are the one kind left as photographs.
   this side researches about 21 advances. That may be right — it is the
   Dragon's and the Death Knight's slot — or the road may be one advance too
   long.
-- **No Spirit Party has ever been built**, so the ending's conversion has
-  never fired in a played game. That follows from the works standing at 0.8 of
-  3, not from anything wrong with `inviteIn`.
+- ~~**No Spirit Party has ever been built**~~ -- **wrong, and corrected in
+  section 156.** True of this twelve-game probe; false at three hundred. The
+  Spirit Party won sixteen games of 324, and four of the Unbound's six wins in
+  the shipped arm are it. The summary row could not show it because it named
+  six victory kinds by hand.
 - `unbound-gate-2`'s measured standing point is 0.70 across where tiers 1 and
   3 are ~0.49, so the middle gate sits right of the other two when it
   upgrades. Cosmetic.
@@ -12464,3 +12466,106 @@ happens to a unit that survives is a rank. And it is the rare queue item where
 **the design and the art are done and the code is the only part left** —
 which, on this project's record, is the half that goes missing rather than the
 half that goes wrong.
+
+## 156. The Unbound measured: the rule buys an army and the army buys nothing
+
+324 games, three arms, two seed sets, the Unbound seated at turn one in every
+arm. The sweep's own estimate was *"about 81 minutes (49-105)"*; it took
+**94.7 minutes at 17.5s a game**.
+
+### What moved
+
+Everything is the Unbound's own block, `no dispersal` against `as it ships`,
+tuned and held-out side by side.
+
+| | no dispersal | as it ships | always gathers |
+|---|---|---|---|
+| units (tuned) | 20.5 | **34.2** | 39.4 |
+| units (held-out) | 15.2 | **31.1** | 29.4 |
+| population (tuned) | 31.5 | 37.5 | 38.7 |
+| population (held-out) | 28.4 | 36.9 | 36.6 |
+| cities (tuned) | 4.06 | 4.46 | 4.46 |
+| cities (held-out) | 3.48 | 4.63 | 4.57 |
+
+**Dispersal is worth about two-thirds of an army.** Three columns move
+together, both seed sets agree on direction and the magnitude is large, which
+is the bar `sweep-noise-at-108-games` sets. The mechanic is not cosmetic and
+it is not marginal.
+
+### What did not move: wins
+
+Out of 108 games an arm:
+
+| arm | Hivekin | Orcs | Humans | **Unbound** | Wandering |
+|---|---|---|---|---|---|
+| as it ships | 45 | 23 | 19 | **6** | 0 |
+| no dispersal | 48 | 19 | 24 | **7** | 0 |
+| always gathers | 42 | 26 | 19 | **9** | 0 |
+
+6, 7, 9. No order, no agreement between the sets (`no dispersal` is 7 on the
+tuned seeds and **0** on the held-out), and the control arm is in the middle.
+**Not established**, and it is not a near miss.
+
+So the finding is a sentence: **the rule buys an army and the army buys
+nothing.** That is a more useful answer than a win delta would have been,
+because it says where to look -- the Unbound convert strength into victories
+worse than anybody else does, and that is a question about their AI and their
+ending rather than about `failBase`.
+
+### `failBase` is not the lever
+
+`always gathers` -- failure at zero, a spirit with a site *always* returns --
+is within noise of `as it ships` on every column in both sets. Certainty adds
+nothing over a one-in-three failure rate.
+
+Taken with the smoke run that found `no want` **byte-identical** to `no
+dispersal` (with no site anywhere, scattering and dying are the same thing),
+the mechanic is **binary**: what matters is whether a Retrieval Circle exists,
+and the roll on top of it is decoration. Tuning `failBase` further would be
+measuring noise, so section 152's open item about it is **closed**: leave it
+where it is.
+
+### Two things the sweep found that it was not asking about
+
+**The Hive wins 42 to 48 games of 108, in every arm** -- about 42%, as a
+*latecomer*, against an Unbound seated from turn one on 6%. Nothing in this
+sweep touched the Hive, so this is the shipped game saying something loudly
+while being asked about something else. It wants its own sweep.
+
+**The Wandering Folk won 0 of 324** and hold 0.44 to 1.80 cities. Section
+153's probe said this at twelve games and this says it at three hundred.
+They are not a faction that loses, they are a faction that never starts.
+See section 153's open items.
+
+### And the report was hiding one of the five endings
+
+The summary row named six victory kinds by hand -- `cq/dm/pt/po/ob/hv` --
+which was right for three factions and silently wrong for five. Recounted off
+the raw rows, **the Spirit Party won sixteen games** across the three arms,
+and the row showed them nowhere. The Circling Caravan had no column either
+(it won nothing, but that could not have been distinguished from having no
+column).
+
+This is section 140's own finding arriving a second time; its note reads *"a
+report that cannot name the third side's ending cannot show the third side
+winning"*, and then the fourth and fifth arrived and nobody read the row
+again. `VICTORY_KINDS` is derived from `VictoryKind` now and
+`tests/sweep-report.test.ts` fails if a road out has no column.
+
+**It corrects section 152.** That entry says no Spirit Party has ever been
+built, which was true of its twelve-game probe and is false at three hundred:
+the Unbound's ending fires in about one game in twenty, and **four of their
+six wins in the shipped arm are it**. Their ending is not unreachable; it is
+most of how they win at all.
+
+### Still open
+
+- **Why the Unbound cannot convert.** They end with more units and more people
+  than the no-dispersal arm and the same handful of wins. The probe to write
+  counts what their army *does*: attacks made, cities taken, fights declined.
+- **The Hive at 42%.** Unasked for, loud, and nothing here touched it.
+- **The Wandering Folk at zero.** Section 153 has it; this is the confirmation
+  at scale.
+- `GUEST_LIST.reach` is still unmeasured. Sixteen Spirit Parties is enough
+  that an arm would now differ from the control, which it would not have been
+  before this sweep.

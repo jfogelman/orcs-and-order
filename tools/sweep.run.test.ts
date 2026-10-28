@@ -1,4 +1,3 @@
-import type { FactionId } from '../src/model/types';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
@@ -6,20 +5,8 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { PERSONALITIES } from '../src/ai/ai';
-import { UNSEEN } from '../src/sim/unseen';
-
-/**
- * The town's own eyes, as they ship, read once at module load.
- *
- * Captured rather than written out, so an arm that zeroes them can put the
- * real numbers back without this file holding a second copy that drifts.
- */
-const TOWN_EYES = {
-  notice: UNSEEN.notice,
-  noticeCelebrating: UNSEEN.noticeCelebrating,
-  noticePerGuard: UNSEEN.noticePerGuard,
-};
+import { DISPERSAL } from '../src/sim/dispersal';
+import { NEW_GAME } from './sweep';
 
 /**
  * The question this sweep is currently asking.
@@ -57,164 +44,86 @@ declare const process: { env: Record<string, string | undefined> };
 
 const buildArms = (): Arm[] => {
   /**
-   * Section 138: the high tier, and the watchful town, asked apart.
+   * Section 153: **does the Unbound's rule do anything?**
    *
-   * **Three arms, because the slice is two changes.** One adds an agent
-   * nobody can see; the other gives every town a chance to notice a concealed
-   * stranger on its own land, which applies to the *low* tier too and
-   * therefore moves a game that shipped in section 136. A single arm turning
-   * both off could not say which did it, and the two have good reason to pull
-   * opposite ways -- one puts more agents on the board, the other kills them.
+   * Everything about this faction is a first answer. `UNBOUND_PLAN.md` left
+   * three numbers open and section 152 filled them in by argument --
+   * `DISPERSAL.failBase` at a third, the Archon at 72, the Naiad's waterside
+   * share at 0.4 -- and nothing has ever been measured. This is the first
+   * question to ask of it, and it is deliberately not *"is 0.35 the right
+   * failure rate"*: a sweep that tunes a number before establishing that the
+   * mechanic matters at all is a sweep measuring noise.
    *
-   * **Predictions, written before the run.**
+   * ## Three arms, because there are two different claims
    *
-   * 1. **No winner shift anywhere.** Espionage *entire* did not move winners
-   *    (Horde p = 0.11, Kingdom p = 1.00, Hive p = 0.12); one more rung
-   *    should not. If any arm clears the bar I should distrust it before I
-   *    believe it.
+   * - **`as it ships`** -- the game as section 152 left it.
+   * - **`no dispersal`** -- `DISPERSAL.enabled` off. An Unbound unit dies like
+   *   anybody else's, which makes the faction **exactly its stat line** -- and
+   *   its stat line is deliberately nobody's own, the named equivalent's
+   *   unchanged. So this arm is the sharpest possible control: if it comes
+   *   back level, the faction's whole identity is costing nothing.
+   * - **`always gathers`** -- `failBase` and `failFloor` at zero, so a spirit
+   *   with a site always comes back. The upper bound, which brackets the
+   *   mechanic rather than tuning it: off, as-shipped, and certain. If the
+   *   top of that range does not move a game, no value of `failBase` in
+   *   between is going to.
    *
-   * 2. **A few more turns, and not significantly.** Espionage entire bought
-   *    +15.3 turns (t = 3.81) by resolving the same amount of war more
-   *    slowly. The high tier is about one more agent a side and arrives late
-   *    -- `nobody-in-particular` is four advances and 160 beakers in, and the
-   *    probe has the *first* agent of any kind appearing on turn 89 of ~240.
-   *    Predict +2 to +5 turns, not clearing 2σ.
+   * ## The arm that was dropped, and why it is worth writing down
    *
-   * 3. **The watchful town is the half more likely to show**, and in the
-   *    other direction. It bites from the moment any spy exists rather than
-   *    from the fourth spy advance, and what it does is kill agents. So it
-   *    should shorten games slightly, and the combined shipped arm should
-   *    read **flatter than either half alone**. If the two-arm version of
-   *    this sweep had been run it would have come back a null for the wrong
-   *    reason.
+   * The first draft's third arm was **`no want`** -- `DISPERSAL.ai` off, the
+   * game as it was for the first twelve games section 152 played, where the
+   * AI never builds a Retrieval Circle. A smoke run returned it
+   * **byte-identical to `no dispersal`** in every column.
    *
-   * 4. **Kingdom units up again, in the shipped arm.** `Kingdom units` has
-   *    moved in all four espionage sweeps (+1.54, +1.20, +1.86) and the cause
-   *    is settled: agents against an economy that does not feel their cost.
-   *    The probe has the Kingdom building the most agents (3.38 a game
-   *    against the Horde's 2.71). Predict +0.5 to +1.0.
+   * That is correct and is the design stated as a number: with no site
+   * anywhere, `scatter` has nowhere to send a spirit and removes it, so
+   * *dispersal with no infrastructure is exactly dying*. The identity check
+   * passed because the two arms move different levers; it cannot see that
+   * they produce the same game. **Two arms can differ in their settings and
+   * not in their games**, which is section 59's trap one level further in,
+   * and the only thing that catches it is reading a cheap run before paying
+   * for an expensive one.
    *
-   * 5. **The Hive is flat across all three.** 0.46 agents a game in the
-   *    probe against 2.71 and 3.38. It barely participates in espionage at
-   *    all, which is the late-arrival gap Jeremy has ruled out of scope until
-   *    staggered arrival is decided.
+   * `GUEST_LIST` is deliberately **not** an arm. Section 152's probe built
+   * 0.8 ending works of three across twelve games and threw no Spirit Party
+   * at all, so an arm that switched the conversion off would differ from the
+   * control in approximately zero games. Measuring it wants the ending road
+   * shortened first, which is a change rather than a lever.
    *
-   * ## What came back. 324 games, 73 minutes, 54 an arm a seed set.
+   * ## The Unbound play themselves, from turn one
    *
-   * **(1) Right. No winner shift anywhere.** Against `no high tier`: Horde
-   * p = 1.00, Kingdom p = 0.68, Hive p = 1.00. Against `no watchful towns`:
-   * 0.75, 0.75, 1.00. Nothing is close, and the totals barely move -- Horde
-   * 33/34/31, Kingdom 36/33/38, Hive 39/40/39.
+   * `NEW_GAME.playerFaction` is set in every arm, which makes it part of the
+   * control rather than a confound. The default game seats them **fourth**,
+   * arriving around turn 80 onto a map three empires have been settling since
+   * the start -- section 153's probe has them finishing with no cities at all
+   * in some seeds. A mechanic cannot be measured on a side that is not in the
+   * game, which is the lesson section 136 learned about espionage arriving in
+   * the last fifth of a game and measuring zero three slices running.
    *
-   * **(5) Right. The Hive is flat**, as predicted and for the reason
-   * predicted.
-   *
-   * **(2) Wrong, and usefully. The high tier buys +6.62 turns, t = +2.39**,
-   * which clears the bar I predicted it would not. The size was nearly right
-   * and the significance call was not. It is believable by the standing test
-   * in `sweep-noise-at-108-games`: both seed sets agree and agree *closely*
-   * (+6.81 and +6.43), turn-limit games move with it (21 -> 26), and a
-   * second column does too -- endings shift from conquest to points,
-   * 7/26 against 12/20. Fights (t = +0.85) and captures (t = -0.90) are
-   * flat, so it is the same amount of war resolving more slowly. **That is
-   * the espionage-entire signature at a fifth the size** (+15.3 turns there),
-   * which is about right for one more rung.
-   *
-   * **(3) Wrong, and it was the argument for running three arms.** The
-   * prediction was that the watchful towns would shorten games, so the
-   * shipped arm would read flatter than either half and a two-arm sweep
-   * would null out for the wrong reason. It does not: removing the towns
-   * moves turns by +0.95 with t = 0.60 and **the two seed sets disagree in
-   * direction** (+2.52 and -0.61), which is the definition of nothing. The
-   * +6.62 belongs to the high tier alone, and the two-arm version of this
-   * sweep would have been right. The third arm cost 24 minutes and bought a
-   * ruled-out confound rather than the one it was run for.
-   *
-   * **(4) Not testable as written, which is a flaw in the prediction.** It
-   * named `Kingdom units`, and `rawRows` has no units column -- the pair
-   * after techs is `ladder`, the deepest counting-group reached. The nearest
-   * proxies both point the predicted way and neither clears the bar: Kingdom
-   * population +2.46 (t = +1.30) and Kingdom cities +0.43 (t = +1.59), both
-   * with the seed sets agreeing. Write predictions against columns the
-   * instrument actually has.
-   *
-   * ## The one thing nobody predicted
-   *
-   * Against `no watchful towns`, the **Horde** gains: population +2.84
-   * (t = +2.92) and cities +0.26 (t = +2.30), both with the seed sets
-   * agreeing. So towns noticing strangers is worth something to the Horde
-   * specifically.
-   *
-   * A story fits -- the Kingdom builds the most agents (3.38 a game against
-   * 2.71), so Horde towns have the most strangers to catch and the most to
-   * gain from catching them. **It is a story invented after seeing the
-   * number**, which is the thing `attribution-needs-the-same-bar` exists to
-   * warn about, and two correlated columns are one finding rather than two.
-   * Twenty tests were run at a 2-sigma bar, so about one false positive is
-   * expected and three flagged. Confirming it would want a probe counting
-   * incidents by *victim* side, which is a cheap addition and has not been
-   * made. No winner moved with it, so whatever it is, it is not deciding
-   * games.
+   * It is a seating change, so it moves the map. That is fine **because every
+   * arm has it** -- the thing section 94 warns about is an arm that changes
+   * worldgen against one that does not, and the identity check below reads
+   * `NEW_GAME`, so a mistake here is a refusal rather than a wrong answer.
    */
+  /** As shipped, read once, so an arm can put the real numbers back. */
+  const SHIPPED = { failBase: DISPERSAL.failBase, failFloor: DISPERSAL.failFloor };
 
-  /** The advance that buys the high tier, and nothing else. */
-  const HIGH_TECH = 'nobody-in-particular';
-
-  /** The priority lists as they ship, captured before any arm touches them. */
-  const asShipped = new Map(
-    // Keyed as 'FactionId' rather than 'string': `PERSONALITIES` is an
-    // exhaustive record since section 152, and `Object.entries` widens the key.
-    Object.entries(PERSONALITIES).map(([k, v]) => [k as FactionId, [...v.techPriority]] as const),
-  );
-
-  /**
-   * Every knob this sweep moves, set one way or the other in every arm.
-   *
-   * Section 59, and the reason the lists are rebuilt from the captured
-   * original in **both** directions rather than edited in place:
-   * `restoreLevers` puts levers back with `Object.assign`, which copies
-   * `PERSONALITIES`' top-level keys by reference and would not undo a change
-   * made inside one of them.
-   *
-   * `UNSEEN.enabled` is the master switch for both halves -- `goesUnseen`,
-   * `hiddenFrom` and `townNotice` all ask it -- so the "no high tier" arm has
-   * to put the towns back on by hand to isolate them. Reading that the wrong
-   * way round would have measured the towns in the arm that claims not to
-   * have them.
-   */
-  const highTier = (on: boolean): void => {
-    UNSEEN.enabled = true;
-    UNSEEN.ai = on;
-    // With the units switched off the advance unlocks nothing, so leaving it
-    // in the lists would have the control spending 160 beakers on an empty
-    // box -- a research-order difference masquerading as the mechanic.
-    for (const [name, list] of asShipped) {
-      PERSONALITIES[name].techPriority = on
-        ? [...list]
-        : list.filter((t) => t !== HIGH_TECH);
-    }
-  };
-
-  /** Whether a town ever notices a concealed stranger by itself. */
-  const watchfulTowns = (on: boolean): void => {
-    UNSEEN.notice = on ? TOWN_EYES.notice : 0;
-    UNSEEN.noticeCelebrating = on ? TOWN_EYES.noticeCelebrating : 0;
-    UNSEEN.noticePerGuard = on ? TOWN_EYES.noticePerGuard : 0;
-  };
-
-  const arm = (label: string, high: boolean, towns: boolean): Arm => ({
+  const arm = (label: string, enabled: boolean, certain: boolean): Arm => ({
     label,
     apply: () => {
       control();
-      highTier(high);
-      watchfulTowns(towns);
+      // Seat 0, so the faction is in the game it is being measured in.
+      NEW_GAME.playerFaction = 'unbound';
+      DISPERSAL.enabled = enabled;
+      DISPERSAL.failBase = certain ? 0 : SHIPPED.failBase;
+      DISPERSAL.failFloor = certain ? 0 : SHIPPED.failFloor;
     },
   });
 
   return [
-    arm('as it ships', true, true),
-    arm('no high tier', false, true),
-    arm('no watchful towns', true, false),
+    arm('as it ships', true, false),
+    arm('no dispersal', false, false),
+    arm('always gathers', true, true),
   ];
 };
 
