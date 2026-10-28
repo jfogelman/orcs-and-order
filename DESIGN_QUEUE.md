@@ -13052,11 +13052,20 @@ playing to turn 299 and therefore plays a different game.
 
 ### Still open
 
-- **Does an explicitly chosen opponent list get shuffled?** It does now, past
-  the first pick. The rule as shipped is "you pick who is in, the game picks
-  the running order, and the first one you pick is your neighbour". Jeremy's
-  call, and the one thing in this section that is a design decision rather
-  than a measurement.
+> **Answered by Jeremy, and it is the shipped rule:** an explicitly chosen
+> opponent list is drawn too, past the first pick.
+>
+> > You pick who is in the game; the map picks the running order -- and the
+> > first one you pick is your neighbour.
+>
+> The argument for exempting it was that ticking boxes in an order is in some
+> sense stating one. The argument against, which is the measurement above: a
+> side arriving first ends about sixty per cent larger than the same side
+> arriving last, so exempting explicit picks hands that to whichever faction
+> the player happened to tick first -- the same accident as the declaration
+> order, moved into the UI. Pinned by a test, because the exemption is the
+> obvious thing for somebody to add later on the "it must have been
+> deliberate" reasoning.
 - **The Hivekin do not respond to the map.** Two to four cities from any slot,
   winning 37-46 of 108 almost entirely through their own ending. Section 156
   flagged the win rate unasked; this gives it a mechanism -- their strength is

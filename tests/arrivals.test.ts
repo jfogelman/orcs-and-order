@@ -339,6 +339,42 @@ describe('the order they turn up in', () => {
     expect(ARRIVALS.shuffle).toBe('latecomers');
   });
 
+  /**
+   * **Jeremy's ruling, section 160: a list you picked yourself is drawn too.**
+   *
+   * Asked whether choosing your opponents explicitly should exempt them, on
+   * the grounds that you had in some sense already stated an order. His
+   * answer was no, and the rule it leaves is worth stating in one line
+   * because it is the one the Orcpedia makes a promise about:
+   *
+   * > You pick who is in the game; the map picks the running order -- and the
+   * > first one you pick is your neighbour.
+   *
+   * This exists because the exemption is the obvious thing for somebody to
+   * add later, reasoning that an explicit pick must be deliberate. It is
+   * deliberate about *who*, and §160 measured what the *order* is worth: a
+   * side arriving first ends about sixty per cent larger than the same side
+   * arriving last. Quietly exempting explicit picks would hand that back to
+   * whichever faction the player happened to tick first.
+   */
+  it('draws the queue for a list the player chose, keeping their first pick next door', () => {
+    const picked: FactionId[] = ['human', 'hivekin', 'wandering', 'unbound'];
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const state = createGame({ seed, width: 40, height: 28, opponents: picked });
+      const order = opponentsOf(state);
+      // Everybody they asked for is in, and nobody else.
+      expect([...order].sort(), `seed ${seed}`).toEqual([...picked].sort());
+      // The first pick is the turn-one neighbour, which is the promise.
+      expect(order[0], `seed ${seed}`).toBe('human');
+      expect(opponentsAtStart(state), `seed ${seed}`).toEqual(['human']);
+      seen.add(order.join(','));
+    }
+    // And the queue behind it actually moves. One order across forty seeds
+    // would mean the explicit list had quietly skipped the draw.
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
   it('is the table order with the lever off, which is what was measured', () => {
     withShuffle('none', () => {
       const state = game();
