@@ -462,7 +462,7 @@ describe('three sides, counted', () => {
    * 0, and a Hive player simply faces both empires.
    */
   it('is offered as a side to play, while still not starting on the map', () => {
-    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin', 'wandering']);
+    expect(STARTING_FACTIONS).toEqual(['orc', 'human', 'hivekin', 'wandering', 'unbound']);
     // Still false, and that still means what it always meant: in a game
     // somebody else is playing, the Hive is not there until it emerges.
     expect(FACTIONS.hivekin.startsOnMap).toBe(false);
@@ -479,24 +479,28 @@ describe('three sides, counted', () => {
     // its own game stops being the one exception to its own rule.
     const theirs = createGame({ seed: 7, width: 30, height: 20, playerFaction: 'hivekin' });
     expect(theirs.players.map((p) => p.faction)).toEqual(['hivekin', 'orc']);
-    // Still two rivals, and the second is on a clock rather than cancelled.
-    // Section 142: and the Wandering Folk behind them, on their own clock.
-    expect(latecomers(theirs)).toEqual(['human', 'wandering']);
+    // Still three rivals, and all but the first are on a clock rather than
+    // cancelled. Section 142 added the Wandering Folk, section 152 the
+    // Unbound, and section 160 made the order among them a draw rather than
+    // the order they happened to be written in -- so this is a set.
+    expect([...latecomers(theirs)].sort()).toEqual(['human', 'unbound', 'wandering']);
     expect(arrivalTurnFor(theirs, 0)).toBeGreaterThan(1);
   });
 
-  it('leaves an empire’s game exactly as it was measured', () => {
-    // The one that must not move. A hundred sections of balance were taken on
-    // an Orc player facing the Kingdom from turn one and the Hive around
-    // ninety, and section 139 has to reproduce it identically rather than
-    // merely equivalently -- including the drawn arrival turn, which is
-    // hashed so that the first latecomer gets exactly what section 125 drew.
+  it('leaves an empire’s turn-one board as it was measured, and its queue drawn', () => {
+    // A hundred sections of balance were taken on an Orc player facing the
+    // Kingdom from turn one, and that half still has to reproduce identically
+    // rather than merely equivalently.
     const ours = createGame({ seed: 7, width: 30, height: 20 });
     expect(ours.players.map((p) => p.faction)).toEqual(['orc', 'human']);
-    // The Hive is still the *first* latecomer, which is the half that has to
-    // not move: its arrival turn is drawn for index 0 exactly as before.
-    expect(latecomers(ours)).toEqual(['hivekin', 'wandering']);
-    expect(hiveArrivalTurn(ours)).toBe(arrivalTurnFor(ours, 0));
+    // **The other half moved on purpose in section 160.** The Hive used to be
+    // the first latecomer in every game ever played -- not by anybody's
+    // decision but because it was written third in `FACTIONS` -- and 324
+    // games said the slot was worth more to a side than which side it was.
+    // So the queue is a set now, and what is pinned instead is that the Hive
+    // is asked about *its own* slot rather than a remembered one.
+    expect([...latecomers(ours)].sort()).toEqual(['hivekin', 'unbound', 'wandering']);
+    expect(hiveArrivalTurn(ours)).toBe(arrivalTurnFor(ours, latecomers(ours).indexOf('hivekin')));
   });
 
   it('starts a Hive player with the same forces as anybody else', () => {
@@ -694,21 +698,29 @@ describe('what the Hive pays for its ending (section 136)', () => {
  * yourself -- without changing any number you are playing against.
  */
 describe('when the Hive turns up, by level (section 136)', () => {
-  it('is unchanged at Normal, which every earlier measurement used', () => {
-    expect(DIFFICULTIES.find((d) => d.id === 'normal')!.hiveArrives).toBe(0);
-  });
-
-  it('runs later the easier the game is, and earlier the harder', () => {
+  /**
+   * Section 153 replaced the shift with the stagger itself, so what used to
+   * be "Normal is unchanged, and the others move it" is now "the level is the
+   * only thing that decides". The direction is the same and that is what is
+   * pinned; the Normal-is-zero assertion went with the rule it was about.
+   */
+  it('runs further apart the easier the game is, and closer the harder', () => {
     const order = ['easiest', 'easy', 'normal', 'hard', 'hardest'] as const;
-    const shifts = order.map((id) => DIFFICULTIES.find((d) => d.id === id)!.hiveArrives);
-    for (let i = 1; i < shifts.length; i++) {
-      expect(shifts[i], `${order[i]} against ${order[i - 1]}`).toBeLessThan(shifts[i - 1]);
+    const gaps = order.map((id) => DIFFICULTIES.find((d) => d.id === id)!.stagger);
+    for (let i = 1; i < gaps.length; i++) {
+      expect(gaps[i], `${order[i]} against ${order[i - 1]}`).toBeLessThan(gaps[i - 1]);
     }
   });
 
-  it('never asks for a turn before the first one', () => {
+  /**
+   * Jeremy's rule, and the reason a stagger of zero is not just a small one:
+   * *"hardest level is everyone simultaneously."*
+   */
+  it('puts everybody on the map at once at the hardest level', () => {
+    expect(DIFFICULTIES.find((d) => d.id === 'hardest')!.stagger).toBe(0);
     for (const d of DIFFICULTIES) {
-      expect(HIVEKIN.from + d.hiveArrives, d.id).toBeGreaterThan(-HIVEKIN.until);
+      if (d.id === 'hardest') continue;
+      expect(d.stagger, `${d.id} should stagger somebody`).toBeGreaterThan(0);
     }
   });
 });

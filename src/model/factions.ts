@@ -248,6 +248,72 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
       'We Will Move On Shortly',
     ],
   },
+  // ------------------------------------------------------------ section 152
+  //
+  // The Unbound. Orcs answer "how many", humans "how organised", Hivekin
+  // "what grows next", the Wandering Folk "whoever's left standing" -- and
+  // these answer **"it did not take"**.
+  //
+  // `UNBOUND_PLAN.md` has the whole design. What is not in it, and is
+  // therefore mine rather than Jeremy's, is marked where it appears: the civ
+  // name, the leader, the colour and the city names. All four are drafted in
+  // the bible's own register -- unhurried, faintly bureaucratic, certain that
+  // the arrangement is reasonable -- and all four are the easiest things in
+  // this file to overwrite.
+  unbound: {
+    id: 'unbound',
+    name: 'Unbound',
+    // Mine. The joke for this lot is that nothing is a nation: it is an
+    // agreement nobody can now recall entering into and nobody has rescinded.
+    civName: 'The Standing Arrangement',
+    leader: 'The One Who Was Asked First',
+    // Mine. A cold bone-grey with a blue cast: the one faction whose colour
+    // is an absence of warmth rather than a hue. Checked against the Hive's
+    // amber and the Wanderers' road-brown, which are both warm; against the
+    // Kingdom's blue, which is saturated where this is washed out; and
+    // against the raiders' tan, which is darker and yellower.
+    color: '#9fb3bd',
+    shade: '#3d4e57',
+    startTech: 'first-unbound',
+    // Nothing about them has to arrive late -- what they are is a condition,
+    // not an event -- so they are offered as a side that can open on the map.
+    startsOnMap: true,
+    playable: true,
+    settlerUnit: 'domovoi',
+    starterUnit: 'revenant',
+    blurb:
+      'Died, and then carried on, and have since declined every opportunity ' +
+      'to make anything of it. The arrangement suits them.',
+    // Mine. Every name is a thing that was supposed to be temporary, a thing
+    // nobody has got round to, or a place described by what happened there --
+    // which between them is the whole faction.
+    cityNames: [
+      'The Standing Arrangement',
+      'Where It Happened',
+      'The Second Arrangement',
+      'Still Pending',
+      'The Long Wake',
+      'Nobody Left To Ask',
+      'The Agreed Hour',
+      'Somewhere To Wait',
+      'The Unread Will',
+      'Formerly A Field',
+      'The Quiet Clause',
+      'As Discussed',
+      'The Returned Quarter',
+      'Twice Buried',
+      'The Open Question',
+      'Pending Review',
+      'The Last Appointment',
+      'Nobody Objected',
+      'The Settled Matter',
+      'Unfinished Business',
+      'The Late Holding',
+      'Where The Lamps Stay Lit',
+      'The Agreed Remainder',
+      'We Are Still Here',
+    ],
+  },
 };
 
 /**

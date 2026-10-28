@@ -9,6 +9,7 @@ import {
   sinkBlocked,
   surface,
 } from '../sim/burrow';
+import { DISPERSAL, REFORM_SITES, dispersingSide, reformBuildings } from '../sim/dispersal';
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
@@ -47,7 +48,7 @@ import { TERRAIN } from '../model/terrain';
 import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
 import { UNIT_TYPES, ammoLeft, headcount, holdsGround, unitType } from '../model/units';
-import type { City, GameState, Player, ProductionItem, Unit } from '../model/types';
+import type { City, FactionId, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
   SETTLER,
@@ -123,7 +124,15 @@ export interface AiPersonality {
  * Tuning these by reasoning about them has produced four wrong answers; the
  * only thing that has ever worked is swapping a number and counting.
  */
-export const PERSONALITIES: Record<string, AiPersonality> = {
+/**
+ * One a side, and **typed so the compiler counts them**. Section 152.
+ *
+ * It was `Record<string, AiPersonality>`, which meant a faction with no entry
+ * fell silently to the Horde's -- see the note on the Unbound's entry below.
+ * Three factions in a row shipped that way and each was found by playing the
+ * game and noticing it only ever fielded the free unit.
+ */
+export const PERSONALITIES: Record<FactionId, AiPersonality> = {
   orc: {
     // The Horde is supposed to be the numerous one. Expanding to only four
     // cities left it permanently behind on trade, and therefore permanently
@@ -572,6 +581,112 @@ export const PERSONALITIES: Record<string, AiPersonality> = {
      * transfer -- but they cost a quarter more to replace than the same unit
      * costs anybody else, which argues the other way. Both halves of that are
      * guesses and the probe is the thing that settles it.
+     */
+    caution: 0.25,
+    stormingParty: 3,
+  },
+  /**
+   * Section 152. **The fourth time of writing this comment**, and the reason
+   * has not changed since section 125 wrote it about the Hivekin and section
+   * 142 wrote it about the Wandering Folk.
+   *
+   * Without an entry here a faction falls to `PERSONALITIES.orc`, whose every
+   * priority is either an orc advance it cannot research or a shared one it
+   * can -- so it works down the shared spine and never researches one of its
+   * own units. The type above is `Record<FactionId, …>` now, for exactly that
+   * reason: three sections in a row found this by playing the faction and
+   * noticing it only fielded whatever was free, and a compile error is
+   * cheaper than a sixty-turn probe.
+   *
+   * The list leads with the line trooper and then **the road back**, which is
+   * the one ordering decision that is specific to this side. Every other
+   * faction's early list is "something to fight with"; for these, a Retrieval
+   * Circle is something to fight with, because without one every loss is
+   * permanent and they are paying their whole premium for nothing. A Revenant
+   * is a Footman at a Footman's price, so an Unbound army with no reform is an
+   * ordinary army that is slightly worse at scouting.
+   *
+   * **`archon-tech` and `arrangement-permanent` sit directly behind The Ankh
+   * rather than at the bottom, and that was a measurement.** Listed last,
+   * `tools/unboundprobe.run.test.ts` came back with an Archon fielded in none
+   * of twelve games and 0.2 of three ending works standing -- which is the
+   * Hive's own note on `all-is-the-hive` above, word for word, and this list
+   * should have been written from it. This side researches about twenty-three
+   * advances a game, so a twenty-sixth entry is an entry nobody reaches.
+   *
+   * Listing one above its own prerequisites costs nothing: `chooseResearch`
+   * takes the first *researchable* entry and skips the rest, so an Archon
+   * asked for here is simply passed over until The Ankh and A Binding,
+   * Offered are both in.
+   */
+  unbound: {
+    // The Kingdom's and the Hive's five rather than the Horde's spread. They
+    // found a place that was already theirs and settle in rather than out, and
+    // the faction's premium is infrastructure -- two buildings a town, before
+    // anything a town is normally for -- so the same ground buys fewer towns
+    // worth having. **Not measured yet**; the obvious first thing to probe.
+    targetCities: 5,
+    // One, like everybody. Worth noting that it is cheaper for this side than
+    // for any other, which is a thing a probe should look at before this
+    // number is trusted: a garrison that scatters and gathers again in the
+    // town behind it is a garrison that was not really spent.
+    garrisonPerCity: 1,
+    techPriority: [
+      // Something to fight with, before anything else whatsoever.
+      'tier-revenant',
+      // Then somewhere to come back to, which for this side is the same
+      // sentence said again. See the note above.
+      'retrieval-circle',
+      'tier-sylph',
+      'sigil-bound',
+      'mapmaking',
+      'bridge-building',
+      'tier-yaksha',
+      'tier-jinn',
+      'tree-hugging',
+      'anchor-totem',
+      'not-you-again',
+      'tier-naiad',
+      'joy-making',
+      'wall-building',
+      'hammers-of-glory',
+      'the-ankh',
+      // **Measured, and moved.** Both of these sat at the bottom of this list
+      // on the first pass and the probe came back `ever fielded an Archon:
+      // 0/12` with `works standing 0.2/3`. See the note above.
+      'archon-tech',
+      'arrangement-permanent',
+      'happiness',
+      // Espionage after the fighting advances, exactly as the Hive's and the
+      // Wandering Folk's notes explain: asked for earlier, sixty beakers of it
+      // displaces a weapon and the side ends up with one sort of soldier and a
+      // good spy.
+      'someone-elses-business',
+      'everyone-has-a-price',
+      'asking-around',
+      'a-word-in-the-wrong-ear',
+      'nobody-in-particular',
+      'tier-drowned',
+      'tier-cairn',
+      'insanity',
+      'pyromancy',
+      'cryomancy',
+      'sky-argument',
+    ],
+    /**
+     * How good the odds have to look before one of them will swing.
+     *
+     * **The Horde's 0.25, and the one personality number on this side that is
+     * an argument rather than a copy.** A side whose losses mostly come back
+     * should be the least cautious in the game, and 0.15 was the first draft
+     * on that basis -- but reform is gated on a building it may not have
+     * built, costs a roll it may fail, and does nothing at all for the Effigy.
+     * A recklessness priced off a safety net the AI has not yet built is a
+     * recklessness that simply loses armies, which is what section 142's note
+     * about the Wandering Folk's quarter-dearer units is the mirror of.
+     *
+     * So: the ordinary number, and a probe that should look at whether it
+     * ought to fall once a Retrieval Circle is standing. **Unmeasured.**
      */
     caution: 0.25,
     stormingParty: 3,
@@ -1080,6 +1195,34 @@ export function chooseProduction(
     if (ours.length >= SPY.aiWants && unseenOnes < UNSEEN.aiWants) {
       const ghost = options.units.find((u) => u.hidden);
       if (ghost) return { kind: 'unit', id: ghost.id };
+    }
+  }
+
+  // 2e. Section 152: somewhere for a spirit to gather, which nothing else
+  // will ever ask for.
+  //
+  // **The same hole for the fourth time**, and the comments on 2b, 2c and 2d
+  // above each describe it in their own words. `chooseProduction` ranks
+  // buildings on gold, science, defence and a barracks, and a Retrieval
+  // Circle carries none of those -- by every number this function reads it is
+  // fifty-five shields of nothing. The first Unbound probe measured **0 of 12
+  // games with a reform site ever standing**, which means every spirit that
+  // fell was lost and the faction was its stat line, which is deliberately
+  // nobody's own.
+  //
+  // Ahead of the riots and the endings below, which is further up than the
+  // diggers and the spies sit, because this is not a programme to add to an
+  // empire -- for this side it is what losing a fight means.
+  if (DISPERSAL.ai && DISPERSAL.enabled && dispersingSide(owner)) {
+    if (reformBuildings(state, city.owner).length < DISPERSAL.aiWants) {
+      // The Totem first where both are offered. A Circle only works while
+      // nothing stands in its city and this AI garrisons every city, so a
+      // Circle is the one it can afford early rather than the one it wants.
+      const sites = options.buildings.filter((b) =>
+        (REFORM_SITES as readonly string[]).includes(b.id),
+      );
+      const site = sites.find((b) => b.id === REFORM_SITES[0]) ?? sites[0];
+      if (site) return { kind: 'building', id: site.id };
     }
   }
 

@@ -2087,6 +2087,9 @@ class App {
    *
    * Follies keep their own notice below, since they had one first and it works.
    */
+  /** Whether the player has been told what a scattered spirit needs. Section 152. */
+  private toldAboutGathering = false;
+
   private promptCriticalNews(): void {
     if (isOver(this.state)) return;
     const fresh = this.state.log.slice(this.criticalSeen);
@@ -2098,6 +2101,28 @@ class App {
           (e.player === null || e.player === this.viewerId),
       )
       .map((e) => e.text);
+
+    // Section 152: the first spirit of yours that comes apart with nowhere to
+    // gather. **Once a game**, which is the rule the note above sets and the
+    // one this cue most needs: an Unbound empire with no Retrieval Circle
+    // loses every fight permanently, so an alert on each would be forty
+    // dialogs and the first one is the only one that tells you anything.
+    //
+    // It is here rather than in the log for the reason section 112 wrote
+    // down: this is news that changes what to build, and what it changes is
+    // the one building the whole faction is about.
+    if (!this.toldAboutGathering) {
+      const gone = fresh.find(
+        (e) => e.cue === 'lost-spirit' && (e.player === null || e.player === this.viewerId),
+      );
+      if (gone) {
+        this.toldAboutGathering = true;
+        lines.push(
+          `${gone.text} Nothing of yours will come back until a Retrieval Circle or an ` +
+            'Anchor Totem is standing somewhere.',
+        );
+      }
+    }
 
     // And the one that is read off the board rather than the log, because
     // nothing logs "they are still there": a band within reach of a town.
@@ -3674,6 +3699,7 @@ const VICTORY_ROUTES: Record<VictoryKind, string> = {
   object: 'The Mysterious Object — somebody pressed the button',
   hive: "The Second Queen's Shell — there are two of her now, and nobody has reacted",
   circle: 'The Circling Caravan — there was nowhere left, so the circle became the destination',
+  party: 'The Spirit Party — death was solved, and the invitations went out',
 };
 
 const RANK_NAMES = ['', 'veteran', 'hardened', 'notorious'] as const;

@@ -2239,7 +2239,380 @@ const WANDERING: AdvisorDef[] = [
  * file and there is nothing to derive it from; the test that catches the next
  * omission sweeps `FACTION_IDS` instead.
  */
-export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE, ...HIVE, ...WANDERING];
+/**
+ * The Unbound's six. Section 152.
+ *
+ * `UNBOUND_PLAN.md` gives all six their role, their appearance and a sample
+ * line, and the sample lines are used as idle lines rather than paraphrased --
+ * they are the register, and the register is the whole character: **flat,
+ * clinical, and faintly bureaucratic about being dead.** Nobody on this
+ * council raises their voice, because nothing on it has anything left to be
+ * urgent about.
+ *
+ * Which makes them the opposite problem to write. The other four councils are
+ * funny because somebody is exercised about something: the Knight-Marshal
+ * wants walls, the Ledger-Thane wants nothing spent, the Reclaimer counts
+ * people as stock. These six are funny because **nobody is exercised about
+ * anything** -- a town has stopped working and that is a matter for the
+ * minutes. So the concerns are ordered the way an in-tray is, and the joke is
+ * in what each of them considers somebody else's department.
+ *
+ * The Effigy is the exception the bible asks for out loud: *"the only advisor
+ * who sounds like an ordinary person, because it's the only one who is, in any
+ * conventional sense, still a thing rather than a presence."* It is also the
+ * only one of the six that can be permanently killed, which is not a
+ * coincidence and is never said.
+ */
+const UNBOUND: AdvisorDef[] = [
+  {
+    id: 'guardian',
+    name: 'The Guardian',
+    role: 'military',
+    faction: 'unbound',
+    blurb:
+      'A Yaksha, arms crossed, a faint glow along a coiled weapon. Treats casualties as ' +
+      'temporary administrative matters, because for this army they usually are.',
+    concerns: [
+      {
+        when: (s) => s.undefended > 0,
+        about: 'war',
+        say: (s) =>
+          `${sentence(count(s.undefended, 'town'))} with nobody standing in ${
+            s.undefended === 1 ? 'it' : 'them'
+          }. A town cannot disperse and reform. This is the distinction that matters and it is ` +
+          'routinely forgotten.',
+      },
+      {
+        when: (s) => s.army === 0 && s.enemiesSeen > 0,
+        // Tagged `the-dead` rather than `war`, which is what it is actually
+        // about: *neither fact is permanent* is this council's whole position,
+        // and it is the line the Binder and the Effigy both answer. A retort
+        // about a subject nobody raises can never be heard -- there is a test
+        // for that, and it caught both of theirs.
+        about: 'the-dead',
+        say: () =>
+          'Nothing of ours is in the field. Something of theirs is. Neither fact is permanent; ' +
+          'the second is likelier to change on its own.',
+      },
+      {
+        when: (s) => s.enemiesSeen > 2 && s.army < s.enemiesSeen,
+        about: 'war',
+        say: (s) =>
+          `${sentence(count(s.enemiesSeen, 'of theirs'))} in sight against ${count(s.army, 'of ours')}. ` +
+          'They will lose what they lose. We will mislay what we mislay. The ledgers are not ' +
+          'comparable and I would rather not be asked to compare them.',
+      },
+      {
+        when: (s) => s.barracks === 0 && s.cities > 2,
+        about: 'war',
+        say: () =>
+          'Nowhere to drill anybody. It makes less difference here than it would elsewhere, ' +
+          'which is not the same as none.',
+      },
+      {
+        when: (s) => s.ending != null && s.ending.theirs,
+        about: 'the-clock',
+        say: (s) =>
+          `Somebody else's arrangement concludes in ${toGo(s.ending!.turnsLeft)}. It is written ` +
+          'to exclude us. That is a thing to be standing somewhere about.',
+      },
+      {
+        when: (s) => s.raiders !== null && s.raiders.atTheGate,
+        about: 'raiders',
+        say: () =>
+          'Somebody unaffiliated is at a gate. They will take what they take and leave. We have ' +
+          'outlasted better-organised arrangements than theirs.',
+      },
+    ],
+    retorts: {
+      walls:
+        'A wall is for something that only gets one attempt. It is not wasted. It is aimed elsewhere.',
+    },
+    idle: [
+      'It dispersed. It will return, or it will not. Neither outcome requires further discussion.',
+      'I have guarded three things. I was told what the first one was.',
+      'The field is as it was. Nothing of ours has been ended, only relocated.',
+    ],
+  },
+  {
+    id: 'hearthkeeper',
+    name: 'The Hearthkeeper',
+    role: 'domestic',
+    faction: 'unbound',
+    blurb:
+      'A Domovoi, small and stooped, tending an unseen hearth. Has done this job for longer than ' +
+      'anyone currently listening has existed, and mentions it.',
+    concerns: [
+      {
+        when: (s) => s.rioting > 0,
+        about: 'unrest',
+        say: (s) =>
+          `${sentence(count(s.rioting, 'settlement'))} has stopped working. They are upset. They ` +
+          'will be upset for a while and then they will not. I have seen this settlement upset ' +
+          'before and I expect to see it again, and the hearth has been tended throughout.',
+      },
+      {
+        when: (s) => s.starving > 0,
+        about: 'hunger',
+        say: (s) =>
+          `${sentence(count(s.starving, 'settlement'))} is eating more than it grows. Most of the ` +
+          'residents do not eat. The ones who do are, in my experience, the ones who mention it.',
+      },
+      {
+        when: (s) => s.restless > 1,
+        about: 'unrest',
+        say: (s) =>
+          `${sentence(count(s.restless, 'settlement'))} one short of stopping. I raise it now ` +
+          'because raising it later would be the same sentence with a worse number in it.',
+      },
+      {
+        when: (s) => s.rioting === 0 && !s.calmAvailable && s.cities > 2,
+        about: 'unrest',
+        say: (s) =>
+          'Nothing we can build keeps anybody calm yet. ' +
+          (s.calmNeedsAdvance
+            ? `${s.calmNeedsAdvance} would change that. It has not been taken.`
+            : 'That will keep.'),
+      },
+      {
+        when: (s) => !!s.terraformKnown && (s.idleWorkers ?? 0) > 1,
+        about: 'the-land',
+        say: (s) =>
+          `${sentence(count(s.idleWorkers ?? 0, 'of ours'))} standing about. They are not resting. ` +
+          'They are waiting to be told, which is a different thing and takes just as long.',
+      },
+    ],
+    retorts: {
+      war: 'The campaign will end. The hearth will not. I only ask that somebody remembers which is which.',
+    },
+    idle: [
+      'The hearth has been tended for longer than anyone currently present has existed. It will continue to be.',
+      'They settle in. They complain about the damp. It is the damp they chose.',
+      'Nothing requires attention. I will be here when something does.',
+    ],
+  },
+  {
+    id: 'binder',
+    name: 'The Binder',
+    role: 'diplomacy',
+    faction: 'unbound',
+    blurb:
+      'A Jinn coiled in dark smoke, arms crossed. Every sentence sounds like a contract clause, ' +
+      'because to this advisor it is one.',
+    concerns: [
+      {
+        when: (s) => (s.peaceLeft ?? 0) > 0 && !!s.theyBroke,
+        about: 'peace',
+        say: () =>
+          'We are at peace with a party that has broken one before. The terms are the same terms. ' +
+          'Their history with terms is the matter I am raising.',
+      },
+      {
+        when: (s) => !!s.ashamed,
+        about: 'peace',
+        say: () =>
+          'We broke an arrangement and our own people are unhappy about it. That is the clause ' +
+          'nobody reads: an arrangement binds the party that offered it too.',
+      },
+      {
+        when: (s) => s.enemiesSeen > 0 && (s.peaceLeft ?? 0) === 0,
+        about: 'war',
+        say: () =>
+          'No arrangement is in force and somebody is in the field. An arrangement is available. ' +
+          'The terms are simple. Reading them is, as ever, recommended.',
+      },
+      {
+        when: (s) => s.unjoinedCities > 1 && s.roadsKnown,
+        about: 'money',
+        say: (s) =>
+          `${sentence(count(s.unjoinedCities, 'settlement'))} with no road home. A party that ` +
+          'cannot be reached cannot be held to anything, including by us.',
+      },
+    ],
+    retorts: {
+      'the-dead': 'The dead are a party like any other. They are simply slower to respond.',
+      walls:
+        'A wall is a position taken in advance of a negotiation. It is not an alternative to one.',
+    },
+    idle: [
+      'An arrangement is available. The terms are simple. Reading them is, as ever, recommended.',
+      'Every party I have bound read the terms. Several of them read them afterwards.',
+      'Nothing is outstanding. There is always something outstanding. I will find it.',
+    ],
+  },
+  {
+    id: 'sigilist',
+    name: 'The Sigilist',
+    role: 'arcane',
+    faction: 'unbound',
+    blurb:
+      'A spirit examining a carved sigil-tablet. Discusses its own binding and reform with the ' +
+      'detachment of somebody reading a procedure out to the room.',
+    concerns: [
+      {
+        when: (s) => s.magicUnits === 0 && s.army > 3,
+        about: 'magic',
+        say: () =>
+          'Nothing of ours works by arrangement rather than by force. It is a serviceable army ' +
+          'and an incomplete one.',
+      },
+      {
+        when: (s) => s.rates.beakers < 3 && s.cities > 2,
+        about: 'magic',
+        say: () =>
+          'Almost nothing is going to study. The sigil determines whether we return. It was ' +
+          'worked out by somebody who was given the time to work it out.',
+      },
+      {
+        when: (s) => s.endingRoad === 'researchable',
+        about: 'the-spiral',
+        say: () =>
+          'The Arrangement Became Permanent can be studied now. I have read what it does. I am ' +
+          'obliged to say that I have read it, and not that I recommend it.',
+      },
+      {
+        when: (s) => s.endingRoad === 'building' || s.endingRoad === 'buildable',
+        about: 'the-spiral',
+        say: () =>
+          'The Guest List, then the Standing Invitation, then the Spirit Party. The arrangement ' +
+          'is being made permanent. I would like it minuted that permanence was not previously ' +
+          'one of our properties.',
+      },
+      {
+        when: (s) => s.researching === null,
+        about: 'magic',
+        say: () =>
+          'Nothing is being studied. We remember the last period during which nothing was being ' +
+          'studied. We remember it poorly, which is the point.',
+      },
+    ],
+    retorts: {
+      war: 'The campaign is a method. I am describing the mechanism. They are not in competition, except for the funding.',
+    },
+    idle: [
+      'The sigil determines whether we return. We did not always have one. We remember that period poorly.',
+      'Reform is reliable at present. Reliable is a figure, and the figure is not one.',
+      'I am describing my own dissolution. It is the clearest example to hand.',
+    ],
+  },
+  {
+    id: 'archon',
+    name: 'The Archon',
+    role: 'faith',
+    faction: 'unbound',
+    blurb:
+      'A tall figure of pale light, crown-ridge raised, both arms up. Never persuades, only ' +
+      'states, because nothing has ever successfully argued with it.',
+    concerns: [
+      {
+        when: (s) => s.dominance != null && s.dominance.theirs,
+        about: 'the-clock',
+        say: (s) =>
+          `Somebody else holds most of the world and will be acknowledged for it in ${toGo(
+            s.dominance!.turnsLeft,
+          )}. Acknowledgement is administrative. I would prefer it administered here.`,
+      },
+      {
+        when: (s) => s.deadline != null && !s.deadline.ahead,
+        about: 'the-clock',
+        say: (s) =>
+          `${sentence(toGo(s.deadline!.turnsLeft))} remain and we are not first. This was not the ` +
+          'arrangement. It will be corrected.',
+      },
+      {
+        when: (s) => s.cities === 1 && s.turn > 20,
+        about: 'expansion',
+        say: () =>
+          'One settlement. It was not elected. It was, in every meaningful sense, inevitable. ' +
+          'There should be more of what is inevitable.',
+      },
+      {
+        when: (s) => s.rioting > 1,
+        about: 'unrest',
+        say: () =>
+          'Several settlements have stopped. They have not been told why they continue. I will ' +
+          'tell them. It is not a discussion.',
+      },
+      {
+        when: (s) => s.army > 8,
+        about: 'war',
+        say: (s) =>
+          `${sentence(count(s.army, 'under arms'))}. None of them asked. That is the arrangement ` +
+          'working as intended.',
+      },
+    ],
+    retorts: {
+      peace: 'An arrangement is offered where there is a question of the outcome. There is not one.',
+      money: 'The treasury is a detail of the arrangement. It is not the arrangement.',
+    },
+    idle: [
+      'It was not elected. It was, in every meaningful sense, inevitable. The rest is administrative.',
+      'Nothing has ever argued with this. Several things have tried, briefly.',
+      'I do not persuade. I have never needed the skill and have not acquired it.',
+    ],
+  },
+  {
+    id: 'effigy',
+    name: 'The Effigy',
+    role: 'trade',
+    faction: 'unbound',
+    blurb:
+      'A small carved idol, entirely physical. The only one of the six who sounds like an ' +
+      'ordinary person, being the only one who is, in any conventional sense, still a thing.',
+    concerns: [
+      {
+        when: (s) => s.gold < 0 || (s.goldPerTurn < 0 && runway(s) < 10),
+        about: 'the-treasury',
+        say: (s) =>
+          s.gold < 0
+            ? 'We are spending money we do not have. I am aware everyone here finds that less ' +
+              'alarming than I do. I would like that noted.'
+            : `Losing ${-s.goldPerTurn} a turn, with ${toGo(runway(s))} before the purse is empty. ` +
+              'Then things stop arriving. Things stopping is my department.',
+      },
+      {
+        when: (s) => s.coinBuildings === 0 && s.cities > 2,
+        about: 'money',
+        say: () =>
+          'Nothing of ours makes money. Goods moved. Goods were sold. We are not currently doing ' +
+          'the second part anywhere.',
+      },
+      {
+        when: (s) => s.unlinkedGoldCities > 0 && s.roadsKnown,
+        about: 'money',
+        say: (s) =>
+          `${sentence(count(s.unlinkedGoldCities, 'settlement'))} with something to sell and no ` +
+          'route to sell it along. The goods are real. That is the part I can speak to.',
+      },
+      {
+        when: (s) => s.routeGold > 0 && s.rates.coin < 4,
+        about: 'money',
+        say: (s) =>
+          `The routes pay ${s.routeGold} a turn and almost nothing is set aside to collect on ` +
+          'them. I am aware this is a small matter. It is the small matters that have bodies.',
+      },
+      {
+        when: (s) => s.gold > 400,
+        about: 'the-treasury',
+        say: (s) =>
+          `${s.gold} in the purse and nothing being done with it. Money left alone does not ` +
+          'improve. I have checked, over a long period.',
+      },
+    ],
+    retorts: {
+      'the-dead':
+        'Everyone here talks about returning. I will not be returning. I would like the accounts kept accordingly.',
+      war: 'A campaign is goods leaving and not being paid for. I say that without objecting. It is simply the entry.',
+    },
+    idle: [
+      'Goods moved. Goods were sold. This part, at least, works the way it always has.',
+      'I am the only one in this room who can be broken. It does focus the accounting.',
+      'Nothing outstanding. The books balance, and I did them myself, with hands.',
+    ],
+  },
+];
+
+export const ADVISORS: AdvisorDef[] = [...KINGDOM, ...HORDE, ...HIVE, ...WANDERING, ...UNBOUND];
 
 export function advisorsFor(faction: FactionId): AdvisorDef[] {
   return ADVISORS.filter((a) => a.faction === faction);

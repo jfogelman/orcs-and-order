@@ -1,6 +1,6 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
 import type { BuildingDef } from '../model/buildings';
-import { FACTIONS, rivalFactions } from '../model/factions';
+import { FACTIONS, FACTION_IDS, rivalFactions } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
 import type { TerrainDef, TerrainSpecial } from '../model/terrain';
 import { SPECIALS } from '../model/terrain';
@@ -17,7 +17,6 @@ import { LEGION, RAIDER_GRUNT } from '../sim/wilds';
 import { RUINS, WARDENS } from '../sim/ruins';
 import { COWED } from '../sim/status';
 import { HIVEKIN, QUEEN } from '../sim/hivekin';
-import { ARRIVALS } from '../sim/arrivals';
 import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
@@ -28,6 +27,8 @@ import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
 import { CARAVANS } from '../sim/caravans';
+import { EXORCISTS, couldExorcise } from '../sim/exorcism';
+import { GUEST_LIST, PHYSICAL, UNIQUE, WATERSIDE } from '../sim/dispersal';
 import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
 import { MOOD_LADDER } from '../model/citizens';
 import { ALT_VICTORY } from '../sim/endings';
@@ -179,6 +180,36 @@ function feedsWhat(def: UnitTypeDef): string[] {
 export function abilityNotes(def: UnitTypeDef): string[] {
   const notes: string[] = [];
   if (def.settler) notes.push('founds cities');
+  // Section 150. On the card rather than in a pane of its own, deliberately:
+  // nothing disperses yet, so a topic explaining what exorcism is *for* would
+  // describe a rule a player cannot watch happen. What is true today is that
+  // this particular unit can do it, and that belongs where the unit is.
+  if (couldExorcise(def.id)) {
+    notes.push(
+      EXORCISTS[def.base] === null
+        ? 'sends spirits back rather than scattering them, which not everything can'
+        : 'can be taught to send spirits back rather than scatter them',
+    );
+  }
+  // Section 152, and the comment above is now half wrong: things do disperse,
+  // there is a pane about it, and the card still wants the sentence -- a
+  // player reading a Revenant's entry should not have to find the pane to
+  // learn that killing it is usually not killing it.
+  if (def.faction === 'unbound') {
+    if (PHYSICAL.has(def.base)) {
+      notes.push('an object rather than a spirit: an ordinary attack simply ends it');
+    } else if (def.base === UNIQUE) {
+      notes.push('only one at a time, and a second cannot be built while the first is about');
+      notes.push('put down by anything but an exorcist, it is home and whole at once');
+    } else {
+      notes.push('disperses rather than dying, unless whatever beat it could exorcise');
+    }
+    if (WATERSIDE.who.has(def.base)) {
+      notes.push(`markedly stronger beside water, attacking or holding (+${Math.round(
+        WATERSIDE.bonus * 100,
+      )}%)`);
+    }
+  }
   // Section 136: and the one that digs is not always the one that founds.
   if (def.works) notes.push('builds roads and improves the ground');
   // Section 137: **a spy's card said nothing a spy does.** Eight rungs of
@@ -670,11 +701,12 @@ export const HIVE_RULES = topicPane(
   with no explanation offered and none apparently required.</p>
   <p class="flavor">
   <strong>When that happens is not their rule any more.</strong> Section 139
-  made arrival a fact about <em>the level and the order you picked your
-  opponents in</em> rather than about the Hivekin, who used to be the only
-  side that turned up late and now are simply whoever happens to be next in
-  the queue &mdash; chosen as your only opponent they start on the map like
-  anybody else. It is written up
+  made arrival a fact about <em>the level and the slot</em> rather than about
+  the Hivekin, who used to be the only side that turned up late and now are
+  simply whoever happens to be next in the queue &mdash; chosen as your only
+  opponent they start on the map like anybody else. And the queue itself is
+  <strong>drawn from the map's seed</strong>, so they are no longer reliably
+  the first to arrive either. It is written up
   ${seeTopic('difficulty', 'Who turns up, and when', 'under Difficulty')}.</p>`,
     },
     {
@@ -740,6 +772,148 @@ export const HIVE_RULES = topicPane(
     },
   ],
 );
+
+/**
+ * One row per side's answer to the Unbound, read off `EXORCISTS`.
+ *
+ * Derived rather than written out, which is the point of putting it in a table
+ * in the first place: four units in prose would be four units in prose that a
+ * fifth faction does not appear in. The advance each one needs is found by
+ * asking which advance grants it, so a unit that moves in the tree does not
+ * take a stale sentence with it.
+ */
+const EXORCIST_ROWS = FACTION_IDS.flatMap((faction) =>
+  CREATURES.filter((c) => c.faction === faction && couldExorcise(c.id)).map((c) => {
+    const unlocks = TECHS.find((t) => t.units.includes(c.id));
+    const extra = EXORCISTS[c.id];
+    const learns = extra ? TECHS.find((t) => t.flags.includes(extra as TechFlag)) : undefined;
+    return `
+      <div class="pedia-tech-row">
+        <img class="pedia-row-icon" src="${assetPath('units', c.id)}" alt="" />
+        <span class="pedia-tech-name">${escapeHtml(c.name)}</span>
+        <span class="pedia-tech-cost">${escapeHtml(FACTIONS[faction].name)}</span>
+        <span class="pedia-tech-needs">${escapeHtml(unlocks?.name ?? '—')}</span>
+        <span class="pedia-flavor">${
+          learns ? `and then ${escapeHtml(learns.name)} before it can do this` : 'from the moment it exists'
+        }</span>
+      </div>`;
+  }),
+).join('');
+
+/**
+ * The Unbound's rules that are not on any card. Section 152.
+ *
+ * Written here for the Hive's reason: none of it is a fact about one creature.
+ * Dispersal is a rule about what losing a fight *means*, reform is a rule
+ * about two buildings, and exorcism is a rule that changes every other
+ * faction's roster. A player who kills the same Revenant three times deserves
+ * to be able to look up why.
+ *
+ * **And the other way round matters more here than it did for the Hive.**
+ * Every side now fields exactly one unit that can end these permanently, and
+ * four players in five will meet that rule from the outside. So the exorcism
+ * topic is written for whoever is fighting them and reads its list
+ * off `EXORCISTS` rather than naming four units in prose -- a fifth
+ * faction's answer appears in the book the day it is added to the table.
+ *
+ * Shown in two places like the Hive's, so it is third person throughout.
+ */
+export const UNBOUND_RULES = topicPane('unbound', '', [
+  {
+    title: 'Who they are',
+    body: `
+  <p class="flavor">Spirits, mostly, and one thing that is not. They hold
+  ordinary cities, build ordinary buildings and field a roster whose numbers
+  are <strong>nobody's own</strong> &mdash; a Revenant is a Footman, a Yaksha is
+  a Troll, at the same price. Nothing about them is stronger.</p>
+  <p class="flavor"><strong>What is different is what happens when one
+  loses.</strong> Beaten by anything that cannot send it back, an Unbound unit
+  <em>disperses</em> rather than dying, and may gather again somewhere it has
+  somewhere to gather. What they pay for that is not a worse stat line. It is
+  two buildings a town, before anything a town is normally for.</p>`,
+  },
+  {
+    title: 'Dispersing',
+    body: `
+  <p class="flavor">It comes apart instead of falling over. It is off the map
+  either way &mdash; it cannot be stood on, seen or attacked while it is
+  scattered, and the tile it fell on is free &mdash; so a fight is won exactly
+  as it always was. The log says <em>scatters</em> rather than
+  <em>destroyed</em>, and that is the whole of the difference you will see at
+  the time.</p>
+  <p class="flavor">It does not keep for later. A scattered spirit tries to
+  gather <strong>once</strong>, at the start of its own next turn, and if it
+  cannot it is gone for good. A long war does not end with a second army
+  arriving all at once.</p>`,
+  },
+  {
+    title: 'Coming back',
+    body: `
+  <p class="flavor">Two buildings, and the difference between them is why
+  there are two. A city with an ${seeEntry('anchorTotem')} can gather a spirit
+  with <strong>no other condition</strong>. A city with a
+  ${seeEntry('retrievalCircle')} can gather one only while <strong>nobody at
+  all is standing in it</strong> &mdash; so the Circle is early, cheap and
+  awkward, since a town being used as a barracks cannot also be a doorway, and
+  the Totem is what stops you having to keep somewhere empty.</p>
+  <p class="flavor"><strong>With neither standing anywhere, a spirit is lost
+  for good.</strong> That is the permanence in this faction, and it is gated
+  behind what they have built rather than behind what killed them. An Unbound
+  empire that never raises a Circle has an ordinary army that is slightly
+  better at scouting.</p>
+  <p class="flavor"><strong>Even with somewhere to go, it can simply
+  fail.</strong> Three things make that less likely, and they stack:
+  <strong>Sigil-Bound</strong>, <strong>The Ankh</strong> &mdash; which needs
+  both Sigil-Bound and the Anchor Totem's advance, one of the few places in the
+  game a branch has to be closed from both sides &mdash; and the folly
+  ${seeEntry('firstBinding')}. It is never certain however much is known.</p>`,
+  },
+  {
+    title: 'Sending them back for good',
+    body: `
+  <p class="flavor"><strong>Every side has exactly one answer, and it is the
+  only answer.</strong> Beat an Unbound unit with one of these and it is simply
+  dead; beat it with anything else and it is somewhere else.</p>
+  <div class="pedia-rows">${EXORCIST_ROWS}</div>
+  <p class="flavor">Nothing else does it &mdash; not a dragon, not a wall, not
+  a stack of ten. A war against them fought without the one unit that can end
+  them is a war of attrition against something that is not being attrited.</p>`,
+  },
+  {
+    title: 'The three that are exceptions',
+    body: `
+  <p class="flavor"><strong>The ${seeEntry('effigy')}</strong> is not a spirit
+  at all. It is an idol somebody made, it does not disperse, it does not
+  gather, and an ordinary attack ends it like anything else on any other
+  roster. The cheapest thing they field is the one thing anybody can just
+  kill.</p>
+  <p class="flavor"><strong>The ${seeEntry('archon')}</strong> goes the other
+  way, twice over. There is <strong>one</strong>, and a second cannot be built
+  while the first is about. Put down by anything ordinary, it is standing in
+  their nearest town immediately, whole, with no building needed and no roll to
+  pass. Put down by an exorcist, it is <em>destroyed</em> &mdash; and the next
+  one costs full price from scratch. It is also an exorcist itself, which is
+  what stops a war between two Unbound empires from being unwinnable by
+  either.</p>
+  <p class="flavor"><strong>The ${seeEntry('naiad')}</strong> is the one tier
+  on the roster that is nobody else's unit rewritten. Beside water &mdash; any
+  water, next to it, on either foot &mdash; it is markedly stronger. Away from
+  it, it is a Revenant that cost more.</p>`,
+  },
+  {
+    title: 'Their ending invites whoever dies near it',
+    body: `
+  <p class="flavor">The third work, the ${seeEntry('spiritParty')}, does
+  something while it counts down, which no other side's does. <strong>Anything
+  that falls within ${GUEST_LIST.reach} tiles of the settlement holding it
+  joins them</strong> &mdash; not their own, and not an Effigy, but anybody
+  else's soldier, killed by anybody at all, comes back on the Unbound's side as
+  whichever of their tiers does the same job for about the same money.</p>
+  <p class="flavor">It is answerable without learning a new rule: fight further
+  off, or take the city. The works themselves are the ordinary three, priced
+  and triggered exactly as every other ending is.</p>`,
+  },
+]);
 
 export function openPedia(state: GameState, player: Player, focus?: string): void {
   const faction = player.faction;
@@ -1740,7 +1914,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
                 <td>${d.content === 0 ? 'as measured' : `${Math.abs(d.content)} citizen${Math.abs(d.content) === 1 ? '' : 's'} ${d.content > 0 ? 'later' : 'sooner'}`}</td>
                 <td>${Math.round(d.aiCost * 100)}%</td>
                 <td>from turn ${d.raidNotBefore}, every ${d.raidEvery}</td>
-                <td>${d.hiveArrives === 0 ? 'as measured' : `${Math.abs(d.hiveArrives)} turns ${d.hiveArrives > 0 ? 'later' : 'sooner'}`}</td>
+                <td>${d.stagger === 0 ? 'all here already' : `one every ${d.stagger} turns`}</td>
               </tr>`,
             ).join('')}
           </tbody>
@@ -1755,20 +1929,30 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           the first turn.</strong> Everybody else is coming, and has not arrived yet.
         </p>
         <p class="flavor">
-          A side that is still on its way turns up somewhere around turn
-          ${ARRIVALS.from} to ${ARRIVALS.until}, and each one after that roughly
-          ${ARRIVALS.spacing} turns behind the last &mdash; so a four-sided game is one
-          rival at the start, one in the middle, and one rather late. They appear on
-          <strong>ground nobody has claimed</strong>, well away from anybody's towns,
-          with a couple of settlers and an escort, and for their first
-          ${HIVEKIN.grace} turns they cannot be attacked at all.
+          <strong>You pick who is in the game; the map picks the running order.</strong>
+          Everybody behind that first one is shuffled, drawn once from the map's own
+          seed, so the same contenders turn up in a different order on a different map.
+          This matters more than it sounds: arriving first is worth roughly twice as
+          many towns as arriving last, whoever you are, and before this the order was
+          simply the order the sides happened to have been written in.
         </p>
         <p class="flavor">
-          <strong>The level moves the whole schedule.</strong> Later on an easy game,
-          which is more of the map to yourself before anybody else wants any of it;
-          sooner on a hard one. The exact turn is drawn once, from the map's own seed,
-          and never changes afterwards &mdash; near enough to plan against, not near
-          enough to diarise.
+          <strong>The level is the only thing that decides when.</strong> Each one
+          after the first arrives a fixed number of turns behind the one before, and
+          that number is what the difficulty sets: ${DIFFICULTIES.map(
+            (d) => `${escapeHtml(d.name)} ${d.stagger === 0 ? 'none at all' : `${d.stagger}`}`,
+          ).join(', ')}. On <strong>${escapeHtml(
+            DIFFICULTIES[DIFFICULTIES.length - 1].name,
+          )} nobody is late at all</strong> &mdash; the whole world is already there on
+          the first turn, which is what makes it the hardest game rather than merely
+          an expensive one.
+        </p>
+        <p class="flavor">
+          They appear on <strong>ground nobody has claimed</strong>, well away from
+          anybody's towns, with a couple of settlers and an escort, and for their
+          first ${HIVEKIN.grace} turns they cannot be attacked at all. The exact turn
+          is drawn once, from the map's own seed, and never changes afterwards &mdash;
+          near enough to plan against, not near enough to diarise.
         </p>
         <p class="flavor">
           <strong>Everybody is told the moment it happens</strong>, wherever they are
@@ -1804,6 +1988,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       <div class="pedia-pane" data-pane="yours">
         <p class="flavor">${escapeHtml(FACTIONS[faction].blurb)}</p>
         ${faction === 'hivekin' ? HIVE_RULES : ''}
+        ${faction === 'unbound' ? UNBOUND_RULES : ''}
         <div class="pedia-grid">${creatureSection(faction)}</div>
       </div>
       ${others
@@ -1812,6 +1997,7 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       <div class="pedia-pane" data-pane="${paneFor(f)}" hidden>
         <p class="flavor">${escapeHtml(FACTIONS[f].blurb)}</p>
         ${f === 'hivekin' ? HIVE_RULES : ''}
+        ${f === 'unbound' ? UNBOUND_RULES : ''}
         <div class="pedia-grid">${creatureSection(f)}</div>
       </div>`,
         )

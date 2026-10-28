@@ -12,9 +12,10 @@ import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city
 import { hasFlag } from './rules';
 import { COWED, SPELL_TURNS, applyStatus, hasStatus } from './status';
 import { RUINS, isWarden } from './ruins';
-import { empireBonus, heldFollies, isMounted, isShellCaste } from './follyEffects';
+import { cityFollyBonus, empireBonus, heldFollies, isMounted, isShellCaste } from './follyEffects';
 import { BURROW } from './burrow';
 import { OMNISCIENCE, knowsEverything } from './research';
+import { WATERSIDE, besideWater, inviteIn, scatter } from './dispersal';
 
 /**
  * Civ2-flavoured combat: two strengths, repeated coin flips, one survivor.
@@ -380,6 +381,12 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   // for is the surprise rather than the creature.
   if (attacker.ambushing) total *= BURROW.ambush;
   if (berserk) total *= 1.25;
+  // Section 152: a Naiad is only really itself near its own water. The one
+  // tier on the Unbound roster the bible says maps onto no existing template,
+  // and the condition is read off the map here rather than written into the
+  // creature's line -- a conditional bonus baked into base stats is a unit
+  // that is simply better, which is the opposite of conditional.
+  if (besideWater(state, attacker)) total *= 1 + WATERSIDE.bonus;
   // Section 124: there is nothing left to learn, and it shows in the swing.
   if (knowsEverything(owner)) total *= 1 + OMNISCIENCE.attack;
 
@@ -439,6 +446,14 @@ export function defenseStrength(
 
   // Section 111: the Long Vigil, for anything that rides.
   let total = type.defense + (isMounted(defender) ? empireBonus(state, defender.owner, (b) => b.mountedDefense) : 0);
+  // Section 152: The Standing Watch, which guards one settlement and has not
+  // been told what it used to guard. Added to the base, so it scales with the
+  // stack the way a point of drill does on the other side -- and only where
+  // the thing is standing, which is what makes it a city folly rather than an
+  // empire one.
+  if (city && city.owner === defender.owner) {
+    total += cityFollyBonus(city, (b) => b.garrisonDefense);
+  }
   // Section 123: and what a thing that guards a ruin is worth holding it, which
   // is a number measurement has opinions about -- see `RUINS.wardenDefence`.
   if (RUINS.wardenDefence !== 1 && isWarden(defender)) total *= RUINS.wardenDefence;
@@ -452,6 +467,10 @@ export function defenseStrength(
   if (fortified) total *= FORTIFY_BONUS_REF.value;
   total *= wallsMult;
   if (berserk) total *= 0.75;
+  // Section 152, the other foot: the same water, worth the same share. Both
+  // directions, because what the bonus is about is the Naiad being somewhere
+  // it belongs rather than it being on the front foot.
+  if (besideWater(state, defender)) total *= 1 + WATERSIDE.bonus;
 
   return {
     total,
@@ -933,11 +952,36 @@ export function disband(state: GameState, unit: Unit): number {
   return refund;
 }
 
-export function destroyUnit(state: GameState, unit: Unit, cause: string): void {
+/**
+ * Take a unit off the board for good, saying why.
+ *
+ * `killer` is whoever did it, where there is one, and exists for exactly one
+ * rule: section 152's Unbound scatter rather than die unless the thing that
+ * beat them could exorcise. **Optional on purpose** -- a unit killed by a
+ * blast, a dragon's breath, a fire it was standing in or a ship going down
+ * under it has no killer to name, and for the Unbound that is the ordinary
+ * case rather than the odd one, so "nobody in particular" correctly means
+ * "scatters".
+ *
+ * The hook is here rather than at the two call sites in `movement.ts` because
+ * this is the one door out of the game: a rule installed at the call sites
+ * would have been true of a fight and false of everything else, and the three
+ * sections after it would each have found a new way to kill something.
+ */
+export function destroyUnit(state: GameState, unit: Unit, cause: string, killer?: Unit): void {
   const i = state.units.indexOf(unit);
   if (i >= 0) state.units.splice(i, 1);
-  // A ship that goes down takes its passengers with it.
+  // A ship that goes down takes its passengers with it. Before the scatter
+  // below, because the passengers are a separate question and are answered
+  // the same way whichever of the two happens to their ship.
   drownCargo(state, unit);
+  // Section 152: it may not be dead at all. `scatter` says so in the log
+  // itself, so a spirit that came apart is never also announced as wiped out.
+  if (scatter(state, unit, killer)) return;
+  // And if a Spirit Party is being thrown nearby, it is dead and also a guest.
+  // Before the message below rather than after, so the two lines read in the
+  // order they happened.
+  inviteIn(state, unit);
   const type = unitType(unit.type);
   const owner = state.players[unit.owner];
   // Where it happened, which is the whole of what the camera has to go on.

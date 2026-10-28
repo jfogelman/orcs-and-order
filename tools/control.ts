@@ -24,6 +24,7 @@ import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN } from '../src/sim/hivekin';
+import { ARRIVALS } from '../src/sim/arrivals';
 import { TECHS_BY_ID } from '../src/model/techs';
 import { PREY } from '../src/sim/barbarians';
 import { PEACE, STANDING } from '../src/sim/diplomacy';
@@ -94,6 +95,16 @@ export const control = () => {
   (TECHS_BY_ID['caste-fodder'] as { units: string[] }).units = [];
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
+  // Section 157: the escort is a shields budget now, and `escort` above is the
+  // superseded count. Set here so the probes play the shipped arrival rather
+  // than whatever an arm left behind -- which is the whole point of this file.
+  HIVEKIN.escortShields = 40;
+  // Section 160: the arrival order. Pinned here so a probe plays the shipped
+  // order rather than whatever arm ran last, and so flipping the shipped
+  // default is one edit in two files rather than a hunt.
+  ARRIVALS.enabled = true;
+  ARRIVALS.jitter = 8;
+  ARRIVALS.shuffle = 'latecomers';
   NAVAL.enabled = true;
   NAVAL.overseasExtra = 3;
   NAVAL.crossFor = 1.2;

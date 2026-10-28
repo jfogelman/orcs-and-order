@@ -90,36 +90,48 @@ const REASONS: Record<AdvisorRole, Record<FactionId, (name: string) => string>> 
     human: (n) => `${n}. It sharpens the point of the spear, and the spear is the argument.`,
     hivekin: (n) => `${n}. Losses and replacements are the same category of fact. This improves the second column.`,
     wandering: (n) => `${n}. We lost four last week. This is how we recruit six. The maths works out, eventually.`,
+    unbound: (n) =>
+      `${n}. We will not run short of soldiers. We would rather not keep rebuilding the same one.`,
   },
   diplomacy: {
     orc: (n) => `${n}. They will come. Better we are difficult when they do.`,
     human: (n) => `${n}. Strength is what makes a conversation possible.`,
     hivekin: (n) => `${n}. She will not be talking either way. It is still worth having.`,
     wandering: (n) => `${n}. They will deal with us for grain. Everyone deals with us for grain. This makes the grain go further.`,
+    unbound: (n) =>
+      `${n}. They are nervous of us, which is reasonable. This makes the conversation shorter.`,
   },
   domestic: {
     orc: (n) => `${n}. People stop shouting. That is my whole job, boss.`,
     human: (n) => `${n}. Contented subjects. It is unglamorous and it is the foundation.`,
     hivekin: (n) => `${n}. The Hive will be less unhappy. It was going to resolve or it was not.`,
     wandering: (n) => `${n}. They are unhappy because they miss somewhere that is not here. Nothing to be done about that specifically. This helps anyway.`,
+    unbound: (n) =>
+      `${n}. Nobody here needs feeding. They still, apparently, need somewhere to sit.`,
   },
   trade: {
     orc: (n) => `${n}. Both heads counted. It pays for itself, which is more than most of you do.`,
     human: (n) => `${n}. It pays for itself, and then it pays for the rest of you.`,
     hivekin: (n) => `${n}. What is available becomes more available. Its purpose remains undisclosed.`,
     wandering: (n) => `${n}. Cheaper than the alternative, and the alternative was going to be asked about eventually.`,
+    unbound: (n) =>
+      `${n}. The living leave things behind. This is where they get put.`,
   },
   faith: {
     orc: (n) => `${n}. The spirits want it. I have not asked them, but I know.`,
     human: (n) => `${n}. It will be popular, and popular is not nothing.`,
     hivekin: (n) => `${n}. Should she die, this will have been prudent. It is not a concerning thought.`,
     wandering: (n) => `${n}. Nobody swore me in and nobody swore this in either. That does not make it less real.`,
+    unbound: (n) =>
+      `${n}. It was agreed a long time ago. This is us keeping to it, which I think matters.`,
   },
   arcane: {
     orc: (n) => `${n}. I want to know what happens. That is a reason.`,
     human: (n) => `${n}. Knowledge compounds. Everything else is a consequence of it.`,
     hivekin: (n) => `${n}. It was always going to be next. This is simply when next arrives.`,
     wandering: (n) => `${n}. I am mostly guessing. It has worked so far. That is not nothing.`,
+    unbound: (n) =>
+      `${n}. We have been here a while and written most of it down. This is the next line.`,
   },
 };
 
@@ -129,6 +141,7 @@ const SHRUGS: Record<FactionId, (name: string) => string> = {
   human: (n) => `${n}, I suppose. Nothing on offer concerns my department.`,
   hivekin: (n) => `${n}. It is not for this caste. It will be grown regardless.`,
   wandering: (n) => `${n}, then. Nothing here is mine. Somebody will have use for it.`,
+  unbound: (n) => `${n}. Not my department. It will keep until it is.`,
 };
 
 /**

@@ -17,6 +17,7 @@ import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
+import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
@@ -24,6 +25,7 @@ import { FACTION_IDS, FACTIONS } from '../src/model/factions';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { ARRIVALS } from '../src/sim/arrivals';
 import { TECHS_BY_ID } from '../src/model/techs';
 import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
@@ -122,6 +124,11 @@ export const LEVERS: Record<string, object> = {
   LEGION,
   RUINS,
   HIVEKIN,
+  // Section 160: the arrival order and the stagger switch. Registered the day
+  // the order became a lever, because the identity guard compares *settings*
+  // and an arm moving something it cannot see is refused as a duplicate --
+  // which is how `no want` and `no dispersal` turned out to be one arm.
+  ARRIVALS,
   HIVE_ENDING,
   BURROW,
   QUEEN,
@@ -144,6 +151,16 @@ export const LEVERS: Record<string, object> = {
   GOSSIP,
   INCITE,
   HIVE_WORKS,
+  /**
+   * Section 153: the Unbound's whole rule, and the thing their ending does.
+   *
+   * In the table before the first arm that moves them, which is the point of
+   * the two comments above: an arm that changes a lever the fingerprint
+   * cannot see is an arm the identity check calls a duplicate, and a sweep
+   * that refuses to run is the *good* outcome of that mistake.
+   */
+  DISPERSAL,
+  GUEST_LIST,
   DIPLOMACY_AI,
   ATTRITION,
   BEAKERS_PER_TRADE,
@@ -184,6 +201,33 @@ export const LEVERS: Record<string, object> = {
   FIRST_HIVEKIN: TECHS_BY_ID['first-hivekin'],
   CASTE_FODDER: TECHS_BY_ID['caste-fodder'],
 };
+
+/**
+ * Every road out, in one place, so the summary row cannot miss one.
+ *
+ * Section 156. The row named six kinds by hand -- `conquest`, `dominance`,
+ * `points`, `portal`, `object`, `hive` -- which was right when there were
+ * three factions and silently wrong once there were five. Section 153's sweep
+ * reported **sixteen Spirit Party wins as nothing at all**, and the Wandering
+ * Folk's Circling Caravan had no column either.
+ *
+ * That is section 140's own finding repeated: its note says *"a report that
+ * cannot name the third side's ending cannot show the third side winning"* --
+ * and then the fourth and fifth arrived and nobody read the row again. The
+ * `routes` field held every kind the whole time; only the printing dropped
+ * them.
+ */
+const VICTORY_KINDS: readonly VictoryKind[] = [
+  'conquest',
+  'dominance',
+  'points',
+  'draw',
+  'portal',
+  'object',
+  'hive',
+  'circle',
+  'party',
+];
 
 /** What every lever says right now, as one comparable string. */
 export function settingsSnapshot(): string {
@@ -801,7 +845,9 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('draw', 6)}${pad('unfin', 6)}` +
     `${pad('turns', 7)}${pad('fights', 8)}${pad('caps', 6)}${pad('roads', 7)}` +
-    `  cq/dm/pt/po/ob/hv`;
+    // Three letters, not two: `points` and `portal` both abbreviate to `po`,
+    // which is a header that cannot be read back.
+    `  ${VICTORY_KINDS.map((k) => k.slice(0, 3)).join('/')}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +
@@ -814,8 +860,7 @@ export function report(results: ArmResult[]): string {
       pad(r.captures.toFixed(1), 6) +
       pad(r.roadTiles.toFixed(0), 7) +
       '  ' +
-      `${r.routes.conquest ?? 0}/${r.routes.dominance ?? 0}/${r.routes.points ?? 0}/` +
-      `${r.routes.portal ?? 0}/${r.routes.object ?? 0}/${r.routes.hive ?? 0}`,
+      VICTORY_KINDS.map((k) => r.routes[k] ?? 0).join('/'),
   );
 
   // ---- and then each side, one block apiece ------------------------------

@@ -2540,3 +2540,220 @@ for. Avoid anything that reads as money: this faction is owed things, not paid.
 
 Drop them at `art_src/factions/wanderers/advances/<id>.jpg`. Both ids are
 already in `TECH_ICONS`, so `npm run art` takes them as they land.
+
+---
+
+## The Bone-Speaker's advance (section 150) — done
+
+The Horde's exorcist, and the one advance in the game whose icon is written
+down nowhere. `UNBOUND_PLAN.md` gives the unit sprite and the `TechDef` in
+full, and says outright that the advance *"belongs in the orc tree, not
+here"* — so its twelve-icon table covers the Unbound's own advances and not
+this one. The Horde's table predates the unit entirely.
+
+The **unit** sprite exists and is processed, under `orc-shaman`: it was filed
+in the Unbound's folder, because they are its whole reason for existing.
+
+House style: **Flat icons — one object, no scene**, the block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `bone-speaker` | The Unpopular Sort | A short wooden staff with a rattling bundle of small bones and pale feathers bound to its head with cord |
+
+**The staff rather than the mask**, deliberately. The unit art already carries
+a carved bone mask pushed up on the forehead, and an icon of the same mask
+would read as a portrait of the unit rather than as the idea. The rattle is
+the *tool the job is done with*, it is an object no other orc advance uses,
+and it reads at 48 pixels as something you shake at a thing to make it leave.
+
+Nothing skull-shaped: that is the Death Knight's half of this tree, and these
+two are written as opposites on purpose.
+
+Drop at `art_src/factions/unbound/advances/bone-speaker.jpg` beside the unit —
+the Unbound's folder is where its sprite already lives, and the pipeline reads
+every faction folder for every kind.
+
+---
+
+## The Unbound's last eight pieces (section 152) — done
+
+**All eight arrived and are processed.** Kept here as the record of what was
+asked for and why, which is what the rest of this file is.
+
+The faction's art drop was complete for everything `UNBOUND_PLAN.md` wrote a
+prompt for, and the gaps were all in the same place: **pieces the bible's own
+tables never covered.** Three building icons, two advance icons and the three
+tiers of the Gate module, which the capital bible does write a prompt for and
+which simply were not generated.
+
+This is the same shape as `tier-corsair` and `tier-collector` two sections
+ago, and the same cause: the plan documents were written before the sections
+that added these, so there is nothing stale here to fix — only art to draw.
+
+### Two advance icons
+
+The naval and siege advances, which the bible's twelve-icon advance table
+predates. `tier-drowned` and `tier-cairn` are the only two Unbound advances
+without a picture, and they are **deliberately left out of `TECH_ICONS`**
+until they land, so every run of `npm run art` does not report them as
+missing.
+
+House style: **Flat icons — one object, no scene**, the block every other
+advance uses:
+
+> 48x48 pixel art icon on a plain solid magenta background (#FF00FF), a single
+> centred object filling the frame, thick dark outline, limited palette, flat
+> shading lit from the upper left, mid-1990s fantasy strategy game interface
+> icon, no text, no letters, no numbers, no border, no background scenery.
+
+| id | Advance | Prompt subject |
+|---|---|---|
+| `tier-drowned` | Already Occupied | A single rotted mooring post standing in still water, pale wisping mist curling around its base, a frayed rope hanging from it into the water |
+| `tier-cairn` | What It Guards Now | A squat stack of flat weathered stones, one of them split, faint blue-white glow showing through the gap |
+
+**The mooring post rather than a wreck or a drowned figure.** The Kingdom's
+Drowned Sailor is a different unit on a different roster and the one
+collision this faction has already had was over exactly that word — see the
+note in `UNBOUND_PLAN.md` about `drowned` versus `ub-drowned`. A post with
+nobody on it says *occupied* without drawing an occupant.
+
+**The cairn split rather than toppled.** It is a siege engine now; the joke is
+that it was built as a marker and has been repurposed, so it should look
+intact and slightly wrong rather than ruined.
+
+### Three building icons
+
+Two of the three Spirit Party works, and one tier-two city building. House
+style: **48×48 isometric buildings**, the same block as the faction's other
+fifteen:
+
+> 48x48 pixel art building icon on a plain solid magenta background (#FF00FF),
+> a single structure centred and filling the frame, isometric view at a fixed
+> 30-degree angle, camera facing the same direction in every asset, consistent
+> horizon line, thick dark outline, limited palette, flat shading with one
+> light source from the upper left, mid-1990s fantasy strategy game city-view
+> style, no text, no logos, no border, no characters, no background scenery, no
+> ground shadow.
+
+| id | Building | Prompt subject |
+|---|---|---|
+| `guestList` | The Guest List *(lesser work)* | A tall standing ledger open to a page dense with names, faint pale glow along the ink |
+| `standingInvitation` | The Standing Invitation *(lesser work)* | A single scroll mounted upright on a stand, wax seal broken, faint cold glow escaping the opening |
+| `titheBasin` | The Tithe Basin | A low open stone basin on a short plinth, pale coins and small offerings heaped in it, faint cold glow from beneath the heap |
+
+The first two are the bible's own prompt subjects, copied across unchanged —
+they were written in the building table and never generated. `titheBasin` is
+the tier-one of the Tithe Vault and is **mine**: the Vault's art already
+exists, so this is the smaller, open, unroofed version of the same object,
+the way every other tier-one is the tier-two with less of it.
+
+### The Gate module, all three tiers
+
+The one capital module with no art. `capital_building_bible`'s own table and
+`art_prompts_wandering_unbound.md` both write these out; the other four
+modules and the chassis all arrived and the Gate did not, so the Unbound
+capital currently has a hole in the front of it where the gate attaches.
+
+House style: **Structures seen in place**, 64×64, the same as every other
+capital piece.
+
+| id | Tier | Prompt |
+|---|---|---|
+| `unbound-gate-1` | Unlocked, Technically | A plain gap in a ring of standing stones marked only by two low unconnected posts, short wall stubs extending to either side, designed to attach to the front of a larger building |
+| `unbound-gate-2` | Attended | A narrow stone archway flanked by two carved sentinel figures, faint glow along their carved eyes, short wall stubs extending to either side, designed to attach to the front of a larger building |
+| `unbound-gate-3` | Warded | A heavy stone archway sealed with a faintly glowing sigil-inlaid lattice, short wall stubs extending to either side, designed to attach to the front of a larger building |
+
+**No magenta, hot pink or violet in the art itself**, which the faction's own
+section of `UNBOUND_PLAN.md` says to double-check here specifically: a ghostly
+glow is exactly the detail a generator defaults toward violet on. Keep every
+glow in cool blue-white or pale cyan.
+
+**If they come out facing the wrong way, do not re-roll them.** The Wandering
+Folk's gate and wing both arrived mirrored, which is a generator habit rather
+than a prompt fault, and section 144 added `PALACE_MIRROR` in
+`tools/prepare_art.py` for exactly this: three ids in that set and the pipeline
+flips them on the way through. Two of the Wandering Folk's gates and all three
+of its wings are in there now. Drop whatever arrives, look at the capital, and
+add the ids rather than asking for the pieces again.
+
+### Where each one goes
+
+| Kind | Path |
+|---|---|
+| advance icons | `art_src/factions/unbound/advances/<id>.jpg` |
+| building icons | `art_src/factions/unbound/buildings/<id>.jpg` |
+| capital gates | `art_src/factions/unbound/palace/<id or tier name>.jpg` |
+
+The three building icons and the three gates were **already listed** in
+`BUILDING_ICONS` and `PALACE`, so the pipeline took them the moment they
+landed. The two advance icons needed their ids adding to `TECH_ICONS`, which
+is done — and `advances` in `tests/art-present.test.ts` is an empty list
+again, which is the state it should normally be in.
+
+The gates arrived named `unbound-gate-1.jpg` rather than *Unlocked,
+Technically.jpg*, and that is fine: `find_source` tries the id before it tries
+the alias, so either spelling works. They came out facing the right way, so
+`PALACE_MIRROR` was not needed.
+
+### One re-roll — done
+
+`unbound-1`, the first Unbound promotion mark, was the last piece of this
+faction not in the game. The pipeline reported *"background would not key"*,
+and measuring it said why: the badge filled **5.9% of its frame**, against 26%
+for `unbound-2` and 20% for `unbound-3`. Keying it therefore removed 94% of
+the picture, and `MAX_REMOVED` refuses anything past 93%.
+
+The border was 100% clean magenta, so it was never the margin — it was the
+size. Redrawn filling the frame it keys at **46%**, which is more room than
+either of its siblings has, and the three now read as the progression the
+bible wrote: a button in smoke, two keepsakes in denser smoke, a solid lump
+with no smoke left.
+
+The ceiling is not the thing to move. Section 151 raised it for two Regalia
+pieces and put it straight back the same afternoon, because **a false refusal
+is loud and a false acceptance is silent** — a run-away fill that is quietly
+accepted eats the subject and nobody notices until the sprite is on the map.
+
+It was listed in `tests/art-manifest.test.ts` with that reason while it was
+outstanding, so the audit named it every run rather than passing over it.
+
+**The prompt was what needed changing, not the roll.** The bible's was:
+
+> *A single tarnished brass button, barely attached to a wisp of pale smoke,
+> pixel art, thick black outline, flat magenta background, no shadow, centred,
+> 90s fantasy strategy game icon*
+
+A single button is the smallest subject on any promotion-mark list in this
+file, and *barely attached to a wisp* asks for a sparse one on top of that.
+Its two siblings are a pair of fused keepsakes and a solid lump, which is why
+they come out at 26% and 20% of frame and this one does not. Nothing says how
+big to draw it, so the generator drew it small — three times, consistently,
+which is the tell that this is the prompt rather than luck.
+
+So: the same object, the same joke, and the framing said out loud. This is
+what was drawn.
+
+| id | Rank | Prompt |
+|---|---|---|
+| `unbound-1` | first | *A single large tarnished brass button trailing a thin wisp of pale grey smoke from one edge, the button and its wisp together filling the frame edge to edge, pixel art, thick black outline, flat magenta background, no shadow, centred, 90s fantasy strategy game icon* |
+
+Three things carried over deliberately:
+
+- **It stays a button and a wisp.** The bible's wisp-to-solid progression --
+  a button in smoke, two keepsakes fused in denser smoke, a solid lump with no
+  smoke left -- is the faction's whole plot in three badges, and the rank-3
+  mark is quietly a preview of The Arrangement Became Permanent. Only the size
+  is wrong.
+- **Pale grey smoke, not pale blue-white.** The bible says so on these
+  specifically, and for the reason the Horde's marks avoid green: the badge is
+  composited on top of a unit of roughly its own colour, and this roster glows
+  pale blue-white.
+- **Well inside the frame even so.** "Filling the frame" and "touching the
+  edge" are different things -- anything that reaches the border loses its
+  outline and turns to mush at a sixth of a tile. Big, with a margin.

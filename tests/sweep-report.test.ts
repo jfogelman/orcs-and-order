@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FACTION_IDS } from '../src/model/factions';
 import { rawRows, report, summarise } from '../tools/sweep';
 import type { ArmResult, Outcome, PerSide } from '../tools/sweep';
-import type { FactionId } from '../src/model/types';
+import type { FactionId, VictoryKind } from '../src/model/types';
 
 /**
  * Section 140: the sweep report, and the two-sidedness that outlived its
@@ -102,6 +102,35 @@ describe('the report counts sides rather than seats', () => {
     ]);
     expect(text).toMatch(/Hivekin/);
     expect(text, 'the Hive’s cities should be on the page').toMatch(/9\.00/);
+  });
+
+  /**
+   * Section 156, and it is section 140's own finding arriving a second time.
+   *
+   * The summary row named six victory kinds by hand. That was right with
+   * three factions and silently wrong with five: section 153's sweep won
+   * **sixteen games by Spirit Party** and reported them nowhere, and the
+   * Wandering Folk's Circling Caravan had no column at all. The data was
+   * never missing -- `routes` counts every kind -- only the printing.
+   *
+   * Asked of `VictoryKind` rather than of a list here, so the next faction's
+   * road out appears in the report on the day it compiles.
+   */
+  it('gives every road out a column, including the ones added last', () => {
+    const ends: VictoryKind[] = ['portal', 'object', 'hive', 'circle', 'party'];
+    const text = report([
+      arm(
+        'a',
+        ends.map((victory) => outcome({ sides: ['orc', 'unbound'], victory })),
+      ),
+    ]);
+    const row = text.split('\n').find((l) => /^a\s/.test(l))!;
+    expect(row, 'one game of each kind should be five ones').toMatch(/1\/1\/1\/1\/1/);
+    // And the header has to name as many columns as the row prints numbers.
+    const header = text.split('\n').find((l) => /^arm\s/.test(l))!;
+    expect(header.trim().split(/\s+/).pop()!.split('/')).toHaveLength(
+      row.trim().split(/\s+/).pop()!.split('/').length,
+    );
   });
 
   it('prints a block per side that was there, and none for one that was not', () => {

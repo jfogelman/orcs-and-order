@@ -10,11 +10,29 @@ import { generateWorld } from '../src/sim/worldgen';
 import type { GameState } from '../src/model/types';
 
 /** Play a whole game out with both sides on autopilot. */
-function playOut(seed: number, halfTurns: number): GameState {
+/**
+ * Play a game for `turns` **calendar turns**, whatever the seat count.
+ *
+ * It used to count half-turns, which is the fifth time this project has been
+ * caught by that: a budget in half-turns silently shortens the game every
+ * time a seat is added. Two empires made 200 half-turns into 100 turns; five
+ * sides make it 40, and section 153's shorter stagger meant all five were
+ * seated well before the budget ran out. The symptom was an empire finishing
+ * with one advance, which reads as a strangled faction rather than a game
+ * that stopped early.
+ *
+ * Counting the calendar means the next faction costs this some wall-clock and
+ * nothing else. The call sites below carry half their old numbers, which is
+ * the game length they were actually calibrated on.
+ */
+function playOut(seed: number, turns: number): GameState {
   const state = createGame({ seed });
   state.players[0].controller = 'ai';
   beginPlayerTurn(state, 0);
-  for (let i = 0; i < halfTurns && state.winner === null; i++) {
+  const until = state.turn + turns;
+  // Bounded by half-turns as well, so a seat count nobody expected cannot
+  // turn this into an unbounded loop.
+  for (let i = 0; i < turns * 12 && state.winner === null && state.turn < until; i++) {
     runAiTurn(state, state.activePlayer);
     endPlayerTurn(state);
   }
@@ -97,7 +115,7 @@ describe('worldgen', () => {
 
 describe('a full game', () => {
   it('runs 200 half-turns without throwing', () => {
-    expect(() => playOut(12345, 200)).not.toThrow();
+    expect(() => playOut(12345, 100)).not.toThrow();
   });
 
   it('is deterministic for a given seed', () => {
@@ -109,11 +127,11 @@ describe('a full game', () => {
         s.cities.map((c) => `${c.owner}:${c.name}:${c.size}`).join('|'),
         s.players.map((p) => p.techs.join(',')).join('||'),
       ].join('#');
-    expect(fingerprint(playOut(777, 120))).toBe(fingerprint(playOut(777, 120)));
+    expect(fingerprint(playOut(777, 60))).toBe(fingerprint(playOut(777, 60)));
   });
 
   it('grows both empires past their starting position', () => {
-    const state = playOut(20250813, 200);
+    const state = playOut(20250813, 100);
     // The empires, not everybody on the board. Since section 123 a quiet game
     // can still acquire a wilds slot part-way through -- the first time
     // somebody disturbs a ruin -- and a thing that stands in a doorway is not
@@ -127,7 +145,7 @@ describe('a full game', () => {
 
   it('gets somebody up the counting ladder', () => {
     // If nobody ever fields a group unit, the entire premise has failed.
-    const state = playOut(20250813, 300);
+    const state = playOut(20250813, 150);
     const groupUnitsSeen = state.units.some((u) => u.type.includes('_x'));
     const groupTechsSeen = state.players.some((p) =>
       p.techs.some((t) =>
@@ -138,12 +156,12 @@ describe('a full game', () => {
   });
 
   it('brings the two sides into contact', () => {
-    const state = playOut(12345, 300);
+    const state = playOut(12345, 150);
     expect(state.log.some((e) => e.kind === 'combat')).toBe(true);
   });
 
   it('never puts two units on one tile', () => {
-    const state = playOut(4242, 200);
+    const state = playOut(4242, 100);
     const seen = new Set<number>();
     for (const u of state.units) {
       const i = idx(u.x, u.y, state.width);
@@ -153,7 +171,7 @@ describe('a full game', () => {
   });
 
   it('never leaves a land unit standing in the sea', () => {
-    const state = playOut(999, 200);
+    const state = playOut(999, 100);
     for (const u of state.units) {
       // Ships, since section 114, are on water on purpose and nowhere else.
       if (unitType(u.type).sails) continue;
@@ -169,7 +187,7 @@ describe('a full game', () => {
   });
 
   it('never leaves a ship standing on dry land', () => {
-    const state = playOut(999, 200);
+    const state = playOut(999, 100);
     for (const u of state.units) {
       if (!unitType(u.type).sails) continue;
       expect(TERRAIN[state.terrain[idx(u.x, u.y, state.width)]].water).toBe(true);
@@ -177,7 +195,7 @@ describe('a full game', () => {
   });
 
   it('keeps unit counts in check through upkeep', () => {
-    const state = playOut(12345, 300);
+    const state = playOut(12345, 150);
     for (const p of state.players) {
       const cities = playerCities(state, p.id).length;
       const units = playerUnits(state, p.id).length;
@@ -203,7 +221,7 @@ describe('saves', () => {
   });
 
   it('round-trips a played game exactly', () => {
-    const original = playOut(31337, 80);
+    const original = playOut(31337, 40);
     const restored = deserialize(serialize(original));
     expect(restored.turn).toBe(original.turn);
     expect(restored.seed).toBe(original.seed);
@@ -219,7 +237,7 @@ describe('saves', () => {
   });
 
   it('resumes identically after a save and load', () => {
-    const a = playOut(2024, 60);
+    const a = playOut(2024, 30);
     const b = deserialize(serialize(a));
     for (let i = 0; i < 40; i++) {
       runAiTurn(a, a.activePlayer);

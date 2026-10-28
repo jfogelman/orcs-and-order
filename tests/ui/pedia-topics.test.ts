@@ -5,7 +5,7 @@ import { CREATURES, UNIT_TYPES } from '../../src/model/units';
 import { BUILDINGS } from '../../src/model/buildings';
 import { abilityNotes, openPedia } from '../../src/ui/pedia';
 import { SPY_ACTIONS } from '../../src/sim/spying';
-import { ARRIVALS } from '../../src/sim/arrivals';
+import { DIFFICULTIES } from '../../src/sim/difficulty';
 import { HIVEKIN } from '../../src/sim/hivekin';
 import { closeModal, isModalOpen } from '../../src/ui/dom';
 import type { GameState } from '../../src/model/types';
@@ -248,10 +248,14 @@ describe('a long pane is topics, not a wall', () => {
     // it, because a rule that relocates and sheds its test is a rule that
     // quietly stops being checked.
     const text = pane('difficulty').textContent ?? '';
-    expect(text, 'the window').toContain(String(ARRIVALS.from));
-    expect(text).toContain(String(ARRIVALS.until));
+    // Section 153: the window is gone and the stagger is the level's, so what
+    // the page has to carry is each level's own gap rather than one shared
+    // pair of numbers.
+    for (const d of DIFFICULTIES) {
+      if (d.stagger > 0) expect(text, `${d.id}'s gap`).toContain(String(d.stagger));
+    }
     expect(text, 'the grace a latecomer gets').toContain(String(HIVEKIN.grace));
-    expect(text, 'that the level moves it').toMatch(/easy game/i);
+    expect(text, 'that the hardest level staggers nobody').toMatch(/nobody is late at all/i);
     expect(text, 'that you choose who is in the game').toMatch(/choose who you are playing against/i);
     // And the table gained a column for it, or the level page would describe
     // a thing its own table does not show.

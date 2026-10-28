@@ -58,7 +58,17 @@ export type SfxId =
    * up. Kept to the short list in `CRITICAL` -- a warning that goes off every
    * turn is a warning nobody hears.
    */
-  | 'alarm';
+  | 'alarm'
+  /**
+   * Section 152: one of yours came apart with nowhere to gather again.
+   *
+   * The same horn as `alarm`, and a cue of its own rather than that one
+   * because `promptCriticalNews` keys the dialog it raises on the cue --
+   * reusing `alarm` would have every other alarm in the game explain the
+   * Retrieval Circle. It is heard once a game, which is where that dialog
+   * stops it.
+   */
+  | 'lost-spirit';
 
 /**
  * Exported so tests can check that every cue the simulation emits names a
@@ -128,6 +138,7 @@ export const SFX_FILES: Record<SfxId, string> = {
   // Section 124: the horn a watchman blows off a wall. The one sound in the
   // game whose job is to make somebody look up from what they were doing.
   alarm: 'freesound_community-dramatic-horn-44005.mp3',
+  'lost-spirit': 'freesound_community-dramatic-horn-44005.mp3',
 };
 
 /** What each creature sounds like when it attacks, and when it dies. */

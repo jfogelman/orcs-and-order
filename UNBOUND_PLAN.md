@@ -281,7 +281,7 @@ relevant to ships that weren't expecting company.
   faction: 'unbound',
   cost: 85,
   prereqs: ['tier-naiad'],
-  units: ['drowned'],
+  units: ['ub-drowned'],  // not `drowned`: see the warning below
   buildings: [],
   flags: [],
   flavor: 'The water had residents before it had traffic. This was inevitable.',
@@ -295,7 +295,16 @@ glowing units.
 | id | Sprite subject | Background |
 |---|---|---|
 | `ferrymansdue` | a low flat spectral barge, faint blue-white glow along its waterline, no visible crew | green (#00FF00) |
-| `drowned` | a waterlogged translucent hull trailing wisps, faint cold glow at the bow | green (#00FF00) |
+| `ub-drowned` | a waterlogged translucent hull trailing wisps, faint cold glow at the bow | green (#00FF00) |
+
+> ⚠️ **`drowned` is taken**, and this is the second time it has come up.
+> `drowned` is the Kingdom's **Drowned Sailor**, from the Sunken Legion.
+> Section 141 found the collision when the art drop overwrote
+> `drowned_hurt.png` -- shipped art, destroyed, and noticed only because the
+> file appeared as *modified* in a commit that was otherwise all additions --
+> and renamed the source files to `ub-drowned`. The id in this document was
+> never updated, so a roster written straight out of it would collide again.
+> **Use `ub-drowned`**, which is what the art is filed and processed under.
 
 ---
 
@@ -529,11 +538,33 @@ eventually nobody there recalls it being optional.
 | `archon-tech` | 220 | the-ankh, tier-jinn | Archon |
 | `arrangement-permanent` | 200 | archon-tech | Ending |
 
-Note `anchor-totem`'s prereq (`tier-yaksha`) is a placeholder choice, not
-a settled one — it just needed *some* mid-tier prereq to sit at the right
-depth ahead of The Ankh; no particular story reason ties Anchor Totem to
-Yaksha specifically the way Sigil-Bound's tie to Retrieval Circle was
-already established. Worth a second look.
+~~Note `anchor-totem`'s prereq is a placeholder~~ — **settled, section 151.
+It stays `tier-yaksha`, and the reason it was missing is this:**
+
+> The yaksha is the *guardian-of-treasure* spirit — the one kind that stays
+> where it is put, indefinitely, holding on to a thing. An Anchor Totem
+> holds a spirit in place. **You learn to anchor a spirit from the one that
+> already anchors itself.**
+
+Three alternatives were weighed and put to Jeremy, who kept this one:
+
+- **`tier-jinn`** is the most literal tie — the roster calls it a
+  *"deceptive, binding spirit"*, and binding is the faction's whole
+  vocabulary. Against it: `tier-jinn` is already a prereq of `archon-tech`,
+  so the late tree would funnel everything through one 90-beaker advance.
+- **`retrieval-circle`** has the strongest building story, since the Totem
+  is plainly the better Circle. It **collapses the fork**: both branches
+  would root in the same advance, making The Ankh two siblings rather than
+  two kinds of knowledge.
+- **`sigil-bound`** makes the reform line one straight chain, which this
+  document already rules out as *"just a longer chain"*.
+
+What the depth was protecting turns out to be the point. The Ankh wants two
+branches *different in kind* — the shared Folly's pyromancy-and-cryomancy
+shape — and this is what gives it one: `retrieval-circle → sigil-bound` is
+the **ritual** line and `anchor-totem` hangs off the **spirit** line, so
+closing the fork means having developed both your rites and your dead. The
+placeholder had the right shape and the wrong tier's worth of reasoning.
 
 **Not yet covered**: the placeholder Folly ("The First Binding") isn't
 attached to a real advance here yet, and Naiad's water-adjacency bonus
@@ -683,23 +714,153 @@ and that's the tell.
 
 ## Open questions before implementation
 
-- **Naiad's water-adjacency bonus magnitude** — flagged above, not yet
-  specified.
-- **Reform failure-chance base rate, and how much Sigil-Bound/The Ankh
-  each reduce it** — placeholder-level only.
-- **Archon's own production cost** — needs to be high enough that the
-  "pay to rebuild after exorcism" penalty actually stings, but that's a
-  real balance pass, not a design decision to make blind.
-- **Ending mechanics**, not just flavor — the new flavor text implies a
-  clearer shape than the placeholder did: not "death stops working" in the
-  abstract, but the living actually joining the Unbound's own condition
-  (no need for food or drink, presumably some flavor-appropriate downside
-  like reduced production or happiness to go with "endless droning
-  conversations"). Still needs a real trigger condition and scope — does
-  it convert every living unit on the map, end the game outright the way
-  the other two endings do, or apply only to the researching faction's own
-  units — but the flavor at least points at what the mechanic should be
-  now, rather than leaving it fully open.
-- **Folly is placeholder-only**, same caveat as Hivekin's and Wandering
-  Folk's — wants a real tech-tree attachment once Unbound's advances
-  actually exist.
+- ~~**Naiad's water-adjacency bonus magnitude**~~ — **answered, section 152.**
+  `WATERSIDE.bonus` in `sim/dispersal.ts`, unmeasured. See below.
+- ~~**Reform failure-chance base rate, and how much Sigil-Bound/The Ankh
+  each reduce it**~~ — **answered, section 152.** `DISPERSAL` in
+  `sim/dispersal.ts`, unmeasured. See below.
+- ~~**Archon's own production cost**~~ — **answered, section 152.** 72, the
+  Death Knight's slot and half as dear again. Unmeasured, and the bible is
+  right that it wants a real pass rather than a blind decision; what it has
+  now is a first answer and a lever.
+- ~~**Ending mechanics**, not just flavor~~ — **settled, section 150.**
+
+  The *trigger* was never actually open: the Ending buildings section above
+  specifies the ordinary three-work pattern down to costs and prereqs, and
+  that stands. What was open is whether the Spirit Party also **does**
+  something, since the flavour promises the living join the Unbound's own
+  condition and nothing would have happened.
+
+  Four shapes were put to Jeremy — flavour only; the hold converts the
+  world; the hold converts what it kills; or it converts only the
+  researching side — and he chose **converts what it kills**:
+
+  > While the Spirit Party is standing and counting down, anything that
+  > dies near it comes back as Unbound.
+
+  It is the only one of the four that is an **extension of this faction's
+  own identity** rather than a new system bolted beside it: dispersal and
+  reform already bring their units back, and the ending turns that on
+  everybody else's. It is answerable without a new rule to learn — fight
+  further off, or take the city — and it is roughly a quarter the surface
+  of a map-wide conversion, which would have meant a new per-unit *and*
+  per-city condition touching all five factions fifteen turns before the
+  game ends.
+
+  The trigger stays standard in every case, deliberately. An ending that
+  fired off a bespoke counter would be a second victory rule nobody else
+  plays by, which is the reasoning that settled the Wandering Folk's
+  identical question in section 146.
+
+  ~~**Still to specify when the roster exists**: what each dying unit comes
+  back *as*.~~ — **answered, section 152**, and not the way this expected.
+  See `guestAs` below: derived off the model rather than tabulated.
+- ~~**Folly is placeholder-only**~~ — **answered, section 152.** All three
+  are hung on the advances this document names: The First Binding on
+  `tier-revenant`, The Standing Watch on `tier-yaksha`, The Read Terms on
+  `tier-jinn`.
+
+---
+
+## What shipped, section 152
+
+The faction is **playable**. Every section of this document above has a
+counterpart in the game, except the eight art pieces listed at the bottom of
+`ART_PROMPTS.md`, which are prompts waiting to be drawn rather than rules
+waiting to be written.
+
+| This document | Where it lives |
+|---|---|
+| Dispersal, reform, the two sites, the failure roll | `src/sim/dispersal.ts` |
+| Exorcism, including the Archon's own entry | `src/sim/exorcism.ts` (section 150) |
+| The roster, all thirteen | `src/model/units.ts` |
+| The fourteen advances, the two-branch Ankh | `src/model/techs.ts` |
+| Ten city slots, both reform sites, three follies, three works | `src/model/buildings.ts` |
+| The six advisors | `src/model/advisors.ts` |
+| Six sorts of citizen | `src/model/citizens.ts` |
+| The capital: chassis and five modules | `src/model/palace.ts` |
+| How they play themselves | `src/ai/ai.ts` |
+| What a player can look up | `src/ui/pedia.ts`, `UNBOUND_RULES` |
+| That any of it happens | `tests/dispersal.test.ts`, `tools/unboundprobe.run.test.ts` |
+
+### The three questions this document left open, answered
+
+- **The Naiad's water bonus** is `WATERSIDE.bonus`, a share rather than a flat
+  point so it scales with what the Naiad is doing, applied to **both** attack
+  and defence — what the bonus is about is the Naiad being somewhere it
+  belongs, not it being on the front foot. It sits in `sim/dispersal.ts` and
+  not in the creature's line, because a conditional bonus written into base
+  stats is a unit that is simply better, which is the opposite of conditional.
+- **The reform failure rate** is `DISPERSAL.failBase`, with `sigil` and `ankh`
+  taken off it and a `failFloor` under it, plus The First Binding's
+  `reformOdds` on top.
+- **The Archon's cost** is 72 — the Death Knight's slot and half as dear
+  again, for a unit that only truly dies to an exorcism.
+
+**None of those three numbers has been measured.** They are first answers, and
+each is a lever a sweep can move. The same goes for `GUEST_LIST.reach`, the
+AI's `targetCities` and its `caution`. `tools/unboundprobe.run.test.ts` is the
+existence check rather than the balance pass: it counts whether anything ever
+scatters, gathers, or gets invited to a party, which is the question section
+147 made a rule of — *check it exists before fixing it*.
+
+### What the ending turned out to be
+
+The open item — *"still to specify when the roster exists: what each dying
+unit comes back as"* — is `guestAs` in `sim/dispersal.ts`, and it is
+**derived rather than tabulated**. Section 146's `RECRUIT_AS` is a
+hand-written map of source ids to Wandering Folk tiers and it was already
+stale twice, once when the Hive's castes arrived and once when this faction
+did. So a guest comes back as the Unbound tier that does the same job for
+about the same money: same role where they field one, nearest cost within it,
+melee as the fallback. A sixth faction appears in it for nothing.
+
+### What the first probe found
+
+`tools/unboundprobe.run.test.ts` is an **existence check, not a balance
+pass** -- section 147's rule, *check it exists before fixing it*. Twelve games
+with the Unbound in seat zero. The first run came back:
+
+> `ever had somewhere to gather: 0/12` -- `scattered 0.0 a game`
+
+**The whole mechanic had never once happened.** `chooseProduction` ranks
+buildings on gold, science, defence and a barracks, and a Retrieval Circle
+carries none of those, so by every number the AI reads it is fifty-five
+shields of nothing. That is the fourth time this exact hole has been found --
+the Burrower-caste in section 125, the spy in 136, the unseen agent in 138 --
+and the fix is the same each time: a standing want of its own, `DISPERSAL.ai`
+and `DISPERSAL.aiWants`.
+
+The second run, with that in:
+
+| | first run | with the want |
+|---|---|---|
+| ever had somewhere to gather | 0/12 | **12/12**, first on turn 48 |
+| scattered a game | 0.0 | 1.3 |
+| gathered again a game | 0.0 | 0.8 |
+| units at the end | 20.8 | 30.8 |
+| ending works standing | 0.2/3 | 0.8/3 |
+
+Two more things the probe says, both **flagged rather than tuned**, because
+twelve games is an existence check and the memory on sweep noise is clear
+that a swing this size is inside chance:
+
+- **The Archon is fielded in 1 game of 12.** Its road is `the-ankh` (150) plus
+  `tier-jinn` (90) plus `archon-tech` (220), and this side researches about
+  21 advances a game. Moving both it and the ending up the research list took
+  the ending from 5/12 to 6/12 and the works from 0.2 to 0.8, and did not
+  move the Archon. That may be correct -- it is the Dragon's and the Death
+  Knight's slot, and neither of those is common either -- or the road may be
+  one advance too long. It wants a sweep, not a guess.
+- **No Spirit Party was ever thrown**, so the ending's conversion has still
+  never fired in a played game. That follows from the works standing at 0.8
+  of 3 rather than from anything wrong with `inviteIn`, which
+  `tests/dispersal.test.ts` exercises directly in six ways.
+
+### One thing that moved
+
+**The First Binding rides on `tier-revenant`**, as this document says. That
+advance briefly also carried the `sigil-bound` flag, which was wrong twice
+over — the flag belongs to the advance of that name, and a reliability bonus
+two advances before the building it reads from is a rung on a ladder that is
+not there yet.

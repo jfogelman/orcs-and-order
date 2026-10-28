@@ -91,6 +91,15 @@ const BEGUN: Record<EndingKind, { yours: string; theirs: (name: string) => strin
       'come first, and it will stand where one of them does. Nobody has been able to get a ' +
       'straight answer about where it is going.',
   },
+  party: {
+    yours:
+      'Work has begun towards the Spirit Party. Two works in any settlement, then the Party ' +
+      'itself where one of them stands. Invitations are understood to be going out.',
+    theirs: (name) =>
+      `${name} has begun work towards something they are calling a Spirit Party. Two lesser ` +
+      'works come first, and it will stand where one of them does. Everyone who has asked ' +
+      'about it has been told they are very welcome.',
+  },
 };
 
 export function endingFor(faction: FactionId): EndingKind | null {

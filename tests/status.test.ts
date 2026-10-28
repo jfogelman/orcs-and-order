@@ -168,9 +168,16 @@ describe('typed damage', () => {
     // a deliberate decision to leave the numbers off until the advances that
     // make them matter existed. Those advances exist now, so it records the
     // new decision instead: death knights, mages and dragons, and nobody else.
+    //
+    // Section 152 adds a fourth, and it is the same decision rather than a new
+    // one: the Archon is a thing made of light that rules by arrangement, so
+    // it belongs on this list for exactly the reason the Death Knight and the
+    // Dragon do. Worth noting the Bone-Speaker was briefly given it in section
+    // 151 and this test caught it -- `UNBOUND_PLAN.md` writes that unit as
+    // *"living, not armored-undead"*, which is the opposite of the property.
     const resistant = Object.values(UNIT_TYPES).filter((t) => t.magicResist > 0);
     expect(new Set(resistant.map((t) => t.base))).toEqual(
-      new Set(['deathknight', 'mage', 'dragon']),
+      new Set(['deathknight', 'mage', 'dragon', 'archon']),
     );
 
     const knight = spawnUnit(state, 0, 'deathknight', 6, 6, false);

@@ -81,9 +81,12 @@ const NOT_DRAWN_YET = {
   // counting rungs were listed when this test was written and drawn an hour
   // later, and the entry below caught them still being listed. An empty list
   // is the state this should normally be in.
-  // Empty, and worth leaving here rather than deleting: section 146's two
-  // naval and siege advances were listed for a day and drawn the next, and
-  // the stale-entry check below is what made somebody come back and say so.
+  // Empty, and left here rather than deleted: an empty list is the state
+  // this should normally be in, and the stale-entry check below is what
+  // brings somebody back to cross an item off.
+  // Empty again, which is the state this should normally be in. Section 152
+  // listed `tier-drowned` and `tier-cairn` here for about an hour, which is
+  // roughly how long the entries below have historically lasted.
   advances: [] as string[],
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is

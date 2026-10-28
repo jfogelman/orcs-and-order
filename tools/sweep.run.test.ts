@@ -5,20 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { PERSONALITIES } from '../src/ai/ai';
-import { UNSEEN } from '../src/sim/unseen';
-
-/**
- * The town's own eyes, as they ship, read once at module load.
- *
- * Captured rather than written out, so an arm that zeroes them can put the
- * real numbers back without this file holding a second copy that drifts.
- */
-const TOWN_EYES = {
-  notice: UNSEEN.notice,
-  noticeCelebrating: UNSEEN.noticeCelebrating,
-  noticePerGuard: UNSEEN.noticePerGuard,
-};
+import { ARRIVALS } from '../src/sim/arrivals';
 
 /**
  * The question this sweep is currently asking.
@@ -56,163 +43,78 @@ declare const process: { env: Record<string, string | undefined> };
 
 const buildArms = (): Arm[] => {
   /**
-   * Section 138: the high tier, and the watchful town, asked apart.
+   * **Answered: yes, and it mattered more than which faction you are.**
+   * Shipped as `latecomers`; the table and the reasoning are in section 160.
+   * Mean cities by the slot a side drew, every faction in every slot:
+   * Kingdom 7.37 / 6.00 / 3.76 / 2.77, Wandering Folk 7.50 / 5.30 / 3.82 /
+   * 2.81, Unbound 5.96 / 4.50 / 3.23 / 2.35 -- and **Hivekin 3.78 / 3.09 /
+   * 3.94 / 2.72**, the one side with no gradient at all, which is the side
+   * the unchosen order had been handing the best slot to.
    *
-   * **Three arms, because the slice is two changes.** One adds an agent
-   * nobody can see; the other gives every town a chance to notice a concealed
-   * stranger on its own land, which applies to the *low* tier too and
-   * therefore moves a game that shipped in section 136. A single arm turning
-   * both off could not say which did it, and the two have good reason to pull
-   * opposite ways -- one puts more agents on the board, the other kills them.
+   * `all` is not shipped: it leaves 36 of 108 games unfinished at the turn
+   * limit against 13, because it seats the Hive beside the player a quarter
+   * of the time and nobody is then strong enough to close the game out.
    *
-   * **Predictions, written before the run.**
+   * Left here as the worked example of three arms earning their cost. Two
+   * would have bundled "arrival order" with "who your neighbour is" and the
+   * answer differs between them: the queue is worth most of the gain, the
+   * turn-one slot is worth the rest and costs the game its ending.
    *
-   * 1. **No winner shift anywhere.** Espionage *entire* did not move winners
-   *    (Horde p = 0.11, Kingdom p = 1.00, Hive p = 0.12); one more rung
-   *    should not. If any arm clears the bar I should distrust it before I
-   *    believe it.
+   * ---
    *
-   * 2. **A few more turns, and not significantly.** Espionage entire bought
-   *    +15.3 turns (t = 3.81) by resolving the same amount of war more
-   *    slowly. The high tier is about one more agent a side and arrives late
-   *    -- `nobody-in-particular` is four advances and 160 beakers in, and the
-   *    probe has the *first* agent of any kind appearing on turn 89 of ~240.
-   *    Predict +2 to +5 turns, not clearing 2σ.
+   * Section 160: **does it matter that nobody chose the arrival order?**
    *
-   * 3. **The watchful town is the half more likely to show**, and in the
-   *    other direction. It bites from the moment any spy exists rather than
-   *    from the fourth spy advance, and what it does is kill agents. So it
-   *    should shorten games slightly, and the combined shipped arm should
-   *    read **flatter than either half alone**. If the two-arm version of
-   *    this sweep had been run it would have come back a null for the wrong
-   *    reason.
+   * Section 159 went looking for why the two late factions are weak and found
+   * this instead: `opponentsOf` returned the faction table's own declaration
+   * order, never shuffled, and `arrivalTurnFor` is `(n + 1) * gap`. So on
+   * Normal the Hive has always arrived about turn 20, the Wandering Folk
+   * about turn 40 and the Unbound about turn 60 -- **in every game this
+   * project has ever measured** -- and the Kingdom has always been the Orc
+   * player's turn-one neighbour. The Hive is first because it was the first
+   * latecomer there was (section 125) and the Unbound last because they were
+   * written last (section 152). Nobody picked any of it.
    *
-   * 4. **Kingdom units up again, in the shipped arm.** `Kingdom units` has
-   *    moved in all four espionage sweeps (+1.54, +1.20, +1.86) and the cause
-   *    is settled: agents against an economy that does not feel their cost.
-   *    The probe has the Kingdom building the most agents (3.38 a game
-   *    against the Horde's 2.71). Predict +0.5 to +1.0.
+   * It also explains two numbers that have been sitting unexplained: section
+   * 156's *"the Unbound arrive last, 4.5 cities"* -- they arrive last
+   * **always** -- and section 157's *"dead by about turn fifty"*, against a
+   * due turn of forty.
    *
-   * 5. **The Hive is flat across all three.** 0.46 agents a game in the
-   *    probe against 2.71 and 3.38. It barely participates in espionage at
-   *    all, which is the late-arrival gap Jeremy has ruled out of scope until
-   *    staggered arrival is decided.
+   * ## Three arms, because "the order" is two rules wearing one name
    *
-   * ## What came back. 324 games, 73 minutes, 54 an arm a seed set.
+   * - **`table order`** -- the control, and every measurement to date.
+   * - **`shuffle queue`** -- slot 0 keeps its occupant, so the turn-one
+   *   neighbour is unchanged and only the arrival queue behind it is drawn.
+   *   Isolates **arrival order** on its own.
+   * - **`shuffle all`** -- slot 0 is drawn too, so *who starts beside you*
+   *   stops being a fact about the table as well.
    *
-   * **(1) Right. No winner shift anywhere.** Against `no high tier`: Horde
-   * p = 1.00, Kingdom p = 0.68, Hive p = 1.00. Against `no watchful towns`:
-   * 0.75, 0.75, 1.00. Nothing is close, and the totals barely move -- Horde
-   * 33/34/31, Kingdom 36/33/38, Hive 39/40/39.
+   * The pair is what makes this worth three arms. If the queue moves nothing
+   * and `shuffle all` moves a lot, the finding is about **the turn-one slot**
+   * and not about arrival order at all -- and the fix would be a different
+   * one line. Two arms would have blamed whichever rule they happened to
+   * bundle.
    *
-   * **(5) Right. The Hive is flat**, as predicted and for the reason
-   * predicted.
+   * ## What would count
    *
-   * **(2) Wrong, and usefully. The high tier buys +6.62 turns, t = +2.39**,
-   * which clears the bar I predicted it would not. The size was nearly right
-   * and the significance call was not. It is believable by the standing test
-   * in `sweep-noise-at-108-games`: both seed sets agree and agree *closely*
-   * (+6.81 and +6.43), turn-limit games move with it (21 -> 26), and a
-   * second column does too -- endings shift from conquest to points,
-   * 7/26 against 12/20. Fights (t = +0.85) and captures (t = -0.90) are
-   * flat, so it is the same amount of war resolving more slowly. **That is
-   * the espionage-entire signature at a fifth the size** (+15.3 turns there),
-   * which is about right for one more rung.
+   * A shuffle gives each latecomer each slot about a third of the time, so
+   * what moves is each faction's average **over** slots. If being third is
+   * what ails the Wandering Folk, their columns rise here; if they are simply
+   * a weak faction, the shuffle redistributes and nothing moves except the
+   * Hive, which loses its guaranteed head start. Either answer is useful and
+   * the second one closes the question.
    *
-   * **(3) Wrong, and it was the argument for running three arms.** The
-   * prediction was that the watchful towns would shorten games, so the
-   * shipped arm would read flatter than either half and a two-arm sweep
-   * would null out for the wrong reason. It does not: removing the towns
-   * moves turns by +0.95 with t = 0.60 and **the two seed sets disagree in
-   * direction** (+2.52 and -0.61), which is the definition of nothing. The
-   * +6.62 belongs to the high tier alone, and the two-arm version of this
-   * sweep would have been right. The third arm cost 24 minutes and bought a
-   * ruled-out confound rather than the one it was run for.
-   *
-   * **(4) Not testable as written, which is a flaw in the prediction.** It
-   * named `Kingdom units`, and `rawRows` has no units column -- the pair
-   * after techs is `ladder`, the deepest counting-group reached. The nearest
-   * proxies both point the predicted way and neither clears the bar: Kingdom
-   * population +2.46 (t = +1.30) and Kingdom cities +0.43 (t = +1.59), both
-   * with the seed sets agreeing. Write predictions against columns the
-   * instrument actually has.
-   *
-   * ## The one thing nobody predicted
-   *
-   * Against `no watchful towns`, the **Horde** gains: population +2.84
-   * (t = +2.92) and cities +0.26 (t = +2.30), both with the seed sets
-   * agreeing. So towns noticing strangers is worth something to the Horde
-   * specifically.
-   *
-   * A story fits -- the Kingdom builds the most agents (3.38 a game against
-   * 2.71), so Horde towns have the most strangers to catch and the most to
-   * gain from catching them. **It is a story invented after seeing the
-   * number**, which is the thing `attribution-needs-the-same-bar` exists to
-   * warn about, and two correlated columns are one finding rather than two.
-   * Twenty tests were run at a 2-sigma bar, so about one false positive is
-   * expected and three flagged. Confirming it would want a probe counting
-   * incidents by *victim* side, which is a cheap addition and has not been
-   * made. No winner moved with it, so whatever it is, it is not deciding
-   * games.
+   * `sweep-noise-at-108-games` still applies: believe it when both seed sets
+   * agree and a second column moves with the first.
    */
-
-  /** The advance that buys the high tier, and nothing else. */
-  const HIGH_TECH = 'nobody-in-particular';
-
-  /** The priority lists as they ship, captured before any arm touches them. */
-  const asShipped = new Map(
-    Object.entries(PERSONALITIES).map(([k, v]) => [k, [...v.techPriority]] as const),
-  );
-
-  /**
-   * Every knob this sweep moves, set one way or the other in every arm.
-   *
-   * Section 59, and the reason the lists are rebuilt from the captured
-   * original in **both** directions rather than edited in place:
-   * `restoreLevers` puts levers back with `Object.assign`, which copies
-   * `PERSONALITIES`' top-level keys by reference and would not undo a change
-   * made inside one of them.
-   *
-   * `UNSEEN.enabled` is the master switch for both halves -- `goesUnseen`,
-   * `hiddenFrom` and `townNotice` all ask it -- so the "no high tier" arm has
-   * to put the towns back on by hand to isolate them. Reading that the wrong
-   * way round would have measured the towns in the arm that claims not to
-   * have them.
-   */
-  const highTier = (on: boolean): void => {
-    UNSEEN.enabled = true;
-    UNSEEN.ai = on;
-    // With the units switched off the advance unlocks nothing, so leaving it
-    // in the lists would have the control spending 160 beakers on an empty
-    // box -- a research-order difference masquerading as the mechanic.
-    for (const [name, list] of asShipped) {
-      PERSONALITIES[name].techPriority = on
-        ? [...list]
-        : list.filter((t) => t !== HIGH_TECH);
-    }
-  };
-
-  /** Whether a town ever notices a concealed stranger by itself. */
-  const watchfulTowns = (on: boolean): void => {
-    UNSEEN.notice = on ? TOWN_EYES.notice : 0;
-    UNSEEN.noticeCelebrating = on ? TOWN_EYES.noticeCelebrating : 0;
-    UNSEEN.noticePerGuard = on ? TOWN_EYES.noticePerGuard : 0;
-  };
-
-  const arm = (label: string, high: boolean, towns: boolean): Arm => ({
+  const arm = (label: string, shuffle: typeof ARRIVALS.shuffle): Arm => ({
     label,
     apply: () => {
       control();
-      highTier(high);
-      watchfulTowns(towns);
+      ARRIVALS.shuffle = shuffle;
     },
   });
 
-  return [
-    arm('as it ships', true, true),
-    arm('no high tier', false, true),
-    arm('no watchful towns', true, false),
-  ];
+  return [arm('table order', 'none'), arm('shuffle queue', 'latecomers'), arm('shuffle all', 'all')];
 };
 
 const ARMS: Arm[] = buildArms();

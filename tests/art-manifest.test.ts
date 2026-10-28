@@ -36,6 +36,9 @@ const OUT = {
   palace: import.meta.glob('../public/palace/*.png', { eager: true }),
   advisors: import.meta.glob('../public/advisors/*.png', { eager: true }),
   posts: import.meta.glob('../public/posts/*.png', { eager: true }),
+  citizens: import.meta.glob('../public/citizens/*.png', { eager: true }),
+  promotions: import.meta.glob('../public/promotions/*.png', { eager: true }),
+  victory: import.meta.glob('../public/victory/*.{png,jpg}', { eager: true }),
 };
 
 /**
@@ -47,8 +50,12 @@ const OUT = {
  */
 const SOURCES = import.meta.glob('../art_src/factions/**/*', { eager: true, query: '?raw' });
 
+// The extension comes off as well as the folder, and `.jpg` as well as `.png`:
+// the victory screens are the one kind the pipeline leaves as photographs
+// rather than keyed sprites, so a `.png`-only strip reported all ten of them
+// as missing art that was right there.
 const names = (glob: Record<string, unknown>) =>
-  new Set(Object.keys(glob).map((p) => p.replace(/^.*\//, '').replace(/\.png$/, '')));
+  new Set(Object.keys(glob).map((p) => p.replace(/^.*\//, '').replace(/\.(png|jpg)$/, '')));
 
 const manifest = buildManifest();
 
@@ -60,11 +67,36 @@ describe('everything the game asks for has been processed', () => {
       'capital pieces',
       manifest.palace,
       names(OUT.palace),
-      // Nothing outstanding. Section 146 drew the last of them.
+      // Nothing outstanding. Section 146 drew the last of the first four
+      // sides' pieces and section 152 drew the Unbound's Gate, which was the
+      // one module their faction drop arrived without.
       [],
     ],
     ['advisor portraits', manifest.advisors, names(OUT.advisors), []],
     ['garrison posts', manifest.posts, names(OUT.posts), []],
+    // Section 152 added these three, and `unbound-1` is why. The Unbound's
+    // first promotion mark was drawn, dropped, and silently not processed --
+    // `remove_background` refused it, which the pipeline says out loud and
+    // nothing checked afterwards. **Every other row here was added the same
+    // way**, after something went missing, so the gap was three kinds wide
+    // rather than one: who lives in the towns, the three rungs a side, and
+    // the picture at the end of the game were all unaudited in this
+    // direction.
+    ['citizen sheets', manifest.citizens, names(OUT.citizens), []],
+    [
+      'promotion marks',
+      manifest.promotions,
+      names(OUT.promotions),
+      // Empty. `unbound-1` was listed here for the length of one re-roll:
+      // the badge filled 5.9% of its frame against its siblings' 26% and
+      // 20%, so keying removed 94% and `MAX_REMOVED` refused it at 93%. The
+      // ceiling was never the thing to move -- section 151 raised it for two
+      // Regalia and put it straight back, because **a false refusal is loud
+      // and a false acceptance is silent**. Redrawn filling the frame it
+      // keys at 46%.
+      [],
+    ],
+    ['victory screens', manifest.victory, names(OUT.victory), []],
   ];
 
   for (const [what, pieces, have, allowed] of kinds) {
@@ -254,3 +286,83 @@ describe('every file that was drawn can be found', () => {
     }
   });
 });
+
+/**
+ * The third direction: **the bible against the art.** Section 150.
+ *
+ * The two audits above ask whether the *model* and the *files* agree. Neither
+ * can see the design documents, and those are where a faction starts: an id
+ * named in a prompt table and never drawn is a piece of the faction nobody
+ * has made yet, and an id the bible gives that the art was filed under a
+ * *different* name is worse -- it is a trap for whoever writes the roster.
+ *
+ * Both have already happened:
+ *
+ * - `bone-speaker`, the Horde's exorcist advance, is named in no icon table
+ *   anywhere, because `UNBOUND_PLAN.md` covers the Unbound's twelve and says
+ *   outright that this advance belongs to the Horde.
+ * - **`drowned`, `skirmisher` and `brute`** were all collisions with existing
+ *   ids. Section 141 found them when the art drop **overwrote shipped art**
+ *   and renamed the source files `ub-` and `wf-`. The bibles were not
+ *   updated, so a roster written straight out of either one would have
+ *   collided a second time -- which is exactly what nearly happened here.
+ */
+describe('the design documents against the art', () => {
+  /** Every id a prompt table names, which is how the bibles list their art. */
+  const BIBLES: Array<[string, string, Record<string, unknown>]> = [
+    ['UNBOUND_PLAN.md', 'unbound', import.meta.glob('../UNBOUND_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+    ['WANDERERS_PLAN.md', 'wanderers', import.meta.glob('../WANDERERS_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+    ['HIVEKIN_PLAN.md', 'hivekin', import.meta.glob('../HIVEKIN_PLAN.md', { eager: true, query: '?raw', import: 'default' })],
+  ];
+
+  /** Ids still waiting to be drawn, each with a reason. */
+  const NOT_DRAWN_YET: Record<string, string> = {
+    // Empty. `bone-speaker` was listed here for one section and drawn the
+    // next, which is the state an outstanding-work list should normally be
+    // in -- and the stale check below is what makes somebody cross it off.
+  };
+
+  function namedIn(doc: string): string[] {
+    const out = new Set<string>();
+    for (const line of doc.split('\n')) {
+      const m = /^\|\s*`([a-zA-Z0-9_-]+)`\s*\|/.exec(line);
+      if (m) out.add(m[1]);
+    }
+    return [...out];
+  }
+
+  for (const [name, folder, loaded] of BIBLES) {
+    const doc = Object.values(loaded)[0] as string | undefined;
+    const files = Object.keys(SOURCES).filter((p) =>
+      p.startsWith(`../art_src/factions/${folder}/`),
+    );
+
+    it(`has art for everything ${name} names`, () => {
+      if (!doc || files.length === 0) return; // no bible, or no drops here
+      const drawn = new Set<string>();
+      for (const f of files) {
+        const stem = f.replace(/^.*\//, '').replace(/\.[a-z0-9]+$/i, '').toLowerCase();
+        drawn.add(stem);
+        drawn.add(stem.replace(VARIANT_WORDS, '').replace(/\s+/g, ' ').trim());
+      }
+      const missing = namedIn(doc)
+        .filter((id) => !drawn.has(id.toLowerCase()))
+        .filter((id) => !(id in NOT_DRAWN_YET));
+      expect(missing.sort(), `named in ${name}, drawn nowhere`).toEqual([]);
+    });
+  }
+
+  it('keeps no stale entries in the not-drawn-yet list', () => {
+    const drawn = new Set(
+      Object.keys(SOURCES).map((p) =>
+        p.replace(/^.*\//, '').replace(/\.[a-z0-9]+$/i, '').toLowerCase(),
+      ),
+    );
+    if (drawn.size === 0) return;
+    expect(Object.keys(NOT_DRAWN_YET).filter((id) => drawn.has(id))).toEqual([]);
+  });
+});
+
+/** Shared with the folder audit above; see the note on variants there. */
+const VARIANT_WORDS =
+  /\b(weakened|attack|hurt|talking|damaged|female|flipped|trapezoid|magenta|bg|v2|v3|redo|reroll|new)\b/gi;

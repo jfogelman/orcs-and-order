@@ -694,6 +694,62 @@ export const CREATURES: CreatureDef[] = [
     trim: '#7f3fbf',
     blurb: 'Formerly a person. Currently a policy.',
   },
+  // ------------------------------------------------------------ section 150
+  //
+  // The Bone-Speaker: the Horde's answer to a thing that does not stay dead.
+  //
+  // `UNBOUND_PLAN.md` describes it and deliberately leaves its `TechDef` to
+  // the orc tree, *"same as how Warden-caste's tech lives inside Hivekin's own
+  // tree"*. It gives the art, the advance and the reasoning, and **no stats at
+  // all** -- so the numbers below are mine, derived rather than invented.
+  //
+  // Derived from the Death Knight directly above it, which the bible names as
+  // its opposite: *"living, not armored-undead, marked as doing the unpopular
+  // 'send them back' job rather than the 'command them' one."* Same tier, same
+  // tree, same role, same magic damage. What differs is what the two are for.
+  // The Death Knight executes and drains; this one trades a point of attack
+  // for a point of defence, because its value is being **present** when the
+  // Unbound are and surviving to be present again, not winning the exchange.
+  //
+  // No `executeChance`: finishing the wounded is the other one's trick, and
+  // giving both to both would make this a better Death Knight than the Death
+  // Knight. Priced a shade above it for the same reason the Paladin is priced
+  // above a Knight -- the exorcism is the premium, and it is not on the line.
+  {
+    id: 'orc-shaman',
+    // Sending something back is not a weapon blow.
+    damageKind: 'magic',
+    // **And no `magicResist`, deliberately.** The first draft copied the Death
+    // Knight's 0.3 on the reasoning that magical things are hard to do magic
+    // to -- which is true, and is the reason it does not apply here. The
+    // bible is explicit that this one is *"living, not armored-undead"*: its
+    // blow is an exorcism, but the thing swinging it is an orc with a rattle.
+    // `tests/status.test.ts` caught it, and that list is a recorded decision
+    // -- death knights, mages and dragons -- rather than an oversight, so the
+    // right fix was the unit and not the test.
+    // **Id is the art's, name is the bible's.** The drop filed this under
+    // `orc-shaman` -- in the Unbound's folder, because they are its whole
+    // reason for existing -- and all four sprites are processed under that
+    // name. The advance is `bone-speaker`, which is what the Horde calls it.
+    name: 'Bone-Speaker',
+    plural: 'Bone-Speakers',
+    faction: 'orc',
+    role: 'caster',
+    attack: 5,
+    defense: 4,
+    hp: 15,
+    move: 2,
+    cost: 54,
+    sight: 2,
+    counts: [1],
+    artScale: 1.1,
+    silhouette: 'robed',
+    body: '#b8ae94',
+    trim: '#6e5a3c',
+    blurb:
+      'Somebody has to send them back. This has never been a popular job, and ' +
+      'has never stopped being a job.',
+  },
   {
     id: 'dragon',
     // Breath, not bite.
@@ -1745,6 +1801,359 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Not a defector at all, and the one entry on this roster with no "why they left" ' +
       'story: nobody asked it to leave anywhere. It was simply caught.',
+  },
+  // ------------------------------------------------------------ section 152
+  //
+  // The Unbound. Orcs answer "how many", humans "how organised", Hivekin
+  // "what grows next", the Wandering Folk "whoever's left standing" -- and
+  // these answer **"it did not take"**.
+  //
+  // `UNBOUND_PLAN.md` has the design. Stats are **the named equivalent's,
+  // unchanged**, which is the rule sections 125 and 142 both set: a faction
+  // written later must not be quietly stronger for it, and the bible gives a
+  // "rough equivalent" column precisely so nobody has to invent a line. Where
+  // a unit has no equivalent -- the Naiad -- that is said out loud rather than
+  // guessed at.
+  //
+  // What they pay for dispersal is **not** a stat premium the way the
+  // Wandering Folk pay for Recruit. It is `sim/dispersal.ts`: reform needs a
+  // building standing somewhere, and with neither on the map a spirit is gone
+  // for good. The faction's cost is infrastructure, not arithmetic.
+  {
+    id: 'effigy',
+    name: 'Effigy',
+    plural: 'Effigies',
+    faction: 'unbound',
+    role: 'worker',
+    // Peon's line. **And the one that is only an object**: the bible makes it
+    // the designed exception -- *"purely physical, a bound idol, not a proper
+    // spirit. No dispersal, no reform, no exorcism requirement at all."* The
+    // "checkable, not broken" promise lives in the power curve rather than in
+    // a special case in combat, so the cheapest thing they field is the one
+    // thing anybody can simply kill.
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 20,
+    sight: 1,
+    counts: [1],
+    works: true,
+    artScale: 0.9,
+    silhouette: 'worker',
+    body: '#8d8477',
+    trim: '#4b453c',
+    blurb:
+      'A shape somebody made on purpose and nobody got round to finishing. It ' +
+      'does as it is told and stops when it is broken, which is unusual here.',
+  },
+  {
+    id: 'domovoi',
+    name: 'Domovoi',
+    plural: 'Domovoi',
+    faction: 'unbound',
+    role: 'worker',
+    // Grub's line, and the founder.
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 20,
+    sight: 1,
+    counts: [1],
+    settler: true,
+    works: true,
+    artScale: 0.9,
+    silhouette: 'worker',
+    body: '#9fa6a8',
+    trim: '#44504f',
+    blurb:
+      'A hearth spirit with no hearth yet. It will pick somewhere, settle in, ' +
+      'and thereafter be extremely particular about it.',
+  },
+  {
+    id: 'revenant',
+    name: 'Revenant',
+    plural: 'Revenants',
+    faction: 'unbound',
+    role: 'melee',
+    // The Footman's line, which is the Orc's with the numbers the other way
+    // round. Taken as the Kingdom's rather than the Horde's: this is a line
+    // that holds rather than one that swings.
+    attack: 2,
+    defense: 3,
+    hp: 12,
+    move: 1,
+    cost: 20,
+    sight: 1,
+    counts: [1, 2, 4],
+    artScale: 1,
+    silhouette: 'armored',
+    body: '#a8a090',
+    trim: '#54484a',
+    blurb: 'Came back. Has not said why, and nobody has asked directly.',
+  },
+  {
+    id: 'yaksha',
+    name: 'Yaksha',
+    plural: 'Yakshas',
+    faction: 'unbound',
+    role: 'melee',
+    // The Troll's line. The bible offers "Ogre / Troll" and the Troll is the
+    // closer read: a guardian that holds a thing, not a heavyweight that
+    // breaks one. It is also what `anchor-totem` hangs off -- the one kind of
+    // spirit that stays where it is put, which is where an Anchor Totem's
+    // whole idea comes from. See section 151.
+    attack: 5,
+    defense: 3,
+    hp: 15,
+    move: 1,
+    cost: 42,
+    sight: 1,
+    counts: [1, 2],
+    artScale: 1.15,
+    silhouette: 'brute',
+    body: '#7f8d86',
+    trim: '#3c4a46',
+    blurb:
+      'Guards something. Will tell you what, at length, if you stop. Most ' +
+      'people have learned not to stop.',
+  },
+  {
+    id: 'sylph',
+    name: 'Sylph',
+    plural: 'Sylphs',
+    faction: 'unbound',
+    role: 'melee',
+    // The Outrider's line exactly: fast, blind-spot filler, barely a soldier.
+    attack: 1,
+    defense: 1,
+    hp: 8,
+    move: 3,
+    cost: 15,
+    sight: 3,
+    counts: [1],
+    artScale: 0.95,
+    silhouette: 'rider',
+    body: '#c6cfd6',
+    trim: '#6e7f8c',
+    blurb: 'Arrives before it is sent and is already somewhere else by the time it matters.',
+  },
+  {
+    id: 'naiad',
+    name: 'Naiad',
+    plural: 'Naiads',
+    faction: 'unbound',
+    role: 'melee',
+    // **The one with no equivalent.** The bible says so plainly: *"genuinely
+    // new, not a reskin of anything on another roster -- meaningfully
+    // stronger when adjacent to water terrain... not yet specified how much
+    // stronger."*
+    //
+    // So this is the Revenant's line at the Troll's price, and the water
+    // bonus is `WATERSIDE` in `sim/dispersal.ts` rather than baked in here --
+    // a conditional bonus written into base stats is a unit that is simply
+    // better, which is the opposite of conditional. Unmeasured; flagged.
+    attack: 3,
+    defense: 3,
+    hp: 12,
+    move: 1,
+    cost: 38,
+    sight: 2,
+    counts: [1],
+    artScale: 1,
+    silhouette: 'armored',
+    body: '#7fa8b8',
+    trim: '#2f5566',
+    blurb:
+      'Belongs to a particular stretch of water and is only really itself ' +
+      'near it. Elsewhere it is polite about the arrangement.',
+  },
+  {
+    id: 'jinn',
+    name: 'Jinn',
+    plural: 'Jinn',
+    faction: 'unbound',
+    // Its reach is not a thrown thing.
+    damageKind: 'magic',
+    role: 'caster',
+    // The Mage's line. The bible offers "Mage / Spitter"; the Mage is the one
+    // that matches a caster rather than a thrower.
+    attack: 6,
+    defense: 2,
+    hp: 12,
+    move: 1,
+    cost: 45,
+    sight: 3,
+    counts: [1],
+    artScale: 1.05,
+    silhouette: 'robed',
+    body: '#6b5f7a',
+    trim: '#2e2740',
+    blurb:
+      'Offers an arrangement. The arrangement is binding, which is the part ' +
+      'people hear last.',
+  },
+  {
+    id: 'archon',
+    name: 'Archon',
+    plural: 'Archons',
+    faction: 'unbound',
+    damageKind: 'magic',
+    // Magical things are hard to do magic to, as the Death Knight and the
+    // Dragon both are. This one genuinely is one.
+    magicResist: 0.3,
+    role: 'caster',
+    // The Death Knight's slot rather than the Dragon's. The bible offers
+    // "Dragon / Death Knight slot", and the Dragon's line at 110 would make
+    // the one unit that **comes back from an ordinary defeat at full
+    // strength** also the strongest thing on the board. Its cost is the open
+    // question the bible flags -- *"high enough that the pay-to-rebuild
+    // penalty actually stings"* -- and 72 is a first answer, not a measured
+    // one: half as dear again as a Death Knight, for a unit that only truly
+    // dies to an exorcism.
+    attack: 6,
+    defense: 4,
+    hp: 18,
+    move: 2,
+    cost: 72,
+    sight: 3,
+    counts: [1],
+    artScale: 1.2,
+    silhouette: 'robed',
+    body: '#d8cfa8',
+    trim: '#6a5a2e',
+    blurb:
+      'Rules by arrangement rather than by force, and has never had to ' +
+      'explain which arrangement.',
+  },
+  {
+    id: 'ferrymansdue',
+    name: "The Ferryman's Due",
+    plural: "Ferryman's Dues",
+    faction: 'unbound',
+    role: 'naval',
+    // The bible's own table: 0/1/10/3 at 35s, which is the Wandering Folk's
+    // Ferry Contract exactly. Two transports priced the same is the point.
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 3,
+    cost: 35,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    carries: 3,
+    artScale: 1.3,
+    silhouette: 'ship',
+    body: '#9aa7ad',
+    trim: '#44565e',
+    blurb:
+      'Passage was always going to be paid for. Nobody has ever been clear ' +
+      'on when, which has not slowed the crossings.',
+  },
+  {
+    // **Not `drowned`.** That is the Kingdom's Drowned Sailor, and the
+    // collision destroyed three shipped sprites in section 141 before
+    // anybody noticed. The bible still said `drowned` until section 150's
+    // audit caught it; the art has been `ub-drowned` since the rename.
+    id: 'ub-drowned',
+    name: 'The Undertow',
+    plural: 'Undertows',
+    faction: 'unbound',
+    role: 'naval',
+    // The bible's table: 5/2/12/3 at 55s.
+    attack: 5,
+    defense: 2,
+    hp: 12,
+    move: 3,
+    cost: 55,
+    sight: 2,
+    counts: [1],
+    sails: true,
+    artScale: 1.4,
+    silhouette: 'ship',
+    body: '#7e8f96',
+    trim: '#2f4249',
+    blurb:
+      'The water was already occupied before it had traffic. This is now ' +
+      'relevant to ships that were not expecting company.',
+  },
+  {
+    id: 'cairn',
+    range: 2,
+    // Five, as all three other engines carry. The bible gives this one no
+    // magazine of its own, and picking a different number would be inventing
+    // a balance decision in a unit meant to sit beside the Ballista.
+    ammo: 5,
+    reloadsBy: 'labour',
+    name: 'The Cairn',
+    plural: 'Cairns',
+    faction: 'unbound',
+    role: 'siege',
+    // The bible's table: 8/1/12/1 at 45s, which is the Ballista's line.
+    attack: 8,
+    defense: 1,
+    hp: 12,
+    move: 1,
+    cost: 45,
+    sight: 1,
+    counts: [1],
+    siegeBonus: 2,
+    artScale: 1.08,
+    silhouette: 'engine',
+    body: '#8f9490',
+    trim: '#434a46',
+    blurb:
+      'Built to guard something, once. Repurposed to remove something ' +
+      'instead. Neither job required much explaining to it.',
+  },
+  // The two spies, from `NEW_FACTION_SPIES.md`. Stats are the Hive's
+  // equivalents unchanged, as the Wandering Folk's were in section 147.
+  {
+    id: 'borrowedface',
+    name: 'Borrowed Face',
+    plural: 'Borrowed Faces',
+    faction: 'unbound',
+    spy: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 30,
+    sight: 2,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#b3b0a6',
+    trim: '#4f4c44',
+    blurb:
+      'Wearing somebody. It is not clear to anyone, including it, whose idea ' +
+      'the arrangement originally was.',
+  },
+  {
+    id: 'unreturned',
+    name: 'The Unreturned',
+    plural: 'The Unreturned',
+    faction: 'unbound',
+    spy: true,
+    hidden: true,
+    role: 'worker',
+    attack: 0,
+    defense: 1,
+    hp: 10,
+    move: 1,
+    cost: 55,
+    sight: 3,
+    counts: [1],
+    artScale: 0.8,
+    silhouette: 'worker',
+    body: '#8e9aa0',
+    trim: '#38444a',
+    blurb:
+      'Went somewhere and did not come back. Is, nonetheless, here. Nobody ' +
+      'has managed to hold both of those at once for long enough to object.',
   },
   // ------------------------------------------------------------ section 147
   //

@@ -31,18 +31,38 @@ export interface DifficultyDef {
   /** No raiders before this turn. */
   raidNotBefore: number;
   /**
-   * Turns added to the Hive's arrival window. Section 136.
+   * Turns between one opponent arriving and the next. Section 153.
    *
-   * Jeremy: *"a staggered arrival depending on game difficulty (later is
-   * easier, same time is harder)."* A third contender turning up is the
-   * largest single thing that can happen to a game, so **when** it happens is
-   * a difficulty dial in its own right -- and a better one than most, because
-   * it changes how much of the game you get to yourself rather than changing
-   * any number you are playing against.
+   * **The stagger is now the whole of the rule rather than a shift applied to
+   * one.** Sections 136 and 139 had a fixed window -- around turn ninety for
+   * the first latecomer, sixty turns apart after that -- which difficulty
+   * nudged either way. At two opponents that worked. At four it does not: the
+   * fifth faction arrived on turn 345 of a 300-turn game on A Picnic and 315
+   * on A Skirmish, which is to say **it never arrived at all**, and on A War
+   * it turned up on turn 285 and existed for fifteen turns.
    *
-   * Zero at Normal, like everything else here. Negative is earlier and harder.
+   * Jeremy settled it by making difficulty the only thing that staggers
+   * anybody: *"no staggered entry except for the difficulty level increasing
+   * -- meaning hardest level is everyone simultaneously, easiest is staggered
+   * slightly."*
+   *
+   * So **zero at Doom**, where everybody is on the map from turn one and the
+   * game is as crowded as it can be, rising to a modest gap at A Picnic,
+   * where you get a little of the map to yourself before each new one. It
+   * remains the difficulty dial section 136 argued for -- it changes how much
+   * of the game you have to yourself rather than any number you play against
+   * -- and it is now the *only* thing that decides when anybody turns up.
+   *
+   * **This moves the baseline, knowingly.** Section 139 went to some trouble
+   * to keep the default game bit-identical to what a hundred sections had
+   * been measured on, and a stagger of twenty-five at Normal does not. That
+   * was Jeremy's call to make and he made it; what it costs is that every
+   * measurement from before section 153 was taken on a different game.
+   *
+   * **The numbers are mine and unmeasured.** The shape -- zero at the hardest,
+   * rising -- is his.
    */
-  hiveArrives: number;
+  stagger: number;
 }
 
 export const DIFFICULTIES: readonly DifficultyDef[] = [
@@ -54,7 +74,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1.3,
     raidEvery: 25,
     raidNotBefore: 40,
-    hiveArrives: 60,
+    stagger: 40,
   },
   {
     id: 'easy',
@@ -64,7 +84,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1.15,
     raidEvery: 20,
     raidNotBefore: 30,
-    hiveArrives: 30,
+    stagger: 30,
   },
   {
     id: 'normal',
@@ -74,7 +94,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1,
     raidEvery: 15,
     raidNotBefore: 25,
-    hiveArrives: 0,
+    stagger: 20,
   },
   {
     id: 'hard',
@@ -84,7 +104,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 1,
     raidEvery: 12,
     raidNotBefore: 22,
-    hiveArrives: -25,
+    stagger: 10,
   },
   {
     id: 'hardest',
@@ -94,7 +114,7 @@ export const DIFFICULTIES: readonly DifficultyDef[] = [
     aiCost: 0.85,
     raidEvery: 10,
     raidNotBefore: 20,
-    hiveArrives: -60,
+    stagger: 0,
   },
 ];
 

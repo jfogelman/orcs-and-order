@@ -16,6 +16,7 @@ import {
   supplyQuality,
 } from '../sim/city';
 import { playerCities, playerUnits } from '../sim/gamestate';
+import { canReform, dispersingSide, reformSites, scatteredOf } from '../sim/dispersal';
 import { tradeGold } from '../sim/trade';
 import { TRADE_STEPS, tradeRates } from '../sim/research';
 import { techCost } from '../sim/research';
@@ -53,6 +54,7 @@ const REPORT_TITLE: Record<FactionId, string> = {
   human: 'Kingdom Survey',
   hivekin: 'The State Of The Hive',
   wandering: 'The Running Total',
+  unbound: 'The Standing Account',
 };
 
 export function empireIncome(state: GameState, playerId: number) {
@@ -242,6 +244,24 @@ export function openHordeReport(
             : '<span class="muted">nothing in particular</span>'
         }</span></div>
         <div><span class="label">Beakers</span><span class="value">${beakers}/turn</span></div>
+        ${
+          // Section 152: how many of theirs are away, and whether there is
+          // anywhere for them to come back to. Only for the side it concerns,
+          // and here rather than in the log because the log is where a
+          // scattered spirit is *announced* -- this is where you find out how
+          // many are outstanding, which is a thing the log can never tell you.
+          dispersingSide(player)
+            ? `<div><span class="label">Scattered</span><span class="value">${
+                scatteredOf(state, playerId).length
+              } <span class="muted ${canReform(state, playerId) ? '' : 'bad-text'}">${
+                canReform(state, playerId)
+                  ? `${reformSites(state, playerId).length} place${
+                      reformSites(state, playerId).length === 1 ? '' : 's'
+                    } to gather`
+                  : 'nowhere to gather'
+              }</span></span></div>`
+            : ''
+        }
       </div>
 
       <div class="panel-title">Where the money goes</div>

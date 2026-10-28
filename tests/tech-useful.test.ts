@@ -1,3 +1,4 @@
+import { REFORM_SITES } from '../src/sim/dispersal';
 import { describe, expect, it } from 'vitest';
 import { TECHS, techsForFaction } from '../src/model/techs';
 import { BUILDINGS, BUILDING_IDS } from '../src/model/buildings';
@@ -93,7 +94,12 @@ describe('the three sides are built out to the same shape', () => {
         b.faction === faction &&
         b.folly === undefined &&
         b.endingPart === undefined &&
-        b.victory === undefined,
+        b.victory === undefined &&
+        // Section 152: and not one of the Unbound's two reform sites, which
+        // are the faction's own mechanic wearing a building's clothes rather
+        // than a job a city needs doing. Taken from `REFORM_SITES` so this is
+        // not a second copy of that list.
+        !(REFORM_SITES as readonly string[]).includes(b.id),
     );
   }
 
