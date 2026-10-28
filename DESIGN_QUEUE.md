@@ -12613,20 +12613,42 @@ Those counts were measured in section 125, carefully, *"over five packages and
 ten seeds"*. They were measured for **one faction**, whose starter is a
 Fodder-caste.
 
-| faction | escort unit | A/D/HP | how they do |
-|---|---|---|---|
-| Hivekin | Fodder-caste | **3/2/12** | wins 42% of games |
-| Unbound | Revenant | **2/3/12** | arrives last, 4.5 cities |
-| Wandering Folk | Skirmisher | **1/1/10** | dies in 13 of 18 |
+> **Correction.** The first version of this entry said the Hive's escort is a
+> Fodder-caste at 3/2/12 and that the Wandering Folk therefore arrive behind
+> "the weakest escort in the game". **Both halves are wrong.** I read the unit
+> table with a regex that matched the wrong block and did not check it. The
+> real figures are below, and they say something different.
 
-The Wandering Folk arrive behind the weakest escort in the game, on a map
-forty turns settled, and their founder costs 25 where everybody else's costs
-20 -- the quarter-dearer premium that is their whole faction identity,
-applied at the one moment they have nothing to spend.
+| faction | arrives | escort unit | A/D/HP | cost | how they do |
+|---|---|---|---|---|---|
+| Hivekin | **~turn 20** | Fodder-caste | 1/1/10 | 10 | wins 42% of games |
+| Wandering Folk | ~turn 40 | Skirmisher | 1/1/10 | 13 | dies in 13 of 18 |
+| Unbound | ~turn 60 | Revenant | **2/3/12** | 20 | 4.5 cities |
 
-**The count was measured; the strength was inherited.** That is the same shape
-as every hand-maintained list in this file: a number that was right for the
-case it was taken on, copied to cases nobody re-measured.
+**The Hive and the Wandering Folk arrive behind the same 1/1/10 escort**, two
+apiece, and one wins two games in five while the other wins none. So escort
+strength alone does not explain it, and the tidy story in the first draft was
+a story.
+
+What is actually different is two things at once, and neither is sufficient
+alone:
+
+- **When.** The Hive lands around turn 20 onto ground two empires have barely
+  touched. The Wandering Folk land around turn 40.
+- **What with.** The Unbound land *latest* of the three, around turn 60, and
+  are fine -- behind a 2/3/12 Revenant rather than a 1/1/10.
+
+The Wandering Folk are the only side that is **neither early nor strong**, and
+their founder costs 25 where everybody else's costs 20 -- the quarter-dearer
+premium that is their faction identity, charged at the one moment they have
+nothing to spend. That is a coherent reading and it is **still a story**: what
+is measured is that they die, not why.
+
+**The count was measured; the strength was inherited.** Two escort was taken
+for the Hive in section 125 and given to every faction since as a *number* of
+whatever its own starter happens to be, and those range from a 10-shield
+1/1/10 to a 20-shield 2/3/12. That much is true however the deaths are
+explained.
 
 ### What to do about it is open
 
@@ -12635,7 +12657,12 @@ Three shapes, cheapest first, and none of them measured:
 1. **Budget the package in shields rather than units.** `founders: 2, escort:
    2` becomes "about 90 shields of escort", so a side with a cheap starter
    gets more of it and the next faction needs no entry at all. Retires the
-   class rather than fixing the instance.
+   class rather than fixing the instance. **Jeremy picked this**, and it is
+   built -- but note what it does with the corrected numbers: at 90 shields
+   the Hive gets **nine** Fodder, the Wandering Folk six Skirmishers and the
+   Unbound four Revenants, so the budget hands the largest package to the side
+   that already wins two games in five. It is a better *rule* than a count and
+   the *number* wants measuring before it is trusted.
 2. **Scale the grace by how weak the arrival is.** `HIVEKIN.grace` is flat.
    A side that lands with 1/1/10s plainly needs longer than one that lands
    with 3/2/12s.
@@ -12652,3 +12679,67 @@ outcomes. It exists because *"the AI does not use Recruit"* and *"the AI
 cannot afford Recruit"* and *"there is nobody to ask"* are three different
 claims that all look like a low win rate, and only one of them was testable
 before this.
+
+## 158. More than one of a faction, and where the next ones come from — QUEUED
+
+Jeremy's, 2026-10-27, and explicitly **after every other item**. No work until
+the queue above it is clear.
+
+### Two of the same side in one game
+
+Two Hordes on one map, told apart by colour and flag rather than by rules.
+The appeal is that it is the cheapest possible way to make a crowded game
+varied: five factions is already more than the balance work has caught up
+with (see section 154), and this adds opponents without adding a roster, a
+tech tree, an AI personality or two hundred art files.
+
+What it is not is free. Three things are a faction's *identity* in this
+codebase rather than its decoration, and all three are keyed by `FactionId`:
+
+- **Colour**, which is one field and is the easy half.
+- **Names.** `FACTIONS[f].cityNames` is one list of twenty-four; two Hordes
+  would race each other down it, and `nextCityName` already falls back to
+  "Outpost 7" when it runs out.
+- **Everything keyed by faction rather than by seat.** `PerSide` is
+  `Partial<Record<FactionId, number>>`, so the sweep report would add two
+  Hordes together and show one. Section 140 moved those *off* seats and onto
+  factions deliberately; this is the case that breaks it the other way, and
+  it is a bigger change than the colour is.
+
+So the real shape of this item is **a side identity that is not a faction
+id** -- a seat with a faction, a colour, a name list and a flag -- and most of
+the work is finding every place that currently says `FactionId` and means
+"this player".
+
+### Faction ideas, asked of me
+
+Jeremy asked me to think about what else might go in this world. Recorded
+here rather than built, and the bar is the one section 154 sets: **a faction
+is worth having when its mechanic is a field and a hook, and when it answers
+a question none of the other five answer.**
+
+The five answer: *how many* (Horde), *how organised* (Kingdom), *what grows
+next* (Hive), *whoever's left standing* (Wandering Folk), *it did not take*
+(Unbound). The gaps are therefore **time**, **terrain** and **knowledge**.
+
+- **Something that plays the map rather than the army.** The one axis nobody
+  touches is the ground: every side improves tiles the same way with the same
+  verbs. A faction whose cities *move*, or that farms terrain nobody else can
+  stand on, would make worldgen matter. Seam: `terraform.ts` and
+  `canStandOn`, both of which already exist for the Sunken Legion.
+- **Something that remembers.** Every side forgets a dead unit completely.
+  The Unbound got half of this by accident -- a Revenant that gathers keeps
+  its rank, and it is the first unit anybody has a reason to care about.
+  A faction built on *accumulated history* rather than production would be
+  the real version, and `model/perks.ts` is the mechanism.
+- **Something that is bad at war on purpose.** All five win by holding
+  ground. A side that cannot take a city at all and wins by being *needed* --
+  trade, tribute, everybody's roads running through it -- would use the
+  diplomacy and trade systems that currently decide nothing. It is also the
+  one idea here that would make gold matter, which section 154 lists as the
+  oldest unfixed measurement in this file.
+
+**What I would not propose**: another roster of twelve units with a different
+coat of paint. The last three factions each cost about two hundred art files
+and the balance of all three is still unmeasured; the next one should earn
+its place by changing a verb, not by adding nouns.

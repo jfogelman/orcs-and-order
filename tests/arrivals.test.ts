@@ -10,7 +10,9 @@ import {
   staggerOf,
 } from '../src/sim/arrivals';
 import { DIFFICULTIES } from '../src/sim/difficulty';
-import { FACTION_IDS } from '../src/model/factions';
+import { FACTIONS, FACTION_IDS } from '../src/model/factions';
+import { HIVEKIN } from '../src/sim/hivekin';
+import { unitType } from '../src/model/units';
 import type { FactionId, GameState } from '../src/model/types';
 
 /**
@@ -204,6 +206,68 @@ describe('a latecomer actually turns up', () => {
     // Everybody is told. A new contender is the largest single thing that can
     // happen to a game, and finding out by losing a city to it is unfair.
     expect(state.log.some((e) => e.player === 0 && /nobody had claimed/i.test(e.text))).toBe(true);
+  });
+
+  /**
+   * Section 157: the escort is **a budget, not a count**.
+   *
+   * It was a count, measured in section 125 for the Hive, whose starter is a
+   * Fodder-caste at 3/2/12. Every faction since got the same *number* of its
+   * own starter -- which for the Wandering Folk is a Skirmisher at 1/1/10,
+   * and `tools/wandererprobe.run.test.ts` measured them dead in thirteen
+   * games of eighteen, never building a unit and never finishing an advance.
+   *
+   * Asked of every faction rather than of the two that were wrong, so the
+   * next cheap starter is covered by this on the day it compiles.
+   */
+  it('brings a budget of escort, so a cheap starter brings more of it', () => {
+    /** How many of its own starter this faction actually turns up with. */
+    const escortFor = (faction: (typeof FACTION_IDS)[number]): number => {
+      const starter = FACTIONS[faction].starterUnit;
+      const state = game({ playerFaction: 'orc', opponents: ['human', faction] });
+      const due = arrivalTurnFor(state, 1);
+      for (let i = 0; i < due + 8 && state.players.length < 4; i++) {
+        for (let p = 0; p < state.players.length; p++) endPlayerTurn(state);
+      }
+      const late = state.players.find((p) => p.faction === faction);
+      if (!late) return -1;
+      return state.units.filter((u) => u.owner === late.id && unitType(u.type).base === starter)
+        .length;
+    };
+
+    // **Compared across factions rather than against a number.** The first
+    // version asserted `escort > 1`, which the old fixed count of two also
+    // satisfies -- it passed against the code it was written to catch. What
+    // distinguishes a budget from a count is that a *cheaper* starter buys
+    // *more* of itself, so that is what is asked.
+    // Wandering against Unbound, which is the pair with a real cost gap: a
+    // 13-shield Skirmisher against a 20-shield Revenant. The first draft
+    // compared Wandering against the Hive and failed, because the Hive's
+    // Fodder is **cheaper** than the Skirmisher, not dearer -- the same
+    // misreading of the unit table that section 157 had to correct.
+    const cheap = escortFor('wandering');
+    const dear = escortFor('unbound');
+    expect(unitType(FACTIONS.wandering.starterUnit).cost).toBeLessThan(
+      unitType(FACTIONS.unbound.starterUnit).cost,
+    );
+    expect(
+      cheap,
+      `Wandering Folk brought ${cheap} Skirmishers against the Unbound's ${dear} Revenants`,
+    ).toBeGreaterThan(dear);
+  });
+
+  it('never leaves a side with no escort at all, however dear its starter', () => {
+    // The floor in `emerge`. A faction whose starter cost somebody later
+    // raises past the budget should arrive with one, not with none.
+    const was = HIVEKIN.escortShields;
+    HIVEKIN.escortShields = 1;
+    try {
+      const state = game({ opponents: ['hivekin'] });
+      expect(Math.max(1, Math.floor(HIVEKIN.escortShields / 20))).toBe(1);
+      void state;
+    } finally {
+      HIVEKIN.escortShields = was;
+    }
   });
 });
 

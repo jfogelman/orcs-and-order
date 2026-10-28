@@ -2,6 +2,7 @@ import { FACTIONS } from '../model/factions';
 import type { FactionDef } from '../model/factions';
 import type { BroodBonus, City, GameState, Player, Unit } from '../model/types';
 import { TERRAIN } from '../model/terrain';
+import { unitType } from '../model/units';
 import { arrivalTurnFor, dueNow, latecomers } from './arrivals';
 import { contenders, log, makePlayer, playerCities, spawnUnit } from './gamestate';
 import { ensureWilds } from './barbarians';
@@ -65,7 +66,43 @@ export const HIVEKIN = {
    * than one that arrives with an army.
    */
   founders: 2,
+  /**
+   * Superseded by `escortShields`. Kept so a sweep arm can still pin a count
+   * and so `control.ts` reads unchanged; nothing in the game asks it.
+   */
   escort: 2,
+  /**
+   * Shields' worth of escort, rather than a number of them. Section 157.
+   *
+   * **The count was measured and the strength was inherited.** Two escort was
+   * taken in section 125 over five packages and ten seeds -- for the Hive,
+   * whose starter is a Fodder-caste at 3/2/12. Every faction since has been
+   * given *the same count* of its own `starterUnit`, and those are not the
+   * same thing:
+   *
+   * | side | escort | A/D/HP | cost |
+   * |---|---|---|---|
+   * | Hivekin | Fodder-caste | 3/2/12 | 20 |
+   * | Unbound | Revenant | 2/3/12 | 20 |
+   * | Wandering Folk | Skirmisher | **1/1/10** | 13 |
+   *
+   * So the Wandering Folk walked onto a forty-turn-old map behind the weakest
+   * escort in the game and `tools/wandererprobe.run.test.ts` measured them
+   * dead in **thirteen games of eighteen**, never building a unit and never
+   * finishing an advance -- while being perfectly healthy in the five they
+   * survived.
+   *
+   * A budget fixes the class rather than the instance: a side with a cheap
+   * starter brings more of it, and **faction six needs no entry here at all**.
+   * That is the same move as `FACTION_IDS` replacing a hand-written tuple, and
+   * this file has been caught by the hand-written version six times.
+   *
+   * **The number is unmeasured.** Ninety is Jeremy's pick off a worked
+   * example and it is roughly double what every side gets today, so it lifts
+   * the Hive -- already winning 42% of games -- as well as the side it is for.
+   * Section 156's sweep has to be re-run before this is trusted.
+   */
+  escortShields: 90,
   /**
    * Turns of grace before anything may attack them.
    *
@@ -313,7 +350,14 @@ export function maybeArrive(state: GameState): void {
   spawnUnit(state, side.id, def.settlerUnit, spot.x, spot.y);
   // The rest stand around it. Founders first, so a cramped spot that can only
   // fit three of them gets the ones that matter.
-  const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + HIVEKIN.escort);
+  // Section 157: founders are a count, escort is a budget. The founders stay
+  // a count because two of them is a *rule* -- "it arrives already split in
+  // two" -- rather than an amount of anything, and because a dearer founder
+  // should not mean a lonelier one. The escort is what has to hold the ground
+  // and is therefore what is worth measuring in what it costs.
+  const escortCost = Math.max(1, unitType(def.starterUnit).cost);
+  const escort = Math.max(1, Math.floor(HIVEKIN.escortShields / escortCost));
+  const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + escort);
   around.forEach(([x, y], n) => {
     const type = n < HIVEKIN.founders - 1 ? def.settlerUnit : def.starterUnit;
     spawnUnit(state, side.id, type, x, y);
