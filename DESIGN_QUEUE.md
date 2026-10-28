@@ -12922,3 +12922,148 @@ they land at forty.
   collapse of 31677 and 1015841 is real, the mechanism is in what a
   six-Skirmisher escort makes their AI *do*, and that wants the attacks-made
   counter section 156 asked for.
+
+## 160. The slot is worth more than the faction, and nobody had chosen the slots
+
+324 games, three arms, two seed sets. The sweep's own estimate was *"about 81
+minutes (49-105)"*; it took **92.5 minutes at 17.1s a game**, over by eleven
+and a half because the arms it was measuring make games longer.
+
+Section 159 found, while chasing something else, that `opponentsOf` returned
+the faction table's own declaration order, never shuffled, and that
+`arrivalTurnFor(state, n)` is `(n + 1) * gap`. So the Hive had always arrived
+about turn 20, the Wandering Folk about turn 40 and the Unbound about turn 60,
+in every game this project had ever measured, because of where somebody typed
+them into `FACTIONS`. This is what that was worth.
+
+### The answer is: more than the faction is worth
+
+The `shuffle all` arm puts every side in every slot, so it reads straight off
+as a table. Mean cities, both seed sets pooled:
+
+| | turn 1 | ~20 | ~40 | ~60 |
+|---|---|---|---|---|
+| Kingdom | 7.37 | 6.00 | 3.76 | 2.77 |
+| Hivekin | 3.78 | 3.09 | 3.94 | 2.72 |
+| **Wandering Folk** | **7.50** | 5.30 | 3.82 | 2.81 |
+| **Unbound** | 5.96 | 4.50 | 3.23 | 2.35 |
+
+Three of the four lose about **sixty per cent of their empire** between the
+first slot and the last. Tested properly -- early slots against late, each
+seed set on its own, two standard errors:
+
+| | tuned | held-out |
+|---|---|---|
+| Kingdom | +3.55 ± 1.90 | +3.01 ± 1.45 |
+| **Hivekin** | +0.87 ± 1.18 | **−0.44** ± 1.46 |
+| Wandering Folk | +2.48 ± 1.98 | +4.21 ± 1.93 |
+| Unbound | +2.02 ± 1.49 | +3.19 ± 1.60 |
+
+Both sets, past the bar, same direction, for everybody **except the Hivekin**,
+whose gap is inside the error in one set and *negative* in the other. That is
+the shape of nothing, and it is the whole finding.
+
+### Which is why the totals do not merely redistribute
+
+A shuffle that only moved luck around would conserve the total. It does not.
+The three latecomers between them hold **5.9 cities** under `none`, 9.3 under
+`latecomers` and **12.3** under `all`.
+
+The reason is in the table above. The best non-player slot was being handed,
+in every game ever played, to **the one side that cannot use it** -- and the
+two sides that could were queued behind it. The Hive gets its two-to-four
+cities whether it arrives on turn 1 or turn 60; it does not play the expansion
+game at all. So a wasted slot was being wasted on purpose, by accident, in every game ever measured.
+
+### The Wandering Folk were never weak
+
+Given turn one they are **the largest empire in the game** -- 7.50 cities,
+above the Kingdom's 7.37. Sections 156, 157 and 159 each asked what ailed
+them; 159 spent a 324-game sweep and a dedicated probe on it. The answer is
+that they were third.
+
+Section 157's bimodality is **not** explained by this and should not be read
+as explained: five of eighteen thriving was measured at a fixed slot, and
+this says nothing about spread within a slot. What is explained is the level.
+
+### What ships, and the number that decided it
+
+`ARRIVALS.shuffle = 'latecomers'`. Slot 0 keeps its occupant and the queue
+behind it is drawn from the map's seed.
+
+| | `none` | **`latecomers`** | `all` |
+|---|---|---|---|
+| Wandering Folk cities | 2.20 / 2.39 | **3.94 / 2.98** | 5.69 / 4.33 |
+| Unbound cities | 1.11 / 1.11 | **2.76 / 2.31** | 3.81 / 3.87 |
+| Kingdom cities | 8.24 / 7.22 | **7.44 / 7.07** | 4.17 / 5.63 |
+| Orc cities | 5.56 / 5.26 | **5.26 / 5.33** | 5.74 / 5.39 |
+| unfinished /108 | 13 | **22** | **36** |
+
+`all` is measured, kept and **not shipped**. It seats the Hivekin beside the
+player a quarter of the time, and a non-expansionist neighbour with the real
+rival forty turns away leaves a third of all games unresolved at the turn
+limit. A game that cannot finish is a worse fault than an arbitrary
+neighbour. It also halves the Kingdom, who are the designed rival and the
+thing a hundred sections of balance rest on.
+
+`latecomers` buys most of the gain, moves the player's own game not at all
+(5.56 / 5.26 against 5.26 / 5.33), and costs nine more unfinished games.
+
+### What this does not fix, said here rather than rediscovered
+
+**Slot 0 of the default roster is still the Kingdom by declaration order.**
+That one is defensible -- they are the designed rival, the fiction wants them
+next door, and every measurement rests on it -- but it is *defensible*, not
+*chosen*, and it is the same mechanism as the bug. Written down so the third
+discovery of it is cheaper than the second was.
+
+### Two copies of the seating rule, found before it bit
+
+`createGame` still kept its own `chosen.slice(0, 1)` -- the copy section 153
+said it had removed and had not, having fixed the comment and left the line.
+Harmless while the order was a constant. The moment it is drawn, the two
+copies disagree about *who is in the game*: one side seated twice, another
+never arriving. `rosterOrder` and `atStartOf` are now the single definition
+and `createGame` is a caller like everything else.
+
+This is the eighth or ninth instance of the hand-maintained list in this file
+and the first one caught **before** it cost a measurement.
+
+### Shipped
+
+- `ARRIVALS.shuffle`, defaulting to `latecomers`, drawn off the seed with its
+  own salt so the order and the arrival turns stay independent.
+- The two copies of the seating rule collapsed into one.
+- `tools/sweep.ts`: `ARRIVALS` registered in `LEVERS`, without which the
+  identity guard compares settings that do not mention the lever and refuses
+  the arms as duplicates. And victory kinds abbreviated to three letters --
+  at two, `points` and `portal` were both `po`.
+- Six tests that named a faction where they meant "the first in the queue",
+  in `arrivals.test.ts` and `hivekin.test.ts`, now assert the shape. They are
+  the same assumption the game was making.
+- The Orcpedia: *"You pick who is in the game; the map picks the running
+  order"*, with what the slot is worth, under **Who turns up, and when**; and
+  the Hivekin pane no longer claims they arrive first.
+
+Nine of the ten fixtures regenerated with **only** the recorded `opponents`
+order changed and the board byte-identical, which is the proof that the draw
+perturbs nothing but the queue. The tenth is `late-game.w2c`, which is made by
+playing to turn 299 and therefore plays a different game.
+
+### Still open
+
+- **Does an explicitly chosen opponent list get shuffled?** It does now, past
+  the first pick. The rule as shipped is "you pick who is in, the game picks
+  the running order, and the first one you pick is your neighbour". Jeremy's
+  call, and the one thing in this section that is a design decision rather
+  than a measurement.
+- **The Hivekin do not respond to the map.** Two to four cities from any slot,
+  winning 37-46 of 108 almost entirely through their own ending. Section 156
+  flagged the win rate unasked; this gives it a mechanism -- their strength is
+  decoupled from the board, which is why the best slot was wasted on them and
+  why nothing anybody does to the map moves them. Still unasked.
+- **A package that scales with lateness** (section 159's fourth option) is now
+  better motivated and better targeted: the gradient is measured, and it is
+  steep, and it is the same for everybody who expands.
+- **Section 157's options 2 and 3**, still untried -- and worth re-asking,
+  because they were aimed at a weakness that turns out to have been a slot.

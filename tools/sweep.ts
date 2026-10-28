@@ -25,6 +25,7 @@ import { FACTION_IDS, FACTIONS } from '../src/model/factions';
 import { PREY, RAIDED } from '../src/sim/barbarians';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN, QUEEN } from '../src/sim/hivekin';
+import { ARRIVALS } from '../src/sim/arrivals';
 import { TECHS_BY_ID } from '../src/model/techs';
 import { BURROW } from '../src/sim/burrow';
 import { PILLAGE, ROADS, connectedByRoad } from '../src/sim/roads';
@@ -123,6 +124,11 @@ export const LEVERS: Record<string, object> = {
   LEGION,
   RUINS,
   HIVEKIN,
+  // Section 160: the arrival order and the stagger switch. Registered the day
+  // the order became a lever, because the identity guard compares *settings*
+  // and an arm moving something it cannot see is refused as a duplicate --
+  // which is how `no want` and `no dispersal` turned out to be one arm.
+  ARRIVALS,
   HIVE_ENDING,
   BURROW,
   QUEEN,

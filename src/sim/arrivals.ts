@@ -44,7 +44,128 @@ export const ARRIVALS = {
    * coin toss about who comes first.
    */
   jitter: 8,
+  /**
+   * Section 160: **the slot is worth more than the faction, and nobody chose
+   * the slots.**
+   *
+   * Section 159 went looking for why the two late factions are weak and found
+   * that `opponentsOf` returns the faction table's own declaration order,
+   * never shuffled, and `arrivalTurnFor` is `(n + 1) * gap`. So on Normal the
+   * Hive had always arrived about turn 20, the Wandering Folk about turn 40
+   * and the Unbound about turn 60, **in every game this project had ever
+   * measured** -- because of where somebody typed them into `FACTIONS`. The
+   * Hive was first because it was the first latecomer there was, in section
+   * 125; the Unbound last because they were written last, in section 152.
+   *
+   * ## What 324 games said
+   *
+   * Mean cities by the slot a side drew, over both seed sets, every faction
+   * in every slot (`all`):
+   *
+   * | | turn 1 | ~20 | ~40 | ~60 |
+   * |---|---|---|---|---|
+   * | Kingdom | 7.37 | 6.00 | 3.76 | 2.77 |
+   * | Hivekin | 3.78 | 3.09 | 3.94 | 2.72 |
+   * | Wandering Folk | **7.50** | 5.30 | 3.82 | 2.81 |
+   * | Unbound | 5.96 | 4.50 | 3.23 | 2.35 |
+   *
+   * Three of the four lose about sixty per cent of their cities between the
+   * first slot and the last, in **both** seed sets and past two standard
+   * errors. **The Hivekin alone have no gradient at all** -- 0.87 one way on
+   * tuned, 0.44 the other on held-out, which is the shape of nothing.
+   *
+   * So the unchosen order was handing the one slot that matters most to the
+   * one side that cannot use it, and queueing the other two behind it. That
+   * is why the totals do not merely redistribute when this is switched on:
+   * the three latecomers between them held 5.9 cities under `none` and 12.3
+   * under `all`. A wasted slot was being wasted on purpose by accident.
+   *
+   * **The Wandering Folk were never weak.** Given turn one they are the
+   * largest empire in the game, above the Kingdom. Sections 156, 157 and 159
+   * each asked what ailed them; the answer is that they were third.
+   *
+   * ## Why `latecomers` ships and `all` does not
+   *
+   * - **`none`** -- the table's order. Every measurement before this section.
+   * - **`latecomers`** -- **the default.** Slot 0 keeps its occupant, so the
+   *   side standing beside you at turn one is unchanged and only the queue
+   *   behind it is drawn. Both late sides roughly double on every column, in
+   *   both sets, and the player's own game does not move: Orc cities 5.56 /
+   *   5.26 against 5.26 / 5.33.
+   * - **`all`** -- slot 0 drawn too. Measured, kept, and *not* shipped: it
+   *   seats the Hivekin beside you a quarter of the time, and a
+   *   non-expansionist neighbour with the real rival forty turns away leaves
+   *   **36 of 108 games unfinished at the turn limit** against 13 under
+   *   `latecomers`. A game that cannot resolve is a worse fault than an
+   *   arbitrary neighbour.
+   *
+   * What `latecomers` does *not* fix: slot 0 of the default roster is still
+   * the Kingdom by declaration order. That one is defensible -- they are the
+   * designed rival and every measurement rests on them being there -- but it
+   * is defensible, not chosen, and it is written down here rather than left
+   * to be rediscovered a third time.
+   *
+   * **Drawn from the seed, never from the shared stream**, which is section
+   * 59's rule and the reason `none` is not merely equivalent to the old game
+   * but byte-identical to it: nothing here moves a roll that comes after it.
+   */
+  shuffle: 'latecomers' as 'none' | 'latecomers' | 'all',
 };
+
+/**
+ * A deterministic shuffle of a short list, off the map's seed.
+ *
+ * Its own salt rather than `arrivalTurnFor`'s, so the order drawn and the
+ * turns drawn are independent: two games that happen to seat the same order
+ * should not thereby agree about when.
+ */
+function drawOrder<T>(list: T[], seed: number): T[] {
+  const out = list.slice();
+  let h = (seed ^ 0x85ebca6b) >>> 0;
+  const next = (): number => {
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+    return (h ^ (h >>> 16)) >>> 0;
+  };
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = next() % (i + 1);
+    const swap = out[i];
+    out[i] = out[j];
+    out[j] = swap;
+  }
+  return out;
+}
+
+/**
+ * **The one definition of who is in a game and in what order they turn up.**
+ *
+ * Takes the seed and the player's side rather than a `GameState`, because
+ * `createGame` needs the answer *before* there is a state to ask about -- and
+ * that is exactly why this function exists. Section 153 found `createGame`
+ * keeping its own copy of "the first opponent stands on the map", fixed the
+ * symptom, and left the copy: the line still sliced the list itself. A
+ * shuffle would have made the two copies disagree about who was even in the
+ * game, which is a worse failure than the one section 153 found.
+ *
+ * Resolved **once**, by `createGame`, and written into `settings.opponents`.
+ * Everything afterwards reads that order back rather than re-drawing it, so
+ * the order survives a save and cannot be re-rolled by a later caller.
+ */
+export function rosterOrder(seed: number, player: FactionId, chosen?: FactionId[]): FactionId[] {
+  const list = (chosen && chosen.length > 0 ? chosen : FACTION_IDS).filter(
+    (f) => f !== player && FACTIONS[f] !== undefined,
+  );
+  if (ARRIVALS.shuffle === 'none' || list.length < 2) return list;
+  if (ARRIVALS.shuffle === 'all') return drawOrder(list, seed);
+  // Slot 0 stands still and the queue behind it is re-drawn.
+  return [list[0], ...drawOrder(list.slice(1), seed)];
+}
+
+/** Who starts on the map, given an order that has already been drawn. */
+export function atStartOf(order: FactionId[], settings: GameState['settings']): FactionId[] {
+  if (!ARRIVALS.enabled || difficultyOf(settings).stagger <= 0) return order;
+  return order.slice(0, 1);
+}
 
 /** Turns between arrivals at this game's level, and the jitter around each. */
 export function staggerOf(state: GameState): { gap: number; jitter: number } {
@@ -61,10 +182,20 @@ export function staggerOf(state: GameState): { gap: number; jitter: number } {
 export function opponentsOf(state: GameState): FactionId[] {
   const player = state.players[0]?.faction ?? 'orc';
   const chosen = state.settings.opponents;
-  const list = chosen && chosen.length > 0 ? chosen : FACTION_IDS.filter((f) => f !== player);
+  // **An order already in the settings is read back, not re-drawn.**
+  // `createGame` resolves it once and writes it here, so this is the recorded
+  // order of this game; re-drawing it would shuffle an already-shuffled list
+  // and the board would disagree with the queue about who comes next.
+  //
   // Never the player's own side, and never a name no longer in the table: a
   // save written when a faction existed should load rather than seat a ghost.
-  return list.filter((f) => f !== player && FACTIONS[f] !== undefined);
+  if (chosen && chosen.length > 0) {
+    return chosen.filter((f) => f !== player && FACTIONS[f] !== undefined);
+  }
+  // No recorded order: a hand-built state in a test, or a save from before
+  // the roster was written down. Drawn here, from the same seed, so it is the
+  // same answer `createGame` would have given.
+  return rosterOrder(state.seed, player, undefined);
 }
 
 /**
@@ -76,15 +207,17 @@ export function opponentsOf(state: GameState): FactionId[] {
  * one where the whole world is already there.
  */
 export function opponentsAtStart(state: GameState): FactionId[] {
-  const all = opponentsOf(state);
-  if (!ARRIVALS.enabled || staggerOf(state).gap <= 0) return all;
-  return all.slice(0, 1);
+  return atStartOf(opponentsOf(state), state.settings);
 }
 
 /** The opponents who arrive later, in order. */
 export function latecomers(state: GameState): FactionId[] {
-  if (!ARRIVALS.enabled || staggerOf(state).gap <= 0) return [];
-  return opponentsOf(state).slice(1);
+  const all = opponentsOf(state);
+  // Whoever is not standing on the map is late, read off the same answer
+  // rather than re-deriving the condition -- so a level that staggers nobody
+  // has no latecomers because everybody is already at the start.
+  const started = atStartOf(all, state.settings);
+  return all.slice(started.length);
 }
 
 /**

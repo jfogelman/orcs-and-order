@@ -5,8 +5,8 @@ import { placeRuins } from './ruins';
 import { idx, inBounds, neighbors8 } from '../engine/grid';
 import { revealAround } from '../engine/fov';
 import { TERRAIN } from '../model/terrain';
-import { FACTION_IDS, FACTIONS } from '../model/factions';
-import { ARRIVALS } from './arrivals';
+import { FACTIONS } from '../model/factions';
+import { atStartOf, rosterOrder } from './arrivals';
 import { unitType } from '../model/units';
 import type {
   City,
@@ -296,12 +296,15 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   // sides on the board. That is the hand-maintained-list failure wearing a
   // function's clothes, and the fix is the same one: one definition, and the
   // other caller reads it.
-  const chosen: FactionId[] =
-    opts.opponents && opts.opponents.length > 0
-      ? opts.opponents.filter((f) => f !== playerFaction && FACTIONS[f] !== undefined)
-      : FACTION_IDS.filter((f) => f !== playerFaction);
-  const staggered = ARRIVALS.enabled && difficultyOf(settings).stagger > 0;
-  const onMap = staggered ? chosen.slice(0, 1) : chosen;
+  //
+  // Section 160: and the copy was still here. Section 153 fixed what that
+  // copy *said* and left it a copy -- these two lines resolved the roster and
+  // sliced it themselves. That was harmless only while the order was a
+  // constant; the moment it is drawn, two copies disagree about who is in the
+  // game at all. `rosterOrder` and `atStartOf` are now the definition and
+  // this is a caller, which is what section 153 said the fix was.
+  const chosen: FactionId[] = rosterOrder(seed, playerFaction, opts.opponents);
+  const onMap = atStartOf(chosen, settings);
   // Written down rather than left to the default, so a save remembers who was
   // *meant* to be in this game. Without it a game loaded after a faction was
   // added to the table would quietly acquire a new opponent at turn ninety.

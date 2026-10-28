@@ -701,11 +701,12 @@ export const HIVE_RULES = topicPane(
   with no explanation offered and none apparently required.</p>
   <p class="flavor">
   <strong>When that happens is not their rule any more.</strong> Section 139
-  made arrival a fact about <em>the level and the order you picked your
-  opponents in</em> rather than about the Hivekin, who used to be the only
-  side that turned up late and now are simply whoever happens to be next in
-  the queue &mdash; chosen as your only opponent they start on the map like
-  anybody else. It is written up
+  made arrival a fact about <em>the level and the slot</em> rather than about
+  the Hivekin, who used to be the only side that turned up late and now are
+  simply whoever happens to be next in the queue &mdash; chosen as your only
+  opponent they start on the map like anybody else. And the queue itself is
+  <strong>drawn from the map's seed</strong>, so they are no longer reliably
+  the first to arrive either. It is written up
   ${seeTopic('difficulty', 'Who turns up, and when', 'under Difficulty')}.</p>`,
     },
     {
@@ -1926,6 +1927,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <strong>You choose who you are playing against</strong> on the new-game screen,
           and you may pick more than one. <strong>The first of them is on the map from
           the first turn.</strong> Everybody else is coming, and has not arrived yet.
+        </p>
+        <p class="flavor">
+          <strong>You pick who is in the game; the map picks the running order.</strong>
+          Everybody behind that first one is shuffled, drawn once from the map's own
+          seed, so the same contenders turn up in a different order on a different map.
+          This matters more than it sounds: arriving first is worth roughly twice as
+          many towns as arriving last, whoever you are, and before this the order was
+          simply the order the sides happened to have been written in.
         </p>
         <p class="flavor">
           <strong>The level is the only thing that decides when.</strong> Each one

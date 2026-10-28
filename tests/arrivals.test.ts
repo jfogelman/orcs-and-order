@@ -34,9 +34,17 @@ describe('who is in the game', () => {
     // Section 152 added a fifth side, so "everybody else" is four of them.
     // The shape of the rule is what is pinned here, not the count: one on the
     // map, the rest on the clock.
-    expect(opponentsOf(state)).toEqual(['human', 'hivekin', 'wandering', 'unbound']);
+    //
+    // **Named as a set, because section 160 draws the queue.** This test used
+    // to assert `['human', 'hivekin', 'wandering', 'unbound']` in order, which
+    // pinned the faction table's declaration order as though somebody had
+    // chosen it -- and that order turned out to be worth more to a side than
+    // which side it was. What is actually the rule is: everybody else is in,
+    // the first one is on the map, the rest are not.
+    expect([...opponentsOf(state)].sort()).toEqual(['hivekin', 'human', 'unbound', 'wandering']);
     expect(opponentsAtStart(state)).toEqual(['human']);
-    expect(latecomers(state)).toEqual(['hivekin', 'wandering', 'unbound']);
+    expect(latecomers(state)).toEqual(opponentsOf(state).slice(1));
+    expect([...latecomers(state)].sort()).toEqual(['hivekin', 'unbound', 'wandering']);
   });
 
   /**
@@ -153,7 +161,12 @@ describe('the staggered clock', () => {
     ARRIVALS.enabled = false;
     try {
       const state = game();
-      expect(opponentsAtStart(state)).toEqual(['human', 'hivekin', 'wandering', 'unbound']);
+      expect([...opponentsAtStart(state)].sort()).toEqual([
+        'hivekin',
+        'human',
+        'unbound',
+        'wandering',
+      ]);
       expect(latecomers(state)).toEqual([]);
     } finally {
       ARRIVALS.enabled = true;
@@ -173,9 +186,14 @@ describe('the staggered clock', () => {
    */
   it('seats everybody at the hardest level, where nobody is late', () => {
     const state = createGame({ seed: 7, width: 64, height: 48, difficulty: 'hardest' });
-    expect(state.players.map((p) => p.faction)).toEqual([...FACTION_IDS]);
+    // The player is seated first and the rest in the drawn order, so this is
+    // a set past the first seat. Everybody is here, which is the rule; who is
+    // seated third is not.
+    const seated = state.players.map((p) => p.faction);
+    expect(seated[0]).toBe('orc');
+    expect([...seated].sort()).toEqual([...FACTION_IDS].sort());
     expect(latecomers(state)).toEqual([]);
-    expect(opponentsAtStart(state)).toEqual(FACTION_IDS.filter((f) => f !== 'orc'));
+    expect(seated.slice(1)).toEqual(opponentsAtStart(state));
   });
 
   it('seats one opponent at every level that staggers anybody', () => {
@@ -192,6 +210,7 @@ describe('a latecomer actually turns up', () => {
   it('arrives on its turn, with founders and an escort, and is announced', () => {
     const state = game();
     const due = arrivalTurnFor(state, 0);
+    const due0 = latecomers(state)[0];
     expect(state.players).toHaveLength(2);
     // Run the calendar to the arrival. Cheap because nothing else is driving
     // the game -- no AI acts, the turn simply advances.
@@ -200,7 +219,9 @@ describe('a latecomer actually turns up', () => {
     }
     expect(state.players.length, `nobody arrived by turn ${state.turn}`).toBe(3);
     const late = state.players[2];
-    expect(late.faction).toBe('hivekin');
+    // **Whoever the queue says, not whoever was written first.** Naming the
+    // Hivekin here was the same assumption section 160 removed from the game.
+    expect(late.faction).toBe(due0);
     expect(late.joinedAt).toBeGreaterThanOrEqual(due);
     expect(state.units.some((u) => u.owner === late.id)).toBe(true);
     // Everybody is told. A new contender is the largest single thing that can
@@ -282,5 +303,142 @@ describe('the table itself', () => {
       expect(opponentsOf(state), `${id} has nobody to play against`).not.toHaveLength(0);
       expect(opponentsOf(state)).not.toContain(id);
     }
+  });
+});
+
+/**
+ * Section 160: the order anybody turns up in, which nobody had chosen.
+ *
+ * Section 159 found that `opponentsOf` returned the faction table's own
+ * declaration order and that `arrivalTurnFor` is `(n + 1) * gap`, so the Hive
+ * had always arrived first and the Unbound always last -- in every game ever
+ * measured -- because of where they were typed into `FACTIONS`.
+ */
+describe('the order they turn up in', () => {
+  const withShuffle = <T>(mode: typeof ARRIVALS.shuffle, body: () => T): T => {
+    const was = ARRIVALS.shuffle;
+    ARRIVALS.shuffle = mode;
+    try {
+      return body();
+    } finally {
+      ARRIVALS.shuffle = was;
+    }
+  };
+
+  /**
+   * Section 160 measured all three settings over 324 games and shipped the
+   * middle one. The number that decided it: `all` leaves **36 of 108 games
+   * unfinished** at the turn limit against 13 here, because it seats the
+   * Hivekin -- who do not expand whatever slot they draw -- beside the player
+   * a quarter of the time.
+   *
+   * Pinned so that changing the shipped game is a deliberate edit with a test
+   * to update, rather than a default somebody adjusts while debugging.
+   */
+  it('ships the drawn queue, with the turn-one neighbour left alone', () => {
+    expect(ARRIVALS.shuffle).toBe('latecomers');
+  });
+
+  it('is the table order with the lever off, which is what was measured', () => {
+    withShuffle('none', () => {
+      const state = game();
+      expect(opponentsOf(state)).toEqual(['human', 'hivekin', 'wandering', 'unbound']);
+    });
+  });
+
+  it('keeps the turn-one neighbour and re-draws the queue behind it', () => {
+    // Across a spread of seeds the queue must actually come out in more than
+    // one order -- a "shuffle" that returns the table order every time is the
+    // bug this section exists to fix, and it would pass a single-seed test.
+    const orders = new Set<string>();
+    withShuffle('latecomers', () => {
+      for (let seed = 1; seed <= 40; seed++) {
+        const state = createGame({ seed, width: 40, height: 28 });
+        const order = opponentsOf(state);
+        expect(order[0], `seed ${seed} moved the turn-one opponent`).toBe('human');
+        expect([...order].sort()).toEqual(['hivekin', 'human', 'unbound', 'wandering']);
+        orders.add(order.join(','));
+      }
+    });
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('draws the turn-one neighbour too, when told to', () => {
+    const first = new Set<string>();
+    withShuffle('all', () => {
+      for (let seed = 1; seed <= 40; seed++) {
+        const state = createGame({ seed, width: 40, height: 28 });
+        first.add(opponentsOf(state)[0]);
+      }
+    });
+    // The Kingdom has been every Orc player's turn-one neighbour for the
+    // project's whole life, for no reason anybody chose.
+    expect(first.size).toBeGreaterThan(1);
+  });
+
+  it('draws the same order every time for the same seed', () => {
+    withShuffle('all', () => {
+      const a = createGame({ seed: 4242, width: 40, height: 28 });
+      const b = createGame({ seed: 4242, width: 40, height: 28 });
+      expect(opponentsOf(a)).toEqual(opponentsOf(b));
+      // And asking twice does not re-roll it.
+      expect(opponentsOf(a)).toEqual(opponentsOf(a));
+    });
+  });
+
+  /**
+   * **The guard that matters.** `createGame` used to resolve the roster and
+   * slice it itself while `opponentsOf` resolved it again -- two copies of
+   * one rule, which section 153 found, fixed the wording of, and left as two
+   * copies. A drawn order makes them disagree about *who is in the game*:
+   * the board seats the table's second faction and the queue expects
+   * somebody else, so one side is seated twice and another never arrives.
+   *
+   * **Checked by breaking it**, because a guard nobody has seen fail is a
+   * guard nobody has tested. Making `opponentsOf` re-draw a *recorded* order
+   * instead of reading it back fails this on seed 1: the board seats the
+   * Unbound and the queue expects the Wandering Folk.
+   *
+   * Restoring section 153's `chosen.slice(0, 1)` does **not** fail this one,
+   * which is worth writing down -- with that copy back, `createGame` records
+   * the undrawn order and `opponentsOf` reads it back, so the shuffle is
+   * simply inert and the two agree about an order nobody drew. What catches
+   * *that* is the pair of tests above, which find only one order across forty
+   * seeds.
+   */
+  it('seats the side the queue says is first, and never one twice', () => {
+    withShuffle('all', () => {
+      for (let seed = 1; seed <= 30; seed++) {
+        const state = createGame({ seed, width: 40, height: 28 });
+        const order = opponentsOf(state);
+        const seated = state.players.slice(1).map((p) => p.faction);
+        expect(seated, `seed ${seed} seated the wrong side`).toEqual([order[0]]);
+        expect(latecomers(state), `seed ${seed} queued the side already seated`).toEqual(
+          order.slice(1),
+        );
+        expect(new Set(state.players.map((p) => p.faction)).size).toBe(state.players.length);
+      }
+    });
+  });
+
+  it('records the order it drew, so a save cannot re-roll it', () => {
+    withShuffle('all', () => {
+      const state = createGame({ seed: 99, width: 40, height: 28 });
+      const drawn = opponentsOf(state);
+      expect(state.settings.opponents).toEqual(drawn);
+      // A reload reads the recorded order back. Re-drawing it here with the
+      // shuffle still on would shuffle an already-shuffled list.
+      const reloaded = JSON.parse(JSON.stringify(state)) as GameState;
+      expect(opponentsOf(reloaded)).toEqual(drawn);
+    });
+  });
+
+  it('leaves nobody late at the level where nobody is late', () => {
+    const hardest = DIFFICULTIES[DIFFICULTIES.length - 1];
+    withShuffle('all', () => {
+      const state = createGame({ seed: 11, width: 40, height: 28, difficulty: hardest.id });
+      expect(latecomers(state)).toEqual([]);
+      expect(state.players).toHaveLength(FACTION_IDS.length);
+    });
   });
 });

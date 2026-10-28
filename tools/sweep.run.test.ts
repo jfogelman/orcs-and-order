@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { ARRIVALS } from '../src/sim/arrivals';
 
 /**
  * The question this sweep is currently asking.
@@ -43,89 +43,78 @@ declare const process: { env: Record<string, string | undefined> };
 
 const buildArms = (): Arm[] => {
   /**
-   * Section 159: **does the escort budget fix the Wandering Folk, and what
-   * does it cost the Hive?**
+   * **Answered: yes, and it mattered more than which faction you are.**
+   * Shipped as `latecomers`; the table and the reasoning are in section 160.
+   * Mean cities by the slot a side drew, every faction in every slot:
+   * Kingdom 7.37 / 6.00 / 3.76 / 2.77, Wandering Folk 7.50 / 5.30 / 3.82 /
+   * 2.81, Unbound 5.96 / 4.50 / 3.23 / 2.35 -- and **Hivekin 3.78 / 3.09 /
+   * 3.94 / 2.72**, the one side with no gradient at all, which is the side
+   * the unchosen order had been handing the best slot to.
    *
-   * ## Answered: no, and more than it is worth
+   * `all` is not shipped: it leaves 36 of 108 games unfinished at the turn
+   * limit against 13, because it seats the Hive beside the player a quarter
+   * of the time and nobody is then strong enough to close the game out.
    *
-   * 324 games, 82.2 minutes. **40 is indistinguishable from the old rule on
-   * every column of every faction in both seed sets.** At 90 the Wandering
-   * Folk end smaller on cities, population, units and recruiting -- both sets
-   * agreeing -- and the Hive ends larger on all four, because a fixed shields
-   * budget buys the most of the cheapest starter and the cheapest belongs to
-   * the side that already wins most. `escortShields` ships at 40: the value
-   * that retires the hand-maintained list without moving the balance.
+   * Left here as the worked example of three arms earning their cost. Two
+   * would have bundled "arrival order" with "who your neighbour is" and the
+   * answer differs between them: the queue is worth most of the gain, the
+   * turn-one slot is worth the rest and costs the game its ending.
    *
-   * `tools/escortprobe.run.test.ts` then asked *why* and found it is not
-   * death: tripling the escort left the same five survivors in eighteen,
-   * dying on turn 69 against 63. The arrival package is not what ails them.
+   * ---
    *
-   * These arms are kept as run, for the next person who wants to re-measure
-   * the same three points. The finding is section 159.
+   * Section 160: **does it matter that nobody chose the arrival order?**
    *
-   * Section 156 measured the Wandering Folk at 0 wins of 324. Section 157's
-   * probe found they die in thirteen games of eighteen without building a
-   * single unit, and that neither of the two hypotheses on offer -- too little
-   * gold, too little Recruit -- survives contact with the counters. What
-   * changed is that a latecomer's escort is a **shields budget** rather than
-   * a count of whatever its own starter happens to be.
+   * Section 159 went looking for why the two late factions are weak and found
+   * this instead: `opponentsOf` returned the faction table's own declaration
+   * order, never shuffled, and `arrivalTurnFor` is `(n + 1) * gap`. So on
+   * Normal the Hive has always arrived about turn 20, the Wandering Folk
+   * about turn 40 and the Unbound about turn 60 -- **in every game this
+   * project has ever measured** -- and the Kingdom has always been the Orc
+   * player's turn-one neighbour. The Hive is first because it was the first
+   * latecomer there was (section 125) and the Unbound last because they were
+   * written last (section 152). Nobody picked any of it.
    *
-   * ## The thing to be careful about
+   * It also explains two numbers that have been sitting unexplained: section
+   * 156's *"the Unbound arrive last, 4.5 cities"* -- they arrive last
+   * **always** -- and section 157's *"dead by about turn fifty"*, against a
+   * due turn of forty.
    *
-   * Section 157's first draft claimed the Hive arrives behind a 3/2/12 and the
-   * Wandering Folk behind a 1/1/10. **That was a misreading**: both arrive
-   * behind a 1/1/10, and the Hive's is *cheaper* (10 shields against 13). So
-   * the budget gives the Hive **more** escort than the Wandering Folk, and the
-   * Hive already wins two games in five.
+   * ## Three arms, because "the order" is two rules wearing one name
    *
-   * | side | starter | cost | at 26s | at 40s | at 90s |
-   * |---|---|---|---|---|---|
-   * | Hivekin | Fodder | 10 | 2 | 4 | **9** |
-   * | Wandering Folk | Skirmisher | 13 | 2 | 3 | 6 |
-   * | Unbound | Revenant | 20 | 1 | 2 | 4 |
+   * - **`table order`** -- the control, and every measurement to date.
+   * - **`shuffle queue`** -- slot 0 keeps its occupant, so the turn-one
+   *   neighbour is unchanged and only the arrival queue behind it is drawn.
+   *   Isolates **arrival order** on its own.
+   * - **`shuffle all`** -- slot 0 is drawn too, so *who starts beside you*
+   *   stops being a fact about the table as well.
    *
-   * This sweep exists because that table is an argument and not a result.
+   * The pair is what makes this worth three arms. If the queue moves nothing
+   * and `shuffle all` moves a lot, the finding is about **the turn-one slot**
+   * and not about arrival order at all -- and the fix would be a different
+   * one line. Two arms would have blamed whichever rule they happened to
+   * bundle.
    *
-   * ## Three arms, and the control is the old rule
+   * ## What would count
    *
-   * - **`old count`** -- `escortShields` low enough that everybody gets what
-   *   the fixed count gave them. The game as section 156 measured it, which
-   *   is what makes the comparison a comparison.
-   * - **`40 shields`** -- the middle. Lifts the weak sides without tripling
-   *   anybody.
-   * - **`90 shields`** -- what ships, and Jeremy's pick.
+   * A shuffle gives each latecomer each slot about a third of the time, so
+   * what moves is each faction's average **over** slots. If being third is
+   * what ails the Wandering Folk, their columns rise here; if they are simply
+   * a weak faction, the shuffle redistributes and nothing moves except the
+   * Hive, which loses its guaranteed head start. Either answer is useful and
+   * the second one closes the question.
    *
-   * Three points rather than two because the question is **shape**: if the
-   * Wandering Folk come up between 26 and 40 and the Hive runs away between
-   * 40 and 90, the answer is 40 and neither two-arm sweep would have found it.
-   *
-   * ## The default game, not the Unbound's
-   *
-   * Section 156's sweep set `NEW_GAME.playerFaction = 'unbound'` to measure a
-   * mechanic on a side that would otherwise barely be in the game. This one
-   * does **not**: arrival packages are about the whole roster, and the
-   * question is which sides win the shipped default. Putting a thumb on the
-   * seating would be measuring a different game than the one being asked
-   * about.
+   * `sweep-noise-at-108-games` still applies: believe it when both seed sets
+   * agree and a second column moves with the first.
    */
-  const arm = (label: string, shields: number): Arm => ({
+  const arm = (label: string, shuffle: typeof ARRIVALS.shuffle): Arm => ({
     label,
     apply: () => {
       control();
-      HIVEKIN.escortShields = shields;
+      ARRIVALS.shuffle = shuffle;
     },
   });
 
-  return [
-    // 26 is the lowest budget that still buys the Hive its old two Fodder
-    // (26/10 = 2) and the Wandering Folk their old two Skirmishers (26/13 = 2).
-    // The Unbound drop to one Revenant against their old two, which is the one
-    // place this control is not quite the old game -- there is no budget that
-    // reproduces a count for three different prices, and that is the point.
-    arm('old count', 26),
-    arm('40 shields', 40),
-    arm('90 shields', 90),
-  ];
+  return [arm('table order', 'none'), arm('shuffle queue', 'latecomers'), arm('shuffle all', 'all')];
 };
 
 const ARMS: Arm[] = buildArms();
