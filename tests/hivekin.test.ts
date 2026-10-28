@@ -678,6 +678,63 @@ describe('what the Hive pays for its ending (section 136)', () => {
     }
   });
 
+  /**
+   * Section 161's lever, and the two things worth pinning about it.
+   *
+   * The first is that it lifts **both anchors together**, so the shape of
+   * section 136's lerp is untouched and only the price it interpolates
+   * between moves. The second is that at 1 the game is byte-identical to
+   * before the lever existed, which is section 59's rule for a control arm.
+   */
+  it('scales the whole curve by HIVE_ENDING.works, both anchors alike', () => {
+    const price = (joined: number, id: (typeof works)[number]) => {
+      const c = hiveCity(joined);
+      return productionCostIn(c.state, c.city, { kind: 'building', id });
+    };
+    const at = (w: number) => {
+      HIVE_ENDING.works = w;
+      try {
+        return works.map((id) => [price(1, id), price(HIVEKIN.from, id)] as const);
+      } finally {
+        HIVE_ENDING.works = 1;
+      }
+    };
+    const one = at(1);
+    const bigger = at(4 / 3);
+    for (let i = 0; i < works.length; i++) {
+      // Both ends move, and by the same factor.
+      expect(bigger[i][0]).toBe(Math.round(one[i][0] * (4 / 3)));
+      expect(bigger[i][1]).toBe(Math.round(one[i][1] * (4 / 3)));
+    }
+    // The late anchor is still section 125's flat price at works = 1.
+    expect(one.reduce((t, [, late]) => t + late, 0)).toBe(600);
+  });
+
+  /**
+   * **The thing that makes the sweep's control arm not "six hundred".**
+   *
+   * Section 136 anchored the cheap end at `HIVEKIN.from`, turn ninety, which
+   * was the only turn a Hive could arrive on when it was written. Section 153
+   * replaced that with one stagger gap per slot, so the Hive now lands in
+   * turns 20-60 on Normal and never pays the floor at all. Pinned as a fact
+   * about the two sections rather than a target: if somebody re-anchors
+   * `from`, this is the test that says what it was for.
+   */
+  it('never charges the floor at the turns the Hive now actually arrives', () => {
+    const total = (joined: number) => {
+      const c = hiveCity(joined);
+      return works.reduce(
+        (t, id) => t + productionCostIn(c.state, c.city, { kind: 'building', id }),
+        0,
+      );
+    };
+    for (const joined of [20, 40, 60]) {
+      expect(total(joined), `turn ${joined}`).toBeGreaterThan(600);
+    }
+    expect(total(20)).toBeGreaterThan(total(60));
+    expect(total(HIVEKIN.from)).toBe(600);
+  });
+
   it('does not touch anybody else’s buildings', () => {
     const state = board();
     const hive = withHive(state);

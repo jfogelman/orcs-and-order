@@ -155,6 +155,23 @@ export const HIVE_ENDING = {
   /** The switch, for sweeps. Off is section 125's flat six hundred. */
   scaled: true,
   /**
+   * Section 161: a multiplier on the whole curve, both anchors together.
+   *
+   * Jeremy, on the Hive winning 37% of games against an even share of 20%:
+   * *"hivekin shouldn't just be the default winners, definitely not."* He
+   * named six hundred, eight hundred and a thousand, which are this at 1,
+   * 4/3 and 5/3 -- and the thing worth knowing before reading the result is
+   * that **the Hive has not paid six hundred since section 153**.
+   *
+   * The floor below is the price for a Hive that arrives on `HIVEKIN.from`,
+   * turn ninety. Section 153 replaced that single arrival with a stagger of
+   * one gap per slot, so on Normal the Hive turns up somewhere in turns
+   * 20-60 and `hiveEndingScale` lerps it to **735-915**. Turn ninety is no
+   * longer reachable at any level, so six hundred is a number the game
+   * cannot charge. That is why the shipped arm here is not "six hundred".
+   */
+  works: 1,
+  /**
    * What the works cost a Hive present from turn one, as a multiple of the
    * shipped price. 1000/600: an empire's ending, because that is what a side
    * with a whole game and an empire's worth of towns is.
@@ -169,15 +186,19 @@ export const HIVE_ENDING = {
  * so that arm is unchanged by construction.
  */
 export function hiveEndingScale(state: GameState, ownerId: number): number {
-  if (!HIVE_ENDING.scaled) return 1;
+  // **The faction question first**, so `works` below cannot reach a side whose
+  // ending this is not. Nobody else's price is scaled by anything here.
   const p = state.players[ownerId];
   if (!p || p.faction !== 'hivekin') return 1;
+  if (!HIVE_ENDING.scaled) return HIVE_ENDING.works;
   // Absent means it was there when the map was made -- seat 0 in a game
   // somebody chose to play as the Hive, where nothing ever set it.
   const joined = p.joinedAt ?? 1;
   const span = Math.max(1, HIVEKIN.from - 1);
   const earliness = Math.max(0, Math.min(1, 1 - (joined - 1) / span));
-  return 1 + (HIVE_ENDING.early - 1) * earliness;
+  // `works` lifts both anchors together, so the shape of the lerp is
+  // untouched and only the price it interpolates between moves.
+  return HIVE_ENDING.works * (1 + (HIVE_ENDING.early - 1) * earliness);
 }
 
 /** The Hivekin seat, once it exists. */

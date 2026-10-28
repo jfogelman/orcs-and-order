@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { ARRIVALS } from '../src/sim/arrivals';
+import { HIVE_ENDING } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -43,78 +43,72 @@ declare const process: { env: Record<string, string | undefined> };
 
 const buildArms = (): Arm[] => {
   /**
-   * **Answered: yes, and it mattered more than which faction you are.**
-   * Shipped as `latecomers`; the table and the reasoning are in section 160.
-   * Mean cities by the slot a side drew, every faction in every slot:
-   * Kingdom 7.37 / 6.00 / 3.76 / 2.77, Wandering Folk 7.50 / 5.30 / 3.82 /
-   * 2.81, Unbound 5.96 / 4.50 / 3.23 / 2.35 -- and **Hivekin 3.78 / 3.09 /
-   * 3.94 / 2.72**, the one side with no gradient at all, which is the side
-   * the unchosen order had been handing the best slot to.
+   * Section 161: **the Hive wins more than anybody and only ever one way.**
    *
-   * `all` is not shipped: it leaves 36 of 108 games unfinished at the turn
-   * limit against 13, because it seats the Hive beside the player a quarter
-   * of the time and nobody is then strong enough to close the game out.
+   * Of 108 games of the shipped arm: Hivekin 40, Kingdom 33, Horde 16,
+   * Wandering Folk 3, Unbound 3, 13 unfinished. Five sides, so an even share
+   * is about 20. Every one of the 40 is their own ending -- not one win by
+   * conquest, dominance or points, in any arm -- and they finish it on turn
+   * **193** against 270 for the Mysterious Object and 283 for the Portal.
    *
-   * Left here as the worked example of three arms earning their cost. Two
-   * would have bundled "arrival order" with "who your neighbour is" and the
-   * answer differs between them: the queue is worth most of the gain, the
-   * turn-one slot is worth the rest and costs the game its ending.
+   * It is not a small side punching up. It is two games wearing one average:
    *
-   * ---
+   * | | games | cities | pop | units | wins |
+   * |---|---|---|---|---|---|
+   * | it established | 52 | 5.92 | 40.1 | 29.7 | **40 (77%)** |
+   * | it did not | 56 | 1.15 | 9.6 | 2.9 | **0** |
    *
-   * Section 160: **does it matter that nobody chose the arrival order?**
+   * Nothing drifted to get here. Section 125 gave them the shortest road to
+   * an ending in the game and the cheapest ending, on purpose, because before
+   * that they could not win at all -- and tuned it to 4 wins in 12, which in
+   * a *three-sided* game was exactly even. Sections 142 and 152 then added
+   * two more sides and nobody re-asked. Jeremy: *"hivekin shouldn't just be
+   * the default winners, definitely not."*
    *
-   * Section 159 went looking for why the two late factions are weak and found
-   * this instead: `opponentsOf` returned the faction table's own declaration
-   * order, never shuffled, and `arrivalTurnFor` is `(n + 1) * gap`. So on
-   * Normal the Hive has always arrived about turn 20, the Wandering Folk
-   * about turn 40 and the Unbound about turn 60 -- **in every game this
-   * project has ever measured** -- and the Kingdom has always been the Orc
-   * player's turn-one neighbour. The Hive is first because it was the first
-   * latecomer there was (section 125) and the Unbound last because they were
-   * written last (section 152). Nobody picked any of it.
+   * ## What the arms actually charge, which is not what they are named
    *
-   * It also explains two numbers that have been sitting unexplained: section
-   * 156's *"the Unbound arrive last, 4.5 cities"* -- they arrive last
-   * **always** -- and section 157's *"dead by about turn fifty"*, against a
-   * due turn of forty.
+   * `buildings.ts` prices the three works at 180/180/240. **The Hive has not
+   * paid that since section 153.** Section 136 made the price a lerp on how
+   * early they arrive, anchored at turn `HIVEKIN.from` (90); section 153
+   * replaced the single turn-90 arrival with one gap per slot, so on Normal
+   * they land in turns 20-60 and pay **735-915**. Turn ninety is no longer
+   * reachable at any level, so six hundred is a price the game cannot charge
+   * and the control arm is not "six hundred".
    *
-   * ## Three arms, because "the order" is two rules wearing one name
+   * | arm | `works` | base | **effective, turns 20-60** |
+   * |---|---|---|---|
+   * | `as shipped` | 1 | 600 | **735-915** |
+   * | `half again` | 4/3 | 800 | **980-1220** |
+   * | `double-ish` | 5/3 | 1000 | **1225-1525** |
    *
-   * - **`table order`** -- the control, and every measurement to date.
-   * - **`shuffle queue`** -- slot 0 keeps its occupant, so the turn-one
-   *   neighbour is unchanged and only the arrival queue behind it is drawn.
-   *   Isolates **arrival order** on its own.
-   * - **`shuffle all`** -- slot 0 is drawn too, so *who starts beside you*
-   *   stops being a fact about the table as well.
-   *
-   * The pair is what makes this worth three arms. If the queue moves nothing
-   * and `shuffle all` moves a lot, the finding is about **the turn-one slot**
-   * and not about arrival order at all -- and the fix would be a different
-   * one line. Two arms would have blamed whichever rule they happened to
-   * bundle.
+   * For scale, the other four endings are flat: Portal, Caravan and Party at
+   * 1000, the Mysterious Object at 1200.
    *
    * ## What would count
    *
-   * A shuffle gives each latecomer each slot about a third of the time, so
-   * what moves is each faction's average **over** slots. If being third is
-   * what ails the Wandering Folk, their columns rise here; if they are simply
-   * a weak faction, the shuffle redistributes and nothing moves except the
-   * Hive, which loses its guaranteed head start. Either answer is useful and
-   * the second one closes the question.
+   * The win column is the point here, which is unusual -- `attribution-
+   * needs-the-same-bar` normally forbids reading rare-event counts, but 40 of
+   * 108 is not a rare event and the three arms are a monotone ladder, so a
+   * monotone fall across both seed sets is the thing to look for. The column
+   * that should move with it is **the turn the Hive's ending lands**: if the
+   * price bites, 193 moves toward the 270-283 the empires take, and the
+   * ending race becomes a race.
    *
-   * `sweep-noise-at-108-games` still applies: believe it when both seed sets
-   * agree and a second column moves with the first.
+   * The failure mode to watch for is the lever being a cliff rather than a
+   * slope -- section 125 found exactly that when it repriced the *road*
+   * (860, 710 and 610 beakers all gave zero wins). If `half again` and
+   * `double-ish` both give roughly nothing, the answer is "somewhere under
+   * 800" and the next sweep is a narrower ladder, not a wider one.
    */
-  const arm = (label: string, shuffle: typeof ARRIVALS.shuffle): Arm => ({
+  const hive = (label: string, works: number): Arm => ({
     label,
     apply: () => {
       control();
-      ARRIVALS.shuffle = shuffle;
+      HIVE_ENDING.works = works;
     },
   });
 
-  return [arm('table order', 'none'), arm('shuffle queue', 'latecomers'), arm('shuffle all', 'all')];
+  return [hive('as shipped', 1), hive('half again', 4 / 3), hive('double-ish', 5 / 3)];
 };
 
 const ARMS: Arm[] = buildArms();
