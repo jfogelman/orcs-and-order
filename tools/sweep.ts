@@ -839,7 +839,9 @@ export function report(results: ArmResult[]): string {
   const head =
     `${'arm'.padEnd(18)}${'set'.padEnd(10)}${pad('games', 6)}${pad('draw', 6)}${pad('unfin', 6)}` +
     `${pad('turns', 7)}${pad('fights', 8)}${pad('caps', 6)}${pad('roads', 7)}` +
-    `  ${VICTORY_KINDS.map((k) => k.slice(0, 2)).join('/')}`;
+    // Three letters, not two: `points` and `portal` both abbreviate to `po`,
+    // which is a header that cannot be read back.
+    `  ${VICTORY_KINDS.map((k) => k.slice(0, 3)).join('/')}`;
   const body = rows.map(
     (r) =>
       r.arm.padEnd(18) +

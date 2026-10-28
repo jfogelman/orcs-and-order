@@ -12672,6 +12672,15 @@ Three shapes, cheapest first, and none of them measured:
 Whichever is picked wants a re-run of this probe and then the section 156
 sweep, because it moves a side that currently wins nothing.
 
+> **Option 1 was built and is now closed.** Section 159 swept the budget over
+> 324 games and probed it over 36: at 40 shields it moves nothing, at 90 it
+> leaves the Wandering Folk *smaller* and the Hive larger, and it does not
+> change how many of them survive. It ships at 40 for the structural reason
+> -- faction six needs no entry -- and not as a fix. **Options 2 and 3 remain
+> open**, and section 159 adds a fourth that is better shaped than any of
+> them: a package that scales with how late a side arrives rather than with
+> what its starter costs.
+
 ### Instrumentation added
 
 `RECRUIT_TRACE` in `sim/recruiting.ts` counts targets, affordability, asks and
@@ -12743,3 +12752,173 @@ next* (Hive), *whoever's left standing* (Wandering Folk), *it did not take*
 coat of paint. The last three factions each cost about two hundred art files
 and the balance of all three is still unmeasured; the next one should earn
 its place by changing a verb, not by adding nouns.
+
+## 159. The escort budget answered: no at 90, nothing at 40, and the arrival order was never chosen
+
+324 games, three arms, two seed sets, the shipped default seating. The sweep's
+own estimate was *"about 81 minutes (49-105)"*; it took **82.2 minutes at
+15.2s a game**, which is the first time the estimate has been that close.
+
+Section 157 made a latecomer's escort a **shields budget** instead of a count
+of its own `starterUnit`, to stop the Wandering Folk arriving behind the
+cheapest escort in the game. This is whether that worked.
+
+### It did not. At ninety it does the opposite
+
+The Wandering Folk, tuned and held-out side by side:
+
+| | old count (26) | 40 shields | **90 shields** |
+|---|---|---|---|
+| cities | 2.17 / 2.37 | 2.20 / 2.39 | **1.81 / 1.85** |
+| population | 15.3 / 17.1 | 14.4 / 16.5 | **13.5 / 12.3** |
+| units | 10.1 / 12.3 | 11.9 / 11.4 | **8.5 / 9.4** |
+| joined | 23% / 25% | 23% / 25% | **19% / 18%** |
+
+Four columns down, both seed sets agreeing on direction, which is the bar
+`sweep-noise-at-108-games` sets. And the side the change was not written for:
+
+| Hivekin | old count (26) | 40 shields | **90 shields** |
+|---|---|---|---|
+| wins /108 | 37 | 40 | **42** |
+| cities | 2.74 / 3.57 | 2.61 / 3.22 | **3.24 / 3.94** |
+| population | 19.3 / 25.1 | 19.3 / 22.6 | **23.8 / 28.1** |
+| units | 10.1 / 17.4 | 9.6 / 16.1 | **11.6 / 19.0** |
+
+**The reason is the cost table, and the cost table was right.** A fixed shields
+budget buys the most of the cheapest starter, and the cheapest belongs to the
+Hive: Fodder-caste at 10 against a Skirmisher at 13 and a Revenant at 20. At
+ninety that is nine, six and four. The lever is pointed at whoever is already
+best placed to use it.
+
+The map agrees that it bought violence: game-level `fights` rose 22/21 →
+25/23 → **30/28**, monotonically, in both sets.
+
+### Three points, and the middle one is why it was worth three
+
+**40 shields is indistinguishable from the old rule on every column of every
+faction in both sets.** The harm appears only between 40 and 90. A two-arm
+sweep would have reported "the budget hurts them" and been wrong about where
+-- which is exactly what the arms comment said three points were for.
+
+So `escortShields` **ships at 40**: it retires the hand-maintained list, so
+faction six needs no entry, and it moves nothing. A lever that does nothing is
+the right value for a change whose purpose was structural rather than
+numeric.
+
+### Wins did not move and are not quoted as if they did
+
+Of 108 an arm: the Wandering Folk 3 → 3 → 5, the Unbound 2 → 3 → 0. At that
+rate neither is distinguishable from chance and `attribution-needs-the-same-bar`
+applies. The Hive's 37 → 40 → 42 is the only win column that moves with a
+second column, and it moves the wrong way for the game.
+
+### Why, measured: it is not that they are killed
+
+`tools/escortprobe.run.test.ts`, 26 against 90 on eighteen tuned seeds -- a
+**subset of the sweep's own fifty-four**, so it is the same games.
+
+| | 26 shields | 90 shields |
+|---|---|---|
+| escort actually placed | 2.0 | **6.0** |
+| arrived on turn | 40.8 | 40.8 |
+| never founded anything | 3/18 | 3/18 |
+| had a city and lost the last | 10/18, turn **63** | 11/18, turn **69** |
+| standing at the end | **5/18** | **5/18** |
+| cities at their best | 2.8 | 2.7 |
+| founders ever built | 5.4 | 6.5 |
+| the Hive when they appeared | 8.5 units | **14.4 units** |
+
+**This falsifies the hypothesis it was written to test.** Reading that the Hive
+arrives a full stagger gap earlier and takes the larger share of the budget, I
+expected the Wandering Folk to be dying sooner into a bigger Hive. The Hive
+*is* nearly twice the size when they land -- and they die **later**, build
+*more* founders, and exactly as many of them are left standing. Tripling the
+escort does not change who lives.
+
+What it does change is the top of the distribution: the games where they were
+getting going. Five seeds peaked at six cities or more at 26 and four did at
+90, with two of the five (31677, 1015841) collapsing from six cities to one
+and two. That is two seeds, so it is a direction to look and **not a finding**
+-- but it is where the sweep's lower averages come from, because survival and
+founding are flat and only the peaks moved.
+
+Section 157's bimodality is therefore intact and untouched: **five of eighteen
+thrive, thirteen do not, at either budget.** The arrival package is not what
+ails the Wandering Folk, and section 157's first option is now closed as
+tried. Its other two -- grace scaled to how weak the arrival is, and a better
+escort unit specifically -- are untouched.
+
+### The thing this went looking for and found instead: nobody chose the order
+
+Section 157 already recorded the three arrival turns -- ~20, ~40, ~60 -- as an
+observation. What it did not say, and what chasing this mechanism through
+`arrivals.ts` turned up, is **where those turns come from and that they never
+vary**:
+
+```ts
+export function latecomers(state: GameState): FactionId[] {
+  if (!ARRIVALS.enabled || staggerOf(state).gap <= 0) return [];
+  return opponentsOf(state).slice(1);
+}
+```
+
+`opponentsOf` is `FACTION_IDS.filter(f => f !== player)` -- **the faction
+table's own order, never shuffled** -- and `arrivalTurnFor(state, n)` is
+`(n + 1) * gap`, with the jitter only moving a side inside its own window. At
+Normal, gap 20. So in every game this project has ever measured:
+
+| | arrives |
+|---|---|
+| Humans | on the map at turn 1 |
+| Hivekin | about turn 20 |
+| **Wandering Folk** | about turn 40 |
+| **Unbound** | about turn 60 |
+
+The probe confirms it from the board: the Wandering Folk arrived on turn 40.8
+on average across all thirty-six games, and **never outside turns 35 to 46** in
+either arm. There is no game in which they are not third.
+
+**Nobody picked that.** The Hive is first because it was faction three in
+section 125, the first latecomer there was. The Unbound are last because they
+were written last in section 152. This is the hand-maintained list in its
+purest form yet -- the order somebody typed names into `FACTIONS` decides the
+shape of every game -- and it is the seventh or eighth instance in this file.
+
+It also explains two numbers that have been sitting unexplained. Section 156:
+*"the Unbound arrive last, 4.5 cities"* -- they arrive last **always**, forty
+turns after the Hive. Section 157: *"they are dead by about turn fifty"* --
+they land at forty.
+
+### Shipped
+
+- `HIVEKIN.escortShields` 90 → **40**, and its comment now carries the
+  measurement instead of *"the number is unmeasured"*.
+- The same comment's stat table was still the **misread** one -- Fodder-caste
+  at 3/2/12 and 20 shields. Corrected in section 157's queue entry at the
+  time and not in the source, which is exactly how a wrong number survives.
+  Both arrive behind a 1/1/10; the costs are 10, 13 and 20.
+- `tools/control.ts` follows, so every probe plays the shipped arrival.
+- `tools/escortprobe.run.test.ts` is new and kept: it is the only thing that
+  can tell "killed harder" from "wasted it", which no column of end-state
+  averages can.
+
+### Still open
+
+- **The arrival order.** Fixed by the table, never chosen, and worth a sweep
+  arm of its own: shuffle `latecomers` off the seed. It would invalidate
+  nothing already measured -- the control is the current order -- and it is
+  the cheapest candidate explanation left for both late factions being weak.
+- **A package that scales with lateness rather than with price.** The budget
+  rewards a cheap starter, which is the wrong target. What the order finding
+  suggests instead is a package that grows with *how late you are*, which
+  points at the two sides that need it and at nobody else. Unmeasured, and the
+  better-shaped version of section 157's option 1.
+- **Section 157's options 2 and 3**, both untried.
+- **The Hive's win rate.** 37 to 42 of 108 here, on two to four cities, while
+  the Humans hold seven and win 32. Essentially all of it is the Hive's own
+  ending (`hiv` 37 / 40 / 40). Section 156 flagged this unasked; it is still
+  unasked.
+- **Why the peaks moved.** Two seeds is not a finding. If the 90-shield
+  collapse of 31677 and 1015841 is real, the mechanism is in what a
+  six-Skirmisher escort makes their AI *do*, and that wants the attacks-made
+  counter section 156 asked for.

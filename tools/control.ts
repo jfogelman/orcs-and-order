@@ -94,6 +94,10 @@ export const control = () => {
   (TECHS_BY_ID['caste-fodder'] as { units: string[] }).units = [];
   HIVEKIN.founders = 2;
   HIVEKIN.escort = 2;
+  // Section 157: the escort is a shields budget now, and `escort` above is the
+  // superseded count. Set here so the probes play the shipped arrival rather
+  // than whatever an arm left behind -- which is the whole point of this file.
+  HIVEKIN.escortShields = 40;
   NAVAL.enabled = true;
   NAVAL.overseasExtra = 3;
   NAVAL.crossFor = 1.2;

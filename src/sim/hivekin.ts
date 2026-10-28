@@ -74,35 +74,38 @@ export const HIVEKIN = {
   /**
    * Shields' worth of escort, rather than a number of them. Section 157.
    *
-   * **The count was measured and the strength was inherited.** Two escort was
-   * taken in section 125 over five packages and ten seeds -- for the Hive,
-   * whose starter is a Fodder-caste at 3/2/12. Every faction since has been
-   * given *the same count* of its own `starterUnit`, and those are not the
-   * same thing:
+   * **The count was measured and the price was not.** Two escort was taken in
+   * section 125 over five packages and ten seeds -- for the Hive. Every
+   * faction since has been given *the same count* of its own `starterUnit`,
+   * and those cost different amounts:
    *
-   * | side | escort | A/D/HP | cost |
-   * |---|---|---|---|
-   * | Hivekin | Fodder-caste | 3/2/12 | 20 |
-   * | Unbound | Revenant | 2/3/12 | 20 |
-   * | Wandering Folk | Skirmisher | **1/1/10** | 13 |
-   *
-   * So the Wandering Folk walked onto a forty-turn-old map behind the weakest
-   * escort in the game and `tools/wandererprobe.run.test.ts` measured them
-   * dead in **thirteen games of eighteen**, never building a unit and never
-   * finishing an advance -- while being perfectly healthy in the five they
-   * survived.
+   * | side | escort | A/D/HP | cost | at 40s |
+   * |---|---|---|---|---|
+   * | Hivekin | Fodder-caste | 1/1/10 | **10** | 4 |
+   * | Wandering Folk | Skirmisher | 1/1/10 | **13** | 3 |
+   * | Unbound | Revenant | 2/3/12 | **20** | 2 |
    *
    * A budget fixes the class rather than the instance: a side with a cheap
    * starter brings more of it, and **faction six needs no entry here at all**.
    * That is the same move as `FACTION_IDS` replacing a hand-written tuple, and
    * this file has been caught by the hand-written version six times.
    *
-   * **The number is unmeasured.** Ninety is Jeremy's pick off a worked
-   * example and it is roughly double what every side gets today, so it lifts
-   * the Hive -- already winning 42% of games -- as well as the side it is for.
-   * Section 156's sweep has to be re-run before this is trusted.
+   * **Forty, and it is a lever that does nothing -- which is why it is forty.**
+   * Section 159 swept 26 (what the old count bought), 40 and 90 over 324
+   * games. At 40 every column of every faction is indistinguishable from the
+   * old rule in both seed sets. At 90 the Wandering Folk end *smaller* on
+   * cities, population, units and recruiting, both sets agreeing, while the
+   * Hive ends larger on all four: a fixed shields budget rewards a cheap
+   * starter, and the cheapest belongs to the side that already wins most.
+   *
+   * So this is kept at the value that retires the hand-maintained list
+   * without moving the balance, and **the arrival package is not the Wandering
+   * Folk's problem**. `tools/escortprobe.run.test.ts` tripled their escort and
+   * measured the same five survivors in eighteen, dying *later* rather than
+   * sooner. What ails them is in section 157's other two options and in the
+   * arrival *order* -- see section 159 and `latecomers`.
    */
-  escortShields: 90,
+  escortShields: 40,
   /**
    * Turns of grace before anything may attack them.
    *

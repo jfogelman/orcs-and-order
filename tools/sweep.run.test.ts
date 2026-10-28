@@ -5,8 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { DISPERSAL } from '../src/sim/dispersal';
-import { NEW_GAME } from './sweep';
+import { HIVEKIN } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -44,86 +43,88 @@ declare const process: { env: Record<string, string | undefined> };
 
 const buildArms = (): Arm[] => {
   /**
-   * Section 153: **does the Unbound's rule do anything?**
+   * Section 159: **does the escort budget fix the Wandering Folk, and what
+   * does it cost the Hive?**
    *
-   * Everything about this faction is a first answer. `UNBOUND_PLAN.md` left
-   * three numbers open and section 152 filled them in by argument --
-   * `DISPERSAL.failBase` at a third, the Archon at 72, the Naiad's waterside
-   * share at 0.4 -- and nothing has ever been measured. This is the first
-   * question to ask of it, and it is deliberately not *"is 0.35 the right
-   * failure rate"*: a sweep that tunes a number before establishing that the
-   * mechanic matters at all is a sweep measuring noise.
+   * ## Answered: no, and more than it is worth
    *
-   * ## Three arms, because there are two different claims
+   * 324 games, 82.2 minutes. **40 is indistinguishable from the old rule on
+   * every column of every faction in both seed sets.** At 90 the Wandering
+   * Folk end smaller on cities, population, units and recruiting -- both sets
+   * agreeing -- and the Hive ends larger on all four, because a fixed shields
+   * budget buys the most of the cheapest starter and the cheapest belongs to
+   * the side that already wins most. `escortShields` ships at 40: the value
+   * that retires the hand-maintained list without moving the balance.
    *
-   * - **`as it ships`** -- the game as section 152 left it.
-   * - **`no dispersal`** -- `DISPERSAL.enabled` off. An Unbound unit dies like
-   *   anybody else's, which makes the faction **exactly its stat line** -- and
-   *   its stat line is deliberately nobody's own, the named equivalent's
-   *   unchanged. So this arm is the sharpest possible control: if it comes
-   *   back level, the faction's whole identity is costing nothing.
-   * - **`always gathers`** -- `failBase` and `failFloor` at zero, so a spirit
-   *   with a site always comes back. The upper bound, which brackets the
-   *   mechanic rather than tuning it: off, as-shipped, and certain. If the
-   *   top of that range does not move a game, no value of `failBase` in
-   *   between is going to.
+   * `tools/escortprobe.run.test.ts` then asked *why* and found it is not
+   * death: tripling the escort left the same five survivors in eighteen,
+   * dying on turn 69 against 63. The arrival package is not what ails them.
    *
-   * ## The arm that was dropped, and why it is worth writing down
+   * These arms are kept as run, for the next person who wants to re-measure
+   * the same three points. The finding is section 159.
    *
-   * The first draft's third arm was **`no want`** -- `DISPERSAL.ai` off, the
-   * game as it was for the first twelve games section 152 played, where the
-   * AI never builds a Retrieval Circle. A smoke run returned it
-   * **byte-identical to `no dispersal`** in every column.
+   * Section 156 measured the Wandering Folk at 0 wins of 324. Section 157's
+   * probe found they die in thirteen games of eighteen without building a
+   * single unit, and that neither of the two hypotheses on offer -- too little
+   * gold, too little Recruit -- survives contact with the counters. What
+   * changed is that a latecomer's escort is a **shields budget** rather than
+   * a count of whatever its own starter happens to be.
    *
-   * That is correct and is the design stated as a number: with no site
-   * anywhere, `scatter` has nowhere to send a spirit and removes it, so
-   * *dispersal with no infrastructure is exactly dying*. The identity check
-   * passed because the two arms move different levers; it cannot see that
-   * they produce the same game. **Two arms can differ in their settings and
-   * not in their games**, which is section 59's trap one level further in,
-   * and the only thing that catches it is reading a cheap run before paying
-   * for an expensive one.
+   * ## The thing to be careful about
    *
-   * `GUEST_LIST` is deliberately **not** an arm. Section 152's probe built
-   * 0.8 ending works of three across twelve games and threw no Spirit Party
-   * at all, so an arm that switched the conversion off would differ from the
-   * control in approximately zero games. Measuring it wants the ending road
-   * shortened first, which is a change rather than a lever.
+   * Section 157's first draft claimed the Hive arrives behind a 3/2/12 and the
+   * Wandering Folk behind a 1/1/10. **That was a misreading**: both arrive
+   * behind a 1/1/10, and the Hive's is *cheaper* (10 shields against 13). So
+   * the budget gives the Hive **more** escort than the Wandering Folk, and the
+   * Hive already wins two games in five.
    *
-   * ## The Unbound play themselves, from turn one
+   * | side | starter | cost | at 26s | at 40s | at 90s |
+   * |---|---|---|---|---|---|
+   * | Hivekin | Fodder | 10 | 2 | 4 | **9** |
+   * | Wandering Folk | Skirmisher | 13 | 2 | 3 | 6 |
+   * | Unbound | Revenant | 20 | 1 | 2 | 4 |
    *
-   * `NEW_GAME.playerFaction` is set in every arm, which makes it part of the
-   * control rather than a confound. The default game seats them **fourth**,
-   * arriving around turn 80 onto a map three empires have been settling since
-   * the start -- section 153's probe has them finishing with no cities at all
-   * in some seeds. A mechanic cannot be measured on a side that is not in the
-   * game, which is the lesson section 136 learned about espionage arriving in
-   * the last fifth of a game and measuring zero three slices running.
+   * This sweep exists because that table is an argument and not a result.
    *
-   * It is a seating change, so it moves the map. That is fine **because every
-   * arm has it** -- the thing section 94 warns about is an arm that changes
-   * worldgen against one that does not, and the identity check below reads
-   * `NEW_GAME`, so a mistake here is a refusal rather than a wrong answer.
+   * ## Three arms, and the control is the old rule
+   *
+   * - **`old count`** -- `escortShields` low enough that everybody gets what
+   *   the fixed count gave them. The game as section 156 measured it, which
+   *   is what makes the comparison a comparison.
+   * - **`40 shields`** -- the middle. Lifts the weak sides without tripling
+   *   anybody.
+   * - **`90 shields`** -- what ships, and Jeremy's pick.
+   *
+   * Three points rather than two because the question is **shape**: if the
+   * Wandering Folk come up between 26 and 40 and the Hive runs away between
+   * 40 and 90, the answer is 40 and neither two-arm sweep would have found it.
+   *
+   * ## The default game, not the Unbound's
+   *
+   * Section 156's sweep set `NEW_GAME.playerFaction = 'unbound'` to measure a
+   * mechanic on a side that would otherwise barely be in the game. This one
+   * does **not**: arrival packages are about the whole roster, and the
+   * question is which sides win the shipped default. Putting a thumb on the
+   * seating would be measuring a different game than the one being asked
+   * about.
    */
-  /** As shipped, read once, so an arm can put the real numbers back. */
-  const SHIPPED = { failBase: DISPERSAL.failBase, failFloor: DISPERSAL.failFloor };
-
-  const arm = (label: string, enabled: boolean, certain: boolean): Arm => ({
+  const arm = (label: string, shields: number): Arm => ({
     label,
     apply: () => {
       control();
-      // Seat 0, so the faction is in the game it is being measured in.
-      NEW_GAME.playerFaction = 'unbound';
-      DISPERSAL.enabled = enabled;
-      DISPERSAL.failBase = certain ? 0 : SHIPPED.failBase;
-      DISPERSAL.failFloor = certain ? 0 : SHIPPED.failFloor;
+      HIVEKIN.escortShields = shields;
     },
   });
 
   return [
-    arm('as it ships', true, false),
-    arm('no dispersal', false, false),
-    arm('always gathers', true, true),
+    // 26 is the lowest budget that still buys the Hive its old two Fodder
+    // (26/10 = 2) and the Wandering Folk their old two Skirmishers (26/13 = 2).
+    // The Unbound drop to one Revenant against their old two, which is the one
+    // place this control is not quite the old game -- there is no budget that
+    // reproduces a count for three different prices, and that is the point.
+    arm('old count', 26),
+    arm('40 shields', 40),
+    arm('90 shields', 90),
   ];
 };
 
