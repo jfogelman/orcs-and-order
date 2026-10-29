@@ -16,7 +16,7 @@ import { BARBARIANS, PREY, RAIDER_TIERS, raidPace } from '../sim/barbarians';
 import { LEGION, RAIDER_GRUNT } from '../sim/wilds';
 import { RUINS, WARDENS } from '../sim/ruins';
 import { COWED } from '../sim/status';
-import { HIVEKIN, QUEEN } from '../sim/hivekin';
+import { HIVE_ENDING, HIVEKIN, QUEEN } from '../sim/hivekin';
 import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
 import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
@@ -31,7 +31,7 @@ import { EXORCISTS, couldExorcise } from '../sim/exorcism';
 import { GUEST_LIST, PHYSICAL, UNIQUE, WATERSIDE } from '../sim/dispersal';
 import { CALM, CITY_DAMAGE, CIVIC_PRIDE, POSTING } from '../sim/city';
 import { MOOD_LADDER } from '../model/citizens';
-import { ALT_VICTORY } from '../sim/endings';
+import { ALT_VICTORY, endingFor, endingWorks } from '../sim/endings';
 import { FOLLIES } from '../sim/follyEffects';
 import { TERRAFORM, jobName } from '../sim/terraform';
 
@@ -1622,21 +1622,42 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
       { title: 'Three works end the game', body: `${
           ALT_VICTORY.enabled
             ? `<p class="flavor">
-          The Horde's <em>Demonic Portal</em>, the
-          Kingdom's <em>Mysterious Object</em> and the Hive's <em>Second Queen's Shell</em> each
-          need two lesser works first; the last one goes up in a city holding one of them, and its
+          <strong>Every side can build its way to winning</strong>, and each of those roads ends
+          in one work that needs two lesser ones first. The last goes up in a city holding one of
+          them, and its
           builder wins if it still holds that city ${ALT_VICTORY.portalTurns} turns later. One of
           each per side, never bought with gold, and everybody is told when work begins and as
           each is finished. Take the city and whatever stands in it is torn down.
         </p>
         <p class="flavor">
-          <strong>The two empires keep theirs at the far end of their own tree. The Hive does
+          <strong>Every side has one, and they do not cost the same.</strong> What the three
+          works come to, before anything below is applied:
+        </p>
+        <table class="pedia-table"><tbody>${FACTION_IDS.map((f) => {
+          const kind = endingFor(f);
+          if (!kind) return '';
+          const works = endingWorks(kind);
+          const total = works.reduce((t, b) => t + b.cost, 0);
+          const last = works[works.length - 1];
+          return `<tr><td>${escapeHtml(FACTIONS[f].name)}</td><td><em>${escapeHtml(
+            last.name,
+          )}</em></td><td>${total}s</td></tr>`;
+        }).join('')}</tbody></table>
+        <p class="flavor">
+          <strong>The empires keep theirs at the far end of their own tree. The Hive does
           not.</strong> <em>All Is The Hive</em> sits four advances in, behind the Soldier-caste,
-          and its three works cost six hundred shields against the empires' thousand. The Hive
-          comes up out of the ground around turn a hundred with two Grubs, against empires six
-          cities deep, and studies at a third their rate &mdash; so where they can afford an
-          ending at the end of everything else, the Hive can only afford one it was always going
-          to walk past. It is the only road it has, and it is a short one.
+          on a road they walk anyway. They arrive late, with two Grubs, against empires already
+          several cities deep, and study at a fraction of their rate &mdash; so where everybody
+          else can afford an ending at the end of everything else, the Hive can only afford one
+          it was always going to walk past. It is the only road it has, and it is a short one.
+        </p>
+        <p class="flavor">
+          <strong>Which is why the Hive alone is charged by when it turned up.</strong> The
+          price above is what a Hive pays that arrives as late as the old rules made it; one
+          standing on the map from the first turn pays ${Math.round(HIVE_ENDING.early * 100)}% of
+          it, and anything in between is charged in between. A short road walked with a whole
+          game in hand is not the same bargain as the same road walked with a third of one, and
+          the Hive is the only side whose starting turn is not a fact about the map.
         </p>`
             : ''
         }` },

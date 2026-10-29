@@ -633,17 +633,22 @@ describe('what the Hive pays for its ending (section 136)', () => {
     }
   });
 
-  it('charges a Hive that has been there since turn one an empire’s price', () => {
+  it('charges a Hive that has been there since turn one five thirds of the price', () => {
     const { state, city } = hiveCity(1);
     const total = works.reduce(
       (t, id) => t + productionCostIn(state, city, { kind: 'building', id }),
       0,
     );
     const shipped = works.reduce((t, id) => t + BUILDINGS[id].cost, 0);
-    expect(shipped).toBe(600);
-    // The other two endings cost a thousand, and a Hive with the whole game is
-    // what an empire is. Both anchors are facts rather than guesses.
-    expect(total).toBe(1000);
+    expect(shipped).toBe(800);
+    // **This used to read "an empire's price", and meant it**: 600 shipped
+    // against a thousand at turn one, because a Hive with the whole game is
+    // what an empire is. Section 161 lifted the shipped price a third on 324
+    // games and kept the ratio, so the turn-one Hive now pays more than the
+    // Kingdom's 1200. The ratio is the thing that was measured; the gloss was
+    // not. Section 161's queue entry records the alternative nobody has
+    // measured -- lifting the floor alone and leaving this end at a thousand.
+    expect(total).toBe(Math.round(800 * (5 / 3)));
   });
 
   it('treats a seat that was never given an arrival as having started', () => {
@@ -707,7 +712,7 @@ describe('what the Hive pays for its ending (section 136)', () => {
       expect(bigger[i][1]).toBe(Math.round(one[i][1] * (4 / 3)));
     }
     // The late anchor is still section 125's flat price at works = 1.
-    expect(one.reduce((t, [, late]) => t + late, 0)).toBe(600);
+    expect(one.reduce((t, [, late]) => t + late, 0)).toBe(800);
   });
 
   /**
@@ -729,10 +734,10 @@ describe('what the Hive pays for its ending (section 136)', () => {
       );
     };
     for (const joined of [20, 40, 60]) {
-      expect(total(joined), `turn ${joined}`).toBeGreaterThan(600);
+      expect(total(joined), `turn ${joined}`).toBeGreaterThan(800);
     }
     expect(total(20)).toBeGreaterThan(total(60));
-    expect(total(HIVEKIN.from)).toBe(600);
+    expect(total(HIVEKIN.from)).toBe(800);
   });
 
   it('does not touch anybody else’s buildings', () => {

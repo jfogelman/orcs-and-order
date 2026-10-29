@@ -145,11 +145,37 @@ export const HIVEKIN = {
  * walking a road priced for a third of a game with a whole one in hand.
  *
  * So the price is not a constant any more, it is a **lerp between the two
- * cases**, and the anchors are both facts rather than guesses: a Hive that has
+ * cases**, and the anchors were both facts rather than guesses: a Hive that has
  * the whole game pays what an empire pays, and a Hive that arrives when
  * section 125 said it arrives pays what section 125 measured. Everything
  * between is interpolated, which is what makes a staggered arrival possible at
  * all -- a Hive that turns up on turn forty should not pay either price.
+ *
+ * ## Section 161: the floor is not reachable, and both ends went up a third
+ *
+ * Two things have happened to this since it was written, and the first is why
+ * the second was needed.
+ *
+ * **`HIVEKIN.from` is turn ninety, and nothing arrives on turn ninety any
+ * more.** Section 153 replaced the single late arrival with one stagger gap
+ * per slot, so on Normal the Hive lands somewhere in turns 20-60 and this
+ * function returns 1.52 to 1.22 -- never 1. The cheap anchor is unreachable
+ * at every difficulty, so the number in `buildings.ts` is a price the game
+ * cannot charge. Anchoring to a fact about the world is only safe while the
+ * world holds still; this is the same failure as section 160's arrival order
+ * and section 125's three-sided win target.
+ *
+ * **So the lerp had drifted upward and the Hive still won too much.** On 324
+ * games it took 27% against an even share of 20% -- every win this ending,
+ * none by any other route. Section 161 multiplied the shipped price by a
+ * third, which lifts both anchors and leaves the shape alone: 21%, the ending
+ * landing on turn 217 rather than 206, and no other side's share moving.
+ *
+ * What it does **not** fix is the shape. The Hive either establishes or does
+ * not, and the price only touches the first branch: 47 of 108 games get three
+ * cities, and those convert at 49% where they used to convert at 62%. The
+ * other 61 have never won a game at any price. That cliff is a different fix
+ * and nobody has asked for it yet.
  */
 export const HIVE_ENDING = {
   /** The switch, for sweeps. Off is section 125's flat six hundred. */
@@ -173,10 +199,23 @@ export const HIVE_ENDING = {
   works: 1,
   /**
    * What the works cost a Hive present from turn one, as a multiple of the
-   * shipped price. 1000/600: an empire's ending, because that is what a side
-   * with a whole game and an empire's worth of towns is.
+   * shipped price -- so 5/3 of 800 is **1333**.
+   *
+   * It was written as `1000 / 600`, and it meant something: *an empire's
+   * ending, because that is what a side with a whole game and an empire's
+   * worth of towns is.* Section 161 lifted the shipped price a third and left
+   * this ratio alone, which raises both anchors together and breaks that
+   * reading -- a turn-one Hive now pays more than the Kingdom's 1200.
+   *
+   * **That is the arm that was measured**, and it is kept rather than
+   * re-anchored because the measurement is what says both ends were too
+   * cheap: at the old anchors the Hive won 27% of 324 games against an even
+   * 20%, and the games it wins are not turn-one games -- they are the staggered
+   * ones in turns 20-60, which is the middle of this lerp and moves only if
+   * both ends do. Lifting the floor alone is a different lever and an
+   * unmeasured one; section 161's queue entry says so.
    */
-  early: 1000 / 600,
+  early: 5 / 3,
 };
 
 /**
