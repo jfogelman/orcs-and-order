@@ -89,19 +89,22 @@ const NOT_DRAWN_YET = {
   // roughly how long the entries below have historically lasted.
   advances: [] as string[],
   /**
-   * Section 155: the thirty-six upgrade advances, as a rule rather than a list.
+   * Section 155 slice 2 set this **true**: the upgrade art was drawn, and
+   * `prepare_art.py` had never heard of the folder it was in, so all
+   * thirty-six advance icons were missing for a reason that was nobody's
+   * fault and nothing's bug.
    *
-   * **The art is drawn.** All thirty-six icons are sitting in `art_src/unit
-   * upgrades/tech updates/`, along with about 174 other upgrade files, and
-   * `prepare_art.py` does not mention that folder -- so none of it has ever
-   * been converted into `public/`. The gap is the pipeline, not the artist.
+   * Slice 3 wired the folder up and the icons landed, and **the check below
+   * is what said so** -- it failed naming all thirty-six the moment they
+   * appeared, which is exactly what a known-gap list is supposed to do when
+   * the gap closes. False now, and the upgrade advances are held to the same
+   * rule as every other advance in the game.
    *
-   * A rule and not thirty-six lines, because thirty-six hand-written ids is
-   * precisely the kind of list this file exists to be suspicious of: it would
-   * need a line removed per icon, and the first person to wire the folder up
-   * would leave half of them behind. The flag goes away and this with it.
+   * Left here rather than deleted. The next drop is the three newer factions'
+   * upgrades, whose advances do not exist yet, and this is where that gap
+   * gets declared if it needs declaring.
    */
-  upgradeAdvancesAwaitingThePipeline: true,
+  upgradeAdvancesAwaitingThePipeline: false,
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is
     // false, so neither is offered in any city, and the definitions are kept

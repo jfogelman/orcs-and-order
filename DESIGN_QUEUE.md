@@ -12387,6 +12387,19 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
+> **Slice 3** (this one) wired `art_src/unit upgrades/` into the pipeline:
+> 36/36 idle sprites and 36/36 advance icons, 29/36 attack strips and 27/36
+> weakened sheets, 128 new files and **nothing overwritten**. The attack and
+> weakened passes needed only to be told where to look, since `split_variant`
+> already reads `orc-veteran` the way it reads `ogre-quake`. The sprites and
+> icons are **scanned rather than listed**, because `CREATURES` and
+> `TECH_ICONS` are hand-maintained copies of `src/model/*.ts` and seventy-two
+> more lines of that is the shape this project keeps getting caught by.
+>
+> Still undrawn after it: **6 attack strips and 9 weakened sheets**. The 13
+> files in `skeletal versions/` are raised-skeleton sprites for the Grave
+> Knight's effect and wait for that rule.
+>
 > **The two things slice 2 found.** Adding the advances moved a late-game
 > fixture *with the lever off*, because `knowsEverything` counted them and a
 > side that had been omniscient silently stopped being — so there is a
