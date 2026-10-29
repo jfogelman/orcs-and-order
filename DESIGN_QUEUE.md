@@ -13076,3 +13076,121 @@ playing to turn 299 and therefore plays a different game.
   steep, and it is the same for everybody who expands.
 - **Section 157's options 2 and 3**, still untried -- and worth re-asking,
   because they were aimed at a weakness that turns out to have been a slot.
+
+## 161. The Hive priced for a three-sided game, in a five-sided one
+
+324 games, three arms, two seed sets. The sweep's own estimate was *"about 81
+minutes (49-105)"*; it took **97.6 minutes at 18.1s a game**.
+
+Jeremy, on the Hive's win rate: *"hivekin shouldn't just be the default
+winners, definitely not."* He named six hundred, eight hundred and a thousand
+for the works.
+
+### What the question looked like before the sweep
+
+Read off section 160's existing rows at no extra cost:
+
+- The Hive is the winningest side in the game, and **every single win is its
+  own ending** -- not one by conquest, dominance or points, in any arm.
+- It finishes that ending on **turn 206**, against 270 for the Mysterious
+  Object and 283 for the Portal.
+- *"Two to four cities"* was never a state it is in. It is two games wearing
+  one average: 47 of 108 establish (5.9 cities, 40 pop) and the other 61
+  average 1.15 cities and 2.9 units and **have never won a game**.
+
+Nothing had drifted. Section 125 gave them the shortest road to an ending in
+the game and the cheapest ending, deliberately, because before that they
+could not win at all -- and tuned it to 4 wins in 12, which in a
+**three-sided** game was exactly even. Sections 142 and 152 added two more
+sides and nobody re-asked. Nothing in the code connects "how many factions
+exist" to "what share of wins is fair", and there is no list to maintain, so
+nothing could have noticed.
+
+### The correction that changed what the arms meant
+
+`buildings.ts` priced the works at 600. **The Hive had not paid that since
+section 153.** Section 136 made the price a lerp on how early they arrive,
+anchored at `HIVEKIN.from`, turn ninety; section 153 replaced the single
+turn-ninety arrival with one stagger gap per slot, so on Normal they land in
+turns 20-60 and pay **735-915**. Turn ninety is unreachable at every
+difficulty, so six hundred is a price the game cannot charge.
+
+Measured rather than reasoned, and worth saying plainly: I had recommended
+raising 600 toward 1000 without checking whether anything scaled it, and it
+was already there. That is three sections running -- 160's arrival order,
+136's turn-ninety anchor, 125's three-sided target -- where a number was
+anchored to a fact about the world and the world then moved.
+
+### The answer
+
+| arm | base | effective | share | established | win if established | ending lands |
+|---|---|---|---|---|---|---|
+| `as shipped` | 600 | 735-915 | 27% | 47 | 62% | turn 206 |
+| **`half again`** | **800** | **980-1220** | **21%** | 47 | **49%** | **turn 217** |
+| `double-ish` | 1000 | 1225-1525 | 15% | 52 | 29% | turn 239 |
+
+Monotone on every column, both sets agreeing on direction (tuned 13 -> 11 ->
+8, held-out 16 -> 12 -> 8). An even share of five sides is 20%.
+
+**Establishment does not move** -- 47 / 47 / 52. The price does not touch
+whether they get going, only whether they convert it, which is where a price
+should bite.
+
+And the reason `double-ish` is wrong is not the Hive:
+
+| | orc | human | hivekin | unbound | wandering | unfinished |
+|---|---|---|---|---|---|---|
+| as shipped | 14% | 28% | **27%** | 7% | 4% | 20% |
+| **half again** | 15% | 30% | **21%** | 6% | 3% | 25% |
+| double-ish | 15% | **37%** | 15% | 6% | 3% | 24% |
+
+At a thousand the Kingdom inherits the runaway at 37%, which is the number
+the Hive had before section 160. It moves the crown rather than melting it.
+
+**So the works ship at 800.** The Hive lands on 21% against an even 20%, the
+Kingdom is unchanged within noise (30 wins against 32), and nobody else moves
+at all.
+
+### The control reproduced the previous sweep exactly
+
+`as shipped` and section 160's `shuffle queue` arm are the same game, and
+across two sweeps run four hours apart they returned **29 wins, 47
+established, 62% conversion** -- identical. That is what a lever pinned at
+its control value is supposed to do, and it is cheap to check.
+
+It also caught an error in what was reported to Jeremy: the 37% and 77%
+quoted from section 156 were the **pre-160** arm. Shipping the arrival
+shuffle had already taken a third of it off, and the game he was asked about
+was at 27%.
+
+### Shipped
+
+- The three works at **240/240/320**, and `buildings.ts` now says it is not
+  what the Hive actually pays and points at the one place that answers that.
+- `HIVE_ENDING.works`, the sweep lever, left at 1.
+- `HIVE_ENDING.early` is now `5 / 3` rather than `1000 / 600`. It used to mean
+  *an empire's ending*; raising the shipped price a third and keeping the
+  ratio raises both anchors, so a turn-one Hive now pays **1333**, more than
+  the Kingdom's 1200. The ratio is what was measured and the gloss was not,
+  so the gloss is what went.
+- The Orcpedia: the endings table is **read off the data** rather than naming
+  three of the five by hand, and a new paragraph says the Hive alone is
+  charged by when it turned up -- a section 136 rule that had never been
+  written down for the player.
+
+### Still open
+
+- **Lifting the floor alone**, leaving the turn-one anchor at an empire's
+  thousand. It keeps section 136's reading intact and is a smaller change.
+  Unmeasured, and deliberately not guessed at.
+- **The cliff.** 49% against 0% is a strange shape at any share: the Hive's
+  game is settled by about turn sixty and then plays itself out. Price does
+  not touch it and nobody has asked for it.
+- **`HIVEKIN.from` is a dead anchor.** Turn ninety is unreachable, so the
+  cheap end of the lerp is decorative. Re-anchoring it to the arrival turns
+  that actually occur would make the number mean something again -- and is a
+  different lever from this one. A test pins the current behaviour so that a
+  re-anchoring has something that says what it was for.
+- **Nobody re-asks a balance target when a faction is added.** Three sections
+  running have found a number anchored to a world that then moved. A sixth
+  faction will do it again to this one.

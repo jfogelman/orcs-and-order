@@ -88,6 +88,9 @@ export const control = () => {
   // game; off is section 125's flat six hundred, which is identical for every
   // Hive that emerges in its own window and differs only for an early one.
   HIVE_ENDING.scaled = true;
+  // Section 161: the multiplier on the Hive's ending price. 1 is the shipped
+  // game, which charges 735-915 rather than the six hundred in `buildings.ts`.
+  HIVE_ENDING.works = 1;
   // Section 136: and the Hive opens able to build a fighter, as both empires
   // always have. Pinned here so an arm that is not asking about it inherits
   // the shipped game rather than whatever the previous arm left behind.

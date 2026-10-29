@@ -534,19 +534,35 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   // advance is known, then the final one, only in a Hive already holding one of
   // them and only once both stand.
   //
-  // **Six hundred shields against the other two endings' thousand**, and the
-  // reason is the thing it is paid out of: 3.5 Hives of 5.5 citizens, where an
-  // empire pays out of six cities of eight. Measured both ways round -- while
-  // the road to the advance was long this price was not a lever at all (at 40%
-  // of it they still built 0.2 works, because cheapening the end of a road
-  // nobody walks changes nothing), and once the road was shortened it was worth
-  // double: 2 wins in 12 at a thousand shields, 4 at six hundred. See the note
-  // on `all-is-the-hive` in techs.ts for the road.
+  // **Eight hundred shields**, against a thousand for the Portal, the Caravan
+  // and the Party and twelve hundred for the Mysterious Object. It is still a
+  // discount, and the reason is the thing it is paid out of: a few Hives of
+  // five or six citizens, where an empire pays out of seven cities of eight.
+  //
+  // It was six hundred from section 125 to section 161, and the history is
+  // worth keeping because both halves of it were measured. Section 125 found
+  // the price was not a lever at all while the road to the advance was long
+  // (at 40% of it they still built 0.2 works, because cheapening the end of a
+  // road nobody walks changes nothing); once the road was shortened it was
+  // worth double, 2 wins in 12 at a thousand against 4 at six hundred. See
+  // the note on `all-is-the-hive` in techs.ts for the road.
+  //
+  // Section 161 raised it a third on 324 games, because six hundred was
+  // priced for a **three-sided** game and there are five sides now. The Hive
+  // was winning 27% of games against an even share of 20%, every one of them
+  // by this ending and none by any other route. At this price they win 21%,
+  // the ending lands on turn 217 rather than 206, and nobody else's share
+  // moves. A thousand was measured too and overshoots: the Hive falls to 15%
+  // and the Kingdom inherits the runaway at 37%.
+  //
+  // **This is not what the Hive actually pays.** Section 136 scales it by how
+  // early they arrive -- see `HIVE_ENDING` in sim/hivekin.ts, which is the
+  // only place that question is answered.
   moltingChamber: {
     id: 'moltingChamber',
     name: 'The Molting Chamber',
     faction: 'hivekin',
-    cost: 180,
+    cost: 240,
     upkeep: 0,
     endingPart: 'hive',
     blurb:
@@ -557,7 +573,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     id: 'secondFeeding',
     name: 'The Second Feeding',
     faction: 'hivekin',
-    cost: 180,
+    cost: 240,
     upkeep: 0,
     endingPart: 'hive',
     blurb:
@@ -568,7 +584,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     id: 'secondQueenShell',
     name: "The Second Queen's Shell",
     faction: 'hivekin',
-    cost: 240,
+    cost: 320,
     upkeep: 0,
     victory: 'hive',
     blurb:
