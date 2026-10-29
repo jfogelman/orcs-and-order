@@ -391,6 +391,10 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Citizen portraits | 13 | done and wired, four moods each |
 | Promotion marks | 6 | done and wired |
 | Cities coming apart | 6 | done and wired |
+| Upgrade sprites | 36 | done and wired (section 155) |
+| Upgrade advance icons | 36 | done and wired |
+| Upgrade attack strips | 29 + 7 | **7 to draw** — see *Unit upgrades* below |
+| Upgrade weakened sheets | 27 + 9 | **9 to draw** — see *Unit upgrades* below |
 
 **Everything drawn is wired**, the Goblin Scout included (drawn 2026-09-19, with its attack and weakened sheets). The last two older pieces went in the same day:
 
@@ -416,6 +420,82 @@ recipe to follow when any of it is re-rolled.
   posting has no image", which it never will have.
 
 ---
+
+## Unit upgrades — 16 sheets to draw
+
+Section 155 gives each of twelve base creatures a linear upgrade and two
+branches that cannot both be had. The design and every prompt for the **idle
+sprites** are in `art_src/unit upgrades/unit_upgrades.md`; the **advance icon**
+prompts are in `unit_upgrade_techs.md` beside it. Both sets are drawn, wired
+and done.
+
+What is missing is the other two sheets a creature gets.
+
+**Nothing is broken by the gap**, and as of slice 3 nothing uses any of it
+yet: no unit carries an upgrade until the mechanism lands, so every creature
+still draws as itself. When it does land, `attackFrames` already takes a
+variant and falls back to the base sheet when there is no art for it — the
+same path the ogre's clubs take — so a missing strip means an upgraded orc
+swings as a plain orc.
+
+`hurtFrames` has **no variant parameter at all**, so a weakened sheet for an
+upgrade cannot be reached by any code path today. Wiring that is part of the
+mechanism slice, not of drawing these; it is recorded here so the nine sheets
+below are not drawn and then quietly never shown, which is exactly how the
+Hive's garrison posts sat correct and unread in `public/` for eighteen
+sections.
+
+### Where they go
+
+| sheet | folder | filename |
+|---|---|---|
+| attack strip | `art_src/unit upgrades/attack animations/` | `<id> attack.jpg` |
+| weakened sheet | `art_src/unit upgrades/weakened state/` | `<id> weakened.jpg` |
+
+**The suffix is the whole of the wiring.** A file in the weakened folder whose
+name does not end in `weakened` is skipped silently, because that folder is
+not literally named `unit states` and the scan deliberately does not complain
+about files that are somebody else's. `sapper-tunnel.jpg` sat there unread
+until section 155 slice 3 went looking for it.
+
+### The seven attack strips
+
+Use the **Unit attack animations — 4-frame strip** prompt above, verbatim,
+attaching the matching idle sprite from `art_src/unit upgrades/`.
+
+| file | what it is doing |
+|---|---|
+| `sapper-tunnel attack.jpg` | goblin sapper lighting and lobbing its bundle of red explosive sticks, shovel still across its back |
+| `sapper-deep attack.jpg` | goblin sapper lighting and lobbing the larger double bundle strapped to its chest |
+| `sapper-cadre attack.jpg` | the pair of goblins together, one lighting while the other throws |
+| `ogre-brawler attack.jpg` | two-headed ogre swinging its spiked club in one wide flat arc, as if it could catch two things |
+| `ogre-warlord attack.jpg` | two-headed ogre bringing the club down overhead, the circleted head roaring |
+| `ogre-grinder attack.jpg` | two-headed ogre sweeping the club low around itself, both heads snarling outward |
+| `deathknight-soulbound attack.jpg` | skeletal knight raising its bone staff, chains of violet light tightening along it |
+
+### The nine weakened sheets
+
+Use the **Weakened stances** prompt above, verbatim. Two frames, 2:1, the
+creature the same size and in the same place in both, **no weapon changes**.
+
+`ogre-brawler weakened.jpg`, `ogre-warlord weakened.jpg`,
+`ogre-grinder weakened.jpg`, `deathknight-grave weakened.jpg`,
+`deathknight-dread weakened.jpg`, `deathknight-soulbound weakened.jpg`,
+`dragon-elder weakened.jpg`, `dragon-rider weakened.jpg`,
+`dragon-wyrm weakened.jpg`.
+
+### Death Knight variants key against green, not magenta
+
+All four Death Knight files above — the three weakened sheets and the one
+attack strip — want **a solid green background (`#00FF00`)**, which is the
+rule the base Death Knight has always used and which `unit_upgrades.md`
+repeats for its variants. The violet hood-glow is red and blue both well
+above green, which is exactly what a magenta key removes: section 155's own
+release had to regenerate the Hive's Heir and the Unbound's Unreturned for
+that reason, and the Heir came out 8.7% solid before it was fixed.
+
+The dragons are red and the ogres are not violet, so those five take the
+ordinary magenta.
 
 ## Advance icons — 44 done, 7 to draw
 
