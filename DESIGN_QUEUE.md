@@ -12396,9 +12396,18 @@ piece of refactoring in this file I would argue for on its own merits.
 > `TECH_ICONS` are hand-maintained copies of `src/model/*.ts` and seventy-two
 > more lines of that is the shape this project keeps getting caught by.
 >
-> Still undrawn after it: **6 attack strips and 9 weakened sheets**. The 13
-> files in `skeletal versions/` are raised-skeleton sprites for the Grave
-> Knight's effect and wait for that rule.
+> Still undrawn after it: **7 attack strips and 9 weakened sheets**, listed by
+> filename with their prompts under *Unit upgrades* in `ART_PROMPTS.md` --
+> the sappers and ogres want attack strips, the ogres, Death Knights and
+> dragons want weakened sheets, and the four Death Knight files key against
+> green rather than magenta for the same reason the Heir did. The 13 files in
+> `skeletal versions/` are raised-skeleton sprites for the Grave Knight's
+> effect and wait for that rule.
+>
+> **And a renderer gap worth knowing before slice 4**: `attackFrames` takes a
+> variant and falls back to the base sheet, but `hurtFrames` takes no variant
+> at all, so an upgrade's weakened sheet cannot be reached by any code path
+> today. Wiring it belongs with the mechanism.
 >
 > **The two things slice 2 found.** Adding the advances moved a late-game
 > fixture *with the lever off*, because `knowsEverything` counted them and a
