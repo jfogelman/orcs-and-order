@@ -8,6 +8,7 @@ import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
 import { ALT_VICTORY } from './endings';
 import { FOLLIES } from './follyEffects';
+import { UPGRADES } from '../model/upgrades';
 import { handicapCost } from './difficulty';
 
 /**
@@ -36,9 +37,34 @@ export function knowsTech(player: Player, id: TechId): boolean {
  */
 export const OMNISCIENCE = { content: 1, attack: 0.1 };
 
+/**
+ * Whether this advance exists at all under this game's rules.
+ *
+ * **Asked in two places, which is why it is a function.** A switched-off
+ * subsystem's advances are not merely unresearchable, they are not part of
+ * the tree: a side that has learned everything there is to learn has done so
+ * whether or not the endings are on.
+ *
+ * Section 155 found this the hard way. Adding thirty-six upgrade advances
+ * moved a late-game fixture with the upgrade lever *off*, because
+ * `knowsEverything` counted them -- so a side that had been omniscient, and
+ * drawing `OMNISCIENCE`'s content and attack for it, silently stopped being.
+ * Filtering `researchableTechs` alone was not enough, and the fixture said so.
+ */
+export function techInPlay(t: TechDef): boolean {
+  return (
+    // Section 110's advances lead nowhere while the endings are switched off.
+    (ALT_VICTORY.enabled || !t.flags.includes('ending')) &&
+    // Nor section 111's, while the follies are.
+    (FOLLIES.enabled || !t.flags.includes('folly')) &&
+    // Nor section 155's, while the upgrades are.
+    (UPGRADES.enabled || !t.flags.includes('upgrade'))
+  );
+}
+
 /** Whether this side has learned everything its faction can learn. */
 export function knowsEverything(player: Player): boolean {
-  const all = techsForFaction(player.faction);
+  const all = techsForFaction(player.faction).filter(techInPlay);
   return all.length > 0 && all.every((t) => knowsTech(player, t.id));
 }
 
@@ -47,10 +73,11 @@ export function researchableTechs(player: Player): TechDef[] {
     (t) =>
       !knowsTech(player, t.id) &&
       t.prereqs.every((p) => knowsTech(player, p)) &&
-      // Section 110's advances lead nowhere while the endings are switched off.
-      (ALT_VICTORY.enabled || !t.flags.includes('ending')) &&
-      // Nor section 111's, while the follies are.
-      (FOLLIES.enabled || !t.flags.includes('folly')),
+      // **The gating is the whole reason a lever means anything.** Thirty-six
+      // researchable advances change what every AI studies and in what order,
+      // so without this the box being unticked would still not be the game
+      // every number in this project was measured on.
+      techInPlay(t),
   );
 }
 

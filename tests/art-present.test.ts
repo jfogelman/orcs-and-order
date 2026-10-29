@@ -88,6 +88,20 @@ const NOT_DRAWN_YET = {
   // listed `tier-drowned` and `tier-cairn` here for about an hour, which is
   // roughly how long the entries below have historically lasted.
   advances: [] as string[],
+  /**
+   * Section 155: the thirty-six upgrade advances, as a rule rather than a list.
+   *
+   * **The art is drawn.** All thirty-six icons are sitting in `art_src/unit
+   * upgrades/tech updates/`, along with about 174 other upgrade files, and
+   * `prepare_art.py` does not mention that folder -- so none of it has ever
+   * been converted into `public/`. The gap is the pipeline, not the artist.
+   *
+   * A rule and not thirty-six lines, because thirty-six hand-written ids is
+   * precisely the kind of list this file exists to be suspicious of: it would
+   * need a line removed per icon, and the first person to wire the folder up
+   * would leave half of them behind. The flag goes away and this with it.
+   */
+  upgradeAdvancesAwaitingThePipeline: true,
   buildings: [
     // Section 102 replaced both with a hut on a tile. `POSTING.enabled` is
     // false, so neither is offered in any city, and the definitions are kept
@@ -101,9 +115,12 @@ const NOT_DRAWN_YET = {
 describe('everything the model offers has a picture', () => {
   it('has an icon for every advance', () => {
     const have = names(TECH_ART);
-    const missing = TECHS.map((t) => t.id).filter(
-      (id) => !have.has(id) && !NOT_DRAWN_YET.advances.includes(id),
-    );
+    const missing = TECHS.filter(
+      (t) =>
+        !have.has(t.id) &&
+        !NOT_DRAWN_YET.advances.includes(t.id) &&
+        !(NOT_DRAWN_YET.upgradeAdvancesAwaitingThePipeline && t.flags.includes('upgrade')),
+    ).map((t) => t.id);
     expect(missing, 'add the art, or add it to NOT_DRAWN_YET with a reason').toEqual([]);
   });
 
@@ -131,6 +148,14 @@ describe('everything the model offers has a picture', () => {
     const drawn = [
       ...NOT_DRAWN_YET.advances.filter((id) => names(TECH_ART).has(id)),
       ...NOT_DRAWN_YET.buildings.filter((id) => names(BUILDING_ART).has(id)),
+      // The blanket exemption is a gap too, and goes stale the same way: the
+      // moment `prepare_art.py` learns about `art_src/unit upgrades/`, these
+      // icons appear and the rule above stops being honest.
+      ...(NOT_DRAWN_YET.upgradeAdvancesAwaitingThePipeline
+        ? TECHS.filter((t) => t.flags.includes('upgrade') && names(TECH_ART).has(t.id)).map(
+            (t) => t.id,
+          )
+        : []),
     ];
     expect(drawn, 'these have art now and should come off the list').toEqual([]);
   });
