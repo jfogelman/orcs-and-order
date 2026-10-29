@@ -151,11 +151,24 @@ describe('the standing wants', () => {
     expect(wantedHere(state, owner, offer(state, city))).toBeNull();
   });
 
-  it('wants nothing for a side whose mechanic is somebody else’s', () => {
-    // The Kingdom is never offered a reform site, so that want must fall
-    // through rather than returning null and stopping the search.
+  /**
+   * A want that does not apply has to **fall through**, not stop the search.
+   *
+   * The loop returns the first want that is both short and satisfiable here,
+   * so a gate that returned something falsy-but-stopping would silently hide
+   * every want below it. The Kingdom is never offered a reform site and never
+   * a Burrower, and both sit in the list -- one above the spy and one below
+   * it -- so a Kingdom yard asking for an agent is the real test of that.
+   */
+  it('falls past the wants that are somebody else’s and reaches the next', () => {
     const { state, city, owner } = yard('human');
     const reform = STANDING_WANTS.find((w) => w.id === 'reform-site')!;
-    expect(reform.when(state, owner)).toBe(false);
+    const burrower = STANDING_WANTS.find((w) => w.id === 'burrower')!;
+    expect(reform.when(state, owner), 'the Kingdom does not disperse').toBe(false);
+    expect(burrower.pick(offer(state, city)), 'no Kingdom yard offers a digger').toBeNull();
+    // And the want below the digger is still reached.
+    const asked = wantedHere(state, owner, offer(state, city));
+    expect(asked, 'the search stopped on a want that did not apply').not.toBeNull();
+    expect(asked!.kind).toBe('unit');
   });
 });
