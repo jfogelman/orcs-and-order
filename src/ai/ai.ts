@@ -1,3 +1,4 @@
+import { wantedHere } from './wants';
 import {
   BURROW,
   burrow,
@@ -9,13 +10,12 @@ import {
   sinkBlocked,
   surface,
 } from '../sim/burrow';
-import { DISPERSAL, REFORM_SITES, dispersingSide, reformBuildings } from '../sim/dispersal';
 import { HIVEKIN } from '../sim/hivekin';
 import { flagsOf, hasFlag } from '../sim/rules';
 import { STANDING, hostile, standing } from '../sim/diplomacy';
 import { appearsTo, canDisguise, wearDisguise } from '../sim/disguise';
 import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } from '../sim/spying';
-import { UNSEEN, goesUnseen } from '../sim/unseen';
+import { goesUnseen } from '../sim/unseen';
 import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../sim/gossip';
 import { INCITE, canIncite, incite, inciteExposure } from '../sim/incite';
 import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
@@ -1134,98 +1134,18 @@ export function chooseProduction(
   const ship = shipToBuild(state, city, inYard.units);
   if (ship) return ship;
 
-  // 2b. Section 125: a couple of Burrower-caste, which nothing else will ever
-  // ask for.
+  // 2b. The standing wants: the things a side should keep a couple of that
+  // nothing else in this function will ever ask for.
   //
-  // `worth()` ranks a unit on strength, health and price, and all three of a
-  // Burrower's reasons to exist are invisible to it -- it hides, it crosses
-  // what cannot be walked round, and it swings harder coming up out of the
-  // ground. By the numbers it is a Soldier-caste costing three quarters again
-  // as much, so the chooser put it last and built 0.2 a game. Slice B then
-  // measured Sink and Burrow and got **identical numbers on both arms**,
-  // because the mechanic was never once on the board.
-  //
-  // A standing want, like the garrison, and a small one: two. See `BURROW`.
-  if (BURROW.ai && BURROW.enabled) {
-    const diggers = allUnitsOf(state, city.owner).filter((u) => burrows(u)).length;
-    if (diggers < BURROW.aiWants) {
-      const digger = options.units.find((u) => burrows({ type: u.id }));
-      if (digger) return { kind: 'unit', id: digger.id };
-    }
-  }
-
-  // 2c. Section 136: a spy, which nothing else will ever ask for.
-  //
-  // The same hole section 125 fell into, and the comment above says what it
-  // cost: `worth()` ranks a unit on strength, health and price, and a spy has
-  // **no attack at all**. It is the worst soldier that can be built, by every
-  // number the chooser looks at, in every yard, forever -- so without a want of
-  // its own the whole of espionage would have been a thing only the player
-  // could do, and a sweep of it would have come back identical on both arms.
-  //
-  // One. A standing want, like the garrison and the diggers, and small: a
-  // second spy reads the same towns the first one does.
-  if (SPY.ai && SPY.enabled) {
-    const agents = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).spy).length;
-    if (agents < SPY.aiWants) {
-      // The cheap one, explicitly. Once section 138's advance is known both
-      // tiers are in `options.units`, and taking whichever happens to be
-      // first would have the chooser spending fifty-five shields on its
-      // *first* agent, in a yard that is usually also the yard that should be
-      // building the garrison.
-      const agent = options.units.find((u) => u.spy && !u.hidden) ?? options.units.find((u) => u.spy);
-      if (agent) return { kind: 'unit', id: agent.id };
-    }
-  }
-
-  // 2d. Section 138: and one that nobody can see, once that is possible.
-  //
-  // A want of its own rather than a larger `SPY.aiWants`, because the two
-  // tiers are not interchangeable and the chooser cannot tell them apart: by
-  // every number it reads a Nobody is a Skulker that costs very nearly twice
-  // as much, so a shared want would buy two Skulkers every time and the high
-  // tier would sit in the tree unbuilt. That is section 125's Burrower and
-  // section 136's spy for the third time, and the fix is the same each time.
-  //
-  // One, and only when the side already has its cheap agents: the expensive
-  // one is a thing you add to a programme, not a thing you start with.
-  if (UNSEEN.ai && UNSEEN.enabled) {
-    const ours = allUnitsOf(state, city.owner).filter((u) => unitType(u.type).spy);
-    const unseenOnes = ours.filter((u) => goesUnseen(u)).length;
-    if (ours.length >= SPY.aiWants && unseenOnes < UNSEEN.aiWants) {
-      const ghost = options.units.find((u) => u.hidden);
-      if (ghost) return { kind: 'unit', id: ghost.id };
-    }
-  }
-
-  // 2e. Section 152: somewhere for a spirit to gather, which nothing else
-  // will ever ask for.
-  //
-  // **The same hole for the fourth time**, and the comments on 2b, 2c and 2d
-  // above each describe it in their own words. `chooseProduction` ranks
-  // buildings on gold, science, defence and a barracks, and a Retrieval
-  // Circle carries none of those -- by every number this function reads it is
-  // fifty-five shields of nothing. The first Unbound probe measured **0 of 12
-  // games with a reform site ever standing**, which means every spirit that
-  // fell was lost and the faction was its stat line, which is deliberately
-  // nobody's own.
-  //
-  // Ahead of the riots and the endings below, which is further up than the
-  // diggers and the spies sit, because this is not a programme to add to an
-  // empire -- for this side it is what losing a fight means.
-  if (DISPERSAL.ai && DISPERSAL.enabled && dispersingSide(owner)) {
-    if (reformBuildings(state, city.owner).length < DISPERSAL.aiWants) {
-      // The Totem first where both are offered. A Circle only works while
-      // nothing stands in its city and this AI garrisons every city, so a
-      // Circle is the one it can afford early rather than the one it wants.
-      const sites = options.buildings.filter((b) =>
-        (REFORM_SITES as readonly string[]).includes(b.id),
-      );
-      const site = sites.find((b) => b.id === REFORM_SITES[0]) ?? sites[0];
-      if (site) return { kind: 'building', id: site.id };
-    }
-  }
-
+  // **Four separate sections pasted four nearly identical blocks here** --
+  // the Burrower-caste (125), the spy (136), the unseen agent (138) and the
+  // reform sites (152) -- each found by a probe after shipping, each with a
+  // fresh comment explaining the same thing. Section 154 asked for the class
+  // to be retired rather than the fifth instance fixed. They are declared in
+  // `ai/wants.ts` now, in the order they were asked in before, and this is
+  // the whole of the chooser's side of it.
+  const standing = wantedHere(state, owner, options);
+  if (standing) return standing;
   // 3. Keep the lid on first. A city at its content limit stops growing and
   // produces nothing at all, so a happiness building is worth more than any
   // amount of economy sitting on top of a riot.
