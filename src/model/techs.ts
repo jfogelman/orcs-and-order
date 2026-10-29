@@ -10,6 +10,8 @@ import type { BuildingId, FactionId, TechId, UnitTypeId } from './types';
  */
 
 export type TechFlag =
+  /** Section 155: grants a unit upgrade, declared in `upgrades.ts`. */
+  | 'upgrade'
   /** Section 136 slice 8: a spy may set a town talking against its own rulers. */
   | 'incite'
   /** Section 136 slice 7: a spy may ask a town what it thinks of everybody. */
@@ -1529,6 +1531,656 @@ export const TECHS: TechDef[] = [
       'It turns out you can simply walk over and look. Nobody has written down a rule ' +
       'against it, which everyone agrees is an oversight, and nobody wants to be the one ' +
       'to write it down in case somebody asks how they knew it was needed.',
+  },
+
+  // ====================================== section 155: unit upgrades
+  //
+  // Thirty-six advances, twelve families, each a linear upgrade and
+  // two branches that cannot both be had. Transcribed from
+  // `art_src/unit upgrades/unit_upgrade_techs.md` rather than retyped,
+  // and checked against this table before being written: every id is
+  // new, every prereq resolves, and every `<base>` is a real creature.
+  //
+  // **`units` is empty on purpose.** See `upgrades.ts`.
+
+  // ---- sapper, section 155
+  {
+    id: 'digging-instead-of-running',
+    name: 'Digging Instead of Running',
+    faction: 'orc',
+    cost: 70,
+    prereqs: ['suicidal-goblins'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Still carries the explosives. Now also carries a shovel. Somehow ' +
+      'this was seen as progress.',
+  },
+  {
+    id: 'load-bearing-grudges',
+    name: 'Load-Bearing Grudges',
+    faction: 'orc',
+    cost: 110,
+    prereqs: ['digging-instead-of-running'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Bigger bang, same nerves.',
+  },
+  {
+    id: 'group-cowardice',
+    name: 'Group Cowardice',
+    faction: 'orc',
+    cost: 110,
+    prereqs: ['digging-instead-of-running'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Misery, appropriately, loves company.',
+  },
+
+  // ---- orc, section 155
+  {
+    id: 'doing-this-before',
+    name: 'Doing This Before',
+    faction: 'orc',
+    cost: 65,
+    prereqs: ['orc-meaning'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'The Horde\'s closest thing to an education system.',
+  },
+  {
+    id: 'losing-it',
+    name: 'Losing It',
+    faction: 'orc',
+    cost: 100,
+    prereqs: ['doing-this-before'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Regrets nothing. Will regret this specifically, briefly.',
+  },
+  {
+    id: 'standing-still-on-purpose',
+    name: 'Standing Still On Purpose',
+    faction: 'orc',
+    cost: 100,
+    prereqs: ['doing-this-before'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Finally, an orc who waits.',
+  },
+
+  // ---- axethrower, section 155
+  {
+    id: 'second-axe-radical',
+    name: 'A Second Axe (Radical)',
+    faction: 'orc',
+    cost: 75,
+    prereqs: ['throwing-buddies'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'A genuine institutional breakthrough.',
+  },
+  {
+    id: 'getting-it-back',
+    name: 'Getting It Back',
+    faction: 'orc',
+    cost: 115,
+    prereqs: ['second-axe-radical'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Someone finally asked "then why not just pick it up."',
+  },
+  {
+    id: 'sharper-wobbling',
+    name: 'Sharper Wobbling',
+    faction: 'orc',
+    cost: 115,
+    prereqs: ['second-axe-radical'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Aerodynamically dubious. Effective anyway.',
+  },
+
+  // ---- troll, section 155
+  {
+    id: 'bigger-trolls',
+    name: 'Bigger Trolls',
+    faction: 'orc',
+    cost: 70,
+    prereqs: ['axes'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Heals just as fast, dies slightly less first.',
+  },
+  {
+    id: 'trolls-arguing-less',
+    name: 'Trolls Arguing Less',
+    faction: 'orc',
+    cost: 105,
+    prereqs: ['bigger-trolls'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Annoyingly, the optimal troll.',
+  },
+  {
+    id: 'personal-space-issues',
+    name: 'Personal Space Issues',
+    faction: 'orc',
+    cost: 105,
+    prereqs: ['bigger-trolls'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Doesn\'t need to argue. Just needs to lean on you.',
+  },
+
+  // ---- ogre, section 155
+  {
+    id: 'meaner-little-friend',
+    name: 'Meaner Little Friend',
+    faction: 'orc',
+    cost: 80,
+    prereqs: ['my-little-friend'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Two heads, two targets, finally consistent.',
+  },
+  {
+    id: 'actual-leadership-one-head-only',
+    name: 'Actual Leadership (One Head Only)',
+    faction: 'orc',
+    cost: 120,
+    prereqs: ['meaner-little-friend'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'One head does the yelling. The other still just eats.',
+  },
+  {
+    id: 'the-other-heads-turn',
+    name: 'The Other Head\'s Turn',
+    faction: 'orc',
+    cost: 120,
+    prereqs: ['meaner-little-friend'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Surrounding it was, in retrospect, the mistake.',
+  },
+
+  // ---- deathknight, section 155
+  {
+    id: 'dead-owe-us',
+    name: 'The Dead Owe Us',
+    faction: 'orc',
+    cost: 100,
+    prereqs: ['dead-messed-up'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Formerly a person. Currently a policy. Now also a pyramid scheme.',
+  },
+  {
+    id: 'worse-reputation',
+    name: 'Worse Reputation',
+    faction: 'orc',
+    cost: 140,
+    prereqs: ['dead-owe-us'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Doesn\'t need to win the fight. Just needs you to hesitate.',
+  },
+  {
+    id: 'longer-contract',
+    name: 'A Longer Contract',
+    faction: 'orc',
+    cost: 140,
+    prereqs: ['dead-owe-us'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'The pyramid scheme finally has overhead.',
+  },
+
+  // ---- dragon, section 155
+  {
+    id: 'even-more-fire',
+    name: 'Even More Fire',
+    faction: 'orc',
+    cost: 150,
+    prereqs: ['full-of-fire'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'The Horde\'s one plan for the late game, now with more commitment ' +
+      'to the bit.',
+  },
+  {
+    id: 'very-trusting-volunteer',
+    name: 'A Very Trusting Volunteer',
+    faction: 'orc',
+    cost: 190,
+    prereqs: ['even-more-fire'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'The last step in a very short interview process.',
+  },
+  {
+    id: 'bigger-everything',
+    name: 'Bigger Everything',
+    faction: 'orc',
+    cost: 190,
+    prereqs: ['even-more-fire'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Finally learns to aim. Nobody asked why it took this long.',
+  },
+
+  // ---- footman, section 155
+  {
+    id: 'holding-the-line-longer',
+    name: 'Holding the Line Longer',
+    faction: 'human',
+    cost: 60,
+    prereqs: ['first-human'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Still holds the line. Now with opinions about pay AND experience.',
+  },
+  {
+    id: 'standing-closer-together',
+    name: 'Standing Closer Together',
+    faction: 'human',
+    cost: 95,
+    prereqs: ['holding-the-line-longer'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'The shield was always the point. Someone just did the math.',
+  },
+  {
+    id: 'yelling-as-a-tactic',
+    name: 'Yelling as a Tactic',
+    faction: 'human',
+    cost: 95,
+    prereqs: ['holding-the-line-longer'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Morale, it turns out, is mostly volume.',
+  },
+
+  // ---- archer, section 155
+  {
+    id: 'bigger-bow',
+    name: 'Bigger Bow',
+    faction: 'human',
+    cost: 65,
+    prereqs: ['archery'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Keeps the arrow. Now from further away.',
+  },
+  {
+    id: 'aiming-up-not-at',
+    name: 'Aiming Up, Not At',
+    faction: 'human',
+    cost: 100,
+    prereqs: ['bigger-bow'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Turns out you don\'t have to see them to hit them.',
+  },
+  {
+    id: 'fewer-better-arrows',
+    name: 'Fewer, Better Arrows',
+    faction: 'human',
+    cost: 100,
+    prereqs: ['bigger-bow'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Trades the safety net for the satisfaction.',
+  },
+
+  // ---- knight, section 155
+  {
+    id: 'better-horse',
+    name: 'A Better Horse',
+    faction: 'human',
+    cost: 65,
+    prereqs: ['horses-sneeze'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Expensive, mounted, and now also fast about it.',
+  },
+  {
+    id: 'pointier-stick',
+    name: 'Pointier Stick',
+    faction: 'human',
+    cost: 100,
+    prereqs: ['better-horse'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Deeply committed to being seen being mounted, and now also winning ' +
+      'because of it.',
+  },
+  {
+    id: 'going-first-badly',
+    name: 'Going First, Badly',
+    faction: 'human',
+    cost: 100,
+    prereqs: ['better-horse'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'All the commitment of a charge, none of the planning.',
+  },
+
+  // ---- paladin, section 155
+  {
+    id: 'run-you-through-again',
+    name: 'We\'ll Run You Through, Again',
+    faction: 'human',
+    cost: 110,
+    prereqs: ['run-you-through'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Morally certain, heavily armored, and now also a healthcare plan.',
+  },
+  {
+    id: 'fewer-doubts',
+    name: 'Fewer Doubts',
+    faction: 'human',
+    cost: 145,
+    prereqs: ['run-you-through-again'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Correct about roughly half of it. The other half doesn\'t scare him ' +
+      'either.',
+  },
+  {
+    id: 'healing-while-winning',
+    name: 'Healing While Winning',
+    faction: 'human',
+    cost: 145,
+    prereqs: ['run-you-through-again'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Multitasking, treated as a holy virtue.',
+  },
+
+  // ---- mage, section 155
+  {
+    id: 'rumbling-voice-louder',
+    name: 'Rumbling Voice, Louder',
+    faction: 'human',
+    cost: 115,
+    prereqs: ['rumbling-voice'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Has read every book in the Kingdom. Started skimming for this one.',
+  },
+  {
+    id: 'fighting-while-talking',
+    name: 'Fighting While Talking',
+    faction: 'human',
+    cost: 150,
+    prereqs: ['rumbling-voice-louder'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Still talks the whole time. Somehow also still swings.',
+  },
+  {
+    id: 'reading-ahead',
+    name: 'Reading Ahead',
+    faction: 'human',
+    cost: 150,
+    prereqs: ['rumbling-voice-louder'],
+    // **Not a new creature.** The upgrade is a variant of the base
+    // unit, declared in `upgrades.ts`; thirty-six new unit ids would
+    // be the largest single addition to every hand-maintained list
+    // in the game, which is what sections 141, 144, 147 and 152 are
+    // all the same story about.
+    units: [],
+    buildings: [],
+    flags: ['upgrade'],
+    flavor:
+      'Read the book on getting hit. Skipped straight to the ending.',
   },
 ];
 

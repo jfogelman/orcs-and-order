@@ -115,6 +115,7 @@ function opensSummary(t: TechDef, player: Player): string {
  * is now a compile error rather than a word nobody explained.
  */
 const FLAG_LABELS: Record<TechFlag, string> = {
+  upgrade: 'Improves a unit you already have',
   incite: 'Spies can set a town talking against its rulers',
   gossip: 'Spies can ask a town what it thinks of everybody',
   turning: 'Spies can buy somebody else’s soldier',

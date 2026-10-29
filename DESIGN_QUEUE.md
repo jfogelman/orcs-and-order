@@ -12372,7 +12372,27 @@ piece of refactoring in this file I would argue for on its own merits.
 
 ---
 
-## 155. Upgraded units, as an option — QUEUED
+## 155. Upgraded units, as an option — IN PROGRESS
+
+> **Jeremy's three rulings, 2026-10-28.** The branch choice is **empire-wide
+> and permanent**; units already built **upgrade in a friendly city for a
+> fee**, which is the Civ2 idiom and not the cheaper new-builds-only I
+> suggested; and the **Horde and Kingdom go first**, the three newer factions
+> following, because their own balance is too fresh to layer an untested
+> system on. Costs come from the bible as provisional, to be swept later.
+>
+> **Shipped so far.** Slice 1 (PR #165): the standing wants, which section 154
+> argued for on its own merits and which this needs, since an AI that will not
+> buy an upgrade makes the whole system invisible to a sweep. Slice 2 (this
+> one): the thirty-six advances and thirty-six upgrade definitions as data,
+> transcribed by script and guarded by a both-directions pairing test.
+>
+> **The two things slice 2 found.** Adding the advances moved a late-game
+> fixture *with the lever off*, because `knowsEverything` counted them and a
+> side that had been omniscient silently stopped being — so there is a
+> `techInPlay` now and gating lives in one place. And the ~210 upgrade art
+> files have never been converted: `prepare_art.py` does not mention
+> `art_src/unit upgrades/` at all. That is slice 3.
 
 Jeremy's, with the design and the art already done: *"Upgraded Units Option
 (similar to barbarians). I already have the full upgrade bible and assets."*
