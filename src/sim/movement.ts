@@ -6,7 +6,7 @@ import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import type { City, GameState, Player, TerrainId, Unit } from '../model/types';
 import type { UnitTypeDef } from '../model/units';
 import { RUIN, isRuined, markDamaged, resettleTurns, workingBuildings } from './city';
@@ -705,7 +705,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       );
       // A dragon's breath does not stop at the thing it hit. Measured before
       // the defender is removed, since the damage it took is the input.
-      breatheThrough(state, unit, defender, unitType(defender.type).hp - Math.max(0, defender.hp));
+      breatheThrough(state, unit, defender, maxHp(defender) - Math.max(0, defender.hp));
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
       const blastVictims = defenderType.explodes > 0 ? detonate(state, defender) : [];

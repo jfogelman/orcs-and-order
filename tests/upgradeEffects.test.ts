@@ -8,15 +8,19 @@ import {
   SEASONED,
   VANGUARD,
   WARLORD,
+  blastRadius,
   coveringFor,
+  keepsItsTurn,
+  LANCE,
   movesThisTurn,
+  shrugsFirstBlow,
   neighbours,
   upgradeAttack,
   upgradeDefence,
   upgradeMoves,
   upgradeReach,
 } from '../src/sim/upgradeEffects';
-import { attackStrength, defenseStrength, resolveCombat } from '../src/sim/combat';
+import { attackStrength, defenseStrength, detonate, resolveCombat } from '../src/sim/combat';
 import { tryStep } from '../src/sim/movement';
 import { runAiTurn } from '../src/ai/ai';
 import {
@@ -26,7 +30,7 @@ import {
   unitReach,
   useAbility,
 } from '../src/sim/abilities';
-import { unitType } from '../src/model/units';
+import { maxHp, unitType } from '../src/model/units';
 import type { GameState, Unit } from '../src/model/types';
 
 /**
@@ -86,7 +90,6 @@ const UNWIRED: Record<string, string> = {
   // ---- the sapper's bundle. All three are rules inside `detonate()`, which
   // is its own small machine: a radius, a self-destruct and a risk roll.
   'sapper-tunnel': 'moving through impassable ground is a movement rule, not a combat one',
-  'sapper-deep': 'detonation radius; `detonate()` has no radius at all today',
   'sapper-cadre': 'the paired-risk rule needs a notion of a pair, which nothing has',
 
   // ---- the axe, which leaves the hand. `disarmed`, `rearmIn` and the
@@ -96,13 +99,10 @@ const UNWIRED: Record<string, string> = {
   'axethrower-heavy': 'ignoring a point of defence has to happen inside the throw, not the stack',
 
   // ---- the troll
-  'troll-brute':
-    '+2 HP needs a `maxHp(unit)` helper: `unitType(u.type).hp` is written out in about fifteen places and replacing them is a refactor, not an effect',
   'troll-regen': 'healing mid-combat means a heal inside the round loop, which has none',
   'troll-bonebreaker': 'a lasting debuff on the target wants a status, like `cowed`',
 
   // ---- the ogre
-  'ogre-brawler': 'splash onto a bystander; the club blast is the nearest thing and is a perk',
 
   // ---- the Death Knight, and the whole raised-skeleton rule
   'deathknight-grave':
@@ -115,7 +115,6 @@ const UNWIRED: Record<string, string> = {
   'dragon-wyrm': 'the carry-through is in `breatheThrough`, and suppressing it is that rule inverted',
 
   // ---- the Kingdom's foot
-  'footman-sergeant': 'ignoring the first point of damage belongs in `applyDamage`, per combat',
 
   // ---- the bow
   // ---- the bow, where the bible and the game turn out to disagree. **This
@@ -125,14 +124,29 @@ const UNWIRED: Record<string, string> = {
   // answered, and looses again. That is wired. `archer-volley` still is not.
   'archer-volley': 'firing past an intervening unit means nothing at range 1',
 
-  // ---- the horse
-  'knight-lance': 'first strike against cavalry needs a cavalry category; `isMounted` is close',
+  // ---- and one that was wired for twenty minutes and taken back out.
+  //
+  // **Measured rather than argued.** `damagePerRound` is
+  // `max(1, round(maxHp / 15))`, so a free blow is **one hit point** for
+  // seventy-eight of the game's eighty-one creatures -- and halving one is
+  // one. Of the three it would save anything for (dragon, queen, drake, all
+  // at 25 health) it saves exactly one point. A mage, which is the creature
+  // that actually gets this upgrade, saves nothing at all.
+  //
+  // So "reduced damage on a first strike" is a no-op in this engine, and
+  // shipping it would be precisely the card-that-lies this file exists to
+  // catch. It wants a different reading -- cancelling the free blow outright,
+  // or warding the first *round* -- and that is Jeremy's call, like the
+  // Archer's range was.
+  'mage-warden':
+    'reduced damage on a first strike is worth nothing here: a free blow is 1 point for 78 of 81 creatures, and half of 1 is 1',
 
-  // ---- the Paladin and the Mage, both of which edit what an ability costs
+  // ---- the horse
+
+  // ---- the Paladin and the Mage. Their "no longer costs the whole turn"
+  // halves landed together, as the note here said they should; what is left
+  // of each wants machinery nothing has yet.
   'paladin-champion': 'heal granting defence wants the same lasting-buff machinery as the troll',
-  'paladin-warden': 'an ability that does not cost the turn is a change to `abilities.ts`',
-  'mage-battle': 'the same change, for the same reason, and they should land together',
-  'mage-warden': 'reduced damage on a first strike needs the first strike to be distinguishable',
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -183,10 +197,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 14 of 36 at the end of slice 5a.
-    expect(Object.keys(UNWIRED)).toHaveLength(22);
-    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(4);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(14);
+    // point. 21 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(15);
+    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(6);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(21);
   });
 });
 
@@ -515,5 +529,185 @@ describe('the AI uses it', () => {
     runAiTurn(state, 0);
     expect(guard.covering, 'the one that cannot take a hit').toBe(hurt.id);
     void healthy;
+  });
+});
+
+describe('the second batch', () => {
+  it('lowers a lance at anything on a horse, and nothing on foot', () => {
+    const state = game();
+    const lancer = put(state, 1, 'knight', 5, 5, 'knight-lance');
+    const horse = put(state, 0, 'dragon', 6, 5);
+    const foot = put(state, 0, 'orc', 4, 5);
+    const plain = put(state, 1, 'knight', 9, 9);
+    // `isMounted` is what "cavalry-type" means here; a knight is, an orc is not.
+    expect(firstStrikesOf(lancer, foot)).toBe(firstStrikesOf(plain, foot));
+    const mounted = put(state, 0, 'knight', 7, 5);
+    expect(firstStrikesOf(lancer, mounted)).toBe(firstStrikesOf(plain, mounted) + LANCE.firstStrikes);
+    // And it is a fact about the pairing, not about the lancer: asked with no
+    // opponent at all, it is an ordinary knight.
+    expect(firstStrikesOf(lancer)).toBe(firstStrikesOf(plain));
+    void horse;
+  });
+
+  it('leaves the Battle Mage and the Warden Paladin their turn', () => {
+    const state = game();
+    const mage = put(state, 1, 'mage', 5, 5, 'mage-battle');
+    const plainMage = put(state, 1, 'mage', 5, 9);
+    // Two tiles out: a ranged unit cannot lob one at somebody standing next
+    // to it, which is the drawback that makes the range worth having -- and
+    // which quietly made the first draft of this test assert nothing at all.
+    const foe = put(state, 0, 'orc', 7, 5);
+    const foe2 = put(state, 0, 'orc', 7, 9);
+    expect(useAbility(state, mage, 'ranged', foe).ok, 'the strike happened').toBe(true);
+    expect(useAbility(state, plainMage, 'ranged', foe2).ok).toBe(true);
+    expect(mage.moves, 'still swinging').toBeGreaterThan(0);
+    expect(plainMage.moves, 'and the ordinary one is not').toBe(0);
+
+    const pal = put(state, 1, 'paladin', 12, 5, 'paladin-warden');
+    const plainPal = put(state, 1, 'paladin', 12, 9);
+    const hurt1 = put(state, 1, 'footman', 13, 5);
+    const hurt2 = put(state, 1, 'footman', 13, 9);
+    hurt1.hp = 1;
+    hurt2.hp = 1;
+    useAbility(state, pal, 'heal', hurt1);
+    useAbility(state, plainPal, 'heal', hurt2);
+    expect(pal.moves).toBeGreaterThan(0);
+    expect(plainPal.moves).toBe(0);
+  });
+
+  it('throws the Deep Sapper a tile further', () => {
+    const state = game();
+    const deep = put(state, 0, 'sapper', 5, 5, 'sapper-deep');
+    const plain = put(state, 0, 'sapper', 15, 15);
+    expect(blastRadius(plain)).toBe(1);
+    expect(blastRadius(deep)).toBe(2);
+    const near = put(state, 1, 'footman', 6, 5);
+    const far = put(state, 1, 'footman', 7, 5);
+    const nearHp = near.hp;
+    const farHp = far.hp;
+    detonate(state, deep);
+    expect(near.hp).toBeLessThan(nearHp);
+    expect(far.hp, 'two tiles out, and still caught').toBeLessThan(farHp);
+  });
+
+  it('lets a Sergeant’s Footmen shrug the first blow, once a fight', () => {
+    const state = game();
+    const sgt = put(state, 1, 'footman', 5, 5, 'footman-sergeant');
+    const mate = put(state, 1, 'footman', 6, 5);
+    const alone = put(state, 1, 'footman', 15, 15);
+    const archer = put(state, 1, 'archer', 4, 5);
+    expect(shrugsFirstBlow(state, mate)).toBe(true);
+    expect(shrugsFirstBlow(state, alone), 'nobody beside it').toBe(false);
+    // Only Footmen. The blurb says Footmen, and a Sergeant is not a general.
+    expect(shrugsFirstBlow(state, archer)).toBe(false);
+    // A Sergeant is a Footman beside another Footman, so it covers itself only
+    // when a second Sergeant is beside it -- the same rule the shieldwall has.
+    void sgt;
+  });
+
+  it('shrugs nothing with the box unticked', () => {
+    const state = game();
+    put(state, 1, 'footman', 5, 5, 'footman-sergeant');
+    const mate = put(state, 1, 'footman', 6, 5);
+    const deep = put(state, 0, 'sapper', 15, 15, 'sapper-deep');
+    const mage = put(state, 1, 'mage', 12, 12, 'mage-battle');
+    UPGRADES.enabled = false;
+    expect(shrugsFirstBlow(state, mate)).toBe(false);
+    expect(blastRadius(deep)).toBe(1);
+    expect(keepsItsTurn(mage, 'ranged')).toBe(false);
+  });
+});
+
+describe('the Troll Brute, and the number that had fifteen homes', () => {
+  it('gives a Brute two more hit points than a troll', () => {
+    const state = game();
+    const plain = put(state, 0, 'troll', 5, 5);
+    const brute = put(state, 0, 'troll', 9, 9, 'troll-brute');
+    expect(maxHp(brute)).toBe(maxHp(plain) + 2);
+  });
+
+  it('gives a group two each, like every other flat addition', () => {
+    const state = game();
+    const one = put(state, 0, 'troll', 5, 5, 'troll-brute');
+    const three = put(state, 0, 'troll_x3', 9, 9, 'troll-brute');
+    const plainThree = put(state, 0, 'troll_x3', 12, 12);
+    expect(maxHp(three) - maxHp(plainThree)).toBe(2 * unitType('troll_x3').count);
+    void one;
+  });
+
+  /**
+   * The point of the helper rather than the upgrade. A ceiling, a threshold,
+   * a limit and a scale all meant the same number and all wrote it out
+   * separately; a Brute at full health has to read as full health to every
+   * one of them, or it is permanently one heal short of itself.
+   */
+  it('is full when it is full, to everything that asks', () => {
+    const state = game();
+    const brute = put(state, 0, 'troll', 5, 5, 'troll-brute');
+    brute.hp = maxHp(brute);
+    const healer = put(state, 0, 'deathknight', 6, 5);
+    expect(abilityTargets(state, healer, 'reload')).not.toContain(brute);
+    // A unit at its own maximum is not a candidate for patching up.
+    const pal = put(state, 1, 'paladin', 15, 15);
+    const sick = put(state, 1, 'footman', 16, 15);
+    sick.hp = 1;
+    expect(abilityTargets(state, pal, 'heal').map((u) => u.id)).toContain(sick.id);
+    expect(abilityTargets(state, pal, 'heal').map((u) => u.id)).not.toContain(brute.id);
+  });
+
+  it('is an ordinary troll with the box unticked', () => {
+    const state = game();
+    const brute = put(state, 0, 'troll', 5, 5, 'troll-brute');
+    const plain = put(state, 0, 'troll', 9, 9);
+    UPGRADES.enabled = false;
+    expect(maxHp(brute)).toBe(maxHp(plain));
+  });
+});
+
+describe('the backswing', () => {
+  /**
+   * **The ogre has to win.** The first draft of this let an even fight decide
+   * it, and the ogre lost -- so `brawlerSwing` correctly did nothing, and the
+   * test failed for a reason that had nothing to do with the backswing. The
+   * target is left on one hit point so the outcome is not in question.
+   */
+  function brawl(state: GameState): { ogre: Unit; target: Unit } {
+    const ogre = put(state, 0, 'ogre', 5, 5, 'ogre-brawler');
+    const target = put(state, 1, 'footman', 6, 5);
+    target.hp = 1;
+    return { ogre, target };
+  }
+
+  it('catches the bystander nearest the Brawler, and only one', () => {
+    const state = game();
+    const { ogre, target } = brawl(state);
+    // Both are beside the target; one is beside the ogre as well, and that is
+    // the one a wide flat arc would catch on the way through.
+    const near = put(state, 1, 'footman', 6, 4);
+    const far = put(state, 1, 'footman', 7, 5);
+    const was = { near: near.hp, far: far.hp };
+    resolveCombat(state, ogre, target);
+    expect(ogre.hp, 'the ogre survived to swing at all').toBeGreaterThan(0);
+    expect(near.hp, 'on the way through').toBeLessThan(was.near);
+    expect(far.hp, 'one bystander, not everything nearby').toBe(was.far);
+  });
+
+  it('swings at nobody of its own', () => {
+    const state = game();
+    const { ogre, target } = brawl(state);
+    const friend = put(state, 0, 'orc', 6, 4);
+    const was = friend.hp;
+    resolveCombat(state, ogre, target);
+    expect(friend.hp).toBe(was);
+  });
+
+  it('does neither with the box unticked', () => {
+    const state = game();
+    const { ogre, target } = brawl(state);
+    const beside = put(state, 1, 'footman', 6, 4);
+    const was = beside.hp;
+    UPGRADES.enabled = false;
+    resolveCombat(state, ogre, target);
+    expect(beside.hp).toBe(was);
   });
 });

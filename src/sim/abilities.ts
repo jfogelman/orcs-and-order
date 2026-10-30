@@ -1,11 +1,11 @@
 import { DIRS8, distance, idx } from '../engine/grid';
-import { hasUpgrade, upgradeReach } from './upgradeEffects';
+import { hasUpgrade, keepsItsTurn, upgradeReach } from './upgradeEffects';
 import { hostile, noteClash } from './diplomacy';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
 import { heldFollies } from './follyEffects';
 import { hasPerk } from '../model/perks';
-import { ammoLeft, needsAmmo, unitType } from '../model/units';
+import { ammoLeft, needsAmmo, unitType, maxHp } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import {
   attackStrength,
@@ -152,11 +152,11 @@ export function abilityReady(unit: Unit, ability: AbilityId): string | null {
     return 'Out of missiles. Reload it, or take it back to a city.';
   }
   if (ability === 'split') {
-    if (unit.hp < unitType(unit.type).hp * SPLIT.needsFraction) {
+    if (unit.hp < maxHp(unit) * SPLIT.needsFraction) {
       return 'Not enough of it left to share.';
     }
   }
-  if (ability === 'drain' && unit.hp >= unitType(unit.type).hp) {
+  if (ability === 'drain' && unit.hp >= maxHp(unit)) {
     return 'It wants for nothing at present.';
   }
   return null;
@@ -225,7 +225,7 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
     // Healing is for a neighbour who actually needs it.
     if (other.owner !== unit.owner) return false;
     if (d > 1) return false;
-    return other.hp < unitType(other.type).hp;
+    return other.hp < maxHp(other);
   });
 }
 
@@ -256,7 +256,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const type = unitType(unit.type);
   const atk = attackStrength(state, unit, target);
   const def = defenseStrength(state, target, unit);
-  const dmg = damagePerRound(type.hp, unitType(target.type).hp);
+  const dmg = damagePerRound(maxHp(unit), maxHp(target));
   // A thrown weapon lands harder than a swung one -- that is what you are
   // buying with the axe you are about to be without.
   const power = type.throwsWeapon ? atk.total * THROW_BONUS : atk.total;
@@ -272,7 +272,10 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   // one of them, so a thrown blow carries its thrower's kind.
   const amount = applyDamage(target, landed * dmg, damageKindOf(unit));
   applySpellEffects(state, unit, target);
-  unit.moves = 0;
+  // Section 155, `mage-battle`: still talks the whole time, somehow also still
+  // swings. Everything else about the strike is unchanged -- it is only the
+  // turn it stops costing.
+  if (!keepsItsTurn(unit, 'ranged')) unit.moves = 0;
   if (unitType(unit.type).ammo > 0) unit.ammo = Math.max(0, ammoLeft(unit) - 1);
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);
@@ -313,9 +316,11 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
 
 /** Patch a neighbour up. The first thing in the game that is not violence. */
 function healFriend(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
-  const max = unitType(target.type).hp;
+  const max = maxHp(target);
   const ceiling = Math.round(max * unitType(unit.type).healsTo);
-  unit.moves = 0;
+  // Section 155, `paladin-warden`: the same sentence as `mage-battle`, for the
+  // other ability that costs a whole turn.
+  if (!keepsItsTurn(unit, 'heal')) unit.moves = 0;
 
   if (target.hp >= ceiling) {
     log(
@@ -450,7 +455,7 @@ function makeSwampyFriend(state: GameState, unit: Unit): AbilityOutcome {
  */
 function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
   if (target.id === unit.id) return { ok: false, reason: 'It cannot bargain with itself.' };
-  const donorMax = unitType(target.type).hp;
+  const donorMax = maxHp(target);
   const owed = Math.max(1, Math.round(target.hp * DRAIN.takesFraction));
   // Section 111: with the Bargain Stone the terms are written down, and the donor
   // gives up less for the same return.
@@ -461,7 +466,7 @@ function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const taken = Math.max(1, Math.round(target.hp * takes));
   const fatal = target.hp <= donorMax * DRAIN.survivesAbove;
 
-  const room = unitType(unit.type).hp - unit.hp;
+  const room = maxHp(unit) - unit.hp;
   const healed = Math.min(room, owed * DRAIN.returnsMultiple);
   unit.hp += healed;
   unit.moves = 0;

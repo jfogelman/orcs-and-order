@@ -1,4 +1,5 @@
 import type { DamageKind, FactionId, UnitTypeId } from './types';
+import { UPGRADES, UPGRADES_BY_ID } from './upgrades';
 
 /**
  * Units are singleton, Civ2 style: one tile, one unit, one health bar.
@@ -2517,11 +2518,34 @@ export function unitType(id: UnitTypeId): UnitTypeDef {
  *
  * Rounds up, so a unit is never reduced below one while it is still alive.
  */
-export function aliveCount(unit: { type: UnitTypeId; hp: number }): number {
+export function aliveCount(unit: { type: UnitTypeId; hp: number; upgrade?: string }): number {
   const type = unitType(unit.type);
   if (unit.hp <= 0) return 0;
   if (type.count <= 1) return 1;
-  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / type.hp))));
+  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / maxHp(unit)))));
+}
+
+/**
+ * The most health this unit can have. Section 155.
+ *
+ * **`unitType(u.type).hp` was written out in about fifteen places** and every
+ * one of them meant this -- a heal ceiling, a split threshold, a drain limit,
+ * the scale damage is measured against, the share of a group still standing.
+ * `troll-brute` is *"+2 HP"* and could not be wired at all while that number
+ * had fifteen homes, which is the shape of bug this project keeps finding:
+ * a fact about the game repeated until one copy disagrees.
+ *
+ * Here in the model rather than beside the other upgrade rules, because
+ * `headcount` and `aliveCount` need it and nothing in `model/` may reach into
+ * `sim/`. `upgrades.ts` imports only types, so this costs no cycle.
+ */
+export function maxHp(unit: { type: UnitTypeId; upgrade?: string }): number {
+  const base = unitType(unit.type).hp;
+  if (!UPGRADES.enabled || !unit.upgrade) return base;
+  const bonus = UPGRADES_BY_ID[unit.upgrade]?.effect?.hp ?? 0;
+  // Scaled by the headcount, like every other flat addition in this game:
+  // two more hit points each for Three Trolls is six.
+  return base + bonus * unitType(unit.type).count;
 }
 
 /**
@@ -2557,7 +2581,7 @@ export function holdsGround(type: UnitTypeDef): boolean {
 }
 
 /** The share of its full strength a unit still fights at, from its losses. */
-export function headcount(unit: { type: UnitTypeId; hp: number }): number {
+export function headcount(unit: { type: UnitTypeId; hp: number; upgrade?: string }): number {
   if (!ATTRITION.enabled) return 1;
   const type = unitType(unit.type);
   if (type.count <= 1) return 1;

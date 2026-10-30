@@ -47,7 +47,7 @@ import { DIRS8, distance, fatCrossIndices, idx } from '../engine/grid';
 import { TERRAIN } from '../model/terrain';
 import { BUILDINGS } from '../model/buildings';
 import type { UnitTypeDef } from '../model/units';
-import { UNIT_TYPES, ammoLeft, headcount, holdsGround, unitType } from '../model/units';
+import { UNIT_TYPES, ammoLeft, headcount, holdsGround, unitType, maxHp } from '../model/units';
 import type { City, FactionId, GameState, Player, ProductionItem, Unit } from '../model/types';
 import { owedPerks, perkChoices } from '../model/perks';
 import {
@@ -2992,7 +2992,7 @@ function standGuard(state: GameState, player: Player): void {
     // shielding whoever happened to be next to them, for the whole game.
     if (guard.goto) continue;
     if (abilityReady(guard, 'cover') !== null) continue;
-    const worth = (u: Unit) => u.hp / Math.max(1, unitType(u.type).hp);
+    const worth = (u: Unit) => u.hp / Math.max(1, maxHp(u));
     const frailest = abilityTargets(state, guard, 'cover').sort(
       (a, b) => worth(a) - worth(b) || unitType(b.type).cost - unitType(a.type).cost,
     )[0];

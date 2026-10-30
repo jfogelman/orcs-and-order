@@ -1,4 +1,4 @@
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import type { GameState, Status, StatusKind, Unit } from '../model/types';
 import { log } from './gamestate';
 
@@ -145,7 +145,7 @@ export function tickStatuses(state: GameState, unit: Unit): boolean {
   if (statuses.length === 0) return false;
 
   if (hasStatus(unit, 'burning')) {
-    const max = unitType(unit.type).hp;
+    const max = maxHp(unit);
     unit.hp -= Math.max(BURN_FLOOR, Math.round(max * BURN_DAMAGE));
   }
 

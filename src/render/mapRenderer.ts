@@ -5,7 +5,7 @@ import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
-import { aliveCount, unitType } from '../model/units';
+import { aliveCount, maxHp, unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { Camera, TILE } from './camera';
 import { roadLinks } from './roadShape';
@@ -996,7 +996,7 @@ export class MapRenderer {
     // Standing still, health decides how it looks. Checked before the
     // disarmed pose, since a dying axethrower is more usefully drawn as dying
     // than as short of an axe.
-    const share = u.hp / Math.max(1, unitType(u.type).hp);
+    const share = u.hp / Math.max(1, maxHp(u));
     if (share < HURT_LEVELS.hurt) {
       const frames = this.sprites.hurtFrames(u.type, u.disarmed, artVariant(u));
       if (frames && frames.length > 0) {

@@ -98,6 +98,10 @@ export interface UpgradeEffect {
   moves?: number;
   /** Tiles added to a striking range, through the `reach` the Rumbling Archive uses. */
   reach?: number;
+  /** Tiles added to a sapper's blast. */
+  blast?: number;
+  /** Hit points, per creature in the group. Read through `maxHp`. */
+  hp?: number;
 }
 
 export interface UpgradeDef {
@@ -153,6 +157,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Detonation radius +1 tile.',
     flavour: 'Bigger bang, same nerves.',
+    effect: { blast: 1 },
   },
   {
     id: 'sapper-cadre',
@@ -255,6 +260,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       '+2 HP.',
     flavour: 'Heals just as fast, dies slightly less first.',
+    effect: { hp: 2 },
   },
   {
     id: 'troll-regen',

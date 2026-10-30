@@ -10,7 +10,7 @@ import { recordTurn } from './history';
 import { checkContacts } from './contact';
 import { forgetSlowly, lapsePeace } from './diplomacy';
 import { refreshCargo } from './ships';
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
 import { BUILDINGS } from '../model/buildings';
@@ -123,7 +123,7 @@ function healUnits(state: GameState, playerId: number): void {
 function wakeTheMended(state: GameState, playerId: number): void {
   for (const unit of state.units) {
     if (unit.owner !== playerId || !unit.mending) continue;
-    if (unit.hp < unitType(unit.type).hp) continue;
+    if (unit.hp < maxHp(unit)) continue;
     delete unit.mending;
     unit.order = 'none';
     log(state, `${unitType(unit.type).name} is patched up and ready.`, 'good', playerId, undefined, [

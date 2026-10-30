@@ -12689,19 +12689,65 @@ and are Jeremy's to name: `dwarf mystic`, `gnome`, and the pair
 `soldier_spitter` / `worker_fodder`, which look like one sheet covering two
 castes and which the pipeline has no convention for.
 
-### What slice 5a did not do
+### The second batch: six more, and the number that had fifteen homes
 
-**Twenty-three upgrades still do nothing**, each with its reason in the test.
-They group into about seven jobs rather than twenty-three: the sapper's
-`detonate()`, the axethrower's throw machinery, a lasting-debuff status, a
-`maxHp(unit)` helper, the raised-skeleton rule, "an ability that does not cost
-the turn", and the damage pipeline.
+**`knight-lance`**, the only upgrade in the thirty-six whose effect depends on
+*what it is fighting* -- hence a second parameter on `firstStrikesOf` that
+every other caller omits. "Cavalry-type" is `isMounted`, which the Long Vigil
+already defined.
 
-**`troll-brute` is the cheapest-looking and is not cheap.** `+2 HP` needs
-`maxHp(unit)`, because `unitType(u.type).hp` is written out in about fifteen
-places with subtly different meanings -- a heal ceiling, a split threshold, a
-drain limit, the damage-per-round scale. That is a refactor, and it is the
-same shape as the wants refactor that went first in slice 1.
+**`mage-battle` and `paladin-warden`** landed together, as the unwired note
+said they should: one sentence between them, asked at each of the two places
+in `abilities.ts` that spend the turn.
+
+**`footman-sergeant`**, where *"the first point of damage each combat"* turned
+out to be the interesting half. `applyDamage` has no idea which fight it is
+in, so the reprieve is worked out once at the top of `resolveCombat` and spent
+by the first blow that lands -- a closure rather than a flag on the unit,
+because it belongs to that combat and nothing outside it should see it.
+
+**`sapper-deep`**, one line, now that the blast has a radius at all.
+
+**And `troll-brute`, which was the cheapest-looking and was not cheap.** `+2
+HP` needed `maxHp(unit)`, because `unitType(u.type).hp` was written out in
+**about fifteen places** and every one meant the same thing: a heal ceiling, a
+split threshold, a drain limit, the scale damage is measured against, the
+share of a group still standing, the point at which a sprite starts looking
+hurt. A Brute at full health has to read as full health to every one of them
+or it is permanently one heal short of itself.
+
+The helper lives in `model/units.ts` rather than with the other upgrade rules,
+because `headcount` and `aliveCount` need it and nothing in `model/` may reach
+into `sim/`. `upgrades.ts` imports only types, so it costs no cycle.
+
+**`ogre-brawler`** catches one bystander on the backswing -- the nearest to
+the attacker, off the damage actually dealt rather than off the ogre's
+strength, so a swing that barely landed barely splashes. One, not all of them:
+an ogre that hit everything standing near its target would be a sapper.
+
+### And one that was wired for twenty minutes and taken back out
+
+**`mage-warden` is a no-op in this engine, and that is measured rather than
+argued.** `damagePerRound` is `max(1, round(maxHp / 15))`, so a free blow is
+**one hit point for seventy-eight of the game's eighty-one creatures** -- and
+half of one is one. Of the three it would save anything for (dragon, queen and
+drake, all at 25 health) it saves exactly one point. **A mage, which is the
+creature that actually gets this upgrade, saves nothing at all.**
+
+Shipping it would have been precisely the card-that-lies the completeness test
+exists to catch: wired, tested, green, and worth nothing. It is back on the
+unwired list with the number.
+
+It wants a different reading to mean anything -- cancelling the free blow
+outright, or warding the first *round* rather than the first strike -- and
+that is Jeremy's call, the way the Archer's range was.
+
+### What is left
+
+**Fifteen upgrades still do nothing**, each with its reason in the test. They
+group into five jobs rather than fifteen: the axethrower's throw machinery, a
+lasting-debuff status, the raised-skeleton rule, the dragon, and the two
+sapper lines that need a notion of impassable ground and of a pair.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with

@@ -1,6 +1,7 @@
 import { UPGRADES, UPGRADES_BY_ID } from '../model/upgrades';
 import type { UpgradeDef, UpgradeEffect } from '../model/upgrades';
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
+import { isMounted } from './follyEffects';
 import type { GameState, Unit } from '../model/types';
 import { distance } from '../engine/grid';
 
@@ -85,7 +86,7 @@ export function upgradeAttack(state: GameState, unit: Unit): number {
   // `orc-berserker`: +2 attack and -1 defence below half health. The defence
   // half is in `upgradeDefence`; this is an orc that fights better the worse
   // it is doing, which is the single most Horde sentence in the upgrade bible.
-  if (hasUpgrade(unit, 'orc-berserker') && unit.hp < unitType(unit.type).hp / 2) {
+  if (hasUpgrade(unit, 'orc-berserker') && unit.hp < maxHp(unit) / 2) {
     bonus += BERSERK_RAGE.attack;
   }
 
@@ -133,7 +134,7 @@ export function upgradeDefence(state: GameState, unit: Unit): number {
   if (!UPGRADES.enabled) return 0;
   let bonus = upgradeStat(unit, 'defence');
 
-  if (hasUpgrade(unit, 'orc-berserker') && unit.hp < unitType(unit.type).hp / 2) {
+  if (hasUpgrade(unit, 'orc-berserker') && unit.hp < maxHp(unit) / 2) {
     bonus -= BERSERK_RAGE.defence;
   }
 
@@ -202,14 +203,57 @@ export const SHIELDWALL = { defence: 1 };
  * by taking one away from this one, which is what a negative here would do
  * when `resolveCombat` nets the two.
  */
-export function firstStrikesOf(unit: Unit): number {
-  const base = unitType(unit.type).firstStrikes;
-  if (hasUpgrade(unit, 'archer-marksman')) return Math.max(0, base - MARKSMAN.firstStrikes);
-  return base;
+export function firstStrikesOf(unit: Unit, against?: Unit): number {
+  let n = unitType(unit.type).firstStrikes;
+  if (hasUpgrade(unit, 'archer-marksman')) n -= MARKSMAN.firstStrikes;
+  // `knight-lance`: a lance is a thing for use against horses, and this is the
+  // only upgrade in the thirty-six whose effect depends on *what it is
+  // fighting* -- hence the second parameter, which every other caller omits.
+  if (against && hasUpgrade(unit, 'knight-lance') && isMounted(against)) n += LANCE.firstStrikes;
+  return Math.max(0, n);
+}
+
+/**
+ * Whether anything beside this unit is shrugging the first blow off for it.
+ *
+ * `footman-sergeant`: *"adjacent Footmen ignore the first point of damage
+ * taken each combat"*. Read once at the top of a fight rather than per blow,
+ * because "the first" has to mean the first of that fight and `applyDamage`
+ * has no idea which fight it is in.
+ */
+export function shrugsFirstBlow(state: GameState, unit: Unit): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (unitType(unit.type).base !== 'footman') return false;
+  return neighbours(state, unit, 'friendly').some((n) => hasUpgrade(n, 'footman-sergeant'));
+}
+
+/**
+ * Whether this unit's ability leaves it the rest of its turn.
+ *
+ * Two upgrades, one sentence between them: `mage-battle` is *"no 'costs the
+ * whole turn' penalty after striking"* and `paladin-warden` is *"heal no
+ * longer costs the whole turn"*. Asked in `abilities.ts` at each of the two
+ * places that spend the turn, so the pair cannot drift apart.
+ */
+export function keepsItsTurn(unit: Unit, ability: 'ranged' | 'heal'): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (ability === 'ranged') return hasUpgrade(unit, 'mage-battle');
+  return hasUpgrade(unit, 'paladin-warden');
+}
+
+/** How far a sapper's blast reaches: one tile, and `sapper-deep` makes it two. */
+export function blastRadius(sapper: Unit): number {
+  return 1 + (UPGRADES.enabled ? upgradeStat(sapper, 'blast') : 0);
 }
 
 /** What a Marksman gives up for its two points. */
 export const MARKSMAN = { firstStrikes: 1 };
+
+/** What a lance is worth against something on a horse. */
+export const LANCE = { firstStrikes: 1 };
+
+/** What a Sergeant's Footmen shrug off, once a fight. */
+export const SERGEANT = { ignores: 1 };
 
 /**
  * Whether this unit gets its movement at all this turn. Section 155.
@@ -253,3 +297,6 @@ export function coveringFor(state: GameState, unit: Unit): Unit | null {
 
 /** How often a Guardian may move, in turns, and what covering costs. */
 export const GUARDIAN = { everyTurns: 2 };
+
+/** What a Brawler's backswing is worth, as a share of what it dealt. */
+export const BRAWLER = { share: 0.5 };

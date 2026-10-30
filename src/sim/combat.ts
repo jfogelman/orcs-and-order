@@ -1,12 +1,21 @@
 import { distance, idx } from '../engine/grid';
-import { firstStrikesOf, hasUpgrade, upgradeAttack, upgradeDefence } from './upgradeEffects';
+import {
+  BRAWLER,
+  SERGEANT,
+  blastRadius,
+  firstStrikesOf,
+  hasUpgrade,
+  shrugsFirstBlow,
+  upgradeAttack,
+  upgradeDefence,
+} from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { defenseOf } from '../model/terrain';
-import { headcount, needsAmmo, unitType } from '../model/units';
+import { headcount, needsAmmo, unitType, maxHp } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
@@ -575,6 +584,50 @@ export const CLUB_QUAKE = 0.12;
  * All three run after the fight resolves, so a dead ogre swings no club and a
  * dead target still burns nobody.
  */
+/**
+ * Section 155, `ogre-brawler`: *"attacks hit the defender and one adjacent
+ * unit at half damage"*.
+ *
+ * One bystander, not all of them: a wide flat arc catches the next thing
+ * along, and an ogre that hit everything standing near its target would be a
+ * sapper. Picked as the **nearest to the attacker**, ties by lower health,
+ * which is the one it would plausibly have caught on the way through.
+ *
+ * Taken off the damage actually dealt rather than off the ogre's strength, so
+ * a swing that barely landed barely splashes.
+ */
+function brawlerSwing(state: GameState, attacker: Unit, defender: Unit): void {
+  if (!hasUpgrade(attacker, 'ogre-brawler') || attacker.hp <= 0) return;
+  const dealt = maxHp(defender) - Math.max(0, defender.hp);
+  if (dealt <= 0) return;
+  const bystander = state.units
+    .filter(
+      (u) =>
+        u.id !== defender.id &&
+        u.id !== attacker.id &&
+        u.owner !== attacker.owner &&
+        u.hp > 0 &&
+        distance(u.x, u.y, defender.x, defender.y) === 1,
+    )
+    .sort(
+      (a, b) =>
+        distance(a.x, a.y, attacker.x, attacker.y) - distance(b.x, b.y, attacker.x, attacker.y) ||
+        a.hp - b.hp,
+    )[0];
+  if (!bystander) return;
+  applyDamage(bystander, Math.max(1, Math.round(dealt * BRAWLER.share)), damageKindOf(attacker));
+  log(
+    state,
+    `${unitType(attacker.type).name} catches ${unitType(bystander.type).name} on the backswing.`,
+    'combat',
+    attacker.owner,
+    undefined,
+    [bystander.x, bystander.y],
+    attacker.id,
+  );
+  if (bystander.hp <= 0) destroyUnit(state, bystander, 'is caught on the backswing', attacker);
+}
+
 function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
   if (attacker.hp <= 0) return;
   if (unitType(attacker.type).base !== 'ogre') return;
@@ -597,7 +650,7 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     const killed: Unit[] = [];
     for (const victim of caught) {
       // A blast is a blast: nothing magical resists being stood next to one.
-      applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * share)), 'physical');
+      applyDamage(victim, Math.max(1, Math.round(maxHp(victim) * share)), 'physical');
       if (victim.hp <= 0) killed.push(victim);
     }
     if (caught.length > 0) {
@@ -620,7 +673,7 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     sweep(target, CLUB_BLAST, false, 'explosion', 'brings the club down and it goes off');
     // Its own blast, at a discount. Never enough to kill it outright, because a
     // unit that explodes itself on a win is a perk nobody would ever choose.
-    const self = Math.max(1, Math.round(unitType(attacker.type).hp * CLUB_BLAST * CLUB_SELF));
+    const self = Math.max(1, Math.round(maxHp(attacker) * CLUB_BLAST * CLUB_SELF));
     attacker.hp = Math.max(1, attacker.hp - self);
   }
 
@@ -666,8 +719,8 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
 
   const atk = attackStrength(state, attacker, defender);
   const def = defenseStrength(state, defender, attacker);
-  const atkMax = unitType(attacker.type).hp;
-  const defMax = unitType(defender.type).hp;
+  const atkMax = maxHp(attacker);
+  const defMax = maxHp(defender);
   const dmg = damagePerRound(atkMax, defMax);
   // The strengths above already count the losses each side arrived with, so
   // divide those out to get the part that does not change during the fight.
@@ -676,18 +729,32 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const atkStatic = atk.total / Math.max(0.0001, headcount(attacker));
   const defStatic = def.total / Math.max(0.0001, headcount(defender));
 
+  // Section 155, `footman-sergeant`: *"adjacent Footmen ignore the first point
+  // of damage taken each combat"*.
+  //
+  // **"The first" is a fact about the fight**, and `applyDamage` has no idea
+  // which fight it is in -- so the reprieve is worked out once, here, and
+  // spent by the first blow that lands on whoever has it. A closure rather
+  // than a flag on the unit, because it belongs to this combat and nothing
+  // outside it should be able to see it.
+  const reprieve = new Set<number>();
+  if (shrugsFirstBlow(state, attacker)) reprieve.add(attacker.id);
+  if (shrugsFirstBlow(state, defender)) reprieve.add(defender.id);
+  const hurt = (unit: Unit, amount: number, kind: DamageKind): number =>
+    applyDamage(unit, reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount, kind);
+
   // Free rounds before the fight proper, to whoever strikes first and by how
   // much more than the other. Netting them is what stops two archers giving
   // each other a free hit and calling it even.
   // Section 155: through `firstStrikesOf`, because `archer-marksman` trades
   // this away for two points of attack and the trade has to be visible from
   // both sides of the subtraction.
-  const edge = firstStrikesOf(attacker) - firstStrikesOf(defender);
+  const edge = firstStrikesOf(attacker, defender) - firstStrikesOf(defender, attacker);
   if (edge !== 0) {
     const striker = edge > 0 ? attacker : defender;
     const struck = edge > 0 ? defender : attacker;
     for (let i = 0; i < Math.abs(edge) && struck.hp > 0; i++) {
-      applyDamage(struck, dmg, damageKindOf(striker));
+      hurt(struck, dmg, damageKindOf(striker));
     }
     // Section 155, `archer-longbow`. **Not range** -- this game's Archer has
     // none; its bow is the free opening shot. Jeremy's ruling of 2026-10-29
@@ -699,8 +766,8 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     // out and neither opens, which is section 11's rule and not a special case
     // for this one.
     if (hasUpgrade(striker, 'archer-longbow') && struck.hp > 0) {
-      applyDamage(striker, dmg, damageKindOf(struck));
-      if (striker.hp > 0 && struck.hp > 0) applyDamage(struck, dmg, damageKindOf(striker));
+      hurt(striker, dmg, damageKindOf(struck));
+      if (striker.hp > 0 && struck.hp > 0) hurt(struck, dmg, damageKindOf(striker));
     }
     // And for a thrower, the free blow *is* the axe leaving its hand. It gets
     // the rest of the fight without one, and fetches it back afterwards.
@@ -735,9 +802,9 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
       const d = defStatic * headcount(defender);
       // A defence of zero would make the fight a certainty; keep it a contest.
       const pAttack = a / Math.max(0.0001, a + d);
-      if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
+      if (rng.float() < pAttack) hurt(defender, dmg, damageKindOf(attacker));
       else {
-        applyDamage(attacker, dmg, damageKindOf(defender));
+        hurt(attacker, dmg, damageKindOf(defender));
         // Knowing when to stop. A fight here runs until somebody dies, so
         // "fails to kill what it attacked" can only ever mean *losing* -- this
         // is Civ4's withdrawal, and it is the only reading of section 11's
@@ -799,6 +866,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   applySpellEffects(state, attacker, defender);
   applySpellEffects(state, defender, attacker);
   clubEffects(state, attacker, defender);
+  brawlerSwing(state, attacker, defender);
 
   return {
     attackerId: attacker.id,
@@ -844,7 +912,7 @@ export function stormEmptyCity(state: GameState, attacker: Unit, city: City): Mi
   const def = militiaStrength(city);
   if (def <= 0) return { taken: true, damage: 0 };
 
-  const dmg = Math.max(1, Math.round(unitType(attacker.type).hp / 12));
+  const dmg = Math.max(1, Math.round(maxHp(attacker) / 12));
   const pAttack = atk / Math.max(0.0001, atk + def);
 
   const damage = withRng(state, (rng) => {
@@ -869,13 +937,15 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
   const power = unitType(sapper.type).explodes;
   if (power <= 0) return [];
 
+  // Section 155, `sapper-deep`: the bigger bundle reaches a tile further.
+  const reach = blastRadius(sapper);
   const caught = state.units.filter(
-    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) === 1,
+    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) <= reach,
   );
   const killed: Unit[] = [];
   for (const victim of caught) {
     // A blast is a blast: nothing magical resists being stood next to one.
-    applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * power)), 'physical');
+    applyDamage(victim, Math.max(1, Math.round(maxHp(victim) * power)), 'physical');
     if (victim.hp <= 0) killed.push(victim);
   }
   log(
