@@ -122,8 +122,12 @@ const UNWIRED: Record<string, string> = {
   // raised unit *is* -- its stats, its lifespan, the chance, and what the
   // ancient skeleton the Unbound leave behind is a copy of. Five invented
   // numbers and a structural decision, so it waits for Jeremy.
-  'deathknight-grave':
-    'the rule needs what a raised unit is: stats, lifespan, chance, and what the ancient skeleton is made of',
+  // **Fully specified as of 2026-10-30 and simply not built yet** -- see the
+  // Grave Knight section in DESIGN_QUEUE. Half the original's numbers, three
+  // turns, one kill in three, one HP a turn per skeleton for the Soul-Bound,
+  // and the ancient skeleton as a new never-buildable creature. This is the
+  // only entry in this list that is waiting on work rather than on an answer.
+  'deathknight-grave': 'decided and written up; not built yet',
   'deathknight-soulbound': 'depends entirely on the above existing first',
 
   'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',

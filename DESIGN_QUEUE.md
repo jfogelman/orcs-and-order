@@ -12861,12 +12861,61 @@ off is a real price rather than the standstill `orc-guardian` would have been.
 notion of impassable ground. `dragon-rider` wants the ship mechanism, for
 something that flies.
 
-And the two Death Knight lines, which are **blocked on design rather than on
-work**: `raising.ts` says who may be raised and the art is drawn, but what a
-raised unit *is* -- its stats, its lifespan, the chance of one, and what the
-ancient skeleton the Unbound leave behind is made of -- is five invented
-numbers and a structural decision. Those are Jeremy's, like the five readings
-before them.
+And the two Death Knight lines. **Everything they need is now decided** --
+see below -- but the build did not start, so the next session picks this up
+from a clean tree.
+
+### The Grave Knight, fully specified and not yet built
+
+Jeremy's two answers, 2026-10-30:
+
+1. **A raised copy has half the original's numbers** -- attack, defence and
+   health all halved. "Copy" then means something: raising a dragon is worth
+   more than raising a peon, and it needs no second table of stats. The known
+   risk is that half a dragon is still a serious unit; if that plays badly the
+   fix is a cap, which was the option not taken.
+2. **The ancient skeleton is a new creature, never buildable.** One new id in
+   `UNIT_TYPES`, Horde faction, unlocked by no advance, so no city can ever
+   build one and it still gets a proper Orcpedia card. Cost: one more entry in
+   every hand-maintained list, which is this project's least favourite kind of
+   cost and was judged worth it here.
+
+My defaults for the rest, all provisional and all for a sweep to decide:
+
+| | |
+|---|---|
+| lifespan of a raised copy | 3 turns |
+| chance on a kill | 1 in 3 |
+| Soul-Bound drain | 1 HP a turn per live skeleton |
+
+And four rulings that are not numbers:
+
+- **Only kills the Grave Knight makes itself, in combat, raise anything.** Not
+  a blast, not a dragon's breath, not a militia. Otherwise a sapper going up
+  next to one would populate a graveyard.
+- A raised skeleton has **no upkeep, counts for no score, and cannot take a
+  city**. It is a few turns of help, not an empire.
+- **No cap on Soul-Bound skeletons.** The drain is the cap, and that is the
+  joke the flavour text makes -- *the pyramid scheme finally has overhead*.
+- The Unbound are **banished** rather than copied, which means `scatters()`
+  has to answer `false` when the killer is a Grave Knight -- the same seam
+  `exorcises` already uses, which is why that rule is cheap.
+
+### The sprite naming, decided with the rule rather than ahead of it
+
+One mapping for `art_src/unit upgrades/skeletal versions/`, with no special
+cases: **`<name> skeleton.jpg` becomes `<name>-skeleton.png`**.
+
+So `orc skeleton.jpg` is the variant sprite an upgraded orc's corpse wears,
+reached by `artVariant` exactly as the upgrades are; and `ancient
+skeleton.jpg` becomes `ancient-skeleton.png`, which is also the new creature's
+id. The two cases fall out of one rule rather than needing a branch, which is
+why it was worth waiting for the rule to decide it.
+
+Files whose names match no creature -- `dwarf mystic`, `gnome` -- convert to
+sprites nothing asks for, which is harmless: `art-present.test.ts` checks what
+the model wants, not what the folder holds. The `soldier_spitter` and
+`worker_fodder` pair still need Jeremy to say what they are.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with
