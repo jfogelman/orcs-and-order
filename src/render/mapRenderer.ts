@@ -124,6 +124,30 @@ function clubVariant(u: Unit): string {
   return '';
 }
 
+/**
+ * Which art this unit wears, as the same suffix the club uses.
+ *
+ * Section 155's upgrade ids are `<base>-<variant>` precisely so that the
+ * suffix falls out of the id -- `ogre-brawler` on an ogre is `-brawler`, which
+ * is the sheet name the pipeline wrote. Taken off the *creature's* base rather
+ * than the unit type, since `orc3` is three orcs and its art is the orc's.
+ *
+ * **An upgrade beats a club, and that is a real loss worth naming.** The
+ * convention has one slot, so an upgraded ogre carrying a fiery club swings
+ * with its upgraded body and without the fire. The upgrade wins because it is
+ * what the creature now *is* and is visible standing still as well as mid-
+ * swing; the club is one flourish on one animation. A combined
+ * `ogre-brawler-fiery_attack.png` would be picked up with no code change if
+ * anybody ever draws the nine of them.
+ */
+function artVariant(u: Unit): string {
+  if (u.upgrade) {
+    const base = unitType(u.type).base;
+    if (u.upgrade.startsWith(`${base}-`)) return u.upgrade.slice(base.length);
+  }
+  return clubVariant(u);
+}
+
 export class MapRenderer {
   private tiles: TerrainTileSet;
   private specialIcon: HTMLCanvasElement;
@@ -966,7 +990,7 @@ export class MapRenderer {
           : playing.kind === 'regen'
             ? this.sprites.regenFrames(u.type)
             : // A thrower that has thrown swings with nothing in its hand.
-              this.sprites.attackFrames(u.type, u.disarmed, clubVariant(u));
+              this.sprites.attackFrames(u.type, u.disarmed, artVariant(u));
       if (frames && frames[playing.frame]) return frames[playing.frame];
     }
     // Standing still, health decides how it looks. Checked before the
@@ -974,7 +998,7 @@ export class MapRenderer {
     // than as short of an axe.
     const share = u.hp / Math.max(1, unitType(u.type).hp);
     if (share < HURT_LEVELS.hurt) {
-      const frames = this.sprites.hurtFrames(u.type, u.disarmed);
+      const frames = this.sprites.hurtFrames(u.type, u.disarmed, artVariant(u));
       if (frames && frames.length > 0) {
         const worst = frames.length - 1;
         return share < HURT_LEVELS.dying ? frames[worst] : frames[0];
@@ -984,7 +1008,7 @@ export class MapRenderer {
       const thrown = this.sprites.disarmedSprite(u.type);
       if (thrown) return thrown;
     }
-    return this.sprites.unit(u.type);
+    return this.sprites.unit(u.type, artVariant(u));
   }
 
   /**

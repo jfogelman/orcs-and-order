@@ -393,8 +393,9 @@ Everything below is drawn, processed and wired unless this section says otherwis
 | Cities coming apart | 6 | done and wired |
 | Upgrade sprites | 36 | done and wired (section 155) |
 | Upgrade advance icons | 36 | done and wired |
-| Upgrade attack strips | 29 + 7 | **7 to draw** — see *Unit upgrades* below |
-| Upgrade weakened sheets | 27 + 9 | **9 to draw** — see *Unit upgrades* below |
+| Upgrade attack strips | 36 | done and wired |
+| Upgrade weakened sheets | 36 | done and wired |
+| Raised skeletons | 18 | Horde, Kingdom and one Wandering Folk — see *Raised skeletons* below |
 
 **Everything drawn is wired**, the Goblin Scout included (drawn 2026-09-19, with its attack and weakened sheets). The last two older pieces went in the same day:
 
@@ -421,7 +422,7 @@ recipe to follow when any of it is re-rolled.
 
 ---
 
-## Unit upgrades — 16 sheets to draw
+## Unit upgrades — 144 of 144 done
 
 Section 155 gives each of twelve base creatures a linear upgrade and two
 branches that cannot both be had. The design and every prompt for the **idle
@@ -429,21 +430,16 @@ sprites** are in `art_src/unit upgrades/unit_upgrades.md`; the **advance icon**
 prompts are in `unit_upgrade_techs.md` beside it. Both sets are drawn, wired
 and done.
 
-What is missing is the other two sheets a creature gets.
+The other two sheets a creature gets — the attack strip and the weakened
+stance — were the sixteen outstanding after slice 3. **Jeremy drew them on
+2026-10-29 and they are converted and wired**: 36 idle, 36 advance icons, 36
+attack strips, 36 weakened sheets. `tests/art-present.test.ts` counts all four
+every run, so the next gap is a failure rather than a line in this file.
 
-**Nothing is broken by the gap**, and as of slice 3 nothing uses any of it
-yet: no unit carries an upgrade until the mechanism lands, so every creature
-still draws as itself. When it does land, `attackFrames` already takes a
-variant and falls back to the base sheet when there is no art for it — the
-same path the ogre's clubs take — so a missing strip means an upgraded orc
-swings as a plain orc.
-
-`hurtFrames` has **no variant parameter at all**, so a weakened sheet for an
-upgrade cannot be reached by any code path today. Wiring that is part of the
-mechanism slice, not of drawing these; it is recorded here so the nine sheets
-below are not drawn and then quietly never shown, which is exactly how the
-Hive's garrison posts sat correct and unread in `public/` for eighteen
-sections.
+Slice 4 gave `hurtFrames` the variant parameter it had been missing, so the
+weakened sheets are reachable now. Both sheets fall back to the base creature,
+the same path the ogre's clubs take, which is what makes a future faction's
+upgrade safe to add sprite-first.
 
 ### Where they go
 
@@ -458,9 +454,9 @@ not literally named `unit states` and the scan deliberately does not complain
 about files that are somebody else's. `sapper-tunnel.jpg` sat there unread
 until section 155 slice 3 went looking for it.
 
-### The seven attack strips
+### The seven attack strips that were outstanding
 
-Use the **Unit attack animations — 4-frame strip** prompt above, verbatim,
+Drawn 2026-10-29. Kept for the record of what each one shows. Use the **Unit attack animations — 4-frame strip** prompt above, verbatim,
 attaching the matching idle sprite from `art_src/unit upgrades/`.
 
 | file | what it is doing |
@@ -473,9 +469,9 @@ attaching the matching idle sprite from `art_src/unit upgrades/`.
 | `ogre-grinder attack.jpg` | two-headed ogre sweeping the club low around itself, both heads snarling outward |
 | `deathknight-soulbound attack.jpg` | skeletal knight raising its bone staff, chains of violet light tightening along it |
 
-### The nine weakened sheets
+### The nine weakened sheets that were outstanding
 
-Use the **Weakened stances** prompt above, verbatim. Two frames, 2:1, the
+Drawn 2026-10-29, and kept for the same reason. Use the **Weakened stances** prompt above, verbatim. Two frames, 2:1, the
 creature the same size and in the same place in both, **no weapon changes**.
 
 `ogre-brawler weakened.jpg`, `ogre-warlord weakened.jpg`,
@@ -496,6 +492,115 @@ that reason, and the Heir came out 8.7% solid before it was fixed.
 
 The dragons are red and the ogres are not violet, so those five take the
 ordinary magenta.
+
+## Raised skeletons (section 155, the Grave Knight)
+
+`deathknight-grave`, the Death Knight's linear upgrade, is *"killing a unit has
+a chance to raise a weak skeletal copy for a few turns"*. The copy is of
+**whatever it killed**, so this set needs one sheet per creature anybody might
+kill — not per creature the Horde owns.
+
+They live in `art_src/unit upgrades/skeletal versions/`, as `<creature>
+skeleton.jpg`, and **nothing reads them yet**: the rule is slice 5. Drawn so
+far are the twelve Horde and Kingdom creatures, the dragon, the dwarf mystic,
+the gnome, and `wf-brute` for the Wandering Folk.
+
+### The prompt that has been working
+
+> Using the attached image as a reference for pose, silhouette, and gear,
+> reimagine this character as a weak reanimated skeleton: strip away flesh and
+> most equipment, leaving bare bleached bone in the same pose and stance, a few
+> tattered fragments of the original clothing or armour still clinging on,
+> hollow eye sockets with a faint violet glow, visibly frail and diminished
+> compared to the original — thinner limbs, slight stoop, no longer standing at
+> full strength. Keep any weapon it was holding, now gripped loosely in a bony
+> hand. 32x32 pixel art game sprite, front-facing three-quarter view, chunky
+> readable silhouette, thick dark outline, limited palette, flat shading with
+> one light source from the upper left, mid-1990s fantasy real-time-strategy
+> style, plain solid green background (#00FF00), no text, no logos, no border,
+> no letterboxing, no ground shadow, no background scenery. Keep the silhouette
+> clear of all four corners of the frame
+
+**The green background is not a style choice, it is the violet.** A magenta key
+is `R−G>28 AND B−G>28`, which is the definition of violet, so a magenta sheet
+would come back with the eye-glow eaten out of it. See *The green background,
+in practice*.
+
+### Why it does not work for the Hivekin, and what to change
+
+Four things, and one of them will cost a regeneration if it is missed.
+
+**1. There is no bone under a Hivekin.** The shell *is* the body, so "strip
+away flesh, leaving bare bleached bone" has nothing to strip and nothing to
+leave. Worse, `hivekin.md` describes the living castes as *pale larval whites*
+and *pale bone-white shell* — a bleached skeleton would come out looking
+**healthier than the thing it was made from**.
+
+The Hive already has its own picture of a dead one and it is in the game:
+`oldQueensShell`, the Folly, is *"a large empty translucent insect exoskeleton
+shell, cracked open along the back"*. Their dead are **moults**. So a raised
+Hivekin is that husk, standing up and walking — which is a better joke than a
+skeleton anyway.
+
+**2. There is no clothing or armour to leave in tatters.** The only carried
+thing in the whole caste roster is the Worker's woven sac. The equivalent is
+plates: cracked, several missing outright, the gaps left ragged.
+
+**3. "Thinner limbs, slight stoop" reads as a withered mammal.** An empty husk
+fails differently — legs folded at angles a living one would not hold, the
+abdomen collapsed and hanging slack, the shell gone chalky and dull where it
+was glossy, an antenna snapped short.
+
+**4. The background, which is the one that bites.** `hivekin.md` says *muted
+greens are all safe* in a Hivekin sprite and gives the Spitter-caste a *sickly
+green glow*. The green key is `G − max(R,B) > 28`, which is exactly that glow.
+A Hivekin drawn to its own house rules on a green background loses pieces of
+itself.
+
+**The fiction resolves it for free.** The husk's own light has gone out — that
+was the living thing in it. One added clause ("no green or yellow-green glow
+anywhere") makes the green key safe, and it is a truer description of a corpse
+than the house rule it overrides.
+
+**And the violet stays**, though `hivekin.md` forbids violet in a Hivekin
+sprite. This is not a Hivekin sprite. It is a Kingdom unit's trophy wearing a
+Hivekin's shape, and the violet is the mark every raised thing in this game
+carries — the Death Knight's hood, the soul-bound chains, all eighteen
+skeletons already drawn. At 32×32 it is the only signal that says *this one is
+not theirs any more*.
+
+### The Hivekin wording
+
+> Using the attached image as a reference for pose, silhouette and gear,
+> reimagine this creature as its own empty moult, reanimated: the hollow
+> exoskeleton standing in the same pose with nothing at all inside it, cracked
+> open along the back and down one side of the thorax so the dark emptiness
+> shows through, several plates missing outright and the gaps left ragged, the
+> shell gone dry and chalky and dull where it was glossy, one antenna snapped
+> short, the abdomen collapsed and hanging slack, legs folded at angles a
+> living one would not hold. Hollow sockets where the compound eyes were, with
+> a faint violet glow inside them — the only light left in it, and not its own.
+> Visibly frail and diminished: a shed skin being walked about. Keep any
+> bone-shard blade or claw it had, now dull, chipped and gripped loosely. No
+> green or yellow-green glow anywhere — whatever was lit inside this has gone
+> out. 32x32 pixel art game sprite, front-facing three-quarter view, chunky
+> readable silhouette, thick dark outline, limited palette, flat shading with
+> one light source from the upper left, mid-1990s fantasy real-time-strategy
+> style, plain solid green background (#00FF00), no text, no logos, no border,
+> no letterboxing, no ground shadow, no background scenery. Keep the silhouette
+> clear of all four corners of the frame
+
+### Still open
+
+**The Unbound want the same question asked of them.** Half that roster is
+already dead, so "reanimated skeleton" means close to nothing for a Revenant
+and nothing at all for a spirit — raising one is less a change of state than a
+change of employer. That is a design answer before it is a prompt, and it is
+Jeremy's.
+
+**How many are needed is a design question too.** The Queen is immobile and the
+Grub is not a fighter, so neither is likely to die the way this rule needs.
+Eighteen sheets exist for what the Grave Knight can meet today.
 
 ## Advance icons — 44 done, 7 to draw
 

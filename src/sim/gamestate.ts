@@ -22,6 +22,7 @@ import { ARCHIPELAGO, generateWorld } from './worldgen';
 import { citySight, effectiveMove, effectiveSight } from './rules';
 import { cityFollyBonus, citySightUnblocked } from './follyEffects';
 import { difficultyOf, handicapFor } from './difficulty';
+import { applyUpgrades, upgradesAsked } from '../model/upgrades';
 
 // 2: units carry `disarmed`, for the axethrower that has thrown its axe.
 // 3: cities carry `citizens`, naming who lives in them.
@@ -41,6 +42,14 @@ export interface NewGameOptions {
   barbarians?: boolean;
   /** Islands, for ships. The ordinary world unless asked for. */
   world?: 'continent' | 'archipelago';
+  /**
+   * Whether the thirty-six unit upgrades are in this game. Section 155.
+   *
+   * Absent takes `UPGRADES.enabled` rather than `false`, so a sweep that sets
+   * the lever in `control.ts` and then calls this gets the arm it asked for.
+   * See `upgradesAsked`.
+   */
+  upgrades?: boolean;
   /**
    * Who else is in this game, in the order they turn up. Section 139.
    *
@@ -274,8 +283,13 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     difficulty: opts.difficulty ?? 'normal',
     maxTurns: opts.maxTurns ?? 300,
     barbarians: opts.barbarians === true,
+    upgrades: upgradesAsked(opts.upgrades),
     ...(opts.world === 'archipelago' ? { world: 'archipelago' as const } : {}),
   };
+  // The settings are the record and `UPGRADES.enabled` is the live copy the
+  // rules read; this is one of the two places that keeps them the same thing.
+  // The other is `deserialize`, so opening a save is enough to get its rules.
+  applyUpgrades(settings);
   const seed = (opts.seed ?? Math.floor(Math.random() * 0xffffffff)) >>> 0;
   const playerFaction = opts.playerFaction ?? 'orc';
   const tileCount = settings.width * settings.height;

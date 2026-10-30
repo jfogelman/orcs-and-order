@@ -1,4 +1,5 @@
 import type { GameState, Player } from '../model/types';
+import { applyUpgrades } from '../model/upgrades';
 import { SAVE_VERSION } from '../sim/gamestate';
 import { returnRaiderHeldCities } from '../sim/barbarians';
 import { migrateRelations } from '../sim/diplomacy';
@@ -166,6 +167,13 @@ export function deserialize(text: string): GameState {
   // peace for the whole game. Moved onto the pair it was really between, so a
   // game loaded mid-treaty is still mid-treaty.
   migrateRelations(state);
+  // Section 155: a game that had the upgrades in it is still that game when it
+  // is reopened. `UPGRADES.enabled` is a module lever rather than a field on
+  // the state -- `techInPlay` is asked about a `TechDef` with no game in hand
+  // -- so loading a save has to point it at what that save was started with,
+  // or a game saved with upgrades comes back without them and quietly loses
+  // twelve advances the empire had already taken.
+  applyUpgrades(state.settings ?? {});
   return state;
 }
 

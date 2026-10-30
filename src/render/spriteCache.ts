@@ -31,7 +31,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export class SpriteCache {
-  private units = new Map<UnitTypeId, CanvasImageSource>();
+  /** Keyed by unit type plus art variant, so an upgraded orc is its own entry. */
+  private units = new Map<string, CanvasImageSource>();
   private cities = new Map<string, CanvasImageSource>();
   private baseArt = new Map<string, Promise<HTMLImageElement>>();
   /** Per-type attack frames; null means "looked, and there are none". */
@@ -51,22 +52,34 @@ export class SpriteCache {
     this.base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   }
 
-  unit(typeId: UnitTypeId): CanvasImageSource {
-    let sprite = this.units.get(typeId);
+  /**
+   * A creature's idle sprite, in whichever variant it is wearing.
+   *
+   * `variant` is an art suffix, `''` for the ordinary creature and
+   * `'-berserker'` for one of section 155's upgrades -- the same convention
+   * the attack strips have used since the ogre's clubs, and the reason the
+   * thirty-six upgrades are named `<base>-<variant>` rather than being given
+   * ids of their own. Every variant falls back to the plain creature, so an
+   * upgrade whose sprite is not drawn yet looks like what it was rather than
+   * like a placeholder diamond.
+   */
+  unit(typeId: UnitTypeId, variant = ''): CanvasImageSource {
+    const key = `${typeId}${variant}`;
+    let sprite = this.units.get(key);
     if (!sprite) {
       sprite = buildUnitSprite(unitType(typeId));
-      this.units.set(typeId, sprite);
+      this.units.set(key, sprite);
     }
-    this.resolveArt(typeId);
+    this.resolveArt(typeId, variant);
     // Start the attack strip loading as soon as a unit of this type is drawn.
     //
     // It used to be fetched at the moment of attacking, which meant the answer
     // was always "not yet" and the swing was skipped -- the animation was
     // effectively never seen. Warming it here costs one request per creature
     // that appears on screen, well before anyone throws a punch.
-    this.attackFrames(typeId);
+    this.attackFrames(typeId, false, variant);
     // Wanted the instant the unit takes a hit, so fetched before it does.
-    this.hurtFrames(typeId);
+    this.hurtFrames(typeId, false, variant);
     // Only trolls have one, so this is a single 404 for everyone else, once.
     if (unitType(typeId).regenMultiplier > 1) this.regenFrames(typeId);
     // A thrower has two more sheets -- swinging with nothing, and getting the
@@ -156,9 +169,22 @@ export class SpriteCache {
    * one knee. Null for a creature with no such sheet, which falls back to
    * looking perfectly fine however close to death it is.
    */
-  hurtFrames(typeId: UnitTypeId, disarmed = false): CanvasImageSource[] | null {
+  hurtFrames(
+    typeId: UnitTypeId,
+    disarmed = false,
+    variant = '',
+  ): CanvasImageSource[] | null {
     if (disarmed) {
       return this.variantFrames(typeId, '-disarmed', 'hurt') ?? this.variantFrames(typeId, '', 'hurt');
+    }
+    // Section 155 added this parameter, which `attackFrames` had and this did
+    // not: nine of the upgrades' weakened sheets existed in `public/` after
+    // slice 3 and **no code path could reach them**, because the only thing
+    // that asked for a hurt sheet asked for the base creature's. Same
+    // fallback as everywhere else, so an upgrade with no weakened art of its
+    // own still looks hurt rather than looking fine.
+    if (variant) {
+      return this.variantFrames(typeId, variant, 'hurt') ?? this.variantFrames(typeId, '', 'hurt');
     }
     return this.variantFrames(typeId, '', 'hurt');
   }
@@ -255,34 +281,47 @@ export class SpriteCache {
     return frames && frames.length > 0 ? frames[frames.length - 1] : null;
   }
 
-  private resolveArt(typeId: UnitTypeId): void {
-    if (this.attempted.has(typeId)) return;
-    this.attempted.add(typeId);
+  private resolveArt(typeId: UnitTypeId, variant = ''): void {
+    const key = `${typeId}${variant}`;
+    if (this.attempted.has(key)) return;
+    this.attempted.add(key);
     const def = unitType(typeId);
-
-    if (def.count === 1) {
+    // A variant that has no art of its own wears the plain creature's, which
+    // is resolved under its own key and copied across.
+    const fallback = () => {
+      if (!variant) return;
+      this.resolveArt(typeId, '');
       this.creatureArt(def.base)
         .then((img) => {
-          this.units.set(typeId, img);
-          this.loadedArt.add(typeId);
+          this.units.set(key, def.count === 1 ? img : composeGroupSprite(img, def.count, COMPOSED_SIZE));
+          (def.count === 1 ? this.loadedArt : this.composedArt).add(key);
         })
         .catch(() => {});
+    };
+
+    if (def.count === 1) {
+      this.creatureArt(`${def.base}${variant}`)
+        .then((img) => {
+          this.units.set(key, img);
+          this.loadedArt.add(key);
+        })
+        .catch(fallback);
       return;
     }
 
     // A hand-drawn group sprite wins if one exists; otherwise stamp the base.
-    loadImage(`${this.base}units/${typeId}.png`)
+    loadImage(`${this.base}units/${key}.png`)
       .then((img) => {
-        this.units.set(typeId, img);
-        this.loadedArt.add(typeId);
+        this.units.set(key, img);
+        this.loadedArt.add(key);
       })
       .catch(() =>
-        this.creatureArt(def.base)
+        this.creatureArt(`${def.base}${variant}`)
           .then((img) => {
-            this.units.set(typeId, composeGroupSprite(img, def.count, COMPOSED_SIZE));
-            this.composedArt.add(typeId);
+            this.units.set(key, composeGroupSprite(img, def.count, COMPOSED_SIZE));
+            this.composedArt.add(key);
           })
-          .catch(() => {}),
+          .catch(fallback),
       );
   }
 

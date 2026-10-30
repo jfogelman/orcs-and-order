@@ -1,4 +1,5 @@
 import { BUILDINGS, BUILDING_IDS } from '../model/buildings';
+import { UPGRADES, UPGRADE_DEFS, upgradesFor } from '../model/upgrades';
 import type { BuildingDef } from '../model/buildings';
 import { FACTIONS, FACTION_IDS, rivalFactions } from '../model/factions';
 import { TERRAIN, TERRAIN_IDS } from '../model/terrain';
@@ -208,6 +209,23 @@ export function abilityNotes(def: UnitTypeDef): string[] {
       notes.push(`markedly stronger beside water, attacking or holding (+${Math.round(
         WATERSIDE.bonus * 100,
       )}%)`);
+    }
+  }
+  // Section 155: what this creature can become, in a game that has upgrades.
+  //
+  // Read off `UPGRADE_DEFS` rather than written out, which is the rule this
+  // project keeps relearning: thirty-six names in a second list would be
+  // thirty-six chances for the card to describe an upgrade the game does not
+  // offer. Gated on the lever, so a game with the box unticked does not
+  // advertise a road it has no intention of opening.
+  if (UPGRADES.enabled) {
+    const road = upgradesFor(def.base);
+    const branches = road.filter((u) => u.line !== 'linear');
+    if (road.length > 0 && branches.length === 2) {
+      notes.push(
+        `can be improved to ${road[0].name}, and from there to either ${branches[0].name} or ` +
+          `${branches[1].name} — never both, and that choice is the whole empire's, for good`,
+      );
     }
   }
   // Section 136: and the one that digs is not always the one that founds.
@@ -2040,6 +2058,26 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           <em>Mysterious Object</em> appears -- with a button nobody will explain -- the Kingdom wins
           if it still holds that city ${ALT_VICTORY.objectTurns} turns later. Take a city and
           whatever works stand in it are torn down.
+        </p>`
+            : ''
+        }
+        ${
+          UPGRADES.enabled
+            ? `<p class="flavor">
+          <strong>${UPGRADE_DEFS.filter((u) => u.faction === player.faction).length} of these advances improve a creature you
+          already have</strong>, rather than unlocking a new one. Each kind gets one plain
+          improvement, and beyond it <strong>two roads that cannot both be taken</strong>: learn
+          one and the other is <strong>gone from this tree for the rest of the game</strong>,
+          for every city you hold and every one you take. There is no undoing it and no
+          paying it off &mdash; it is the sort of decision the Horde makes loudly and the
+          Kingdom minutes.
+        </p>
+        <p class="flavor">
+          <strong>Anything built afterwards comes out improved for nothing.</strong> Anything
+          already standing has to <strong>walk into a city of yours and be paid for</strong>
+          &mdash; ${UPGRADES.fee} gold for each shield it cost to build, and the rest of
+          that unit's turn. Cheaper than buying a replacement, which is the entire
+          argument for bothering.
         </p>`
             : ''
         }

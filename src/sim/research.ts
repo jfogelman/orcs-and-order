@@ -8,7 +8,7 @@ import type { GameState, Player, TechId, TradeRates } from '../model/types';
 import { log } from './gamestate';
 import { ALT_VICTORY } from './endings';
 import { FOLLIES } from './follyEffects';
-import { UPGRADES } from '../model/upgrades';
+import { UPGRADES, branchGivenUp } from '../model/upgrades';
 import { handicapCost } from './difficulty';
 
 /**
@@ -62,9 +62,30 @@ export function techInPlay(t: TechDef): boolean {
   );
 }
 
+/**
+ * Whether this advance is still on this empire's road at all.
+ *
+ * Two different ways it can be off it, and both have to be asked in the same
+ * breath or the pair disagree. `techInPlay` is about the game's rules -- a
+ * switched-off subsystem's advances are not part of the tree for anybody.
+ * `branchGivenUp` is about this empire's history: section 155's upgrades come
+ * in mutually exclusive pairs, and taking one shuts the other for good.
+ *
+ * **Both callers need both halves, which is why this exists.** Slice 2 learned
+ * it the expensive way with `techInPlay`: filtering only `researchableTechs`
+ * left `knowsEverything` counting advances nobody could study, and a side that
+ * had been omniscient silently stopped being. A locked branch is the same
+ * shape -- twelve of the thirty-six are doors an empire has closed itself, and
+ * counting them would put omniscience permanently out of reach in every game
+ * with the box ticked.
+ */
+export function techOpenTo(player: Player, t: TechDef): boolean {
+  return techInPlay(t) && !branchGivenUp(player.techs, t.id);
+}
+
 /** Whether this side has learned everything its faction can learn. */
 export function knowsEverything(player: Player): boolean {
-  const all = techsForFaction(player.faction).filter(techInPlay);
+  const all = techsForFaction(player.faction).filter((t) => techOpenTo(player, t));
   return all.length > 0 && all.every((t) => knowsTech(player, t.id));
 }
 
@@ -77,7 +98,7 @@ export function researchableTechs(player: Player): TechDef[] {
       // researchable advances change what every AI studies and in what order,
       // so without this the box being unticked would still not be the game
       // every number in this project was measured on.
-      techInPlay(t),
+      techOpenTo(player, t),
   );
 }
 

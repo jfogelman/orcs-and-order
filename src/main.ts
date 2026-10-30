@@ -61,6 +61,7 @@ import {
   tryStep,
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
+import { buyUpgrade, upgradeBlocked, upgradeFee, upgradeOffered } from './sim/upgrading';
 import {
   beginPlayerTurn,
   continuePlaying,
@@ -561,6 +562,27 @@ class App {
       return;
     }
     resupply(this.state, unit);
+    audio.play('built', 0);
+    this.refreshSidebar();
+    this.playLogCues();
+  }
+
+  /**
+   * Take the selected unit back to the works. Section 155.
+   *
+   * Same shape as `orderResupply`, down to the flash when it cannot: the
+   * blocked message is the whole explanation, so there is nothing for this to
+   * add beyond showing it.
+   */
+  private orderUpgrade(): void {
+    const unit = this.selected;
+    if (!unit) return;
+    const blocked = upgradeBlocked(this.state, unit);
+    if (blocked) {
+      this.flash(blocked);
+      return;
+    }
+    buyUpgrade(this.state, unit);
     audio.play('built', 0);
     this.refreshSidebar();
     this.playLogCues();
@@ -2897,7 +2919,8 @@ class App {
         openHordeReport(this.state, this.viewerId, (c) => this.openCity(c), () => this.refreshHud());
         break;
       case 'u':
-        this.orderResupply();
+        if (e.shiftKey) this.orderUpgrade();
+        else this.orderResupply();
         break;
       case 'x':
         this.orderHalt();
@@ -3339,6 +3362,15 @@ class App {
               ? '<button class="small" data-act="resupply">Resupply (U)</button>'
               : ''
           }
+          ${
+            upgradeBlocked(this.state, unit) === null
+              ? `<button class="small" data-act="upgrade" title="${
+                  upgradeOffered(this.state, unit)?.blurb ?? ''
+                }">Upgrade to ${
+                  upgradeOffered(this.state, unit)?.name ?? ''
+                } &mdash; ${upgradeFee(this.state, unit)} gold (Shift+U)</button>`
+              : ''
+          }
           <button class="small danger" data-act="disband" title="${
             disbandRefund(this.state, unit) <= 0
               ? 'Dismiss it. Nothing comes back outside a city.'
@@ -3455,6 +3487,9 @@ class App {
               break;
             case 'burrow':
               this.orderBurrow();
+              break;
+            case 'upgrade':
+              this.orderUpgrade();
               break;
             case 'resupply':
               this.orderResupply();

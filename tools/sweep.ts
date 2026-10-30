@@ -18,6 +18,7 @@ import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
+import { UPGRADES } from '../src/model/upgrades';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
 import type { DifficultyId, FactionId, GameState, VictoryKind } from '../src/model/types';
@@ -160,6 +161,17 @@ export const LEVERS: Record<string, object> = {
    * that refuses to run is the *good* outcome of that mistake.
    */
   DISPERSAL,
+  /**
+   * Section 155: the upgrade switch and the fee for one already standing.
+   *
+   * Registered with the mechanism rather than with the first arm that moves
+   * it, for the reason the two notes above give. It is also the first lever
+   * here a *player* can set, so the fingerprint is doing double duty: an arm
+   * that ticks the box is a different game, and `createGame` takes this as the
+   * default for `settings.upgrades` precisely so that setting it here is
+   * enough to get it.
+   */
+  UPGRADES,
   GUEST_LIST,
   DIPLOMACY_AI,
   ATTRITION,

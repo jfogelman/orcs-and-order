@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { TERRAIN, TERRAIN_IDS } from '../src/model/terrain';
 import { TECHS } from '../src/model/techs';
-import { CREATURES } from '../src/model/units';
+import { CREATURES, UNIT_TYPES } from '../src/model/units';
+import { UPGRADE_DEFS } from '../src/model/upgrades';
 import { BUILDINGS } from '../src/model/buildings';
 import { FACTION_IDS } from '../src/model/factions';
 
@@ -161,6 +162,52 @@ describe('everything the model offers has a picture', () => {
         : []),
     ];
     expect(drawn, 'these have art now and should come off the list').toEqual([]);
+  });
+});
+
+/**
+ * Section 155's upgrades, and the three sheets each of them wants.
+ *
+ * The idle sprite is a bar: the renderer asks for `units/<base>-<variant>.png`
+ * for a unit wearing an upgrade, and without one it falls back to the plain
+ * creature -- which looks exactly like the upgrade not working.
+ *
+ * The attack strip and the weakened sheet are **controls with a count**,
+ * because both fall back harmlessly and neither can therefore break anything.
+ * Slice 3 shipped with seven and nine of them missing and the only record of
+ * that was a line in a markdown file. This is the number, in the suite, where
+ * it is read every run rather than when somebody opens the file.
+ */
+const UPGRADE_SHEETS = { attack: 36, hurt: 36 };
+
+describe('every upgrade has been through the art pipeline', () => {
+  const have = names(UNIT_ART);
+
+  it('has an idle sprite for each of the thirty-six', () => {
+    const missing = UPGRADE_DEFS.map((u) => u.id).filter((id) => !have.has(id));
+    expect(missing, 'run `npm run art`').toEqual([]);
+  });
+
+  it('has the attack strips and weakened sheets it says it has', () => {
+    // Named rather than counted when they are short, so the failure says which.
+    const attack = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_attack`)).map((u) => u.id);
+    const hurt = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_hurt`)).map((u) => u.id);
+    expect(36 - attack.length, `no attack strip: ${attack.join(', ')}`).toBe(UPGRADE_SHEETS.attack);
+    expect(36 - hurt.length, `no weakened sheet: ${hurt.join(', ')}`).toBe(UPGRADE_SHEETS.hurt);
+  });
+
+  /**
+   * The sprite name has to fall out of the id, because that is the whole
+   * reason these are variants rather than thirty-six new creatures: the
+   * renderer takes `ogre-brawler`, strips `ogre`, and asks for `-brawler`.
+   * An id that did not start with its base would quietly load the wrong
+   * creature's art rather than failing.
+   */
+  it('names each sprite so the renderer can take it apart again', () => {
+    const wrong = UPGRADE_DEFS.filter((u) => !u.id.startsWith(`${UNIT_TYPES[u.base].base}-`)).map(
+      (u) => u.id,
+    );
+    expect(wrong).toEqual([]);
   });
 });
 

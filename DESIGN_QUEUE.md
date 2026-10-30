@@ -12387,7 +12387,12 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
-> **Slice 3** (this one) wired `art_src/unit upgrades/` into the pipeline:
+> **Slice 4** (this one) is the mechanism: a unit carries an upgrade, the
+> branch locks, and one already standing can be paid for. See *Slice 4, in
+> detail* below. **Jeremy drew the sixteen outstanding sheets the same day**,
+> so the art is 144/144 and counted by `art-present.test.ts` every run.
+>
+> **Slice 3** wired `art_src/unit upgrades/` into the pipeline:
 > 36/36 idle sprites and 36/36 advance icons, 29/36 attack strips and 27/36
 > weakened sheets, 128 new files and **nothing overwritten**. The attack and
 > weakened passes needed only to be told where to look, since `split_variant`
@@ -12508,6 +12513,101 @@ happens to a unit that survives is a rank. And it is the rare queue item where
 **the design and the art are done and the code is the only part left** —
 which, on this project's record, is the half that goes missing rather than the
 half that goes wrong.
+
+### Slice 4, in detail — the mechanism
+
+**What a unit carries.** `Unit.upgrade?: string`, an `UPGRADES_BY_ID` key, not
+a `UnitTypeId`: the creature keeps its own type and its row in every table,
+and the upgrade is a variant of it the way `rank` is a fact about it. Optional,
+so every save and fixture written before this loads as a unit that has not
+been upgraded — which is every unit in a game with the box unticked.
+
+**Where "empire-wide and permanent" actually lives.** In `researchableTechs`,
+and nowhere else. Learning Branch A makes Branch B *unresearchable*, which is
+the honest way for a game built on a tech tree to say a door has closed. No
+new field on `Player`, so there is no second record of the decision that could
+disagree with the books: the advance you took **is** the decision.
+
+**And the trap that came with it, which is slice 2's trap in a new shape.**
+Slice 2 added thirty-six advances and `knowsEverything` counted them, so a side
+that had been omniscient silently stopped being and a fixture moved with the
+lever off. The locked branch does the same thing from the other direction:
+twelve of the thirty-six are doors an empire has shut itself, and counting
+them would put `OMNISCIENCE` permanently out of reach in **every** game with
+the box ticked — a rule nobody asked for that would fail nowhere. Both halves
+are now one function, `techOpenTo`, and both callers read it.
+
+**The fee.** `UPGRADES.fee` gold per shield of the creature's build cost,
+through `handicapCost` so a level that makes building and studying dearer does
+not leave a cheap back door. Two gold a shield is a first answer by argument:
+an Orc for twenty, a Dragon for ninety, deliberately well under `rushCost`,
+which charges two a shield *plus* a quadratic term and then doubles it from
+cold. Improving what you have should beat replacing it, or nobody would ever
+pay this. **Unswept**, like every first number in this project.
+
+It also costs the rest of that unit's turn, the price `resupply` charges, which
+is what stops a column upgrading itself mid-march.
+
+**The two routes in.** Paid, in `upgrading.ts`: the unit stands in a city of
+its own and goes back to the works. Free, in `city.ts`: a unit that has just
+been built comes out as whatever the current model is. That split is Jeremy's
+second ruling and it is the Civ2 idiom.
+
+**A lever a player can set is new here.** `techInPlay` is asked about a
+`TechDef` with no game in hand, so this cannot become a field on `GameState`
+without threading state through thirty-seven call sites of
+`researchableTechs`. So `settings.upgrades` is the record and `UPGRADES.enabled`
+is the live copy, and `applyUpgrades` is the only thing that writes it —
+called by `createGame` and by `deserialize`, so **opening a save is enough to
+get its rules**. `createGame` takes the lever as the *default* rather than
+clearing it, so a sweep that sets it in `control.ts` still gets the arm it
+asked for. `UPGRADES` is in `LEVERS` from the day the mechanism landed, for
+the reason section 160 gives: an arm that moves a lever the fingerprint cannot
+see is refused as a duplicate.
+
+**The renderer gap, closed.** `hurtFrames` had no variant parameter at all, so
+after slice 3 the twenty-seven weakened sheets in `public/` could not be
+reached by any code path. It takes one now, with the same fallback
+`attackFrames` has. The idle sprite needed the same: `SpriteCache.unit` and
+`resolveArt` are keyed by type *plus* variant, and a variant with no art of its
+own wears the plain creature's.
+
+**One thing genuinely given up, and it is worth naming.** The art convention
+has a single variant slot, so an upgraded ogre carrying a fiery club swings
+with its upgraded body and without the fire. The upgrade wins because it is
+what the creature now *is* and shows standing still as well as mid-swing; the
+club is one flourish on one animation. A combined
+`ogre-brawler-fiery_attack.png` would be picked up with no code change if the
+nine of them are ever drawn.
+
+**The AI pays, and only when it costs nothing extra.** `upgradeArmy` takes
+units that were *already standing still* — fortified or sentried, in a city of
+their own — dearest first, three a turn, never below the gold reserve.
+Upgrading something about to march is paying twice, and an AI that froze its
+field army the turn an advance landed would be worse for the option.
+`tests/upgrading.test.ts` asserts it actually fires, which is the lesson from
+the Burrower-caste, the spy, the unseen agent and the reform sites: a mechanic
+the AI never uses makes a sweep measure nothing.
+
+### What slice 4 did not do
+
+**No upgrade has an effect yet.** All thirty-six blurbs describe one and none
+of them is wired; a Berserker is an Orc with a different sprite and a different
+name. That is slice 5, and it is the slice where the numbers start to matter.
+
+**Nothing has been swept.** The fee, the AI's three-a-turn, and the whole
+question of whether the system is worth having are all unmeasured, and must
+stay so until the effects exist — an arm measured now would compare a game
+with upgrades against a game with upgrades that do nothing.
+
+**The Advances pane is still a list, not topics.** The upgrade rule went in as
+two gated paragraphs beside the endings paragraph, which is the shape that
+pane has. It should become a `topicPane` the next time somebody has reason to
+open it.
+
+**The three newer factions are still waiting**, per Jeremy's third ruling, and
+their art is drawn: 21 Hivekin, 24 Wandering Folk, 18 Unbound files in
+`art_src/factions/*/units/upgrades/`.
 
 ## 156. The Unbound measured: the rule buys an army and the army buys nothing
 
