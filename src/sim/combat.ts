@@ -8,6 +8,7 @@ import {
   shrugsFirstBlow,
   upgradeAttack,
   upgradeDefence,
+  wardShare,
 } from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
@@ -160,10 +161,17 @@ export const MAX_RESIST = 0.75;
  * be measured when they are chosen rather than arriving with them.
  */
 export function resistance(unit: Unit, kind: DamageKind): number {
-  if (kind !== 'magic') return 0;
+  // Section 155, `mage-warden`: half of any attack, whatever it is made of.
+  // Here rather than in the combat loop for the reason the note on
+  // `applyDamage` gives -- this is the one place health comes off a unit, so
+  // a ward put here cannot be forgotten at one of the half-dozen sites that
+  // deal damage. Burning is not an attack and takes its health directly, so
+  // it is not covered, which is the right answer rather than an oversight.
+  const ward = wardShare(unit);
+  if (kind !== 'magic') return ward;
   const base = unitType(unit.type).magicResist ?? 0;
-  if (base <= 0) return 0;
-  return Math.min(MAX_RESIST, base + unit.rank * RESIST_PER_RANK);
+  if (base <= 0) return ward;
+  return Math.min(MAX_RESIST, base + unit.rank * RESIST_PER_RANK + ward);
 }
 
 /**
@@ -740,8 +748,34 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const reprieve = new Set<number>();
   if (shrugsFirstBlow(state, attacker)) reprieve.add(attacker.id);
   if (shrugsFirstBlow(state, defender)) reprieve.add(defender.id);
-  const hurt = (unit: Unit, amount: number, kind: DamageKind): number =>
-    applyDamage(unit, reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount, kind);
+  // Section 155, `mage-warden`: **half the damage, at a granularity where a
+  // half does not exist.**
+  //
+  // The ward is a 50% resistance and `applyDamage` honours it, which works
+  // for a blast, a dragon's breath or a militia -- blows big enough to halve.
+  // The ordinary exchange is not one of those: of the 6561 creature matchups
+  // in this game, **6084 deal exactly one point a round**, and
+  // `Math.round(1 * 0.5)` is 1. So for ninety-three per cent of fights the
+  // percentage is rounded away and the ward does nothing at all.
+  //
+  // Half the blows is half the damage when a blow is indivisible, so that is
+  // what happens instead: every second one that the percentage failed to
+  // reduce is shrugged off entirely. Guarded on it having failed, so a blow
+  // the resistance *did* halve is not halved twice.
+  const shrugged = new Map<number, number>();
+  const hurt = (unit: Unit, amount: number, kind: DamageKind): number => {
+    const asked = reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount;
+    const ward = wardShare(unit);
+    // Did the percentage achieve anything? If rounding gave the blow back
+    // whole, the ward has to be paid some other way.
+    const roundedAway = ward > 0 && asked > 0 && Math.round(asked * (1 - ward)) === asked;
+    if (roundedAway) {
+      const n = (shrugged.get(unit.id) ?? 0) + 1;
+      shrugged.set(unit.id, n);
+      if (n % 2 === 0) return 0;
+    }
+    return applyDamage(unit, asked, kind);
+  };
 
   // Free rounds before the fight proper, to whoever strikes first and by how
   // much more than the other. Netting them is what stops two archers giving

@@ -585,8 +585,8 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Warden Mage',
     needs: 'reading-ahead',
     blurb:
-      'First strike against this unit each combat deals reduced damage (a ' +
-      'warding effect).',
+      'Takes half the damage from any attack, and nothing gets a free first ' +
+      'strike against it.',
     flavour: 'Read the book on getting hit. Skipped straight to the ending.',
   },
 ];

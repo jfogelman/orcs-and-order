@@ -14,13 +14,22 @@ import {
   LANCE,
   movesThisTurn,
   shrugsFirstBlow,
+  WARD,
   neighbours,
   upgradeAttack,
   upgradeDefence,
   upgradeMoves,
   upgradeReach,
 } from '../src/sim/upgradeEffects';
-import { attackStrength, defenseStrength, detonate, resolveCombat } from '../src/sim/combat';
+import {
+  applyDamage,
+  attackStrength,
+  defenseStrength,
+  detonate,
+  MAX_RESIST,
+  resistance,
+  resolveCombat,
+} from '../src/sim/combat';
 import { tryStep } from '../src/sim/movement';
 import { runAiTurn } from '../src/ai/ai';
 import {
@@ -124,22 +133,6 @@ const UNWIRED: Record<string, string> = {
   // answered, and looses again. That is wired. `archer-volley` still is not.
   'archer-volley': 'firing past an intervening unit means nothing at range 1',
 
-  // ---- and one that was wired for twenty minutes and taken back out.
-  //
-  // **Measured rather than argued.** `damagePerRound` is
-  // `max(1, round(maxHp / 15))`, so a free blow is **one hit point** for
-  // seventy-eight of the game's eighty-one creatures -- and halving one is
-  // one. Of the three it would save anything for (dragon, queen, drake, all
-  // at 25 health) it saves exactly one point. A mage, which is the creature
-  // that actually gets this upgrade, saves nothing at all.
-  //
-  // So "reduced damage on a first strike" is a no-op in this engine, and
-  // shipping it would be precisely the card-that-lies this file exists to
-  // catch. It wants a different reading -- cancelling the free blow outright,
-  // or warding the first *round* -- and that is Jeremy's call, like the
-  // Archer's range was.
-  'mage-warden':
-    'reduced damage on a first strike is worth nothing here: a free blow is 1 point for 78 of 81 creatures, and half of 1 is 1',
 
   // ---- the horse
 
@@ -197,10 +190,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 21 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(15);
+    // point. 22 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(14);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(6);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(21);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(22);
   });
 });
 
@@ -709,5 +702,105 @@ describe('the backswing', () => {
     UPGRADES.enabled = false;
     resolveCombat(state, ogre, target);
     expect(beside.hp).toBe(was);
+  });
+});
+
+describe('the Warden Mage, on its second reading', () => {
+  /**
+   * The bible's wording -- *"first strike against this unit deals reduced
+   * damage"* -- was measured and found to be worth nothing: a free blow is
+   * one hit point for 78 of the game's 81 creatures, and half of one is one.
+   * Jeremy's answer on 2026-10-30 made it both larger and simpler.
+   */
+  it('shrugs off half of any blow, whatever it is made of', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    const plain = put(state, 1, 'mage', 5, 9);
+    expect(resistance(warden, 'physical')).toBe(WARD.share);
+    // A mage already resists magic, so there the ward stacks on top of what
+    // it had and runs into the ceiling rather than standing alone.
+    expect(resistance(warden, 'magic')).toBeGreaterThanOrEqual(WARD.share);
+    expect(resistance(plain, 'physical')).toBe(0);
+    // Through `applyDamage`, which is the one place health comes off a unit.
+    expect(applyDamage(warden, 8, 'physical')).toBe(4);
+    expect(applyDamage(plain, 8, 'physical')).toBe(8);
+  });
+
+  it('never lets a resistance past the ceiling', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    warden.rank = 3;
+    expect(resistance(warden, 'magic')).toBeLessThanOrEqual(MAX_RESIST);
+  });
+
+  it('takes the free opening blow away from whatever attacks it', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    const plain = put(state, 1, 'mage', 5, 9);
+    const archer = put(state, 0, 'archer', 6, 5);
+    expect(firstStrikesOf(archer, plain), 'an archer normally opens').toBe(1);
+    expect(firstStrikesOf(archer, warden), 'and not against this one').toBe(0);
+    // Both directions of the subtraction `resolveCombat` does: the warden has
+    // none of its own either, so the netting is zero rather than negative.
+    expect(firstStrikesOf(warden, archer)).toBe(0);
+  });
+
+  it('does neither with the box unticked', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    const archer = put(state, 0, 'archer', 6, 5);
+    UPGRADES.enabled = false;
+    expect(resistance(warden, 'physical')).toBe(0);
+    expect(firstStrikesOf(archer, warden)).toBe(1);
+  });
+
+  it('is reached: the same fight leaves the warded mage better off', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    const plain = put(state, 1, 'mage', 5, 9);
+    const a = put(state, 0, 'orc', 6, 5);
+    const b = put(state, 0, 'orc', 6, 9);
+    const seed = state.rngState;
+    resolveCombat(state, a, warden);
+    state.rngState = seed;
+    resolveCombat(state, b, plain);
+    // A mage is a single creature, so the odds never move during a fight and
+    // the same seed deals the same sequence of blows to both.
+    expect(warden.hp, 'half of everything adds up').toBeGreaterThan(plain.hp);
+  });
+});
+
+describe('the ward at a granularity where a half does not exist', () => {
+  /**
+   * The finding that shaped the implementation. Of the 6561 creature
+   * matchups in this game, **6084 deal exactly one point a round**, and
+   * `Math.round(1 * 0.5)` is 1 -- so a 50% resistance is rounded away in
+   * ninety-three per cent of fights and does nothing whatever.
+   *
+   * Half the blows is half the damage when a blow is indivisible, so every
+   * second one the percentage failed to reduce is shrugged off entirely.
+   */
+  it('still halves what a whole fight does to it', () => {
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    const plain = put(state, 1, 'mage', 5, 9);
+    const a = put(state, 0, 'orc', 6, 5);
+    const b = put(state, 0, 'orc', 6, 9);
+    const seed = state.rngState;
+    resolveCombat(state, a, warden);
+    state.rngState = seed;
+    resolveCombat(state, b, plain);
+    // A mage is a single creature, so the odds never move during a fight and
+    // the same seed deals the same sequence of blows to both.
+    expect(warden.hp, 'took half of what the other did').toBeGreaterThan(plain.hp);
+  });
+
+  it('does not halve a blow twice when the percentage worked', () => {
+    // A dragon's breath and a sapper's blast are big enough to halve, and
+    // those go through `applyDamage` and its resistance alone.
+    const state = game();
+    const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
+    expect(applyDamage(warden, 8, 'physical'), 'halved once').toBe(4);
+    expect(applyDamage(warden, 8, 'physical'), 'and once, every time').toBe(4);
   });
 });

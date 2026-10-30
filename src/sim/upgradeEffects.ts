@@ -204,6 +204,10 @@ export const SHIELDWALL = { defence: 1 };
  * when `resolveCombat` nets the two.
  */
 export function firstStrikesOf(unit: Unit, against?: Unit): number {
+  // Section 155, `mage-warden`, Jeremy's second reading of it: nobody gets a
+  // free opening blow against a Warden Mage at all. Before the subtractions
+  // below, because there is nothing left to subtract from.
+  if (against && hasUpgrade(against, 'mage-warden')) return 0;
   let n = unitType(unit.type).firstStrikes;
   if (hasUpgrade(unit, 'archer-marksman')) n -= MARKSMAN.firstStrikes;
   // `knight-lance`: a lance is a thing for use against horses, and this is the
@@ -300,3 +304,26 @@ export const GUARDIAN = { everyTurns: 2 };
 
 /** What a Brawler's backswing is worth, as a share of what it dealt. */
 export const BRAWLER = { share: 0.5 };
+
+/**
+ * What a Warden Mage shrugs off, as a share of any blow. Section 155.
+ *
+ * **The second reading of this upgrade, and the first one that is worth
+ * anything.** As written in the bible -- *"first strike against this unit
+ * deals reduced damage"* -- it was a no-op: `damagePerRound` is
+ * `max(1, round(maxHp / 15))`, so a free blow is one hit point for
+ * seventy-eight of the game's eighty-one creatures, and half of one is one.
+ * Measured before it was believed, and taken back out.
+ *
+ * Jeremy's answer on 2026-10-30 was to make it both larger and simpler: half
+ * of **any** attack, and no free first strike against it at all. Read through
+ * `resistance`, which is the one thing `applyDamage` consults -- so it covers
+ * an exchange, a blast, a dragon's breath and a militia, and does **not**
+ * cover burning, which takes its health directly and is not an attack.
+ */
+export const WARD = { share: 0.5 };
+
+/** How much of any blow this unit's upgrade shrugs off, 0..1. */
+export function wardShare(unit: Unit): number {
+  return hasUpgrade(unit, 'mage-warden') ? WARD.share : 0;
+}

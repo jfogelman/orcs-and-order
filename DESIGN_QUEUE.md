@@ -12725,27 +12725,45 @@ the attacker, off the damage actually dealt rather than off the ogre's
 strength, so a swing that barely landed barely splashes. One, not all of them:
 an ogre that hit everything standing near its target would be a sapper.
 
-### And one that was wired for twenty minutes and taken back out
+### `mage-warden`, which took three readings and taught us something
 
-**`mage-warden` is a no-op in this engine, and that is measured rather than
-argued.** `damagePerRound` is `max(1, round(maxHp / 15))`, so a free blow is
-**one hit point for seventy-eight of the game's eighty-one creatures** -- and
-half of one is one. Of the three it would save anything for (dragon, queen and
-drake, all at 25 health) it saves exactly one point. **A mage, which is the
-creature that actually gets this upgrade, saves nothing at all.**
+**The bible's version is a no-op, and that was measured rather than argued.**
+*"First strike against this unit deals reduced damage"*: `damagePerRound` is
+`max(1, round(maxHp / 15))`, so a free blow is **one hit point for
+seventy-eight of the game's eighty-one creatures**, and half of one is one. A
+mage, which is the creature that gets this upgrade, saves nothing at all. It
+was wired, tested and green before anybody asked what it was worth, which is
+exactly the card-that-lies the completeness test exists to catch.
 
-Shipping it would have been precisely the card-that-lies the completeness test
-exists to catch: wired, tested, green, and worth nothing. It is back on the
-unwired list with the number.
+**Jeremy's answer, 2026-10-30:** half the damage from *any* attack, and no
+free first strike against it at all. The first-strike half is one line in
+`firstStrikesOf` and works perfectly.
 
-It wants a different reading to mean anything -- cancelling the free blow
-outright, or warding the first *round* rather than the first strike -- and
-that is Jeremy's call, the way the Archer's range was.
+**And the damage half ran into the same wall, one level down.** Of the 6561
+creature matchups in this game, **6084 deal exactly one point a round**, and
+`Math.round(1 * 0.5)` is 1. A percentage cannot halve an indivisible blow, so
+a 50% resistance is rounded away in ninety-three per cent of fights.
+
+So the ward is paid two ways, and the seam is deliberate:
+
+- **`resistance`**, which `applyDamage` consults, halves anything big enough
+  to halve -- a blast, a dragon's breath, a militia. Burning is not an attack
+  and takes its health directly, so it is untouched, which is right.
+- **In `resolveCombat`**, every second blow that the percentage *failed* to
+  reduce is shrugged off whole. Half the blows is half the damage when a blow
+  is indivisible. Guarded on the percentage having failed, so nothing is
+  halved twice.
+
+**The general lesson is worth more than the upgrade.** This game's damage
+granularity is one point for almost every exchange, so *any* percentage
+reduction is a coin that lands on "nothing" unless it exceeds 50%. Three
+upgrades in this bible are written as percentages; the next one wants this
+checked before it is believed.
 
 ### What is left
 
-**Fifteen upgrades still do nothing**, each with its reason in the test. They
-group into five jobs rather than fifteen: the axethrower's throw machinery, a
+**Fourteen upgrades still do nothing**, each with its reason in the test. They
+group into five jobs rather than fourteen: the axethrower's throw machinery, a
 lasting-debuff status, the raised-skeleton rule, the dragon, and the two
 sapper lines that need a notion of impassable ground and of a pair.
 
