@@ -2970,6 +2970,37 @@ function upgradeArmy(state: GameState, player: Player): void {
 }
 
 /**
+ * Put the Guardians in front of somebody. Section 155.
+ *
+ * **Reachability again**, which is the lesson from the Burrower-caste, the
+ * spy, the unseen agent and the reform sites: an ability no AI ever uses is a
+ * mechanic that never reaches the board, and a sweep of it measures nothing.
+ *
+ * The heuristic is deliberately plain, because nothing about it has been
+ * measured: a Guardian covers the **frailest** neighbour it has -- lowest
+ * health as a share of its own maximum, ties broken by the dearer unit --
+ * since a bodyguard is worth most in front of something that cannot take a
+ * hit. It covers on every turn it is not moving, which is every other turn by
+ * construction and any turn it has nothing better to do.
+ */
+function standGuard(state: GameState, player: Player): void {
+  if (!UPGRADES.enabled) return;
+  for (const guard of playerUnits(state, player.id)) {
+    // **Not one that is on its way somewhere.** Covering costs the whole turn,
+    // so an AI that covered at every opportunity would field Guardians that
+    // never arrived anywhere -- they would stand where they were built,
+    // shielding whoever happened to be next to them, for the whole game.
+    if (guard.goto) continue;
+    if (abilityReady(guard, 'cover') !== null) continue;
+    const worth = (u: Unit) => u.hp / Math.max(1, unitType(u.type).hp);
+    const frailest = abilityTargets(state, guard, 'cover').sort(
+      (a, b) => worth(a) - worth(b) || unitType(b.type).cost - unitType(a.type).cost,
+    )[0];
+    if (frailest) useAbility(state, guard, 'cover', frailest);
+  }
+}
+
+/**
  * Take the promotions owed to this player's units.
  *
  * Ordered by taste rather than measured: the Horde reaches for the thing that
@@ -3092,6 +3123,7 @@ export function runAiTurn(state: GameState, playerId: number): void {
   // Before production, so a city that is about to choose what to build is
   // choosing with the purse this has already drawn on.
   upgradeArmy(state, player);
+  standGuard(state, player);
 
   const frontier = frontierTiles(state, player);
   for (const city of playerCities(state, playerId)) {

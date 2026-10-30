@@ -210,3 +210,46 @@ export function firstStrikesOf(unit: Unit): number {
 
 /** What a Marksman gives up for its two points. */
 export const MARKSMAN = { firstStrikes: 1 };
+
+/**
+ * Whether this unit gets its movement at all this turn. Section 155.
+ *
+ * **One upgrade in thirty-six needs this**, and it needs it because the flat
+ * number did not work: `orc-guardian` reads "-1 movement" and an orc has one,
+ * so taken literally the Guardian could never move again. Jeremy's answer on
+ * 2026-10-29 was *one tile every two turns*, which is a real cost that still
+ * leaves a unit playing -- the same shape as `FREEZE_SLOW`, and the same
+ * reasoning behind it.
+ *
+ * Every Guardian in the game steps on the same turns, which is predictable to
+ * play against and, for a creature whose joke is that it has finally learned
+ * to wait, rather the point.
+ */
+export function movesThisTurn(state: GameState, unit: Unit): boolean {
+  if (!UPGRADES.enabled) return true;
+  if (hasUpgrade(unit, 'orc-guardian')) return state.turn % GUARDIAN.everyTurns === 0;
+  return true;
+}
+
+/**
+ * The unit standing in front of this one, if anybody is. Section 155.
+ *
+ * `orc-guardian`'s other half, and the reason it is worth two points of
+ * defence and half its speed: it can spend a turn **covering** somebody
+ * adjacent, and whatever comes for them meets the Guardian instead.
+ *
+ * Returns the Guardian rather than a boolean, because the caller substitutes
+ * it into the fight whole -- its own defence, its own health, its own death.
+ * Checked for adjacency again here rather than trusted from when the order was
+ * given, since both of them may have moved since.
+ */
+export function coveringFor(state: GameState, unit: Unit): Unit | null {
+  if (!UPGRADES.enabled) return null;
+  for (const near of neighbours(state, unit, 'friendly')) {
+    if (near.covering === unit.id && near.hp > 0 && hasUpgrade(near, 'orc-guardian')) return near;
+  }
+  return null;
+}
+
+/** How often a Guardian may move, in turns, and what covering costs. */
+export const GUARDIAN = { everyTurns: 2 };

@@ -1,5 +1,5 @@
 import { checkEndings, isEndingPiece } from './endings';
-import { upgradeMoves } from './upgradeEffects';
+import { movesThisTurn, upgradeMoves } from './upgradeEffects';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
@@ -168,6 +168,15 @@ function refreshUnits(state: GameState, player: Player): void {
         slowed < 0
         ? Math.max(1, full)
         : full;
+    // Section 155: and a Guardian stands still on the turns between. Jeremy's
+    // ruling of 2026-10-29 -- "-1 movement" could not be a number, because an
+    // orc has one and the Guardian would never move again. One tile every two
+    // turns is a cost it can still play around.
+    if (!movesThisTurn(state, unit)) unit.moves = 0;
+    // And whoever it was standing in front of, it is not any more: covering
+    // buys exactly the one turn it cost. Cleared before the order is given
+    // again, so a Guardian that covers every turn simply does.
+    delete unit.covering;
     if (unit.order === 'skip') unit.order = 'none';
     // Digging carries on at the top of the owner's turn, and a road is laid the
     // turn its last shift is done.

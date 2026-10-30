@@ -198,9 +198,15 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Orc Guardian',
     needs: 'standing-still-on-purpose',
     blurb:
-      '+2 defense, -1 movement.',
+      '+2 defense, and moves one tile every two turns. Can Cover an adjacent ' +
+      'unit, meeting whatever comes for it in their place.',
     flavour: 'Finally, an orc who waits.',
-    effect: { defence: 2, moves: -1 },
+    // The movement half is not a number. Jeremy settled it on 2026-10-29: an
+    // orc has one movement point, so a flat -1 left the Guardian unable to
+    // move at all for the rest of the game. It moves **one tile every two
+    // turns** instead, and gets `cover` in exchange -- see `GUARDIAN` and
+    // `coverBlocked`.
+    effect: { defence: 2 },
   },
 
   // ---- axethrower
@@ -427,8 +433,13 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Longbow Archer',
     needs: 'bigger-bow',
     blurb:
-      'Strike range increases to 3 tiles.',
+      'Looses twice at the opening of a fight: its free shot, the answer to ' +
+      'it, and a second shot.',
     flavour: 'Keeps the arrow. Now from further away.',
+    // Not range, which this game's Archer does not have -- Jeremy's ruling of
+    // 2026-10-29 reads the bible's "twice as far" as **twice**: it looses,
+    // is answered, and looses again. The rule is in `resolveCombat`; there is
+    // no number here to hold.
   },
   {
     id: 'archer-volley',

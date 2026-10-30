@@ -8,6 +8,8 @@ import {
   SEASONED,
   VANGUARD,
   WARLORD,
+  coveringFor,
+  movesThisTurn,
   neighbours,
   upgradeAttack,
   upgradeDefence,
@@ -15,7 +17,15 @@ import {
   upgradeReach,
 } from '../src/sim/upgradeEffects';
 import { attackStrength, defenseStrength, resolveCombat } from '../src/sim/combat';
-import { unitReach } from '../src/sim/abilities';
+import { tryStep } from '../src/sim/movement';
+import { runAiTurn } from '../src/ai/ai';
+import {
+  abilitiesOf,
+  abilityReady,
+  abilityTargets,
+  unitReach,
+  useAbility,
+} from '../src/sim/abilities';
 import { unitType } from '../src/model/units';
 import type { GameState, Unit } from '../src/model/types';
 
@@ -51,6 +61,10 @@ function game(): GameState {
 function put(state: GameState, owner: number, type: string, x: number, y: number, up?: string): Unit {
   const u = spawnUnit(state, owner, type as Parameters<typeof spawnUnit>[2], x, y, false);
   if (up) u.upgrade = up;
+  // Abilities only ever target what the acting side can see, which is what
+  // stops an armed ability doubling as a fog-of-war probe. A bare test state
+  // has seen nothing, so say it has.
+  for (const p of state.players) p.visible[y * state.width + x] = 1;
   return u;
 }
 
@@ -106,10 +120,9 @@ const UNWIRED: Record<string, string> = {
   // ---- the bow
   // ---- the bow, where the bible and the game turn out to disagree. **This
   // game's Archer has `range: 1`**; what makes it ranged is `firstStrikes: 1`.
-  // So two of its three lines describe a mechanic that does not exist here,
-  // and the third ports exactly.
-  'archer-longbow':
-    'the blurb says "range increases to 3" and the Archer has a range of 1, so +1 contradicts the card and a floor at 3 would out-range the Mage; a design call, not a wiring one',
+  // `archer-longbow` was unwired for a day over exactly that, and Jeremy's
+  // answer on 2026-10-29 reads the longer reach as *twice*: it looses, is
+  // answered, and looses again. That is wired. `archer-volley` still is not.
   'archer-volley': 'firing past an intervening unit means nothing at range 1',
 
   // ---- the horse
@@ -170,19 +183,21 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 13 of 36 at the end of slice 5a.
-    expect(Object.keys(UNWIRED)).toHaveLength(23);
+    // point. 14 of 36 at the end of slice 5a.
+    expect(Object.keys(UNWIRED)).toHaveLength(22);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(4);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(13);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(14);
   });
 });
 
 describe('the flat ones', () => {
-  it('gives the Knight Errant a move and the Orc Guardian one fewer', () => {
+  it('gives the Knight Errant a move, and nobody a flat penalty', () => {
     const state = game();
     expect(upgradeMoves(put(state, 1, 'knight', 5, 5, 'knight-errant'))).toBe(1);
-    expect(upgradeMoves(put(state, 0, 'orc', 7, 7, 'orc-guardian'))).toBe(-1);
     expect(upgradeMoves(put(state, 0, 'orc', 9, 9))).toBe(0);
+    // The Guardian's cost is not a number -- see Jeremy's ruling below. A flat
+    // -1 on a creature with one movement point is a creature that never moves.
+    expect(upgradeMoves(put(state, 0, 'orc', 7, 7, 'orc-guardian'))).toBe(0);
   });
 
   it('puts the Archmage a tile further out, and says 3 because it means 3', () => {
@@ -352,5 +367,153 @@ describe('the ones that reach past their own tile', () => {
     expect(upgradeDefence(state, mate)).toBeGreaterThan(0);
     expect(upgradeDefence(state, archer), 'an archer is not a wall').toBe(0);
     void wall;
+  });
+});
+
+describe('Jeremy’s two rulings of 2026-10-29', () => {
+  /**
+   * `archer-longbow`. The bible said "range increases to 3" and this game's
+   * Archer has a range of 1, so the line sat unwired for a day. The answer was
+   * to read the longer reach as *twice*: it looses, is answered, and looses
+   * again, all before the fight proper.
+   */
+  it('lets the Longbow loose twice, and be answered in between', () => {
+    const state = game();
+    const plain = put(state, 1, 'archer', 5, 5);
+    const long = put(state, 1, 'archer', 5, 7, 'archer-longbow');
+    const a = put(state, 0, 'orc', 6, 5);
+    const b = put(state, 0, 'orc', 6, 7);
+    const hpWas = { a: a.hp, b: b.hp, plain: plain.hp, long: long.hp };
+    resolveCombat(state, plain, a);
+    resolveCombat(state, long, b);
+    // Both archers opened; the Longbow got a second shot in, and took one back
+    // for the privilege. Compared as "more damage dealt" rather than an exact
+    // figure, because the rest of the fight is dice.
+    expect(hpWas.b - b.hp, 'the Longbow hit harder').toBeGreaterThan(hpWas.a - a.hp);
+    void hpWas.plain;
+    void hpWas.long;
+  });
+
+  it('nets against another first-striker, the way every first strike does', () => {
+    const state = game();
+    // Two archers cancel, so neither opens and the Longbow's extra hangs off
+    // a shot it never got. Section 11's rule, not a special case for this one.
+    const long = put(state, 1, 'archer', 5, 5, 'archer-longbow');
+    const other = put(state, 0, 'axethrower', 6, 5);
+    expect(firstStrikesOf(long)).toBe(firstStrikesOf(other));
+  });
+
+  /**
+   * `orc-guardian`. "-1 movement" could not be a number, because an orc has
+   * one and the Guardian would never move again. One tile every two turns,
+   * and `cover` to do with the turns in between.
+   */
+  it('moves the Guardian one turn in two', () => {
+    const state = game();
+    const guard = put(state, 0, 'orc', 5, 5, 'orc-guardian');
+    const plain = put(state, 0, 'orc', 9, 9);
+    const moving: boolean[] = [];
+    for (let turn = 1; turn <= 4; turn++) {
+      state.turn = turn;
+      moving.push(movesThisTurn(state, guard));
+      expect(movesThisTurn(state, plain), 'an ordinary orc is unaffected').toBe(true);
+    }
+    expect(moving.filter(Boolean)).toHaveLength(2);
+    expect(moving[0]).not.toBe(moving[1]);
+  });
+
+  it('lets a Guardian cover even on a turn it cannot move', () => {
+    const state = game();
+    const guard = put(state, 0, 'orc', 5, 5, 'orc-guardian');
+    const friend = put(state, 0, 'peon', 6, 5);
+    guard.moves = 0;
+    expect(abilitiesOf(guard)).toContain('cover');
+    expect(abilityReady(guard, 'cover'), 'the thing it does while waiting').toBeNull();
+    expect(abilityTargets(state, guard, 'cover').map((u) => u.id)).toContain(friend.id);
+    expect(useAbility(state, guard, 'cover', friend).ok).toBe(true);
+    expect(guard.covering).toBe(friend.id);
+    // And not twice in one turn.
+    expect(abilityReady(guard, 'cover')).not.toBeNull();
+  });
+
+  it('puts the Guardian in the way of whatever comes', () => {
+    const state = game();
+    const guard = put(state, 0, 'orc', 5, 5, 'orc-guardian');
+    const peon = put(state, 0, 'peon', 6, 5);
+    guard.covering = peon.id;
+    expect(coveringFor(state, peon)?.id, 'adjacent and covering').toBe(guard.id);
+    // Moved away, and no longer covering anybody: checked at the moment of
+    // the blow rather than trusted from when the order was given.
+    guard.x = 12;
+    guard.y = 12;
+    expect(coveringFor(state, peon)).toBeNull();
+    guard.x = 5;
+    guard.y = 5;
+    guard.hp = 0;
+    expect(coveringFor(state, peon), 'a dead orc covers nobody').toBeNull();
+  });
+
+  it('covers nobody at all in a game without upgrades', () => {
+    const state = game();
+    const guard = put(state, 0, 'orc', 5, 5, 'orc-guardian');
+    const peon = put(state, 0, 'peon', 6, 5);
+    guard.covering = peon.id;
+    UPGRADES.enabled = false;
+    expect(coveringFor(state, peon)).toBeNull();
+    expect(abilitiesOf(guard)).not.toContain('cover');
+    expect(movesThisTurn(state, guard)).toBe(true);
+  });
+});
+
+describe('covering, end to end', () => {
+  /**
+   * The lookup is one thing; the fight is the other. This drives a real
+   * attack through `tryStep`, because the substitution happens in the mover
+   * and a test of `coveringFor` alone would pass with the mover unchanged.
+   */
+  it('sends the blow to the Guardian and leaves the covered unit alone', () => {
+    const state = game();
+    const guard = put(state, 1, 'orc', 5, 5, 'orc-guardian');
+    const peon = put(state, 1, 'peon', 6, 5);
+    const attacker = put(state, 0, 'orc', 7, 5);
+    guard.covering = peon.id;
+    guard.owner = 1;
+    const peonHp = peon.hp;
+    const guardHp = guard.hp;
+    tryStep(state, attacker, peon.x, peon.y);
+    expect(peon.hp, 'untouched, because somebody was in the way').toBe(peonHp);
+    expect(guard.hp, 'the Guardian took it').toBeLessThan(guardHp);
+  });
+
+  it('lets the blow through once nobody is covering', () => {
+    const state = game();
+    const guard = put(state, 1, 'orc', 5, 5, 'orc-guardian');
+    const peon = put(state, 1, 'peon', 6, 5);
+    const attacker = put(state, 0, 'orc', 7, 5);
+    const peonHp = peon.hp;
+    const guardHp = guard.hp;
+    // No `covering` set: the Guardian is simply standing there.
+    tryStep(state, attacker, peon.x, peon.y);
+    expect(guard.hp, 'it did not volunteer').toBe(guardHp);
+    expect(peon.hp).toBeLessThan(peonHp);
+  });
+});
+
+describe('the AI uses it', () => {
+  /**
+   * The fifth instance of the same lesson. An ability no AI ever reaches for
+   * is a mechanic that never happens, and a sweep of it compares two games
+   * that are the same game.
+   */
+  it('puts a Guardian in front of the frailest thing beside it', () => {
+    const state = game();
+    const guard = put(state, 0, 'orc', 5, 5, 'orc-guardian');
+    const healthy = put(state, 0, 'orc', 6, 5);
+    const hurt = put(state, 0, 'peon', 4, 5);
+    hurt.hp = 1;
+    state.players[0].controller = 'ai';
+    runAiTurn(state, 0);
+    expect(guard.covering, 'the one that cannot take a hit').toBe(hurt.id);
+    void healthy;
   });
 });

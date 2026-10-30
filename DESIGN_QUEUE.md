@@ -12707,23 +12707,37 @@ same shape as the wants refactor that went first in slice 1.
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with
 upgrades against a game where two thirds of them are inert.
 
-### One question for Jeremy: the Orc Guardian cannot move
+### Both questions answered (Jeremy, 2026-10-29)
 
-*"+2 defense, -1 movement"*, and **an orc has one movement point**. Read
-literally the Guardian has none at all, for the rest of the game: it cannot
-retreat, cannot be repositioned, cannot take the city it was built to hold if
-that city ever changes. "Finally, an orc who waits" is a good joke about a
-slow orc and a worse one about a statue.
+**The Longbow looses twice.** The bible's longer reach could not be range --
+this game's Archer has `range: 1` and its bow *is* the free opening shot -- so
+it is read as **twice**: it looses, is answered, and looses again, all before
+the fight proper. Hung off the free shot rather than standing alone, so it
+nets against another first-striker the way section 11 says every first strike
+does; two archers still cancel.
 
-It ships floored at one, so a Guardian is slow in principle and unchanged in
-practice, and the floor applies **only** where an upgrade takes movement away
--- an unconditional floor there gave the Hivekin Queen a movement point in a
-game with the box unticked, and three fixtures said so.
+**The Guardian moves one tile every two turns**, rather than taking a flat -1
+it could not afford. Every Guardian steps on the same turns, which is
+predictable to play against and, for a creature whose joke is that it has
+finally learned to wait, rather the point.
 
-Three ways out, and the choice is his: leave it floored and accept the cost is
-notional; give the orc a second movement point so -1 means something; or move
-the cost onto something else, since the pattern elsewhere in the bible is a
-trade rather than a tax.
+**And in exchange it can Cover.** A turn spent standing in front of an
+adjacent unit -- including one inside a city -- so that whatever comes for
+them meets the Guardian instead: its defence, its health, its death. The one
+thing it can do on a turn it cannot move, which is half of what makes the
+slower pace bearable.
+
+The substitution is in `movement.ts`, before the fight rather than inside
+`resolveCombat`, because everything downstream reads the defender for the
+logs, the experience, the bounty and `destroyUnit`. **It works because the
+attacker does not advance onto the tile it attacked** in this game, so a
+defender standing somewhere else costs the geometry nothing. Melee only: a
+ranged strike goes through `abilities.ts` and does not consult it, which is a
+gap rather than a decision.
+
+Cover took the key **Y**, not C, because C centres the view and one unit type
+in eighty should not take a universal key away. The single-letter ability
+space is nearly full and the next one will want a better answer.
 
 ### And a weakness in how the fixtures protect us
 

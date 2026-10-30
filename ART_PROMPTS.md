@@ -603,7 +603,16 @@ That is one sprite rather than nine, it needs no reference image, and it is
 the better joke: the Grave Knight cannot make a skeleton out of a ghost, so it
 digs one up.
 
-The file is `ancient skeleton.jpg`, in the same folder as the rest.
+The file is `ancient skeleton.jpg`, in the same folder as the rest, and
+**drawn as of 2026-10-29**.
+
+It is not converted yet, deliberately: `prepare_art.py` does not know
+`skeletal versions/`, and wiring it means choosing what a raised skeleton is
+called in `public/units/`. A copy of what died is a variant of that creature
+(`orc-skeleton.png`, by the convention the upgrades already use); this one is
+a copy of nothing and needs a name of its own. That choice belongs with the
+rule, not ahead of it -- a filename convention invented now is exactly how a
+drawn sheet ends up silently unread.
 
 > A skeleton that was in the ground long before any of this: not a fresh
 > corpse raised, but something disinterred, far older than the war going on

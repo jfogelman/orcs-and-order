@@ -1,5 +1,5 @@
 import { distance, idx } from '../engine/grid';
-import { firstStrikesOf, upgradeAttack, upgradeDefence } from './upgradeEffects';
+import { firstStrikesOf, hasUpgrade, upgradeAttack, upgradeDefence } from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
 import { drownCargo } from './ships';
@@ -688,6 +688,19 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     const struck = edge > 0 ? defender : attacker;
     for (let i = 0; i < Math.abs(edge) && struck.hp > 0; i++) {
       applyDamage(struck, dmg, damageKindOf(striker));
+    }
+    // Section 155, `archer-longbow`. **Not range** -- this game's Archer has
+    // none; its bow is the free opening shot. Jeremy's ruling of 2026-10-29
+    // reads the bible's longer reach as *twice*: it looses, is answered, and
+    // looses again, all before the fight proper starts.
+    //
+    // Hung off the free shot rather than standing on its own, so it nets the
+    // way every first strike in this game nets: two archers cancel each other
+    // out and neither opens, which is section 11's rule and not a special case
+    // for this one.
+    if (hasUpgrade(striker, 'archer-longbow') && struck.hp > 0) {
+      applyDamage(striker, dmg, damageKindOf(struck));
+      if (striker.hp > 0 && struck.hp > 0) applyDamage(struck, dmg, damageKindOf(striker));
     }
     // And for a thrower, the free blow *is* the axe leaving its hand. It gets
     // the rest of the fight without one, and fetches it back afterwards.

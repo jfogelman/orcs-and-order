@@ -1,4 +1,5 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
+import { coveringFor } from './upgradeEffects';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
@@ -659,12 +660,37 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         'sally',
       );
     }
-    const result = resolveCombat(state, unit, occupant);
+    // Section 155: somebody may be standing in front of this one.
+    //
+    // An Orc Guardian that spent its turn covering meets whatever comes for
+    // the unit it covered -- with its own defence, its own health and its own
+    // death. Substituted here, before the fight, rather than inside
+    // `resolveCombat`: everything below reads the defender for the logs, the
+    // experience, the bounty and `destroyUnit`, and all of it should be about
+    // whoever actually took the blow.
+    //
+    // It works because **the attacker does not advance onto the tile it
+    // attacked** in this game -- `unit.moves = 0` and it stays where it is --
+    // so a defender standing on another tile costs the geometry nothing.
+    const shield = coveringFor(state, occupant);
+    const defender = shield ?? occupant;
+    if (shield) {
+      log(
+        state,
+        `${unitType(shield.type).name} is in the way.`,
+        'combat',
+        shield.owner,
+        undefined,
+        [shield.x, shield.y],
+        shield.id,
+      );
+    }
+    const result = resolveCombat(state, unit, defender);
     unit.moves = 0;
     unit.order = 'none';
     unit.goto = null;
 
-    const defenderType = unitType(occupant.type);
+    const defenderType = unitType(defender.type);
     if (result.attackerWon) {
       log(
         state,
@@ -674,30 +700,30 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         'combat',
         unit.owner,
         undefined,
-        [occupant.x, occupant.y],
+        [defender.x, defender.y],
         unit.id,
       );
       // A dragon's breath does not stop at the thing it hit. Measured before
       // the defender is removed, since the damage it took is the input.
-      breatheThrough(state, unit, occupant, unitType(occupant.type).hp - Math.max(0, occupant.hp));
+      breatheThrough(state, unit, defender, unitType(defender.type).hp - Math.max(0, defender.hp));
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
-      const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
+      const blastVictims = defenderType.explodes > 0 ? detonate(state, defender) : [];
       // Section 152: the attacker is named, because for the Unbound whether it
       // could exorcise is the difference between a death and an absence.
-      destroyUnit(state, occupant, 'is wiped out', unit);
+      destroyUnit(state, defender, 'is wiped out', unit);
       // Killing teaches most. Nothing is awarded for the blast above, which
       // the sapper's victims did not choose to be part of.
       awardXp(state, unit, XP.kill);
       // Section 115: a raider worth killing was carrying something.
-      claimBounty(state, unit, occupant);
+      claimBounty(state, unit, defender);
       // Section 122: and a Drowned Captain is not finished when he falls over.
-      lastWords(state, unit, occupant);
+      lastWords(state, unit, defender);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
       if (blastVictims.some((v) => v.id === unit.id)) {
         recomputeVisibility(state, unit.owner);
-        recomputeVisibility(state, occupant.owner);
+        recomputeVisibility(state, defender.owner);
         return { kind: 'combat', result, defenderDied: true, attackerDied: true };
       }
     } else {
@@ -706,7 +732,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // the withdrawal was never really available -- section 11 asked for a
       // rule for having nowhere to go, and this is it: a cornered knight dies
       // like anybody else.
-      const withdrawn = result.withdrew === true && stepBack(state, unit, occupant.x, occupant.y);
+      const withdrawn = result.withdrew === true && stepBack(state, unit, defender.x, defender.y);
       if (result.withdrew && !withdrawn) unit.hp = 0;
 
       if (withdrawn) {
@@ -724,9 +750,9 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         state,
         `${defenderType.name} holds against ${type.name}.`,
         'combat',
-        occupant.owner,
+        defender.owner,
         undefined,
-        [occupant.x, occupant.y],
+        [defender.x, defender.y],
         // The swinger, not the one who held: it is the attacker that moves.
         unit.id,
       );
@@ -737,15 +763,15 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
           state,
           unit,
           result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking',
-          occupant,
+          defender,
         );
-        awardXp(state, occupant, XP.kill);
+        awardXp(state, defender, XP.kill);
         // A raider that threw itself at a garrison and lost pays the same purse,
         // and a captain that died on somebody's spear still has his crew.
-        claimBounty(state, occupant, unit);
-        lastWords(state, occupant, unit);
+        claimBounty(state, defender, unit);
+        lastWords(state, defender, unit);
       } else {
-        awardXp(state, occupant, XP.survive);
+        awardXp(state, defender, XP.survive);
       }
     }
     if (result.promoted) {
@@ -754,12 +780,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         state,
         `${winner} is promoted to veteran.`,
         'good',
-        result.attackerWon ? unit.owner : occupant.owner,
+        result.attackerWon ? unit.owner : defender.owner,
         'promote',
       );
     }
     recomputeVisibility(state, unit.owner);
-    recomputeVisibility(state, occupant.owner);
+    recomputeVisibility(state, defender.owner);
     return {
       kind: 'combat',
       result,

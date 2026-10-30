@@ -310,6 +310,18 @@ export interface Unit {
    * Optional, so every save and fixture from before this counts as nought.
    */
   fights?: number;
+  /**
+   * The unit this one is standing in front of. Section 155, `orc-guardian`.
+   *
+   * Set by the `cover` ability and cleared at the top of the coverer's next
+   * turn, so it lasts exactly the one turn it cost. Holds a unit **id** rather
+   * than a reference, like `homeCity`, so a save is still plain JSON.
+   *
+   * Read through `coveringFor`, which re-checks adjacency: both of them may
+   * have moved since the order was given, and a bodyguard three tiles away is
+   * not covering anybody.
+   */
+  covering?: number;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;

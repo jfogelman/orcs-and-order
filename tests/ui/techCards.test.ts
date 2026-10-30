@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openTechPanel } from '../../src/ui/techPanel';
 import { createGame } from '../../src/sim/gamestate';
-import { UPGRADES } from '../../src/model/upgrades';
+import { UPGRADES, UPGRADES_BY_ID } from '../../src/model/upgrades';
 import type { GameState } from '../../src/model/types';
 
 /**
@@ -58,10 +58,22 @@ describe('an upgrade advance says what it gives you', () => {
   });
 
   it('is the same sentence the creature card shows, because it is the same string', () => {
-    // Read off `UPGRADE_BY_TECH` rather than written out here, which is the
-    // only way the two can be guaranteed not to drift.
+    /**
+     * **Read off the data, which this test originally only claimed to do.**
+     *
+     * It was written asserting the literal string `'+2 defense, -1 movement.'`
+     * under a comment saying that writing it out was the one thing not to do.
+     * The blurb changed the next day -- Jeremy's ruling that the Guardian
+     * moves one tile every two turns -- and the test failed for the only
+     * reason it ever could, which is that it had drifted from the thing it
+     * was guarding.
+     */
     const text = open(['doing-this-before']);
-    expect(text).toContain('+2 defense, -1 movement.');
+    for (const id of ['orc-veteran', 'orc-berserker', 'orc-guardian']) {
+      const up = UPGRADES_BY_ID[id];
+      expect(text, id).toContain(up.name);
+      expect(text, `${id}: the blurb, not a paraphrase of it`).toContain(up.blurb);
+    }
   });
 });
 
