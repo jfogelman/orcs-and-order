@@ -14,7 +14,10 @@ import {
   LANCE,
   movesThisTurn,
   axesCarried,
+  BONEBREAKER,
+  breathShare,
   breathSpares,
+  VOLLEY,
   KNIT,
   knitsMidFight,
   sparedByBlast,
@@ -35,6 +38,7 @@ import {
   applyDamage,
   attackStrength,
   breatheThrough,
+  BREATH_CARRY,
   rearm,
   REARM_TURNS,
   defenseStrength,
@@ -111,61 +115,18 @@ function put(state: GameState, owner: number, type: string, x: number, y: number
  * outstanding, in the suite rather than in a markdown file, and it shrinks.
  */
 const UNWIRED: Record<string, string> = {
-  // ---- the sapper's bundle. All three are rules inside `detonate()`, which
-  // is its own small machine: a radius, a self-destruct and a risk roll.
   'sapper-tunnel': 'moving through impassable ground is a movement rule, not a combat one',
 
-
-  // ---- the troll
-  // **Measured, after it was built and found never to fire.** A lasting
-  // debuff on whatever a troll hit needs whatever a troll hit to still be
-  // standing, and a probe over 2160 melee fights found **not one** that left
-  // both sides alive: `resolveCombat` runs until somebody dies, and the only
-  // exception is a withdrawal perk that did not fire once either. The
-  // `broken` status was written, wired and deleted again.
-  //
-  // Two readings would work and the choice is a design one: apply it at the
-  // *start* of the fight, which makes it `axethrower-heavy` under another
-  // name, or make it an aura on adjacent enemies like `deathknight-dread`.
-  'troll-bonebreaker':
-    'a lasting debuff needs a survivor, and 0 of 2160 melee fights left both sides alive',
-
-  // ---- the ogre
-
-  // ---- the Death Knight, and the whole raised-skeleton rule
+  // ---- the Death Knight, and the whole raised-skeleton rule. `raising.ts`
+  // says who may be raised and the art is drawn; what is open is what a
+  // raised unit *is* -- its stats, its lifespan, the chance, and what the
+  // ancient skeleton the Unbound leave behind is a copy of. Five invented
+  // numbers and a structural decision, so it waits for Jeremy.
   'deathknight-grave':
-    'raising a skeleton is a new unit on the board with a lifespan; the art is drawn and the Unbound ruling is made, but the rule is its own slice',
+    'the rule needs what a raised unit is: stats, lifespan, chance, and what the ancient skeleton is made of',
   'deathknight-soulbound': 'depends entirely on the above existing first',
 
-  // ---- the dragon
-  // **Measured, and the drawback cannot happen.** *"Flying over enemy cities
-  // costs double movement"*, and in this game **no unit may enter an enemy
-  // city tile by pathing at all** -- `costFnFor` returns null for every one
-  // of them, flier included, because enemy ground is taken by attacking and
-  // never by walking over. So the cost half describes a manoeuvre that does
-  // not exist, and wiring the breath half alone would hand the Horde a free
-  // buff -- which is the `archer-marksman` hazard, where a pair has to land
-  // together or the upgrade is a bonus with no price.
-  'dragon-elder':
-    'the drawback is a manoeuvre the game has no rule for: an enemy city tile cannot be flown over, only attacked',
   'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',
-
-  // ---- the Kingdom's foot
-
-  // ---- the bow
-  // ---- the bow, where the bible and the game turn out to disagree. **This
-  // game's Archer has `range: 1`**; what makes it ranged is `firstStrikes: 1`.
-  // `archer-longbow` was unwired for a day over exactly that, and Jeremy's
-  // answer on 2026-10-29 reads the longer reach as *twice*: it looses, is
-  // answered, and looses again. That is wired. `archer-volley` still is not.
-  'archer-volley': 'firing past an intervening unit means nothing at range 1',
-
-
-  // ---- the horse
-
-  // ---- the Paladin and the Mage. Their "no longer costs the whole turn"
-  // halves landed together, as the note here said they should; what is left
-  // of each wants machinery nothing has yet.
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -216,10 +177,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 29 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(7);
-    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(6);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(29);
+    // point. 32 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(4);
+    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(7);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(32);
   });
 });
 
@@ -1052,5 +1013,71 @@ describe('the knitting troll and the sappers who stand together', () => {
     UPGRADES.enabled = false;
     expect(sparedByBlast(a, b)).toBe(false);
     expect(knitsMidFight(knitter)).toBe(false);
+  });
+});
+
+describe('Jeremy’s three rulings of 2026-10-30', () => {
+  /**
+   * All three were written as something this engine cannot do, and all three
+   * were found by measuring rather than reading. The replacements are his.
+   */
+  it('gives a Volley Archer a second opening shot', () => {
+    const state = game();
+    const volley = put(state, 1, 'archer', 5, 5, 'archer-volley');
+    const plain = put(state, 1, 'archer', 5, 9);
+    const mark = put(state, 0, 'orc', 6, 5);
+    expect(firstStrikesOf(volley, mark)).toBe(firstStrikesOf(plain, mark) + VOLLEY.firstStrikes);
+    UPGRADES.enabled = false;
+    expect(firstStrikesOf(volley, mark)).toBe(firstStrikesOf(plain, mark));
+  });
+
+  it('breaks the line a Bonebreaker is fighting, during the fight', () => {
+    const state = game();
+    const breaker = put(state, 0, 'troll', 5, 5, 'troll-bonebreaker');
+    const plain = put(state, 0, 'troll', 5, 9);
+    const mark = put(state, 1, 'footman', 6, 5);
+    expect(piercesDefence(breaker)).toBe(BONEBREAKER.pierces);
+    expect(piercesDefence(plain)).toBe(0);
+    expect(defenseStrength(state, mark, breaker).total).toBeLessThan(
+      defenseStrength(state, mark, plain).total,
+    );
+  });
+
+  it('carries an Elder Dragon’s breath further, and costs it a move', () => {
+    const state = game();
+    const elder = put(state, 0, 'dragon', 5, 5, 'dragon-elder');
+    const plain = put(state, 0, 'dragon', 5, 12);
+    expect(breathShare(elder, BREATH_CARRY)).toBeGreaterThan(BREATH_CARRY);
+    expect(breathShare(plain, BREATH_CARRY)).toBe(BREATH_CARRY);
+    // A dragon has four movement points, so one off is a real price rather
+    // than the standstill a flat -1 would have been for an orc.
+    expect(upgradeMoves(elder)).toBe(-1);
+    expect(unitType('dragon').move).toBeGreaterThan(2);
+  });
+
+  it('burns more off the thing behind the line', () => {
+    const state = game();
+    const elder = put(state, 0, 'dragon', 5, 5, 'dragon-elder');
+    const plain = put(state, 0, 'dragon', 5, 12);
+    const markA = put(state, 1, 'footman', 6, 5);
+    const behindA = put(state, 1, 'footman', 7, 5);
+    const markB = put(state, 1, 'footman', 6, 12);
+    const behindB = put(state, 1, 'footman', 7, 12);
+    const was = { a: behindA.hp, b: behindB.hp };
+    breatheThrough(state, elder, markA, 8);
+    breatheThrough(state, plain, markB, 8);
+    expect(was.a - behindA.hp, 'an older dragon carries further').toBeGreaterThan(
+      was.b - behindB.hp,
+    );
+  });
+
+  it('does none of the three with the box unticked', () => {
+    const state = game();
+    const elder = put(state, 0, 'dragon', 5, 5, 'dragon-elder');
+    const breaker = put(state, 0, 'troll', 9, 9, 'troll-bonebreaker');
+    UPGRADES.enabled = false;
+    expect(breathShare(elder, BREATH_CARRY)).toBe(BREATH_CARRY);
+    expect(piercesDefence(breaker)).toBe(0);
+    expect(upgradeMoves(elder)).toBe(0);
   });
 });

@@ -12836,12 +12836,37 @@ Brute would have healed two short of its own maximum for ever. Also the health
 bar, the sidebar's `12 / 15`, the AI's retreat threshold and the recruiting
 discount. All six read `maxHp` now.
 
+### Jeremy's three rulings, 2026-10-30
+
+All three lines had been written as something this engine cannot do, and all
+three were found by measuring rather than reading.
+
+**`archer-volley`** -- *"any unit in range regardless of intervening units"*,
+at range 1. What an Archer has instead of range is the free opening blow, so a
+Volley Archer gets **two of them**.
+
+**`troll-bonebreaker`** -- the lasting debuff that could never land, since no
+melee fight leaves a survivor. Applied **during the fight** instead, where the
+bone actually breaks. It shares `piercesDefence` with `axethrower-heavy`,
+which is the cost of this reading and was the stated trade-off.
+
+**`dragon-elder`** -- keep the stronger breath, pay for it somewhere the game
+can express. An Elder Dragon is a **slower** dragon, which is also what
+"circling to line up the shot" should look like. Four movement points, so one
+off is a real price rather than the standstill `orc-guardian` would have been.
+
 ### What is left
 
-**Seven upgrades still do nothing**, each with its reason in the test:
-`sapper-tunnel` (impassable ground), `troll-bonebreaker` and `dragon-elder`
-and `archer-volley` (all three waiting on a design call), `dragon-rider`, and
-the two Death Knight skeleton lines.
+**Four upgrades**, and they are two jobs. `sapper-tunnel` wants a unit-aware
+notion of impassable ground. `dragon-rider` wants the ship mechanism, for
+something that flies.
+
+And the two Death Knight lines, which are **blocked on design rather than on
+work**: `raising.ts` says who may be raised and the art is drawn, but what a
+raised unit *is* -- its stats, its lifespan, the chance of one, and what the
+ancient skeleton the Unbound leave behind is made of -- is five invented
+numbers and a structural decision. Those are Jeremy's, like the five readings
+before them.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with

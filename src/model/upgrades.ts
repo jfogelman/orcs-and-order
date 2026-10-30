@@ -366,9 +366,16 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Elder Dragon',
     needs: 'even-more-fire',
     blurb:
-      'Breath damage increases, but flying over enemy cities costs double ' +
-      'movement (circling to line up the shot).',
+      'Its breath carries further through the line, but it is slower: one ' +
+      'movement point gone to circling.',
     flavour: 'The Horde\'s one plan, now with more commitment to the bit.',
+    // The drawback the bible gave it -- double movement over enemy cities --
+    // is a manoeuvre this game has no rule for: no unit may enter an enemy
+    // city tile by pathing at all. Jeremy's ruling of 2026-10-30 moved the
+    // cost somewhere the game can express. A dragon has four movement points,
+    // so one off is a real price rather than the standstill `orc-guardian`
+    // would have been.
+    effect: { moves: -1 },
   },
   {
     id: 'dragon-rider',

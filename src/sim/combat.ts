@@ -2,6 +2,7 @@ import { distance, idx } from '../engine/grid';
 import {
   axesCarried,
   BRAWLER,
+  breathShare,
   breathSpares,
   conditionDefence,
   KNIT,
@@ -347,7 +348,8 @@ export function breatheThrough(
   // mechanic -- it simply stops at its own. Finally learns to aim.
   if (behind.owner === attacker.owner && breathSpares(attacker)) return null;
 
-  const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
+  // Section 155, `dragon-elder`: an older dragon's breath carries further through.
+  const carried = Math.max(1, Math.round(damageDealt * breathShare(attacker, BREATH_CARRY)));
   applyDamage(behind, carried, damageKindOf(attacker));
   log(
     state,

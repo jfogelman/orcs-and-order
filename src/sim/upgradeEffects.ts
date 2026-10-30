@@ -215,6 +215,11 @@ export function firstStrikesOf(unit: Unit, against?: Unit): number {
   // only upgrade in the thirty-six whose effect depends on *what it is
   // fighting* -- hence the second parameter, which every other caller omits.
   if (against && hasUpgrade(unit, 'knight-lance') && isMounted(against)) n += LANCE.firstStrikes;
+  // `archer-volley`, on Jeremy's reading of 2026-10-30. The bible's "any unit
+  // in range regardless of intervening units" means nothing at range 1, and
+  // what an Archer has instead of range is the free opening blow -- so a
+  // Volley Archer gets two of them.
+  if (hasUpgrade(unit, 'archer-volley')) n += VOLLEY.firstStrikes;
   return Math.max(0, n);
 }
 
@@ -256,6 +261,15 @@ export const MARKSMAN = { firstStrikes: 1 };
 
 /** What a lance is worth against something on a horse. */
 export const LANCE = { firstStrikes: 1 };
+
+/** A second opening shot, for the archer line that could not have range. */
+export const VOLLEY = { firstStrikes: 1 };
+
+/** What a broken bone costs the line it was holding. */
+export const BONEBREAKER = { pierces: 1 };
+
+/** How much more of the blow an Elder Dragon's breath carries through. */
+export const ELDER = { carries: 0.3 };
 
 /** What a Sergeant's Footmen shrug off, once a fight. */
 export const SERGEANT = { ignores: 1 };
@@ -356,7 +370,31 @@ export function axesCarried(unit: Unit): number {
  */
 export function piercesDefence(attacker: Unit | undefined): number {
   if (!UPGRADES.enabled || !attacker) return 0;
-  return hasUpgrade(attacker, 'axethrower-heavy') ? HEAVY.pierces : 0;
+  if (hasUpgrade(attacker, 'axethrower-heavy')) return HEAVY.pierces;
+  // `troll-bonebreaker`, on Jeremy's reading of 2026-10-30. Written as a
+  // debuff lasting two turns, which a probe found can never land: 0 of 2160
+  // melee fights leave both sides alive. Applied to the fight instead, where
+  // the bone actually breaks.
+  if (hasUpgrade(attacker, 'troll-bonebreaker')) return BONEBREAKER.pierces;
+  return 0;
+}
+
+/**
+ * What share of a dragon's blow carries into the tile behind. Section 155.
+ *
+ * `dragon-elder` is *"breath damage increases"*, and the carry-through is the
+ * part of a dragon's attack that is actually the breath -- everything else
+ * about it is an ordinary fight. So that is what gets stronger.
+ *
+ * Its written drawback was flying over enemy cities at double cost, which no
+ * unit in this game may do at all. Jeremy's ruling on 2026-10-30 was to keep
+ * the stronger breath and pay for it somewhere the game can express: an Elder
+ * Dragon is a *slower* dragon, which is also what "circling to line up the
+ * shot" should look like. It has four movement points, so one off is a real
+ * cost and not the trap `orc-guardian` fell into.
+ */
+export function breathShare(attacker: Unit, base: number): number {
+  return UPGRADES.enabled && hasUpgrade(attacker, 'dragon-elder') ? base + ELDER.carries : base;
 }
 
 /** Whether this unit might find its axe again before the slow walk back. */
