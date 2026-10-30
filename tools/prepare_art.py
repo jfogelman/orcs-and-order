@@ -834,6 +834,21 @@ FACTION_FOLDER_ALIASES: dict[str, list[str]] = {
 }
 
 
+# Folders that hold one kind of art but are not named for it.
+#
+# Section 155's upgrades arrived as a tree of their own -- the sprites at the
+# top, the attack strips and weakened sheets in subfolders beside them -- and
+# every one of those is an ordinary unit sheet that the existing passes already
+# know how to slice. Listing the folders here is the whole of the wiring: the
+# attack and state scans walk them, name each sheet through `split_variant`
+# (which reads `orc-veteran` as the orc carrying something, exactly as it reads
+# `ogre-quake`), and nothing else has to learn that upgrades exist.
+EXTRA_SOURCE_DIRS: dict[str, list[str]] = {
+    "unit effects": ["unit upgrades/attack animations"],
+    "unit states": ["unit upgrades/weakened state"],
+}
+
+
 def source_dirs(folder: Path) -> list[Path]:
     """
     Where a given kind of art may be filed: the flat folder, then each faction's.
@@ -848,6 +863,10 @@ def source_dirs(folder: Path) -> list[Path]:
         rel = folder.relative_to(SRC)
     except ValueError:
         return out
+    for extra in EXTRA_SOURCE_DIRS.get(rel.as_posix(), []):
+        candidate = SRC / extra
+        if candidate.is_dir():
+            out.append(candidate)
     inside = FACTION_FOLDER_ALIASES.get(rel.as_posix(), [rel.as_posix()])
     for root in faction_roots():
         for name in inside:
@@ -2122,6 +2141,79 @@ def wild_sheets(suffix: str, *folders: str) -> list[tuple[Path, str]]:
     return found
 
 
+def process_upgrade_art(force: bool) -> tuple[int, list[str], list[str]]:
+    """
+    Section 155's upgrade sprites and advance icons.
+
+    **Scanned, not listed.** Every other pass in this file walks a table --
+    `CREATURES`, `TECH_ICONS` -- and those tables are copies of
+    `src/model/*.ts` maintained by hand. Adding thirty-six upgrades and
+    thirty-six advances to them would be seventy-two more lines to keep in
+    step with a file this one cannot read, and this project has been caught by
+    that shape often enough to stop doing it on purpose.
+    So the folder is the list: a sprite named `orc-veteran.jpg` becomes
+    `units/orc-veteran.png`, and an icon named `bigger-trolls.jpg` becomes
+    `tech/bigger-trolls.png`. The names are already the ids.
+    What checks them is on the TypeScript side, where the ids actually live:
+    `tests/upgrades.test.ts` pairs every upgrade with its advance in both
+    directions, and `tests/art-present.test.ts` fails for an advance with no
+    icon. A sprite dropped here under a name nothing uses is reported below
+    rather than written out silently.
+
+    The attack strips and weakened sheets are *not* here. They are ordinary
+    unit sheets that need slicing into frames, and the two passes that already
+    do that walk these folders through `EXTRA_SOURCE_DIRS`.
+    """
+    sprites = SRC / "unit upgrades"
+    if not sprites.is_dir():
+        return 0, [], []
+
+    known = set(CREATURES) | set(WILDS)
+    done = 0
+    problems: list[str] = []
+
+    jobs: list[tuple[Path, Path, int]] = []
+    out_units = OUT / "units"
+    out_units.mkdir(parents=True, exist_ok=True)
+    for path in sorted(sprites.iterdir(), key=lambda p: p.name.lower()):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        base, variant = normalise_stem(path.stem)
+        name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+        if split_variant(name, known) is None:
+            # Not "unknown art": a sprite whose name does not begin with a
+            # creature cannot be an upgrade of anything, and writing it out
+            # would put a file in `units/` that no unit will ever ask for.
+            problems.append(f"{path.name}: '{name}' is not a known creature and a variant")
+            continue
+        jobs.append((path, out_units / f"{name}.png", UNIT_SIZE))
+
+    icons = sprites / "tech updates"
+    if icons.is_dir():
+        out_tech = OUT / "tech"
+        out_tech.mkdir(parents=True, exist_ok=True)
+        for path in sorted(icons.iterdir(), key=lambda p: p.name.lower()):
+            if path.suffix.lower() not in IMAGE_SUFFIXES:
+                continue
+            base, _variant = normalise_stem(path.stem)
+            name = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+            jobs.append((path, out_tech / f"{name}.png", ICON_SIZE))
+
+    for path, target, size in jobs:
+        if target.exists() and not force and target.stat().st_mtime > path.stat().st_mtime:
+            continue
+        img, cut_out = remove_background(Image.open(path))
+        img = trim_and_square(img, size)
+        img.save(target, optimize=True)
+        flag = "" if cut_out else "   <-- BACKGROUND NOT REMOVED, needs a re-roll"
+        rel = target.relative_to(OUT).as_posix()
+        print(f"  {rel}  {target.stat().st_size // 1024}KB{flag}")
+        if not cut_out:
+            problems.append(f"{target.stem}: background would not key")
+        done += 1
+    return done, [], problems
+
+
 def process_unit_effects(force: bool) -> tuple[int, list[str], list[str]]:
     """
     Per-creature attack animations, sliced the same way the effect strips are.
@@ -3073,6 +3165,12 @@ def main() -> int:
     units += wilds
     missing_units.extend(missing_wilds)
     failed_units.extend(failed_wilds)
+    # Section 155, and after the creatures: an upgrade's sprite is a variant of
+    # one of them, and its attack strip is matched against the idle sheet.
+    print("Unit upgrades:")
+    ups, _missing_ups, failed_ups = process_upgrade_art(force)
+    units += ups
+    failed_units.extend(failed_ups)
     print("Cities:")
     cities, missing_cities, failed_cities = process_cutouts("cities", CITIES, force)
     hives, missing_hives, failed_hives = process_aliased(
