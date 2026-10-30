@@ -1,6 +1,9 @@
 import { distance, idx } from '../engine/grid';
 import {
+  axesCarried,
   BRAWLER,
+  breathSpares,
+  conditionDefence,
   SERGEANT,
   blastRadius,
   firstStrikesOf,
@@ -8,6 +11,7 @@ import {
   shrugsFirstBlow,
   upgradeAttack,
   upgradeDefence,
+  piercesDefence,
   wardShare,
 } from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
@@ -310,6 +314,8 @@ export function rearm(state: GameState, unit: Unit, how: string): void {
   unit.disarmed = false;
   // Whichever way the axe came back, the slow way is no longer pending.
   delete unit.rearmIn;
+  // And it has a full hand again, which for a Twin Thrower is two.
+  delete unit.axesThrown;
   log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
 }
 
@@ -333,6 +339,10 @@ export function breatheThrough(
   const by = target.y + (target.y - attacker.y);
   const behind = state.units.find((u) => u.x === bx && u.y === by);
   if (!behind) return null;
+  // Section 155, `dragon-wyrm`: *"no longer has the carries-into-the-tile-
+  // behind friendly-fire risk"*. It still carries on -- that is the whole
+  // mechanic -- it simply stops at its own. Finally learns to aim.
+  if (behind.owner === attacker.owner && breathSpares(attacker)) return null;
 
   const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
   applyDamage(behind, carried, damageKindOf(attacker));
@@ -479,7 +489,12 @@ export function defenseStrength(
   // Section 155, the other foot. Floored at zero rather than at `COWED.floor`,
   // since a Berserker deliberately gives a point up and ought to be allowed
   // to -- and guarded the same way, so a game without upgrades is untouched.
-  const shielded = upgradeDefence(state, defender);
+  //
+  // `piercesDefence` is the attacker's contribution: a Heavy Thrower's target
+  // holds the line one point worse. Taken off the base with everything else,
+  // so it scales with the headcount the way a point of drill does.
+  const shielded =
+    upgradeDefence(state, defender) + conditionDefence(defender) - piercesDefence(attacker);
   if (shielded !== 0) total = Math.max(0, total + shielded);
   // Section 152: The Standing Watch, which guards one settlement and has not
   // been told what it used to guard. Added to the base, so it scales with the
@@ -806,8 +821,15 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
     // And for a thrower, the free blow *is* the axe leaving its hand. It gets
     // the rest of the fight without one, and fetches it back afterwards.
     if (unitType(striker.type).throwsWeapon && !striker.disarmed) {
-      striker.disarmed = true;
-      striker.rearmIn = REARM_TURNS;
+      // Section 155, `axethrower-twin`: a second axe, so the hand is not
+      // empty until both have gone. An ordinary thrower carries one and is
+      // disarmed by its first throw, exactly as before.
+      const thrown = (striker.axesThrown ?? 0) + 1;
+      striker.axesThrown = thrown;
+      if (thrown >= axesCarried(striker)) {
+        striker.disarmed = true;
+        striker.rearmIn = REARM_TURNS;
+      }
       // Says so out loud, which is also what puts the axe on the screen: the
       // interface reads this cue and throws the animation along the same line.
       // Without it the one throw in the game had no picture at all.
@@ -901,7 +923,6 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   applySpellEffects(state, defender, attacker);
   clubEffects(state, attacker, defender);
   brawlerSwing(state, attacker, defender);
-
   return {
     attackerId: attacker.id,
     defenderId: defender.id,

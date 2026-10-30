@@ -355,6 +355,16 @@ export interface Unit {
    */
   rearmIn?: number;
   /**
+   * Axes thrown since it last picked one up. Section 155.
+   *
+   * `disarmed` is a boolean and an ordinary thrower has one axe, so the two
+   * said the same thing and only one of them was needed. `axethrower-twin`
+   * carries a second, which is a count -- and a count is what `disarmed` can
+   * no longer be inferred from. Cleared by `rearm`, absent on every save
+   * before this, which reads as nothing thrown.
+   */
+  axesThrown?: number;
+  /**
    * Whether this unit has already used its one reprieve.
    *
    * Only ever set on a sapper that took Mostly Volatile. Absent means it still
@@ -536,7 +546,7 @@ export type AutoBuild = 'ask' | 'repeat' | 'coin' | 'beakers';
  * Deliberately separate from `disarmed`, which is a bare boolean with no
  * duration and ends by killing something rather than by waiting.
  */
-export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed';
+export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed' | 'blessed';
 
 export interface Status {
   kind: StatusKind;

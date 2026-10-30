@@ -12760,12 +12760,57 @@ reduction is a coin that lands on "nothing" unless it exceeds 50%. Three
 upgrades in this bible are written as percentages; the next one wants this
 checked before it is believed.
 
+### The third batch: the axethrower, a blessing, and a dragon that aims
+
+**The axethrower's three were one mechanism**, as the unwired list had said.
+`axethrower-twin` forced `Unit.axesThrown` to exist: `disarmed` is a boolean,
+and for a creature with one axe a boolean and a count are the same thing,
+which is why nothing noticed until there were two. `axethrower-retriever`
+rolls *before* the countdown rather than instead of it, so an unlucky
+Retriever still gets its axe back the slow way and is never worse off than an
+ordinary thrower.
+
+**`axethrower-heavy` needed a new reading**, the third of those. *"Thrown
+strikes ignore 1 point of target defense"*, and in this engine a thrown strike
+does not consult defence at all -- the free opening blow deals
+`damagePerRound`, which is a function of health. The nearest true sentence is
+about the fight the throw opens, so a Heavy Thrower's target holds the line
+one point worse, read in `defenseStrength`, which already takes the attacker
+for the sake of siege engines.
+
+**`paladin-champion`** brought the game its first condition applied by an
+upgrade rather than a spell: `blessed`, worth a point of defence for a turn.
+Applied even to somebody already at full health, because a Champion standing
+over the unhurt is still worth standing next to, and that is the half of it
+that makes it more than a bigger heal.
+
+**`dragon-wyrm`** stops the breath at its own front rank. It still carries on
+-- that is the whole mechanic -- it simply stops cooking orcs.
+
+### And a fourth thing the engine would not do
+
+**`troll-bonebreaker` was built, wired and deleted again.** *"Attacks reduce
+target's defense by 1 for 2 turns"* needs the target to still be standing, and
+a probe over **2160 melee fights found not one that left both sides alive**.
+`resolveCombat` runs until somebody dies; the one exception is a withdrawal
+perk that did not fire a single time in that sample. The `broken` status went
+in and came straight back out with it.
+
+Two readings would work, and the choice is Jeremy's: apply it at the *start*
+of the fight, which makes it `axethrower-heavy` under another name, or make it
+an aura on adjacent enemies like `deathknight-dread`.
+
+**That is now four upgrades whose wording describes a different game** -- the
+Archer's range, the orc's movement point, the Warden's percentage and this.
+All four were found by measuring rather than reading, and three of them only
+after they had been written and were passing their tests.
+
 ### What is left
 
-**Fourteen upgrades still do nothing**, each with its reason in the test. They
-group into five jobs rather than fourteen: the axethrower's throw machinery, a
-lasting-debuff status, the raised-skeleton rule, the dragon, and the two
-sapper lines that need a notion of impassable ground and of a pair.
+**Nine upgrades still do nothing**, each with its reason in the test: the two
+sapper lines (impassable ground, and a notion of a pair), `troll-regen`,
+`troll-bonebreaker` above, the two Death Knight skeleton lines, `dragon-elder`
+and `dragon-rider`, and `archer-volley`, which means nothing at range 1.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with

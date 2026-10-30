@@ -1,5 +1,6 @@
 import { DIRS8, distance, idx } from '../engine/grid';
-import { hasUpgrade, keepsItsTurn, upgradeReach } from './upgradeEffects';
+import { CHAMPION, hasUpgrade, keepsItsTurn, upgradeReach } from './upgradeEffects';
+import { UPGRADES } from '../model/upgrades';
 import { hostile, noteClash } from './diplomacy';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
@@ -321,6 +322,14 @@ function healFriend(state: GameState, unit: Unit, target: Unit): AbilityOutcome 
   // Section 155, `paladin-warden`: the same sentence as `mage-battle`, for the
   // other ability that costs a whole turn.
   if (!keepsItsTurn(unit, 'heal')) unit.moves = 0;
+  // Section 155, `paladin-champion`: *"heal also grants +1 defense for one
+  // turn to the healed unit"*. Applied before the "already full" branch
+  // below, because a Champion standing over somebody unhurt is still worth
+  // standing next to -- and that is the half of this upgrade that makes it
+  // more than a bigger heal.
+  if (UPGRADES.enabled && hasUpgrade(unit, 'paladin-champion')) {
+    applyStatus(target, 'blessed', CHAMPION.turns);
+  }
 
   if (target.hp >= ceiling) {
     log(

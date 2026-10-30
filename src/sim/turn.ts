@@ -1,5 +1,5 @@
 import { checkEndings, isEndingPiece } from './endings';
-import { movesThisTurn, upgradeMoves } from './upgradeEffects';
+import { movesThisTurn, RETRIEVER, retrievesAxe, upgradeMoves } from './upgradeEffects';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
@@ -28,7 +28,7 @@ import {
 } from './city';
 import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
-import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
+import { contenders, log, playerCities, playerUnits, recomputeVisibility, withRng } from './gamestate';
 import { noticeStrangers } from './noticing';
 import { UNSEEN_TRACE, forgetSpotted, goesUnseen } from './unseen';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
@@ -223,6 +223,15 @@ function refreshUnits(state: GameState, player: Player): void {
       delete unit.job;
     }
     // The axe was thrown, not destroyed. Given a moment, it is fetched back.
+    //
+    // Section 155, `axethrower-retriever`: *"chance to recover a thrown axe at
+    // the start of next turn"*. Rolled before the countdown rather than
+    // instead of it, so a Retriever that is unlucky still gets its axe back
+    // the slow way and is never worse off than an ordinary thrower.
+    if (unit.disarmed && retrievesAxe(unit) && withRng(state, (rng) => rng.chance(RETRIEVER.odds))) {
+      delete unit.rearmIn;
+      rearm(state, unit, 'spots its axe lying nearby and has it back at once');
+    }
     if (unit.disarmed && unit.rearmIn !== undefined) {
       unit.rearmIn -= 1;
       if (unit.rearmIn <= 0) {

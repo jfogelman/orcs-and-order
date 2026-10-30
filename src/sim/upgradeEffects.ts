@@ -2,6 +2,7 @@ import { UPGRADES, UPGRADES_BY_ID } from '../model/upgrades';
 import type { UpgradeDef, UpgradeEffect } from '../model/upgrades';
 import { unitType, maxHp } from '../model/units';
 import { isMounted } from './follyEffects';
+import { hasStatus } from './status';
 import type { GameState, Unit } from '../model/types';
 import { distance } from '../engine/grid';
 
@@ -327,3 +328,73 @@ export const WARD = { share: 0.5 };
 export function wardShare(unit: Unit): number {
   return hasUpgrade(unit, 'mage-warden') ? WARD.share : 0;
 }
+
+/**
+ * How many axes this thrower has to throw before it is empty-handed.
+ *
+ * One, unless it is `axethrower-twin`, which carries a spare: *"can throw
+ * twice before dropping to reduced strength"*. The count is what forced
+ * `Unit.axesThrown` to exist -- `disarmed` is a boolean, and for a creature
+ * with one axe a boolean and a count are the same thing, which is why nothing
+ * noticed until there were two.
+ */
+export function axesCarried(unit: Unit): number {
+  return 1 + (UPGRADES.enabled && hasUpgrade(unit, 'axethrower-twin') ? TWIN.spare : 0);
+}
+
+/**
+ * Defence this attacker's blows go straight through. Section 155.
+ *
+ * `axethrower-heavy` is *"thrown strikes ignore 1 point of target defense"*,
+ * and in this engine **a thrown strike does not consult defence at all** --
+ * the free opening blow deals `damagePerRound`, which is a function of health.
+ * So the sentence has no literal home, and the nearest true one is the fight
+ * the throw opens: a Heavy Thrower's target holds the line one point worse.
+ *
+ * Read in `defenseStrength`, which already takes the attacker for the sake of
+ * siege engines, so this costs no new plumbing.
+ */
+export function piercesDefence(attacker: Unit | undefined): number {
+  if (!UPGRADES.enabled || !attacker) return 0;
+  return hasUpgrade(attacker, 'axethrower-heavy') ? HEAVY.pierces : 0;
+}
+
+/** Whether this unit might find its axe again before the slow walk back. */
+export function retrievesAxe(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'axethrower-retriever');
+}
+
+/** The spare axe, the point it goes through, and the odds of finding one again. */
+export const TWIN = { spare: 1 };
+export const HEAVY = { pierces: 1 };
+/**
+ * An invented number, like every first answer here. Half, so a Retriever
+ * averages one turn without its axe where `REARM_TURNS` is two -- worth
+ * having, and short of the Twin Thrower's second axe, which is certain.
+ */
+export const RETRIEVER = { odds: 0.5 };
+
+/**
+ * What a condition is worth to a defence. Section 155.
+ *
+ * `paladin-champion` puts `blessed` on whatever it heals. Read here rather
+ * than in `status.ts` because it is an upgrade rule first and a condition
+ * second -- nothing else in the game applies it, and with the upgrades
+ * switched off it can never appear at all.
+ *
+ * It had a twin, briefly. `troll-bonebreaker` was going to put `broken` on
+ * whatever a troll hit, until a probe found that **zero of 2160 melee fights
+ * leave both sides alive** -- so a lasting debuff on a combat survivor can
+ * never fire. See the unwired list.
+ */
+export function conditionDefence(unit: Unit): number {
+  return hasStatus(unit, 'blessed') ? CHAMPION.defence : 0;
+}
+
+/** Whether this dragon's breath spares whatever of its own is behind the line. */
+export function breathSpares(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'dragon-wyrm');
+}
+
+/** What a Champion's blessing is worth, and for how long. */
+export const CHAMPION = { defence: 1, turns: 1 };

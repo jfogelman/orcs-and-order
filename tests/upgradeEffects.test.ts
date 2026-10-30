@@ -13,6 +13,13 @@ import {
   keepsItsTurn,
   LANCE,
   movesThisTurn,
+  axesCarried,
+  breathSpares,
+  CHAMPION,
+  conditionDefence,
+  HEAVY,
+  piercesDefence,
+  retrievesAxe,
   shrugsFirstBlow,
   WARD,
   neighbours,
@@ -24,6 +31,9 @@ import {
 import {
   applyDamage,
   attackStrength,
+  breatheThrough,
+  rearm,
+  REARM_TURNS,
   defenseStrength,
   detonate,
   MAX_RESIST,
@@ -31,6 +41,8 @@ import {
   resolveCombat,
 } from '../src/sim/combat';
 import { tryStep } from '../src/sim/movement';
+import { beginPlayerTurn } from '../src/sim/turn';
+import { applyStatus, clearStatus, hasStatus } from '../src/sim/status';
 import { runAiTurn } from '../src/ai/ai';
 import {
   abilitiesOf,
@@ -101,15 +113,21 @@ const UNWIRED: Record<string, string> = {
   'sapper-tunnel': 'moving through impassable ground is a movement rule, not a combat one',
   'sapper-cadre': 'the paired-risk rule needs a notion of a pair, which nothing has',
 
-  // ---- the axe, which leaves the hand. `disarmed`, `rearmIn` and the
-  // first-strike throw are one mechanism and these three all edit it.
-  'axethrower-twin': 'two throws needs a count where `disarmed` is a boolean',
-  'axethrower-retriever': 'a chance at the start of a turn; `rearmIn` is a fixed countdown',
-  'axethrower-heavy': 'ignoring a point of defence has to happen inside the throw, not the stack',
 
   // ---- the troll
   'troll-regen': 'healing mid-combat means a heal inside the round loop, which has none',
-  'troll-bonebreaker': 'a lasting debuff on the target wants a status, like `cowed`',
+  // **Measured, after it was built and found never to fire.** A lasting
+  // debuff on whatever a troll hit needs whatever a troll hit to still be
+  // standing, and a probe over 2160 melee fights found **not one** that left
+  // both sides alive: `resolveCombat` runs until somebody dies, and the only
+  // exception is a withdrawal perk that did not fire once either. The
+  // `broken` status was written, wired and deleted again.
+  //
+  // Two readings would work and the choice is a design one: apply it at the
+  // *start* of the fight, which makes it `axethrower-heavy` under another
+  // name, or make it an aura on adjacent enemies like `deathknight-dread`.
+  'troll-bonebreaker':
+    'a lasting debuff needs a survivor, and 0 of 2160 melee fights left both sides alive',
 
   // ---- the ogre
 
@@ -121,7 +139,6 @@ const UNWIRED: Record<string, string> = {
   // ---- the dragon
   'dragon-elder': 'breath damage plus a movement cost over enemy cities, which is two systems',
   'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',
-  'dragon-wyrm': 'the carry-through is in `breatheThrough`, and suppressing it is that rule inverted',
 
   // ---- the Kingdom's foot
 
@@ -139,7 +156,6 @@ const UNWIRED: Record<string, string> = {
   // ---- the Paladin and the Mage. Their "no longer costs the whole turn"
   // halves landed together, as the note here said they should; what is left
   // of each wants machinery nothing has yet.
-  'paladin-champion': 'heal granting defence wants the same lasting-buff machinery as the troll',
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -190,10 +206,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 22 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(14);
+    // point. 27 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(9);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(6);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(22);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(27);
   });
 });
 
@@ -802,5 +818,166 @@ describe('the ward at a granularity where a half does not exist', () => {
     const warden = put(state, 1, 'mage', 5, 5, 'mage-warden');
     expect(applyDamage(warden, 8, 'physical'), 'halved once').toBe(4);
     expect(applyDamage(warden, 8, 'physical'), 'and once, every time').toBe(4);
+  });
+});
+
+describe('the axethrower’s three, which are all one mechanism', () => {
+  /** A fight the thrower opens, so the axe actually leaves its hand. */
+  function throwAt(state: GameState, thrower: Unit): Unit {
+    const mark = put(state, 1, 'footman', thrower.x + 1, thrower.y);
+    resolveCombat(state, thrower, mark);
+    return mark;
+  }
+
+  it('leaves a Twin Thrower an axe after the first fight', () => {
+    const state = game();
+    const twin = put(state, 0, 'axethrower', 5, 5, 'axethrower-twin');
+    const plain = put(state, 0, 'axethrower', 5, 9);
+    expect(axesCarried(twin)).toBe(2);
+    expect(axesCarried(plain)).toBe(1);
+    throwAt(state, plain);
+    expect(plain.disarmed, 'one axe, and it has gone').toBe(true);
+    twin.hp = unitType(twin.type).hp;
+    throwAt(state, twin);
+    expect(twin.axesThrown).toBe(1);
+    expect(twin.disarmed, 'still has the spare').toBe(false);
+  });
+
+  it('empties a Twin Thrower’s hands on the second throw', () => {
+    const state = game();
+    const twin = put(state, 0, 'axethrower', 5, 5, 'axethrower-twin');
+    twin.axesThrown = 1;
+    throwAt(state, twin);
+    expect(twin.axesThrown).toBe(2);
+    expect(twin.disarmed).toBe(true);
+    expect(twin.rearmIn).toBeGreaterThan(0);
+  });
+
+  it('gives the hand back full when the axe is fetched', () => {
+    const state = game();
+    const twin = put(state, 0, 'axethrower', 5, 5, 'axethrower-twin');
+    twin.disarmed = true;
+    twin.axesThrown = 2;
+    rearm(state, twin, 'picks them up');
+    expect(twin.disarmed).toBe(false);
+    expect(twin.axesThrown, 'both of them, not one').toBeUndefined();
+  });
+
+  it('lowers the line a Heavy Thrower opens on, and nobody else’s', () => {
+    const state = game();
+    const heavy = put(state, 0, 'axethrower', 5, 5, 'axethrower-heavy');
+    const plain = put(state, 0, 'axethrower', 5, 9);
+    const mark = put(state, 1, 'footman', 6, 5);
+    expect(piercesDefence(heavy)).toBe(HEAVY.pierces);
+    expect(piercesDefence(plain)).toBe(0);
+    expect(piercesDefence(undefined), 'nobody attacking at all').toBe(0);
+    expect(defenseStrength(state, mark, heavy).total).toBeLessThan(
+      defenseStrength(state, mark, plain).total,
+    );
+  });
+
+  it('never drops a defence below nothing', () => {
+    const state = game();
+    const heavy = put(state, 0, 'axethrower', 5, 5, 'axethrower-heavy');
+    const mark = put(state, 1, 'peasant', 6, 5);
+    expect(defenseStrength(state, mark, heavy).total).toBeGreaterThanOrEqual(0);
+  });
+
+  it('gives a Retriever its axe back early, and never late', () => {
+    const state = game();
+    const quick = put(state, 0, 'axethrower', 5, 5, 'axethrower-retriever');
+    expect(retrievesAxe(quick)).toBe(true);
+    expect(retrievesAxe(put(state, 0, 'axethrower', 5, 9))).toBe(false);
+    quick.disarmed = true;
+    quick.rearmIn = REARM_TURNS;
+    // Rolled, so run it until it lands rather than asserting one coin toss.
+    let turns = 0;
+    while (quick.disarmed && turns < 20) {
+      turns++;
+      beginPlayerTurn(state, 0);
+    }
+    expect(quick.disarmed, 'it got the axe back').toBe(false);
+    expect(turns, 'and never slower than the long walk').toBeLessThanOrEqual(REARM_TURNS);
+  });
+
+  it('does none of the three with the box unticked', () => {
+    const state = game();
+    const twin = put(state, 0, 'axethrower', 5, 5, 'axethrower-twin');
+    const heavy = put(state, 0, 'axethrower', 5, 9, 'axethrower-heavy');
+    const quick = put(state, 0, 'axethrower', 5, 12, 'axethrower-retriever');
+    UPGRADES.enabled = false;
+    expect(axesCarried(twin)).toBe(1);
+    expect(piercesDefence(heavy)).toBe(0);
+    expect(retrievesAxe(quick)).toBe(false);
+  });
+});
+
+describe('the blessing, and the dragon that learned to aim', () => {
+  it('blesses whoever a Champion patches up, even at full health', () => {
+    const state = game();
+    const champ = put(state, 1, 'paladin', 5, 5, 'paladin-champion');
+    const plain = put(state, 1, 'paladin', 5, 12);
+    const mended = put(state, 1, 'footman', 6, 5);
+    const other = put(state, 1, 'footman', 6, 12);
+    mended.hp = 1;
+    other.hp = 1;
+    useAbility(state, champ, 'heal', mended);
+    useAbility(state, plain, 'heal', other);
+    expect(hasStatus(mended, 'blessed')).toBe(true);
+    expect(hasStatus(other, 'blessed'), 'an ordinary paladin only heals').toBe(false);
+    expect(defenseStrength(state, mended).total).toBeGreaterThan(
+      defenseStrength(state, other).total,
+    );
+  });
+
+  it('reads the blessing off the defence, and nothing once it lapses', () => {
+    const state = game();
+    const unit = put(state, 1, 'footman', 5, 5);
+    const plain = put(state, 1, 'footman', 9, 9);
+    expect(conditionDefence(unit)).toBe(0);
+    applyStatus(unit, 'blessed', 1);
+    expect(conditionDefence(unit)).toBe(CHAMPION.defence);
+    clearStatus(unit, 'blessed');
+    expect(conditionDefence(unit)).toBe(0);
+    expect(conditionDefence(plain)).toBe(0);
+  });
+
+  it('stops an Ancient Wyrm’s breath at its own front rank', () => {
+    const state = game();
+    const wyrm = put(state, 0, 'dragon', 5, 5, 'dragon-wyrm');
+    const plain = put(state, 0, 'dragon', 5, 12);
+    const markA = put(state, 1, 'footman', 6, 5);
+    const ownA = put(state, 0, 'orc', 7, 5);
+    const markB = put(state, 1, 'footman', 6, 12);
+    const ownB = put(state, 0, 'orc', 7, 12);
+    const was = { a: ownA.hp, b: ownB.hp };
+    expect(breathSpares(wyrm)).toBe(true);
+    expect(breathSpares(plain)).toBe(false);
+    expect(breatheThrough(state, wyrm, markA, 8), 'spared its own').toBeNull();
+    expect(breatheThrough(state, plain, markB, 8), 'cooked its own').not.toBeNull();
+    expect(ownA.hp).toBe(was.a);
+    expect(ownB.hp).toBeLessThan(was.b);
+  });
+
+  it('still carries on into an enemy behind the line', () => {
+    const state = game();
+    const wyrm = put(state, 0, 'dragon', 5, 5, 'dragon-wyrm');
+    const mark = put(state, 1, 'footman', 6, 5);
+    const foe = put(state, 1, 'footman', 7, 5);
+    const was = foe.hp;
+    expect(breatheThrough(state, wyrm, mark, 8)).not.toBeNull();
+    expect(foe.hp, 'that is the whole mechanic').toBeLessThan(was);
+  });
+
+  it('does none of the three with the box unticked', () => {
+    const state = game();
+    const wyrm = put(state, 0, 'dragon', 5, 5, 'dragon-wyrm');
+    const champ = put(state, 1, 'paladin', 12, 12, 'paladin-champion');
+    const mended = put(state, 1, 'footman', 13, 12);
+    mended.hp = 1;
+    UPGRADES.enabled = false;
+    expect(breathSpares(wyrm)).toBe(false);
+    useAbility(state, champ, 'heal', mended);
+    expect(hasStatus(mended, 'blessed')).toBe(false);
   });
 });

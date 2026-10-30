@@ -245,7 +245,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Heavy Axethrower',
     needs: 'sharper-wobbling',
     blurb:
-      'Thrown strikes ignore 1 point of target defense.',
+      'Whatever it opens on holds the line one point worse.',
     flavour: 'Aerodynamically dubious. Effective anyway.',
   },
 
