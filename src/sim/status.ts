@@ -1,4 +1,4 @@
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import type { GameState, Status, StatusKind, Unit } from '../model/types';
 import { log } from './gamestate';
 
@@ -38,6 +38,10 @@ export const STATUS_RULES: Record<StatusKind, { label: string; blurb: string }> 
   confused: { label: 'Confused', blurb: 'Cannot tell friend from enemy.' },
   spent: { label: 'Spent', blurb: 'Cannot regenerate for the moment.' },
   cowed: { label: 'Cowed', blurb: 'Swings softly: something enormous shouted at it.' },
+  // Section 155. The first condition in this game put on a unit by an upgrade
+  // rather than by a spell: a Champion Paladin's patients hold the line a
+  // little better for a turn afterwards.
+  blessed: { label: 'Blessed', blurb: 'Holds the line better, for a little while.' },
 };
 
 /**
@@ -145,7 +149,7 @@ export function tickStatuses(state: GameState, unit: Unit): boolean {
   if (statuses.length === 0) return false;
 
   if (hasStatus(unit, 'burning')) {
-    const max = unitType(unit.type).hp;
+    const max = maxHp(unit);
     unit.hp -= Math.max(BURN_FLOOR, Math.round(max * BURN_DAMAGE));
   }
 

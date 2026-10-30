@@ -5,7 +5,7 @@ import { claims } from '../sim/borders';
 import { hasPerk } from '../model/perks';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
-import { aliveCount, unitType } from '../model/units';
+import { aliveCount, maxHp, unitType } from '../model/units';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { Camera, TILE } from './camera';
 import { roadLinks } from './roadShape';
@@ -996,7 +996,7 @@ export class MapRenderer {
     // Standing still, health decides how it looks. Checked before the
     // disarmed pose, since a dying axethrower is more usefully drawn as dying
     // than as short of an axe.
-    const share = u.hp / Math.max(1, unitType(u.type).hp);
+    const share = u.hp / Math.max(1, maxHp(u));
     if (share < HURT_LEVELS.hurt) {
       const frames = this.sprites.hurtFrames(u.type, u.disarmed, artVariant(u));
       if (frames && frames.length > 0) {
@@ -1320,12 +1320,12 @@ export class MapRenderer {
     );
 
     // Health bar, only when it matters.
-    if (u.hp < type.hp) {
+    if (u.hp < maxHp(u)) {
       const w = size * 0.7;
       const h = Math.max(3, size * 0.07);
       const bx = s.x + (size - w) / 2;
       const by = s.y + size * 0.06;
-      const frac = Math.max(0, u.hp / type.hp);
+      const frac = Math.max(0, u.hp / maxHp(u));
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(bx - 1, by - 1, w + 2, h + 2);
       ctx.fillStyle = frac > 0.6 ? '#5fbf4a' : frac > 0.3 ? '#d8b13a' : '#c9432c';

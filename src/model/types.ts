@@ -299,6 +299,29 @@ export interface Unit {
    * standing gets it by paying in a city of its own.
    */
   upgrade?: string;
+  /**
+   * Fights this unit has been in and come out of. Section 155 slice 5.
+   *
+   * Counted rather than read off `xp`, which is awarded for razing a city,
+   * taking one, and reading a spy's dispatches, and would make a scholar of
+   * anybody. Only two upgrades read it -- `orc-veteran` and `footman-veteran`,
+   * both "after surviving 2 combats" -- and both want the thing the words say.
+   *
+   * Optional, so every save and fixture from before this counts as nought.
+   */
+  fights?: number;
+  /**
+   * The unit this one is standing in front of. Section 155, `orc-guardian`.
+   *
+   * Set by the `cover` ability and cleared at the top of the coverer's next
+   * turn, so it lasts exactly the one turn it cost. Holds a unit **id** rather
+   * than a reference, like `homeCity`, so a save is still plain JSON.
+   *
+   * Read through `coveringFor`, which re-checks adjacency: both of them may
+   * have moved since the order was given, and a bodyguard three tiles away is
+   * not covering anybody.
+   */
+  covering?: number;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;
@@ -331,6 +354,16 @@ export interface Unit {
    * now has. See DESIGN_QUEUE section 38.
    */
   rearmIn?: number;
+  /**
+   * Axes thrown since it last picked one up. Section 155.
+   *
+   * `disarmed` is a boolean and an ordinary thrower has one axe, so the two
+   * said the same thing and only one of them was needed. `axethrower-twin`
+   * carries a second, which is a count -- and a count is what `disarmed` can
+   * no longer be inferred from. Cleared by `rearm`, absent on every save
+   * before this, which reads as nothing thrown.
+   */
+  axesThrown?: number;
   /**
    * Whether this unit has already used its one reprieve.
    *
@@ -513,7 +546,7 @@ export type AutoBuild = 'ask' | 'repeat' | 'coin' | 'beakers';
  * Deliberately separate from `disarmed`, which is a bare boolean with no
  * duration and ends by killing something rather than by waiting.
  */
-export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed';
+export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed' | 'blessed';
 
 export interface Status {
   kind: StatusKind;

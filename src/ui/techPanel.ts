@@ -1,9 +1,10 @@
 import { BUILDINGS } from '../model/buildings';
+import { UPGRADE_BY_TECH, branchGivenUp, rivalBranch } from '../model/upgrades';
 import { TECHS, techsForFaction, TECHS_BY_ID } from '../model/techs';
 import type { TechDef } from '../model/techs';
 import { UNIT_TYPES } from '../model/units';
 import type { GameState, Player } from '../model/types';
-import { knowsTech, researchableTechs, setResearch, techCost } from '../sim/research';
+import { knowsTech, researchableTechs, setResearch, techCost, techInPlay } from '../sim/research';
 import { turnsToLearn } from '../sim/turn';
 import { advisorSuggestions } from '../model/suggestions';
 import { portraitPath } from './advisors';
@@ -77,7 +78,23 @@ function unlockSummary(t: TechDef, player: Player): string {
       );
     }
   }
-  for (const f of t.flags) bits.push(escapeHtml(FLAG_LABELS[f]));
+  for (const f of t.flags) {
+    // Section 155 slice 5: an upgrade advance says *which* upgrade and what it
+    // does, rather than "Improves a unit you already have" thirty-six times.
+    // Read off `UPGRADE_BY_TECH`, so a card cannot describe one the game does
+    // not offer -- and the blurb is the same string the creature's own card
+    // shows, so the two can never drift apart.
+    const up = f === 'upgrade' ? UPGRADE_BY_TECH[t.id] : undefined;
+    if (up) {
+      const base = UNIT_TYPES[up.base];
+      const who = base
+        ? `<a href="#" class="pedia-link" data-pedia="${escapeHtml(base.id)}">${escapeHtml(base.name)}</a>`
+        : escapeHtml(up.base);
+      bits.push(`${who} &rarr; <strong>${escapeHtml(up.name)}</strong>: ${escapeHtml(up.blurb)}`);
+      continue;
+    }
+    bits.push(escapeHtml(FLAG_LABELS[f]));
+  }
   return bits.join(', ');
 }
 
@@ -150,7 +167,14 @@ const FLAG_LABELS: Record<TechFlag, string> = {
 
 export function openTechPanel(state: GameState, player: Player, onChange: () => void): void {
   const cache = new Map<string, number>();
-  const all = techsForFaction(player.faction);
+  // Section 155: **only the advances that are in this game.** This drew the
+  // whole of `techsForFaction` and nothing filtered it, so a switched-off
+  // subsystem's advances were rendered as ordinary locked cards -- true of
+  // section 110's endings and section 111's follies since they were written,
+  // and suddenly loud when section 155 added thirty-six more to a lever that
+  // is off by default. A card for an advance that can never be researched,
+  // with no explanation, is the same failure as the given-up branch below.
+  const all = techsForFaction(player.faction).filter(techInPlay);
   const available = new Set(researchableTechs(player).map((t) => t.id));
   const maxDepth = Math.max(...all.map((t) => depthOf(t, cache)));
 
@@ -171,6 +195,13 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
         const missing = t.prereqs
           .filter((p) => !knowsTech(player, p))
           .map((p) => TECHS_BY_ID[p]?.name ?? p);
+        // Section 155: a branch given up has every prerequisite met and will
+        // never be researchable again, so it drew a locked card with no "needs"
+        // line and no explanation at all -- a player would keep coming back to
+        // it. Say which road was taken instead, and name the thing they have.
+        const rival = branchGivenUp(player.techs, t.id)
+          ? rivalBranch(UPGRADE_BY_TECH[t.id])
+          : null;
         return `
           <div class="tech-card ${cls}" data-id="${escapeHtml(t.id)}" ${canResearch ? '' : 'data-locked="1"'}>
             <div class="tech-head">
@@ -180,7 +211,15 @@ export function openTechPanel(state: GameState, player: Player, onChange: () => 
             <div class="tech-cost">${known ? 'known' : `${techCost(player, t)} beakers`}</div>
             ${unlocks ? `<div class="tech-unlocks">${unlocks}</div>` : ''}
             ${opens ? `<div class="tech-opens">${escapeHtml(opens)}</div>` : ''}
-            ${missing.length > 0 && !known ? `<div class="tech-needs">needs ${escapeHtml(missing.join(', '))}</div>` : ''}
+            ${
+              rival
+                ? `<div class="tech-needs">not any more &mdash; this empire took ${escapeHtml(
+                    rival.name,
+                  )}, and that cannot be undone</div>`
+                : missing.length > 0 && !known
+                  ? `<div class="tech-needs">needs ${escapeHtml(missing.join(', '))}</div>`
+                  : ''
+            }
             <div class="tech-flavor">${escapeHtml(t.flavor)}</div>
           </div>`;
       })

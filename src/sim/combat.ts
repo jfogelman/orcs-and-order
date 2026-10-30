@@ -1,11 +1,30 @@
 import { distance, idx } from '../engine/grid';
+import {
+  axesCarried,
+  BRAWLER,
+  breathShare,
+  breathSpares,
+  conditionDefence,
+  KNIT,
+  knitsMidFight,
+  sparedByBlast,
+  SERGEANT,
+  blastRadius,
+  firstStrikesOf,
+  hasUpgrade,
+  shrugsFirstBlow,
+  upgradeAttack,
+  upgradeDefence,
+  piercesDefence,
+  wardShare,
+} from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
 import { hasPerk } from '../model/perks';
 import { defenseOf } from '../model/terrain';
-import { headcount, needsAmmo, unitType } from '../model/units';
+import { headcount, needsAmmo, unitType, maxHp } from '../model/units';
 import type { DamageKind, City, GameState, Unit } from '../model/types';
 import { cityAt, log, withRng } from './gamestate';
 import { militiaStrength, supplyQuality, workingBuildings, SUPPLY } from './city';
@@ -150,10 +169,17 @@ export const MAX_RESIST = 0.75;
  * be measured when they are chosen rather than arriving with them.
  */
 export function resistance(unit: Unit, kind: DamageKind): number {
-  if (kind !== 'magic') return 0;
+  // Section 155, `mage-warden`: half of any attack, whatever it is made of.
+  // Here rather than in the combat loop for the reason the note on
+  // `applyDamage` gives -- this is the one place health comes off a unit, so
+  // a ward put here cannot be forgotten at one of the half-dozen sites that
+  // deal damage. Burning is not an attack and takes its health directly, so
+  // it is not covered, which is the right answer rather than an oversight.
+  const ward = wardShare(unit);
+  if (kind !== 'magic') return ward;
   const base = unitType(unit.type).magicResist ?? 0;
-  if (base <= 0) return 0;
-  return Math.min(MAX_RESIST, base + unit.rank * RESIST_PER_RANK);
+  if (base <= 0) return ward;
+  return Math.min(MAX_RESIST, base + unit.rank * RESIST_PER_RANK + ward);
 }
 
 /**
@@ -292,6 +318,8 @@ export function rearm(state: GameState, unit: Unit, how: string): void {
   unit.disarmed = false;
   // Whichever way the axe came back, the slow way is no longer pending.
   delete unit.rearmIn;
+  // And it has a full hand again, which for a Twin Thrower is two.
+  delete unit.axesThrown;
   log(state, `${unitType(unit.type).name} ${how}.`, 'good', unit.owner, 'promote', [unit.x, unit.y]);
 }
 
@@ -315,8 +343,13 @@ export function breatheThrough(
   const by = target.y + (target.y - attacker.y);
   const behind = state.units.find((u) => u.x === bx && u.y === by);
   if (!behind) return null;
+  // Section 155, `dragon-wyrm`: *"no longer has the carries-into-the-tile-
+  // behind friendly-fire risk"*. It still carries on -- that is the whole
+  // mechanic -- it simply stops at its own. Finally learns to aim.
+  if (behind.owner === attacker.owner && breathSpares(attacker)) return null;
 
-  const carried = Math.max(1, Math.round(damageDealt * BREATH_CARRY));
+  // Section 155, `dragon-elder`: an older dragon's breath carries further through.
+  const carried = Math.max(1, Math.round(damageDealt * breathShare(attacker, BREATH_CARRY)));
   applyDamage(behind, carried, damageKindOf(attacker));
   log(
     state,
@@ -349,6 +382,18 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
 
   // Section 111: built beside the Loudest Rock, and it swings a little harder for good.
   let total = type.attack + (attacker.drilled ?? 0);
+  // Section 155: and whatever its upgrade is worth, plus whatever is standing
+  // around it. Added to the base beside `drilled` so it scales with the
+  // headcount, which is the rule every other flat addition here follows --
+  // and floored, since a Dread Knight is allowed to make a creature worse and
+  // not to switch it off.
+  //
+  // **Guarded on the bonus being non-zero, which matters more than it looks.**
+  // An unconditional `Math.max(COWED.floor, ...)` here would quietly raise the
+  // attack of anything whose base is below one -- in a game with the box
+  // unticked, where nothing of section 155 is supposed to happen at all.
+  const upgraded = upgradeAttack(state, attacker);
+  if (upgraded !== 0) total = Math.max(COWED.floor, total + upgraded);
   // Section 125: and the Old Queen's Shell, which is empire-wide and only ever
   // about two castes. Added to the base alongside `drilled` so it scales with
   // the headcount below, exactly as a point of drill does.
@@ -446,6 +491,16 @@ export function defenseStrength(
 
   // Section 111: the Long Vigil, for anything that rides.
   let total = type.defense + (isMounted(defender) ? empireBonus(state, defender.owner, (b) => b.mountedDefense) : 0);
+  // Section 155, the other foot. Floored at zero rather than at `COWED.floor`,
+  // since a Berserker deliberately gives a point up and ought to be allowed
+  // to -- and guarded the same way, so a game without upgrades is untouched.
+  //
+  // `piercesDefence` is the attacker's contribution: a Heavy Thrower's target
+  // holds the line one point worse. Taken off the base with everything else,
+  // so it scales with the headcount the way a point of drill does.
+  const shielded =
+    upgradeDefence(state, defender) + conditionDefence(defender) - piercesDefence(attacker);
+  if (shielded !== 0) total = Math.max(0, total + shielded);
   // Section 152: The Standing Watch, which guards one settlement and has not
   // been told what it used to guard. Added to the base, so it scales with the
   // stack the way a point of drill does on the other side -- and only where
@@ -557,6 +612,50 @@ export const CLUB_QUAKE = 0.12;
  * All three run after the fight resolves, so a dead ogre swings no club and a
  * dead target still burns nobody.
  */
+/**
+ * Section 155, `ogre-brawler`: *"attacks hit the defender and one adjacent
+ * unit at half damage"*.
+ *
+ * One bystander, not all of them: a wide flat arc catches the next thing
+ * along, and an ogre that hit everything standing near its target would be a
+ * sapper. Picked as the **nearest to the attacker**, ties by lower health,
+ * which is the one it would plausibly have caught on the way through.
+ *
+ * Taken off the damage actually dealt rather than off the ogre's strength, so
+ * a swing that barely landed barely splashes.
+ */
+function brawlerSwing(state: GameState, attacker: Unit, defender: Unit): void {
+  if (!hasUpgrade(attacker, 'ogre-brawler') || attacker.hp <= 0) return;
+  const dealt = maxHp(defender) - Math.max(0, defender.hp);
+  if (dealt <= 0) return;
+  const bystander = state.units
+    .filter(
+      (u) =>
+        u.id !== defender.id &&
+        u.id !== attacker.id &&
+        u.owner !== attacker.owner &&
+        u.hp > 0 &&
+        distance(u.x, u.y, defender.x, defender.y) === 1,
+    )
+    .sort(
+      (a, b) =>
+        distance(a.x, a.y, attacker.x, attacker.y) - distance(b.x, b.y, attacker.x, attacker.y) ||
+        a.hp - b.hp,
+    )[0];
+  if (!bystander) return;
+  applyDamage(bystander, Math.max(1, Math.round(dealt * BRAWLER.share)), damageKindOf(attacker));
+  log(
+    state,
+    `${unitType(attacker.type).name} catches ${unitType(bystander.type).name} on the backswing.`,
+    'combat',
+    attacker.owner,
+    undefined,
+    [bystander.x, bystander.y],
+    attacker.id,
+  );
+  if (bystander.hp <= 0) destroyUnit(state, bystander, 'is caught on the backswing', attacker);
+}
+
 function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
   if (attacker.hp <= 0) return;
   if (unitType(attacker.type).base !== 'ogre') return;
@@ -579,7 +678,7 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     const killed: Unit[] = [];
     for (const victim of caught) {
       // A blast is a blast: nothing magical resists being stood next to one.
-      applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * share)), 'physical');
+      applyDamage(victim, Math.max(1, Math.round(maxHp(victim) * share)), 'physical');
       if (victim.hp <= 0) killed.push(victim);
     }
     if (caught.length > 0) {
@@ -602,7 +701,7 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
     sweep(target, CLUB_BLAST, false, 'explosion', 'brings the club down and it goes off');
     // Its own blast, at a discount. Never enough to kill it outright, because a
     // unit that explodes itself on a win is a perk nobody would ever choose.
-    const self = Math.max(1, Math.round(unitType(attacker.type).hp * CLUB_BLAST * CLUB_SELF));
+    const self = Math.max(1, Math.round(maxHp(attacker) * CLUB_BLAST * CLUB_SELF));
     attacker.hp = Math.max(1, attacker.hp - self);
   }
 
@@ -648,8 +747,8 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
 
   const atk = attackStrength(state, attacker, defender);
   const def = defenseStrength(state, defender, attacker);
-  const atkMax = unitType(attacker.type).hp;
-  const defMax = unitType(defender.type).hp;
+  const atkMax = maxHp(attacker);
+  const defMax = maxHp(defender);
   const dmg = damagePerRound(atkMax, defMax);
   // The strengths above already count the losses each side arrived with, so
   // divide those out to get the part that does not change during the fight.
@@ -658,21 +757,84 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   const atkStatic = atk.total / Math.max(0.0001, headcount(attacker));
   const defStatic = def.total / Math.max(0.0001, headcount(defender));
 
+  // Section 155, `footman-sergeant`: *"adjacent Footmen ignore the first point
+  // of damage taken each combat"*.
+  //
+  // **"The first" is a fact about the fight**, and `applyDamage` has no idea
+  // which fight it is in -- so the reprieve is worked out once, here, and
+  // spent by the first blow that lands on whoever has it. A closure rather
+  // than a flag on the unit, because it belongs to this combat and nothing
+  // outside it should be able to see it.
+  const reprieve = new Set<number>();
+  if (shrugsFirstBlow(state, attacker)) reprieve.add(attacker.id);
+  if (shrugsFirstBlow(state, defender)) reprieve.add(defender.id);
+  // Section 155, `mage-warden`: **half the damage, at a granularity where a
+  // half does not exist.**
+  //
+  // The ward is a 50% resistance and `applyDamage` honours it, which works
+  // for a blast, a dragon's breath or a militia -- blows big enough to halve.
+  // The ordinary exchange is not one of those: of the 6561 creature matchups
+  // in this game, **6084 deal exactly one point a round**, and
+  // `Math.round(1 * 0.5)` is 1. So for ninety-three per cent of fights the
+  // percentage is rounded away and the ward does nothing at all.
+  //
+  // Half the blows is half the damage when a blow is indivisible, so that is
+  // what happens instead: every second one that the percentage failed to
+  // reduce is shrugged off entirely. Guarded on it having failed, so a blow
+  // the resistance *did* halve is not halved twice.
+  const shrugged = new Map<number, number>();
+  const hurt = (unit: Unit, amount: number, kind: DamageKind): number => {
+    const asked = reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount;
+    const ward = wardShare(unit);
+    // Did the percentage achieve anything? If rounding gave the blow back
+    // whole, the ward has to be paid some other way.
+    const roundedAway = ward > 0 && asked > 0 && Math.round(asked * (1 - ward)) === asked;
+    if (roundedAway) {
+      const n = (shrugged.get(unit.id) ?? 0) + 1;
+      shrugged.set(unit.id, n);
+      if (n % 2 === 0) return 0;
+    }
+    return applyDamage(unit, asked, kind);
+  };
+
   // Free rounds before the fight proper, to whoever strikes first and by how
   // much more than the other. Netting them is what stops two archers giving
   // each other a free hit and calling it even.
-  const edge = unitType(attacker.type).firstStrikes - unitType(defender.type).firstStrikes;
+  // Section 155: through `firstStrikesOf`, because `archer-marksman` trades
+  // this away for two points of attack and the trade has to be visible from
+  // both sides of the subtraction.
+  const edge = firstStrikesOf(attacker, defender) - firstStrikesOf(defender, attacker);
   if (edge !== 0) {
     const striker = edge > 0 ? attacker : defender;
     const struck = edge > 0 ? defender : attacker;
     for (let i = 0; i < Math.abs(edge) && struck.hp > 0; i++) {
-      applyDamage(struck, dmg, damageKindOf(striker));
+      hurt(struck, dmg, damageKindOf(striker));
+    }
+    // Section 155, `archer-longbow`. **Not range** -- this game's Archer has
+    // none; its bow is the free opening shot. Jeremy's ruling of 2026-10-29
+    // reads the bible's longer reach as *twice*: it looses, is answered, and
+    // looses again, all before the fight proper starts.
+    //
+    // Hung off the free shot rather than standing on its own, so it nets the
+    // way every first strike in this game nets: two archers cancel each other
+    // out and neither opens, which is section 11's rule and not a special case
+    // for this one.
+    if (hasUpgrade(striker, 'archer-longbow') && struck.hp > 0) {
+      hurt(striker, dmg, damageKindOf(struck));
+      if (striker.hp > 0 && struck.hp > 0) hurt(struck, dmg, damageKindOf(striker));
     }
     // And for a thrower, the free blow *is* the axe leaving its hand. It gets
     // the rest of the fight without one, and fetches it back afterwards.
     if (unitType(striker.type).throwsWeapon && !striker.disarmed) {
-      striker.disarmed = true;
-      striker.rearmIn = REARM_TURNS;
+      // Section 155, `axethrower-twin`: a second axe, so the hand is not
+      // empty until both have gone. An ordinary thrower carries one and is
+      // disarmed by its first throw, exactly as before.
+      const thrown = (striker.axesThrown ?? 0) + 1;
+      striker.axesThrown = thrown;
+      if (thrown >= axesCarried(striker)) {
+        striker.disarmed = true;
+        striker.rearmIn = REARM_TURNS;
+      }
       // Says so out loud, which is also what puts the axe on the screen: the
       // interface reads this cue and throws the animation along the same line.
       // Without it the one throw in the game had no picture at all.
@@ -697,13 +859,21 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
       // being cut down swings weaker with every exchange, which is the whole
       // of DESIGN_QUEUE section 31: fixed odds plus health that scales with
       // the count is what made a big enough stack unbeatable by anything.
+      // Section 155, `troll-regen`: a troll knits while the fight is still
+      // going on. Before the exchange, so the point it gets back is a point
+      // it can spend on this round rather than on the next one.
+      for (const side of [attacker, defender]) {
+        if (knitsMidFight(side) && rounds % KNIT.everyRounds === 0 && side.hp > 0) {
+          side.hp = Math.min(maxHp(side), side.hp + KNIT.amount);
+        }
+      }
       const a = atkStatic * headcount(attacker);
       const d = defStatic * headcount(defender);
       // A defence of zero would make the fight a certainty; keep it a contest.
       const pAttack = a / Math.max(0.0001, a + d);
-      if (rng.float() < pAttack) applyDamage(defender, dmg, damageKindOf(attacker));
+      if (rng.float() < pAttack) hurt(defender, dmg, damageKindOf(attacker));
       else {
-        applyDamage(attacker, dmg, damageKindOf(defender));
+        hurt(attacker, dmg, damageKindOf(defender));
         // Knowing when to stop. A fight here runs until somebody dies, so
         // "fails to kill what it attacked" can only ever mean *losing* -- this
         // is Civ4's withdrawal, and it is the only reading of section 11's
@@ -750,12 +920,22 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   attacker.hp = Math.max(0, attacker.hp);
   defender.hp = Math.max(0, defender.hp);
 
+  // Section 155: whoever walked away from it has been in one more fight.
+  //
+  // Here rather than beside `awardXp`, because the two count different things
+  // on purpose -- experience is given for razing a city, taking one and
+  // reading a spy's post, and "survived two combats" is meant to mean combats.
+  // Counted for both sides, since surviving somebody else's attack is the way
+  // a Footman is most likely to earn it.
+  if (attacker.hp > 0) attacker.fights = (attacker.fights ?? 0) + 1;
+  if (defender.hp > 0) defender.fights = (defender.fights ?? 0) + 1;
+
   // Whatever the magical one did, it leaves behind. Both directions: a mage
   // that fought off an orc has still set it alight.
   applySpellEffects(state, attacker, defender);
   applySpellEffects(state, defender, attacker);
   clubEffects(state, attacker, defender);
-
+  brawlerSwing(state, attacker, defender);
   return {
     attackerId: attacker.id,
     defenderId: defender.id,
@@ -800,7 +980,7 @@ export function stormEmptyCity(state: GameState, attacker: Unit, city: City): Mi
   const def = militiaStrength(city);
   if (def <= 0) return { taken: true, damage: 0 };
 
-  const dmg = Math.max(1, Math.round(unitType(attacker.type).hp / 12));
+  const dmg = Math.max(1, Math.round(maxHp(attacker) / 12));
   const pAttack = atk / Math.max(0.0001, atk + def);
 
   const damage = withRng(state, (rng) => {
@@ -825,13 +1005,20 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
   const power = unitType(sapper.type).explodes;
   if (power <= 0) return [];
 
+  // Section 155, `sapper-deep`: the bigger bundle reaches a tile further.
+  const reach = blastRadius(sapper);
   const caught = state.units.filter(
-    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) === 1,
+    (u) =>
+      u.id !== sapper.id &&
+      distance(u.x, u.y, sapper.x, sapper.y) <= reach &&
+      // Section 155, `sapper-cadre`: one of a pair does not take the other
+      // with it, which is the whole point of being allowed to stand together.
+      !sparedByBlast(sapper, u),
   );
   const killed: Unit[] = [];
   for (const victim of caught) {
     // A blast is a blast: nothing magical resists being stood next to one.
-    applyDamage(victim, Math.max(1, Math.round(unitType(victim.type).hp * power)), 'physical');
+    applyDamage(victim, Math.max(1, Math.round(maxHp(victim) * power)), 'physical');
     if (victim.hp <= 0) killed.push(victim);
   }
   log(

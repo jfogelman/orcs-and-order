@@ -1,4 +1,5 @@
 import { checkEndings, isEndingPiece } from './endings';
+import { movesThisTurn, RETRIEVER, retrievesAxe, upgradeMoves } from './upgradeEffects';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
@@ -9,7 +10,7 @@ import { recordTurn } from './history';
 import { checkContacts } from './contact';
 import { forgetSlowly, lapsePeace } from './diplomacy';
 import { refreshCargo } from './ships';
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import { TECHS_BY_ID } from '../model/techs';
 import { hasPerk } from '../model/perks';
 import { BUILDINGS } from '../model/buildings';
@@ -27,7 +28,7 @@ import {
 } from './city';
 import { destroyUnit, rearm } from './combat';
 import { FREEZE_SLOW, hasStatus, tickStatuses } from './status';
-import { contenders, log, playerCities, playerUnits, recomputeVisibility } from './gamestate';
+import { contenders, log, playerCities, playerUnits, recomputeVisibility, withRng } from './gamestate';
 import { noticeStrangers } from './noticing';
 import { UNSEEN_TRACE, forgetSpotted, goesUnseen } from './unseen';
 import { reportSightings, runRaiders, spawnWave } from './barbarians';
@@ -101,7 +102,7 @@ function healUnits(state: GameState, playerId: number): void {
     // together, and neither is anything else that has been left spent.
     if (hasStatus(unit, 'spent')) continue;
     const type = unitType(unit.type);
-    const max = type.hp;
+    const max = maxHp(unit);
     if (unit.hp >= max) continue;
     const rate = regenRateFor(state, unit) * type.regenMultiplier;
     // A rate of zero means zero. The floor below exists so that a very small
@@ -122,7 +123,7 @@ function healUnits(state: GameState, playerId: number): void {
 function wakeTheMended(state: GameState, playerId: number): void {
   for (const unit of state.units) {
     if (unit.owner !== playerId || !unit.mending) continue;
-    if (unit.hp < unitType(unit.type).hp) continue;
+    if (unit.hp < maxHp(unit)) continue;
     delete unit.mending;
     unit.order = 'none';
     log(state, `${unitType(unit.type).name} is patched up and ready.`, 'good', playerId, undefined, [
@@ -141,13 +142,41 @@ function refreshUnits(state: GameState, player: Player): void {
     // removed from the game for the duration, which is strictly better than
     // damage; halving is a real cost that leaves it playing. Never below one,
     // so a one-move unit is slowed rather than frozen in place forever.
+    const slowed = upgradeMoves(unit);
     const full =
       effectiveMove(player, unit.type) +
       (march > 0 && onOwnLand(state, player.id, unit.x, unit.y) ? march : 0) +
       // Section 146: the Unnamed Marker, which is a fact about the unit and
       // goes with it everywhere, unlike the Long March above.
-      (unit.strides ?? 0);
-    unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
+      (unit.strides ?? 0) +
+      // Section 155: `knight-errant` adds one and `orc-guardian` takes one
+      // away, which is the only negative movement modifier in the game.
+      slowed;
+    unit.moves = hasStatus(unit, 'frozen')
+      ? Math.max(1, Math.floor(full * FREEZE_SLOW))
+      : // **The floor applies only when an upgrade is taking something away**,
+        // and that is not fussiness. An unconditional `Math.max(1, full)` here
+        // makes the Hivekin Queen mobile -- she has `move: 0` on purpose, sits
+        // in the first Hive and never leaves it -- in a game with the box
+        // unticked. Three fixtures moved and said so.
+        //
+        // Where it does apply, a Guardian keeps one move rather than none.
+        // An orc has one to begin with, so the honest reading of "-1 movement"
+        // would leave it unable to move at all for the rest of the game, which
+        // is a joke the blurb does not make. Flagged for Jeremy rather than
+        // decided quietly: see the queue.
+        slowed < 0
+        ? Math.max(1, full)
+        : full;
+    // Section 155: and a Guardian stands still on the turns between. Jeremy's
+    // ruling of 2026-10-29 -- "-1 movement" could not be a number, because an
+    // orc has one and the Guardian would never move again. One tile every two
+    // turns is a cost it can still play around.
+    if (!movesThisTurn(state, unit)) unit.moves = 0;
+    // And whoever it was standing in front of, it is not any more: covering
+    // buys exactly the one turn it cost. Cleared before the order is given
+    // again, so a Guardian that covers every turn simply does.
+    delete unit.covering;
     if (unit.order === 'skip') unit.order = 'none';
     // Digging carries on at the top of the owner's turn, and a road is laid the
     // turn its last shift is done.
@@ -194,6 +223,15 @@ function refreshUnits(state: GameState, player: Player): void {
       delete unit.job;
     }
     // The axe was thrown, not destroyed. Given a moment, it is fetched back.
+    //
+    // Section 155, `axethrower-retriever`: *"chance to recover a thrown axe at
+    // the start of next turn"*. Rolled before the countdown rather than
+    // instead of it, so a Retriever that is unlucky still gets its axe back
+    // the slow way and is never worse off than an ordinary thrower.
+    if (unit.disarmed && retrievesAxe(unit) && withRng(state, (rng) => rng.chance(RETRIEVER.odds))) {
+      delete unit.rearmIn;
+      rearm(state, unit, 'spots its axe lying nearby and has it back at once');
+    }
     if (unit.disarmed && unit.rearmIn !== undefined) {
       unit.rearmIn -= 1;
       if (unit.rearmIn <= 0) {

@@ -70,6 +70,40 @@ export const UPGRADES = {
 /** Which of a family's three an upgrade is. */
 export type UpgradeLine = 'linear' | 'a' | 'b';
 
+/**
+ * The part of an upgrade that is only a number. Section 155 slice 5.
+ *
+ * **Deliberately small, and deliberately not everything.** Of the thirty-six
+ * blurbs, five are a flat modifier to a figure the game already computes and
+ * the other thirty-one are rules -- a condition, an aura, a change to what an
+ * ability costs. Trying to express all of them as data would mean inventing a
+ * little language, and the moment a table needs a predicate it has stopped
+ * being a table.
+ *
+ * So the flat ones live here, where they can be read off, and the rest are
+ * named checks in the subsystem that owns them, exactly as `hasPerk` is. What
+ * holds the two halves together is `tests/upgradeEffects.test.ts`, which
+ * insists every one of the thirty-six is **either** data here, **or** named
+ * somewhere under `src/`, **or** declared unwired with a reason. There is no
+ * fourth option, which is the whole point: an upgrade whose blurb promises
+ * something and whose code does nothing is a card that lies, and nothing else
+ * would ever fail because of it.
+ */
+export interface UpgradeEffect {
+  /** Added to the creature's base attack, before every multiplier. */
+  attack?: number;
+  /** Added to its base defence, likewise. */
+  defence?: number;
+  /** Movement points a turn. Negative is a real cost, and two of these have one. */
+  moves?: number;
+  /** Tiles added to a striking range, through the `reach` the Rumbling Archive uses. */
+  reach?: number;
+  /** Tiles added to a sapper's blast. */
+  blast?: number;
+  /** Hit points, per creature in the group. Read through `maxHp`. */
+  hp?: number;
+}
+
 export interface UpgradeDef {
   /**
    * `<base>-<variant>`, which is also the sprite's filename.
@@ -90,6 +124,13 @@ export interface UpgradeDef {
   blurb: string;
   /** And the joke, which is usually the point. */
   flavour: string;
+  /**
+   * The flat part, if this upgrade's whole effect is a number.
+   *
+   * Absent means the effect is a rule and lives in code. It does **not** mean
+   * the upgrade does nothing -- see the completeness test.
+   */
+  effect?: UpgradeEffect;
 }
 
 export const UPGRADE_DEFS: UpgradeDef[] = [
@@ -116,6 +157,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Detonation radius +1 tile.',
     flavour: 'Bigger bang, same nerves.',
+    effect: { blast: 1 },
   },
   {
     id: 'sapper-cadre',
@@ -161,8 +203,15 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Orc Guardian',
     needs: 'standing-still-on-purpose',
     blurb:
-      '+2 defense, -1 movement.',
+      '+2 defense, and moves one tile every two turns. Can Cover an adjacent ' +
+      'unit, meeting whatever comes for it in their place.',
     flavour: 'Finally, an orc who waits.',
+    // The movement half is not a number. Jeremy settled it on 2026-10-29: an
+    // orc has one movement point, so a flat -1 left the Guardian unable to
+    // move at all for the rest of the game. It moves **one tile every two
+    // turns** instead, and gets `cover` in exchange -- see `GUARDIAN` and
+    // `coverBlocked`.
+    effect: { defence: 2 },
   },
 
   // ---- axethrower
@@ -196,7 +245,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Heavy Axethrower',
     needs: 'sharper-wobbling',
     blurb:
-      'Thrown strikes ignore 1 point of target defense.',
+      'Whatever it opens on holds the line one point worse.',
     flavour: 'Aerodynamically dubious. Effective anyway.',
   },
 
@@ -211,6 +260,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       '+2 HP.',
     flavour: 'Heals just as fast, dies slightly less first.',
+    effect: { hp: 2 },
   },
   {
     id: 'troll-regen',
@@ -316,9 +366,16 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Elder Dragon',
     needs: 'even-more-fire',
     blurb:
-      'Breath damage increases, but flying over enemy cities costs double ' +
-      'movement (circling to line up the shot).',
+      'Its breath carries further through the line, but it is slower: one ' +
+      'movement point gone to circling.',
     flavour: 'The Horde\'s one plan, now with more commitment to the bit.',
+    // The drawback the bible gave it -- double movement over enemy cities --
+    // is a manoeuvre this game has no rule for: no unit may enter an enemy
+    // city tile by pathing at all. Jeremy's ruling of 2026-10-30 moved the
+    // cost somewhere the game can express. A dragon has four movement points,
+    // so one off is a real price rather than the standstill `orc-guardian`
+    // would have been.
+    effect: { moves: -1 },
   },
   {
     id: 'dragon-rider',
@@ -389,8 +446,13 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Longbow Archer',
     needs: 'bigger-bow',
     blurb:
-      'Strike range increases to 3 tiles.',
+      'Looses twice at the opening of a fight: its free shot, the answer to ' +
+      'it, and a second shot.',
     flavour: 'Keeps the arrow. Now from further away.',
+    // Not range, which this game's Archer does not have -- Jeremy's ruling of
+    // 2026-10-29 reads the bible's "twice as far" as **twice**: it looses,
+    // is answered, and looses again. The rule is in `resolveCombat`; there is
+    // no number here to hold.
   },
   {
     id: 'archer-volley',
@@ -413,6 +475,13 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       '+2 attack, but loses the "not struck back" protection.',
     flavour: 'Trades the safety net for the satisfaction.',
+    // The one archer line that ports cleanly, and only because the game is
+    // not the one the bible pictured. The Archer here has `range: 1` and
+    // `firstStrikes: 1` -- its "ranged" nature *is* the free opening blow, so
+    // "loses the not-struck-back protection" means losing that first strike.
+    // The +2 is data; the first strike is a rule in `firstStrikesOf`, and the
+    // two have to land together or this is a free two points of attack.
+    effect: { attack: 2 },
   },
 
   // ---- knight
@@ -426,6 +495,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Movement +1.',
     flavour: 'Expensive, mounted, and now also fast about it.',
+    effect: { moves: 1 },
   },
   {
     id: 'knight-lance',
@@ -497,6 +567,11 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Strike range increases to 3 tiles.',
     flavour: 'Has read every book in the Kingdom. Started skimming for this one.',
+    // "Range increases to 3", and the Mage's base is 2, so +1 rather than a
+    // floor at 3. The Archer's line says the same words and does **not** get
+    // this, because the Archer's range is 1: see `archer-longbow` in the
+    // unwired list.
+    effect: { reach: 1 },
   },
   {
     id: 'mage-battle',
@@ -517,8 +592,8 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Warden Mage',
     needs: 'reading-ahead',
     blurb:
-      'First strike against this unit each combat deals reduced damage (a ' +
-      'warding effect).',
+      'Takes half the damage from any attack, and nothing gets a free first ' +
+      'strike against it.',
     flavour: 'Read the book on getting hit. Skipped straight to the ending.',
   },
 ];

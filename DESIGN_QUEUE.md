@@ -12387,7 +12387,12 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
-> **Slice 4** (this one) is the mechanism: a unit carries an upgrade, the
+> **Slice 5a** (this one) is the first of the effects: 13 of 36 do something,
+> and the other 23 are listed in `tests/upgradeEffects.test.ts` with a reason
+> each. See *Slice 5a, in detail* below, and in particular **the Archer**,
+> which turns out not to be a ranged unit in this game at all.
+>
+> **Slice 4** is the mechanism: a unit carries an upgrade, the
 > branch locks, and one already standing can be paid for. See *Slice 4, in
 > detail* below. **Jeremy drew the sixteen outstanding sheets the same day**,
 > so the art is 144/144 and counted by `art-present.test.ts` every run.
@@ -12588,6 +12593,384 @@ field army the turn an advance landed would be worse for the option.
 `tests/upgrading.test.ts` asserts it actually fires, which is the lesson from
 the Burrower-caste, the spy, the unseen agent and the reform sites: a mechanic
 the AI never uses makes a sweep measure nothing.
+
+### Slice 5a, in detail — the first thirteen effects
+
+**The seam.** Five of the thirty-six blurbs are a flat modifier to a figure the
+game already computes; the other thirty-one are rules. So `UpgradeDef.effect`
+holds the flat ones as data and the rest are named checks -- `hasUpgrade(unit,
+'orc-berserker')` -- in the subsystem that owns them, exactly as `hasPerk` is.
+Trying to express all thirty-six as data would mean inventing a little
+language, and the moment a table needs a predicate it has stopped being a table.
+
+**The test this slice is really for.** An upgrade whose blurb promises
+something and whose code does nothing is a card that lies, and **nothing else
+in the suite would fail because of it**: the unit builds, the sprite loads, the
+advance researches, the fee is paid, and the thing simply does not happen.
+So `upgradeEffects.test.ts` insists each of the thirty-six is data, **or**
+named in a file under `src/`, **or** declared unwired with a reason -- the
+sources read through `import.meta.glob` with `?raw`, so "is it wired" is
+answered by looking rather than by a second list somebody maintains. The two
+halves check each other: if the grep always said yes, the stale-entry test
+would name all twenty-three; if it always said no, the orphan test would name
+the nine wired by rule.
+
+**Wired (13).** Flat: `orc-guardian`, `knight-errant`, `mage-archmage`,
+`archer-marksman`. By rule: `orc-berserker`, `orc-veteran`, `footman-veteran`,
+`knight-vanguard`, `ogre-warlord`, `ogre-grinder`, `deathknight-dread`,
+`paladin-templar`, `footman-shieldwall`.
+
+**Two small things the game did not have.** `neighbours(state, unit, side)`,
+because three auras all wanted adjacency and it had been computed inline
+wherever it was needed -- two auras disagreeing about what "adjacent" means is
+the quietest possible bug. And `Unit.fights`, because "after surviving 2
+combats" means combats, where `xp` is awarded for razing a city, taking one,
+and reading a spy's post.
+
+**A guard worth remembering.** The flat bonus is added to the base beside
+`drilled`, under a floor so a Dread Knight cannot switch a creature off. An
+*unconditional* `Math.max(COWED.floor, ...)` there would have quietly raised
+the attack of anything with a base below one -- in a game with the box
+unticked, where none of this is supposed to happen. Guarded on the bonus being
+non-zero.
+
+### The Archer is not what the upgrade bible thought it was
+
+The bible describes a Civ-style bowman. **This game's Archer has `range: 1`.**
+What makes it "ranged" here is `firstStrikes: 1` -- section 11's free opening
+blow. The only units with a real range are the Mage, the catapult, the
+ballista, the Bloat-caste, the Cairn and the Collector.
+
+So of its three lines:
+
+- `archer-marksman` -- *"+2 attack, but loses the 'not struck back'
+  protection"* -- **ports exactly**, and better than it reads: the protection
+  it gives up *is* the first strike. Wired, both halves together, because the
+  +2 on its own is a free bonus.
+- `archer-longbow` -- *"range increases to 3"* -- **is a design call, not a
+  wiring one.** +1 contradicts the card; a floor at 3 would give the Archer a
+  longer reach than the Mage, which is a balance change dressed as a port.
+  Left for Jeremy.
+- `archer-volley` -- *"any unit in range regardless of intervening units"* --
+  means nothing at range 1.
+
+`mage-archmage` says the same words as `archer-longbow` and **does** get the
++1, because the Mage's base really is 2 and 2+1 really is 3.
+
+### Who the Grave Knight can raise (Jeremy, 2026-10-29)
+
+Settled before the rule exists, because it is the question that decides which
+art is worth drawing. **The obvious reading -- anything it kills -- is wrong
+in six ways**, and they are rules in `src/model/raising.ts` rather than a list
+of ids, because the roster is eighty creatures and growing.
+
+**The Unbound are banished instead.** A Grave Knight that kills one ends it
+for good -- no dispersal, no reform -- and raises something that was already
+in the ground from long before any of this. One sprite rather than nine, no
+reference image, and the better joke: it cannot make a skeleton out of a
+ghost, so it digs one up. Prompt in `ART_PROMPTS.md`.
+
+And five exclusions: **no boats**, **no spies**, **no sappers** (it went off
+when it died), **no machinery**, and **not the Hive's Grub, Princess or
+Queen**.
+
+**The Bloat-caste is the exception to the machinery rule, and the reason the
+rule could not be structural.** All six siege creatures share `silhouette:
+'engine'`, which is a drawing hint that says nothing about biology -- the
+Bloat-caste is a bloated insect that walks up and bursts. So it is a named
+exception with a test that makes anybody adding a seventh siege creature
+decide which kind it is rather than inherit an answer.
+
+That leaves **45 creatures**: 13 Horde, 13 Kingdom, 9 Hivekin, 10 Wandering
+Folk. One sheet per creature, not per group size.
+
+**Four filenames in `skeletal versions/` do not resolve against the roster**
+and are Jeremy's to name: `dwarf mystic`, `gnome`, and the pair
+`soldier_spitter` / `worker_fodder`, which look like one sheet covering two
+castes and which the pipeline has no convention for.
+
+### The second batch: six more, and the number that had fifteen homes
+
+**`knight-lance`**, the only upgrade in the thirty-six whose effect depends on
+*what it is fighting* -- hence a second parameter on `firstStrikesOf` that
+every other caller omits. "Cavalry-type" is `isMounted`, which the Long Vigil
+already defined.
+
+**`mage-battle` and `paladin-warden`** landed together, as the unwired note
+said they should: one sentence between them, asked at each of the two places
+in `abilities.ts` that spend the turn.
+
+**`footman-sergeant`**, where *"the first point of damage each combat"* turned
+out to be the interesting half. `applyDamage` has no idea which fight it is
+in, so the reprieve is worked out once at the top of `resolveCombat` and spent
+by the first blow that lands -- a closure rather than a flag on the unit,
+because it belongs to that combat and nothing outside it should see it.
+
+**`sapper-deep`**, one line, now that the blast has a radius at all.
+
+**And `troll-brute`, which was the cheapest-looking and was not cheap.** `+2
+HP` needed `maxHp(unit)`, because `unitType(u.type).hp` was written out in
+**about fifteen places** and every one meant the same thing: a heal ceiling, a
+split threshold, a drain limit, the scale damage is measured against, the
+share of a group still standing, the point at which a sprite starts looking
+hurt. A Brute at full health has to read as full health to every one of them
+or it is permanently one heal short of itself.
+
+The helper lives in `model/units.ts` rather than with the other upgrade rules,
+because `headcount` and `aliveCount` need it and nothing in `model/` may reach
+into `sim/`. `upgrades.ts` imports only types, so it costs no cycle.
+
+**`ogre-brawler`** catches one bystander on the backswing -- the nearest to
+the attacker, off the damage actually dealt rather than off the ogre's
+strength, so a swing that barely landed barely splashes. One, not all of them:
+an ogre that hit everything standing near its target would be a sapper.
+
+### `mage-warden`, which took three readings and taught us something
+
+**The bible's version is a no-op, and that was measured rather than argued.**
+*"First strike against this unit deals reduced damage"*: `damagePerRound` is
+`max(1, round(maxHp / 15))`, so a free blow is **one hit point for
+seventy-eight of the game's eighty-one creatures**, and half of one is one. A
+mage, which is the creature that gets this upgrade, saves nothing at all. It
+was wired, tested and green before anybody asked what it was worth, which is
+exactly the card-that-lies the completeness test exists to catch.
+
+**Jeremy's answer, 2026-10-30:** half the damage from *any* attack, and no
+free first strike against it at all. The first-strike half is one line in
+`firstStrikesOf` and works perfectly.
+
+**And the damage half ran into the same wall, one level down.** Of the 6561
+creature matchups in this game, **6084 deal exactly one point a round**, and
+`Math.round(1 * 0.5)` is 1. A percentage cannot halve an indivisible blow, so
+a 50% resistance is rounded away in ninety-three per cent of fights.
+
+So the ward is paid two ways, and the seam is deliberate:
+
+- **`resistance`**, which `applyDamage` consults, halves anything big enough
+  to halve -- a blast, a dragon's breath, a militia. Burning is not an attack
+  and takes its health directly, so it is untouched, which is right.
+- **In `resolveCombat`**, every second blow that the percentage *failed* to
+  reduce is shrugged off whole. Half the blows is half the damage when a blow
+  is indivisible. Guarded on the percentage having failed, so nothing is
+  halved twice.
+
+**The general lesson is worth more than the upgrade.** This game's damage
+granularity is one point for almost every exchange, so *any* percentage
+reduction is a coin that lands on "nothing" unless it exceeds 50%. Three
+upgrades in this bible are written as percentages; the next one wants this
+checked before it is believed.
+
+### The third batch: the axethrower, a blessing, and a dragon that aims
+
+**The axethrower's three were one mechanism**, as the unwired list had said.
+`axethrower-twin` forced `Unit.axesThrown` to exist: `disarmed` is a boolean,
+and for a creature with one axe a boolean and a count are the same thing,
+which is why nothing noticed until there were two. `axethrower-retriever`
+rolls *before* the countdown rather than instead of it, so an unlucky
+Retriever still gets its axe back the slow way and is never worse off than an
+ordinary thrower.
+
+**`axethrower-heavy` needed a new reading**, the third of those. *"Thrown
+strikes ignore 1 point of target defense"*, and in this engine a thrown strike
+does not consult defence at all -- the free opening blow deals
+`damagePerRound`, which is a function of health. The nearest true sentence is
+about the fight the throw opens, so a Heavy Thrower's target holds the line
+one point worse, read in `defenseStrength`, which already takes the attacker
+for the sake of siege engines.
+
+**`paladin-champion`** brought the game its first condition applied by an
+upgrade rather than a spell: `blessed`, worth a point of defence for a turn.
+Applied even to somebody already at full health, because a Champion standing
+over the unhurt is still worth standing next to, and that is the half of it
+that makes it more than a bigger heal.
+
+**`dragon-wyrm`** stops the breath at its own front rank. It still carries on
+-- that is the whole mechanic -- it simply stops cooking orcs.
+
+### And a fourth thing the engine would not do
+
+**`troll-bonebreaker` was built, wired and deleted again.** *"Attacks reduce
+target's defense by 1 for 2 turns"* needs the target to still be standing, and
+a probe over **2160 melee fights found not one that left both sides alive**.
+`resolveCombat` runs until somebody dies; the one exception is a withdrawal
+perk that did not fire a single time in that sample. The `broken` status went
+in and came straight back out with it.
+
+Two readings would work, and the choice is Jeremy's: apply it at the *start*
+of the fight, which makes it `axethrower-heavy` under another name, or make it
+an aura on adjacent enemies like `deathknight-dread`.
+
+**That is now four upgrades whose wording describes a different game** -- the
+Archer's range, the orc's movement point, the Warden's percentage and this.
+All four were found by measuring rather than reading, and three of them only
+after they had been written and were passing their tests.
+
+### The fourth batch, and a fifth thing the engine would not do
+
+**`sapper-cadre`** -- one of a pair does not take the other with it, which is
+the whole point of being allowed to stand together. Everything else is still
+caught, and a blast still does not chain.
+
+**`troll-regen`**, where the rate was the whole question. A blow in this game
+is one point and lands about half the time, so a troll takes roughly half a
+point a round -- **anything faster than one point every two rounds is a troll
+that cannot be killed**. One in four is a quarter of a point a round. The
+number is invented, and that arithmetic is why it is not larger.
+
+Its test measures **rounds, not health**: a troll loses to a footman either
+way, and two corpses have the same health. What the knitting buys is time --
+thirty rounds against twenty-four.
+
+**`dragon-elder` cannot be wired, and this one is structural.** *"Flying over
+enemy cities costs double movement"*, and in this game **no unit may enter an
+enemy city tile by pathing at all**: `costFnFor` returns null for every one of
+them, flier included, because enemy ground is taken by attacking and never by
+walking over. The drawback describes a manoeuvre the game has no rule for, and
+wiring the breath half alone would hand the Horde a free buff -- the
+`archer-marksman` hazard, where a pair must land together or the upgrade is a
+bonus with no price.
+
+**And a miss of mine, found on the way.** The `maxHp` refactor left six sites
+still reading `type.hp` -- including the regeneration ceiling, so a Troll
+Brute would have healed two short of its own maximum for ever. Also the health
+bar, the sidebar's `12 / 15`, the AI's retreat threshold and the recruiting
+discount. All six read `maxHp` now.
+
+### Jeremy's three rulings, 2026-10-30
+
+All three lines had been written as something this engine cannot do, and all
+three were found by measuring rather than reading.
+
+**`archer-volley`** -- *"any unit in range regardless of intervening units"*,
+at range 1. What an Archer has instead of range is the free opening blow, so a
+Volley Archer gets **two of them**.
+
+**`troll-bonebreaker`** -- the lasting debuff that could never land, since no
+melee fight leaves a survivor. Applied **during the fight** instead, where the
+bone actually breaks. It shares `piercesDefence` with `axethrower-heavy`,
+which is the cost of this reading and was the stated trade-off.
+
+**`dragon-elder`** -- keep the stronger breath, pay for it somewhere the game
+can express. An Elder Dragon is a **slower** dragon, which is also what
+"circling to line up the shot" should look like. Four movement points, so one
+off is a real price rather than the standstill `orc-guardian` would have been.
+
+### What is left
+
+**Four upgrades**, and they are two jobs. `sapper-tunnel` wants a unit-aware
+notion of impassable ground. `dragon-rider` wants the ship mechanism, for
+something that flies.
+
+And the two Death Knight lines. **Everything they need is now decided** --
+see below -- but the build did not start, so the next session picks this up
+from a clean tree.
+
+### The Grave Knight, fully specified and not yet built
+
+Jeremy's two answers, 2026-10-30:
+
+1. **A raised copy has half the original's numbers** -- attack, defence and
+   health all halved. "Copy" then means something: raising a dragon is worth
+   more than raising a peon, and it needs no second table of stats. The known
+   risk is that half a dragon is still a serious unit; if that plays badly the
+   fix is a cap, which was the option not taken.
+2. **The ancient skeleton is a new creature, never buildable.** One new id in
+   `UNIT_TYPES`, Horde faction, unlocked by no advance, so no city can ever
+   build one and it still gets a proper Orcpedia card. Cost: one more entry in
+   every hand-maintained list, which is this project's least favourite kind of
+   cost and was judged worth it here.
+
+My defaults for the rest, all provisional and all for a sweep to decide:
+
+| | |
+|---|---|
+| lifespan of a raised copy | 3 turns |
+| chance on a kill | 1 in 3 |
+| Soul-Bound drain | 1 HP a turn per live skeleton |
+
+And four rulings that are not numbers:
+
+- **Only kills the Grave Knight makes itself, in combat, raise anything.** Not
+  a blast, not a dragon's breath, not a militia. Otherwise a sapper going up
+  next to one would populate a graveyard.
+- A raised skeleton has **no upkeep, counts for no score, and cannot take a
+  city**. It is a few turns of help, not an empire.
+- **No cap on Soul-Bound skeletons.** The drain is the cap, and that is the
+  joke the flavour text makes -- *the pyramid scheme finally has overhead*.
+- The Unbound are **banished** rather than copied, which means `scatters()`
+  has to answer `false` when the killer is a Grave Knight -- the same seam
+  `exorcises` already uses, which is why that rule is cheap.
+
+### The sprite naming, decided with the rule rather than ahead of it
+
+One mapping for `art_src/unit upgrades/skeletal versions/`, with no special
+cases: **`<name> skeleton.jpg` becomes `<name>-skeleton.png`**.
+
+So `orc skeleton.jpg` is the variant sprite an upgraded orc's corpse wears,
+reached by `artVariant` exactly as the upgrades are; and `ancient
+skeleton.jpg` becomes `ancient-skeleton.png`, which is also the new creature's
+id. The two cases fall out of one rule rather than needing a branch, which is
+why it was worth waiting for the rule to decide it.
+
+Files whose names match no creature -- `dwarf mystic`, `gnome` -- convert to
+sprites nothing asks for, which is harmless: `art-present.test.ts` checks what
+the model wants, not what the folder holds. The `soldier_spitter` and
+`worker_fodder` pair still need Jeremy to say what they are.
+
+**Still nothing swept.** Every number slice 5a invented is in one object per
+rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with
+upgrades against a game where two thirds of them are inert.
+
+### Both questions answered (Jeremy, 2026-10-29)
+
+**The Longbow looses twice.** The bible's longer reach could not be range --
+this game's Archer has `range: 1` and its bow *is* the free opening shot -- so
+it is read as **twice**: it looses, is answered, and looses again, all before
+the fight proper. Hung off the free shot rather than standing alone, so it
+nets against another first-striker the way section 11 says every first strike
+does; two archers still cancel.
+
+**The Guardian moves one tile every two turns**, rather than taking a flat -1
+it could not afford. Every Guardian steps on the same turns, which is
+predictable to play against and, for a creature whose joke is that it has
+finally learned to wait, rather the point.
+
+**And in exchange it can Cover.** A turn spent standing in front of an
+adjacent unit -- including one inside a city -- so that whatever comes for
+them meets the Guardian instead: its defence, its health, its death. The one
+thing it can do on a turn it cannot move, which is half of what makes the
+slower pace bearable.
+
+The substitution is in `movement.ts`, before the fight rather than inside
+`resolveCombat`, because everything downstream reads the defender for the
+logs, the experience, the bounty and `destroyUnit`. **It works because the
+attacker does not advance onto the tile it attacked** in this game, so a
+defender standing somewhere else costs the geometry nothing. Melee only: a
+ranged strike goes through `abilities.ts` and does not consult it, which is a
+gap rather than a decision.
+
+Cover took the key **Y**, not C, because C centres the view and one unit type
+in eighty should not take a universal key away. The single-letter ability
+space is nearly full and the next one will want a better answer.
+
+### And a weakness in how the fixtures protect us
+
+`tests/fixtures.test.ts` **writes** the `.w2c` files rather than comparing
+them, so a change that moves the game makes the suite rewrite its own oracle
+and pass. The Queen bug above was caught by `git diff --stat fixtures/` and
+not by any test. The signal is the diff; somebody has to look at it.
+
+**And "the fixture moved" has two very different meanings**, which cost an
+hour here. The Queen bug changed `seed` from 71 to 75: the late fixtures
+search a fixed list of seeds for one where both empires are still standing at
+turn 299, so a different seed means the *game* moved. Slice 5a's remaining
+diff is `fights` appearing on 20 units of 118, with the same seed, the same
+`rngState` and every other field identical: that is the save format carrying
+one more fact, not the game changing.
+
+So diff field by field before concluding anything. Bisecting by "does the file
+match HEAD" is a trap, because removing the write also removes the field --
+which looks exactly like fixing a behaviour change and is not.
 
 ### What slice 4 did not do
 
