@@ -36,6 +36,7 @@ export const SHORTCUTS: Control[] = [
   { group: 'Units', keys: 'Shift+W', does: 'Dig ditches all the way to a tile you click next' },
   { group: 'Units', keys: 'Shift+A', does: 'Auto work: a worker finds land to improve by itself' },
   { group: 'Units', keys: 'U', does: 'Resupply' },
+  { group: 'Units', keys: 'Shift+U', does: 'Upgrade: in a city of yours, for gold, if the game has upgrades in it' },
   { group: 'Units', keys: 'C', does: 'Centre the view on it' },
   { group: 'Units', keys: 'Esc', does: 'Put down an ability, then deselect' },
   { group: 'Cities', keys: ', / .', does: 'Previous or next city of yours' },

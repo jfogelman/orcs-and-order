@@ -77,6 +77,8 @@ import { COWED, hasStatus } from '../sim/status';
 import { RUINS, expectedGuard, isWarden, standingRuins } from '../sim/ruins';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, unitAt, withRng } from '../sim/gamestate';
+import { buyUpgrade, upgradeBlocked, upgradeFee } from '../sim/upgrading';
+import { UPGRADES } from '../model/upgrades';
 import { unitReach, abilityReady, abilityTargets, useAbility } from '../sim/abilities';
 import { resupply, resupplyBlocked } from '../sim/combat';
 import {
@@ -2897,6 +2899,23 @@ export const AI_TUNING = {
    * soldier standing in a field.
    */
   buildPosts: true,
+  /**
+   * Whether the AI pays to upgrade the units it already has. Section 155.
+   *
+   * A lever because the spend competes with nothing else by default --
+   * `rushBuying` is off, so an AI treasury is largely idle -- and because the
+   * price of an upgrade is a turn of that unit's time as well as the gold,
+   * which is a trade nobody has measured yet.
+   */
+  upgrading: true,
+  /**
+   * How many units the AI will take back to the works in one turn.
+   *
+   * Bounded for the same reason `spendGold` is bounded, and low on purpose: an
+   * empire that upgrades its whole garrison the turn an advance lands has also
+   * stood its whole garrison still for a turn.
+   */
+  upgradesPerTurn: 3,
 };
 
 /**
@@ -2919,6 +2938,34 @@ function spendGold(state: GameState, player: Player): void {
     if (!affordable) break;
     if (player.gold - rushCost(state, affordable) < AI_TUNING.goldReserve) break;
     if (!rushBuy(state, affordable)) break;
+  }
+}
+
+/**
+ * Send the garrison back to the works. Section 155.
+ *
+ * **Only units that were already standing still**: fortified or sentried, in a
+ * city of their own. `buyUpgrade` costs the rest of the unit's turn as well as
+ * the gold, so upgrading something that was about to march is paying twice,
+ * and an AI that froze its field army the turn an advance landed would be
+ * worse for having the option.
+ *
+ * Dearest first, which is the opposite of `spendGold`'s cheapest-first and for
+ * a different reason: that function is buying *more things*, and this one is
+ * improving the things most worth improving. Unmeasured, like the fee itself.
+ */
+function upgradeArmy(state: GameState, player: Player): void {
+  if (!UPGRADES.enabled || !AI_TUNING.upgrading) return;
+  const waiting = playerUnits(state, player.id)
+    .filter((u) => u.order === 'fortified' || u.order === 'sentry')
+    .filter((u) => upgradeBlocked(state, u) === null)
+    .sort((a, b) => upgradeFee(state, b) - upgradeFee(state, a));
+  let done = 0;
+  for (const u of waiting) {
+    if (done >= AI_TUNING.upgradesPerTurn) break;
+    if (player.gold - upgradeFee(state, u) < AI_TUNING.goldReserve) break;
+    if (!buyUpgrade(state, u)) break;
+    done++;
   }
 }
 
@@ -3042,6 +3089,9 @@ export function runAiTurn(state: GameState, playerId: number): void {
 
   chooseResearch(state, player, personality);
   takePromotions(state, player);
+  // Before production, so a city that is about to choose what to build is
+  // choosing with the purse this has already drawn on.
+  upgradeArmy(state, player);
 
   const frontier = frontierTiles(state, player);
   for (const city of playerCities(state, playerId)) {

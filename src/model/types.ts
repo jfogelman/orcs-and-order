@@ -286,6 +286,19 @@ export interface Unit {
    * choice whenever it has fewer of these than it has ranks.
    */
   perks?: string[];
+  /**
+   * Which upgrade this unit carries, as an `UPGRADES_BY_ID` key. Section 155.
+   *
+   * **Not a `UnitTypeId`.** The creature keeps its own type and its row in
+   * every table; this says which variant of it is standing there, the way
+   * `rank` says how practised it is. Optional, so every save and every test
+   * fixture written before section 155 loads as a unit that has not been
+   * upgraded -- which is also every unit in a game with the box unticked.
+   *
+   * A unit built after the advance comes out with this set; one already
+   * standing gets it by paying in a city of its own.
+   */
+  upgrade?: string;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;
@@ -821,6 +834,16 @@ export interface GameSettings {
    * every measurement in this project assumes exactly two sides.
    */
   barbarians?: boolean;
+  /**
+   * Whether the thirty-six unit upgrades are in this game. Section 155.
+   *
+   * Asked for "similar to barbarians", and kept the same way: decided on the
+   * new-game screen, saved with the game, and absent on every save from
+   * before it, which loads as a game without them. The live copy the rules
+   * read is `UPGRADES.enabled`; `applyUpgrades` is the only thing that writes
+   * it, and this is what it writes.
+   */
+  upgrades?: boolean;
 }
 
 /**

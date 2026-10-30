@@ -17,6 +17,7 @@ import type { UnitTypeDef } from '../model/units';
 import type { BuildingDef } from '../model/buildings';
 import type { City, GameState, ProductionItem, Unit, AutoBuild, Player, UnitTypeId } from '../model/types';
 import { cityAt, log, nextCityName, recomputeVisibility, spawnUnit, unitAt, withRng } from './gamestate';
+import { upgradeForNewUnit } from './upgrading';
 import { BEAKERS_PER_TRADE, TRADE_STEPS, splitTrade, tradeRates } from './research';
 import { unlockedBuildings, unlockedUnits } from './research';
 import { recordLandmark } from './history';
@@ -1278,6 +1279,12 @@ export function processCity(state: GameState, city: City): CityTurnEvents {
             ? cityFollyBonus(city, (b) => b.builtMoves)
             : 0;
           if (strides > 0) unit.strides = strides;
+          // Section 155: the works make the current model. The free half of
+          // the upgrade rule -- paying for one already standing is in
+          // `upgrading.ts` -- and undefined in every game with the box
+          // unticked, so the key is simply not written.
+          const fitted = upgradeForNewUnit(state, unit);
+          if (fitted) unit.upgrade = fitted;
           unit.homeCity = city.id;
           // Section 138: counted here rather than inferred from the board at the
           // end, because a hidden agent that is built and killed on turn 40

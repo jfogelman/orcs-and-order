@@ -52,6 +52,19 @@ import type { FactionId, UnitTypeId } from './types';
 export const UPGRADES = {
   /** The new-game checkbox. Off is every measurement ever taken. */
   enabled: false,
+  /**
+   * Gold per shield of the creature's build cost, to upgrade one already
+   * built.
+   *
+   * A first answer by argument, which is how every number in this project
+   * starts. Two gold a shield puts an Orc at twenty and a Dragon at ninety --
+   * dear enough that an empire upgrades the army it means to fight with
+   * rather than all of it, and cheap enough to be worth doing at all. It is
+   * deliberately well under `rushCost`, which charges two gold a shield
+   * *plus* a quadratic term and then doubles it from cold: buying a whole new
+   * creature should cost more than improving one you have.
+   */
+  fee: 2,
 };
 
 /** Which of a family's three an upgrade is. */
@@ -534,3 +547,91 @@ export function branchesFor(base: UnitTypeId): UpgradeDef[] {
 
 /** The advance ids that grant an upgrade, for the tree view and the tests. */
 export const UPGRADE_TECH_IDS: string[] = UPGRADE_DEFS.map((u) => u.needs);
+
+/** By the advance that grants it, which is how the research side looks one up. */
+export const UPGRADE_BY_TECH: Record<string, UpgradeDef> = Object.fromEntries(
+  UPGRADE_DEFS.map((u) => [u.needs, u]),
+);
+
+/**
+ * The other branch of a family -- the one taking this gives up.
+ *
+ * Null for a linear upgrade, which gives nothing up, and for a family that
+ * somehow has only one branch, which the list-agreement test forbids.
+ */
+export function rivalBranch(u: UpgradeDef): UpgradeDef | null {
+  if (u.line === 'linear') return null;
+  return UPGRADE_DEFS.find((o) => o.base === u.base && o.line !== 'linear' && o.id !== u.id) ?? null;
+}
+
+/**
+ * Whether this advance is a door that has already closed.
+ *
+ * **This is where "the branch is empire-wide and permanent" actually lives.**
+ * Jeremy's first ruling was that researching Branch A settles the question for
+ * the whole empire for the rest of the game, and the honest way to say that in
+ * a game built on a tech tree is that Branch B stops being researchable. No
+ * new field on `Player`, no second record of the decision that could disagree
+ * with the books: the advance you took *is* the decision.
+ *
+ * Takes the id list rather than a `Player` so it stays a pure function of what
+ * an empire knows, and so a test can ask it about a hand of three advances.
+ */
+export function branchGivenUp(techs: readonly string[], techId: string): boolean {
+  const up = UPGRADE_BY_TECH[techId];
+  if (!up) return false;
+  const rival = rivalBranch(up);
+  return rival !== null && techs.includes(rival.needs);
+}
+
+/**
+ * What this empire's creatures of a kind are, given what it knows.
+ *
+ * The branch if a branch has been taken, otherwise the linear upgrade, and
+ * null for a creature this empire has learned nothing about -- which is every
+ * creature in a game with the box unticked, and most of them in one with it
+ * ticked.
+ *
+ * A newly built unit comes out like this for nothing; one already standing
+ * pays `UPGRADES.fee` in a city of its own. That split is Jeremy's second
+ * ruling, and it is the Civ2 idiom: the factory makes the current model, and
+ * last year's model goes back to the works.
+ */
+export function upgradeHeld(techs: readonly string[], base: UnitTypeId): UpgradeDef | null {
+  const mine = UPGRADE_DEFS.filter((u) => u.base === base);
+  return (
+    mine.find((u) => u.line !== 'linear' && techs.includes(u.needs)) ??
+    mine.find((u) => u.line === 'linear' && techs.includes(u.needs)) ??
+    null
+  );
+}
+
+/**
+ * Point the lever at what this game was started with.
+ *
+ * **A lever a player can set is new here, and it needs exactly one owner.**
+ * Every other subsystem switch in this project -- `ALT_VICTORY`, `FOLLIES`,
+ * `TERRAFORM` -- is a module object that only a sweep ever writes, and
+ * `techInPlay` reads this one from a `TechDef` with no game in hand, so it
+ * cannot become a field on `GameState` without threading state through
+ * thirty-seven call sites of `researchableTechs`.
+ *
+ * So the settings are the record and the lever is the live copy, and this is
+ * the only thing that writes it: `createGame` calls it with the settings it
+ * just built, and `deserialize` calls it with the settings it just read. A
+ * save carries its own answer and loading one is enough to get it, which is
+ * the failure to avoid -- a game started with upgrades, saved, and reopened in
+ * a session that had them off.
+ *
+ * It reads `UPGRADES.enabled` as the *default* rather than clearing it, so a
+ * sweep that sets the lever and then calls `createGame` still gets the arm it
+ * asked for. See `upgradesAsked`.
+ */
+export function applyUpgrades(settings: { upgrades?: boolean }): void {
+  UPGRADES.enabled = settings.upgrades === true;
+}
+
+/** What a new game's settings should record: what was asked, else the lever. */
+export function upgradesAsked(asked?: boolean): boolean {
+  return asked ?? UPGRADES.enabled;
+}

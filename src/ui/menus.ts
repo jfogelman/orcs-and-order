@@ -171,6 +171,19 @@ export function openNewGameMenu(
             </span>
           </span>
         </label>
+
+        <label class="field-check">
+          <input type="checkbox" id="upgrades-input" />
+          <span>
+            <strong>Unit upgrades</strong>
+            <span class="muted">
+              &mdash; every creature can be improved once, and then down one of two
+              roads that cannot both be taken. The road is chosen for the whole empire
+              and never changed. Units already built go back to a city and pay for it.
+              Decided now and kept for the whole game.
+            </span>
+          </span>
+        </label>
       </div>
       <div class="button-row" style="justify-content:flex-end">
         <button class="primary" id="btn-start">Begin</button>
@@ -294,6 +307,8 @@ export function openNewGameMenu(
           maxTurns: Number.isFinite(maxTurns) ? maxTurns : 300,
           barbarians:
             root.querySelector<HTMLInputElement>('#barbarians-input')?.checked === true,
+          upgrades:
+            root.querySelector<HTMLInputElement>('#upgrades-input')?.checked === true,
           ...(Number.isFinite(parsedSeed) ? { seed: parsedSeed >>> 0 } : {}),
         });
       });
