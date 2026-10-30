@@ -299,6 +299,17 @@ export interface Unit {
    * standing gets it by paying in a city of its own.
    */
   upgrade?: string;
+  /**
+   * Fights this unit has been in and come out of. Section 155 slice 5.
+   *
+   * Counted rather than read off `xp`, which is awarded for razing a city,
+   * taking one, and reading a spy's dispatches, and would make a scholar of
+   * anybody. Only two upgrades read it -- `orc-veteran` and `footman-veteran`,
+   * both "after surviving 2 combats" -- and both want the thing the words say.
+   *
+   * Optional, so every save and fixture from before this counts as nought.
+   */
+  fights?: number;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;

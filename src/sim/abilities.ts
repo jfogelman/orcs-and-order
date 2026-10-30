@@ -1,4 +1,5 @@
 import { DIRS8, distance, idx } from '../engine/grid';
+import { upgradeReach } from './upgradeEffects';
 import { hostile, noteClash } from './diplomacy';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
@@ -84,7 +85,11 @@ export const RANGED_ROUNDS = 3;
  * range it would never stand at.
  */
 export function unitReach(unit: Unit): number {
-  return unitType(unit.type).range + (unit.reach ?? 0);
+  // Section 155: `archer-longbow` and `mage-archmage` both read "range
+  // increases to 3", and both creatures have a base of 2. Added through the
+  // same sum as the Rumbling Archive's `reach`, so an Archmage built beside
+  // one is not quietly capped at whichever of the two is larger.
+  return unitType(unit.type).range + (unit.reach ?? 0) + upgradeReach(unit);
 }
 
 /** How much harder a thrown weapon hits than the same creature swinging it. */

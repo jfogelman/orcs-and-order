@@ -1,4 +1,5 @@
 import { distance, idx } from '../engine/grid';
+import { firstStrikesOf, upgradeAttack, upgradeDefence } from './upgradeEffects';
 import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
 import { drownCargo } from './ships';
@@ -349,6 +350,18 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
 
   // Section 111: built beside the Loudest Rock, and it swings a little harder for good.
   let total = type.attack + (attacker.drilled ?? 0);
+  // Section 155: and whatever its upgrade is worth, plus whatever is standing
+  // around it. Added to the base beside `drilled` so it scales with the
+  // headcount, which is the rule every other flat addition here follows --
+  // and floored, since a Dread Knight is allowed to make a creature worse and
+  // not to switch it off.
+  //
+  // **Guarded on the bonus being non-zero, which matters more than it looks.**
+  // An unconditional `Math.max(COWED.floor, ...)` here would quietly raise the
+  // attack of anything whose base is below one -- in a game with the box
+  // unticked, where nothing of section 155 is supposed to happen at all.
+  const upgraded = upgradeAttack(state, attacker);
+  if (upgraded !== 0) total = Math.max(COWED.floor, total + upgraded);
   // Section 125: and the Old Queen's Shell, which is empire-wide and only ever
   // about two castes. Added to the base alongside `drilled` so it scales with
   // the headcount below, exactly as a point of drill does.
@@ -446,6 +459,11 @@ export function defenseStrength(
 
   // Section 111: the Long Vigil, for anything that rides.
   let total = type.defense + (isMounted(defender) ? empireBonus(state, defender.owner, (b) => b.mountedDefense) : 0);
+  // Section 155, the other foot. Floored at zero rather than at `COWED.floor`,
+  // since a Berserker deliberately gives a point up and ought to be allowed
+  // to -- and guarded the same way, so a game without upgrades is untouched.
+  const shielded = upgradeDefence(state, defender);
+  if (shielded !== 0) total = Math.max(0, total + shielded);
   // Section 152: The Standing Watch, which guards one settlement and has not
   // been told what it used to guard. Added to the base, so it scales with the
   // stack the way a point of drill does on the other side -- and only where
@@ -661,7 +679,10 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // Free rounds before the fight proper, to whoever strikes first and by how
   // much more than the other. Netting them is what stops two archers giving
   // each other a free hit and calling it even.
-  const edge = unitType(attacker.type).firstStrikes - unitType(defender.type).firstStrikes;
+  // Section 155: through `firstStrikesOf`, because `archer-marksman` trades
+  // this away for two points of attack and the trade has to be visible from
+  // both sides of the subtraction.
+  const edge = firstStrikesOf(attacker) - firstStrikesOf(defender);
   if (edge !== 0) {
     const striker = edge > 0 ? attacker : defender;
     const struck = edge > 0 ? defender : attacker;
@@ -749,6 +770,16 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
 
   attacker.hp = Math.max(0, attacker.hp);
   defender.hp = Math.max(0, defender.hp);
+
+  // Section 155: whoever walked away from it has been in one more fight.
+  //
+  // Here rather than beside `awardXp`, because the two count different things
+  // on purpose -- experience is given for razing a city, taking one and
+  // reading a spy's post, and "survived two combats" is meant to mean combats.
+  // Counted for both sides, since surviving somebody else's attack is the way
+  // a Footman is most likely to earn it.
+  if (attacker.hp > 0) attacker.fights = (attacker.fights ?? 0) + 1;
+  if (defender.hp > 0) defender.fights = (defender.fights ?? 0) + 1;
 
   // Whatever the magical one did, it leaves behind. Both directions: a mage
   // that fought off an orc has still set it alight.

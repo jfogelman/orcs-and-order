@@ -1,4 +1,5 @@
 import { checkEndings, isEndingPiece } from './endings';
+import { upgradeMoves } from './upgradeEffects';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
@@ -141,13 +142,32 @@ function refreshUnits(state: GameState, player: Player): void {
     // removed from the game for the duration, which is strictly better than
     // damage; halving is a real cost that leaves it playing. Never below one,
     // so a one-move unit is slowed rather than frozen in place forever.
+    const slowed = upgradeMoves(unit);
     const full =
       effectiveMove(player, unit.type) +
       (march > 0 && onOwnLand(state, player.id, unit.x, unit.y) ? march : 0) +
       // Section 146: the Unnamed Marker, which is a fact about the unit and
       // goes with it everywhere, unlike the Long March above.
-      (unit.strides ?? 0);
-    unit.moves = hasStatus(unit, 'frozen') ? Math.max(1, Math.floor(full * FREEZE_SLOW)) : full;
+      (unit.strides ?? 0) +
+      // Section 155: `knight-errant` adds one and `orc-guardian` takes one
+      // away, which is the only negative movement modifier in the game.
+      slowed;
+    unit.moves = hasStatus(unit, 'frozen')
+      ? Math.max(1, Math.floor(full * FREEZE_SLOW))
+      : // **The floor applies only when an upgrade is taking something away**,
+        // and that is not fussiness. An unconditional `Math.max(1, full)` here
+        // makes the Hivekin Queen mobile -- she has `move: 0` on purpose, sits
+        // in the first Hive and never leaves it -- in a game with the box
+        // unticked. Three fixtures moved and said so.
+        //
+        // Where it does apply, a Guardian keeps one move rather than none.
+        // An orc has one to begin with, so the honest reading of "-1 movement"
+        // would leave it unable to move at all for the rest of the game, which
+        // is a joke the blurb does not make. Flagged for Jeremy rather than
+        // decided quietly: see the queue.
+        slowed < 0
+        ? Math.max(1, full)
+        : full;
     if (unit.order === 'skip') unit.order = 'none';
     // Digging carries on at the top of the owner's turn, and a road is laid the
     // turn its last shift is done.

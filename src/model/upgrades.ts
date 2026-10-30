@@ -70,6 +70,36 @@ export const UPGRADES = {
 /** Which of a family's three an upgrade is. */
 export type UpgradeLine = 'linear' | 'a' | 'b';
 
+/**
+ * The part of an upgrade that is only a number. Section 155 slice 5.
+ *
+ * **Deliberately small, and deliberately not everything.** Of the thirty-six
+ * blurbs, five are a flat modifier to a figure the game already computes and
+ * the other thirty-one are rules -- a condition, an aura, a change to what an
+ * ability costs. Trying to express all of them as data would mean inventing a
+ * little language, and the moment a table needs a predicate it has stopped
+ * being a table.
+ *
+ * So the flat ones live here, where they can be read off, and the rest are
+ * named checks in the subsystem that owns them, exactly as `hasPerk` is. What
+ * holds the two halves together is `tests/upgradeEffects.test.ts`, which
+ * insists every one of the thirty-six is **either** data here, **or** named
+ * somewhere under `src/`, **or** declared unwired with a reason. There is no
+ * fourth option, which is the whole point: an upgrade whose blurb promises
+ * something and whose code does nothing is a card that lies, and nothing else
+ * would ever fail because of it.
+ */
+export interface UpgradeEffect {
+  /** Added to the creature's base attack, before every multiplier. */
+  attack?: number;
+  /** Added to its base defence, likewise. */
+  defence?: number;
+  /** Movement points a turn. Negative is a real cost, and two of these have one. */
+  moves?: number;
+  /** Tiles added to a striking range, through the `reach` the Rumbling Archive uses. */
+  reach?: number;
+}
+
 export interface UpgradeDef {
   /**
    * `<base>-<variant>`, which is also the sprite's filename.
@@ -90,6 +120,13 @@ export interface UpgradeDef {
   blurb: string;
   /** And the joke, which is usually the point. */
   flavour: string;
+  /**
+   * The flat part, if this upgrade's whole effect is a number.
+   *
+   * Absent means the effect is a rule and lives in code. It does **not** mean
+   * the upgrade does nothing -- see the completeness test.
+   */
+  effect?: UpgradeEffect;
 }
 
 export const UPGRADE_DEFS: UpgradeDef[] = [
@@ -163,6 +200,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       '+2 defense, -1 movement.',
     flavour: 'Finally, an orc who waits.',
+    effect: { defence: 2, moves: -1 },
   },
 
   // ---- axethrower
@@ -413,6 +451,13 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       '+2 attack, but loses the "not struck back" protection.',
     flavour: 'Trades the safety net for the satisfaction.',
+    // The one archer line that ports cleanly, and only because the game is
+    // not the one the bible pictured. The Archer here has `range: 1` and
+    // `firstStrikes: 1` -- its "ranged" nature *is* the free opening blow, so
+    // "loses the not-struck-back protection" means losing that first strike.
+    // The +2 is data; the first strike is a rule in `firstStrikesOf`, and the
+    // two have to land together or this is a free two points of attack.
+    effect: { attack: 2 },
   },
 
   // ---- knight
@@ -426,6 +471,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Movement +1.',
     flavour: 'Expensive, mounted, and now also fast about it.',
+    effect: { moves: 1 },
   },
   {
     id: 'knight-lance',
@@ -497,6 +543,11 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     blurb:
       'Strike range increases to 3 tiles.',
     flavour: 'Has read every book in the Kingdom. Started skimming for this one.',
+    // "Range increases to 3", and the Mage's base is 2, so +1 rather than a
+    // floor at 3. The Archer's line says the same words and does **not** get
+    // this, because the Archer's range is 1: see `archer-longbow` in the
+    // unwired list.
+    effect: { reach: 1 },
   },
   {
     id: 'mage-battle',

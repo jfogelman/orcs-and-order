@@ -12387,7 +12387,12 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
-> **Slice 4** (this one) is the mechanism: a unit carries an upgrade, the
+> **Slice 5a** (this one) is the first of the effects: 13 of 36 do something,
+> and the other 23 are listed in `tests/upgradeEffects.test.ts` with a reason
+> each. See *Slice 5a, in detail* below, and in particular **the Archer**,
+> which turns out not to be a ranged unit in this game at all.
+>
+> **Slice 4** is the mechanism: a unit carries an upgrade, the
 > branch locks, and one already standing can be paid for. See *Slice 4, in
 > detail* below. **Jeremy drew the sixteen outstanding sheets the same day**,
 > so the art is 144/144 and counted by `art-present.test.ts` every run.
@@ -12588,6 +12593,156 @@ field army the turn an advance landed would be worse for the option.
 `tests/upgrading.test.ts` asserts it actually fires, which is the lesson from
 the Burrower-caste, the spy, the unseen agent and the reform sites: a mechanic
 the AI never uses makes a sweep measure nothing.
+
+### Slice 5a, in detail — the first thirteen effects
+
+**The seam.** Five of the thirty-six blurbs are a flat modifier to a figure the
+game already computes; the other thirty-one are rules. So `UpgradeDef.effect`
+holds the flat ones as data and the rest are named checks -- `hasUpgrade(unit,
+'orc-berserker')` -- in the subsystem that owns them, exactly as `hasPerk` is.
+Trying to express all thirty-six as data would mean inventing a little
+language, and the moment a table needs a predicate it has stopped being a table.
+
+**The test this slice is really for.** An upgrade whose blurb promises
+something and whose code does nothing is a card that lies, and **nothing else
+in the suite would fail because of it**: the unit builds, the sprite loads, the
+advance researches, the fee is paid, and the thing simply does not happen.
+So `upgradeEffects.test.ts` insists each of the thirty-six is data, **or**
+named in a file under `src/`, **or** declared unwired with a reason -- the
+sources read through `import.meta.glob` with `?raw`, so "is it wired" is
+answered by looking rather than by a second list somebody maintains. The two
+halves check each other: if the grep always said yes, the stale-entry test
+would name all twenty-three; if it always said no, the orphan test would name
+the nine wired by rule.
+
+**Wired (13).** Flat: `orc-guardian`, `knight-errant`, `mage-archmage`,
+`archer-marksman`. By rule: `orc-berserker`, `orc-veteran`, `footman-veteran`,
+`knight-vanguard`, `ogre-warlord`, `ogre-grinder`, `deathknight-dread`,
+`paladin-templar`, `footman-shieldwall`.
+
+**Two small things the game did not have.** `neighbours(state, unit, side)`,
+because three auras all wanted adjacency and it had been computed inline
+wherever it was needed -- two auras disagreeing about what "adjacent" means is
+the quietest possible bug. And `Unit.fights`, because "after surviving 2
+combats" means combats, where `xp` is awarded for razing a city, taking one,
+and reading a spy's post.
+
+**A guard worth remembering.** The flat bonus is added to the base beside
+`drilled`, under a floor so a Dread Knight cannot switch a creature off. An
+*unconditional* `Math.max(COWED.floor, ...)` there would have quietly raised
+the attack of anything with a base below one -- in a game with the box
+unticked, where none of this is supposed to happen. Guarded on the bonus being
+non-zero.
+
+### The Archer is not what the upgrade bible thought it was
+
+The bible describes a Civ-style bowman. **This game's Archer has `range: 1`.**
+What makes it "ranged" here is `firstStrikes: 1` -- section 11's free opening
+blow. The only units with a real range are the Mage, the catapult, the
+ballista, the Bloat-caste, the Cairn and the Collector.
+
+So of its three lines:
+
+- `archer-marksman` -- *"+2 attack, but loses the 'not struck back'
+  protection"* -- **ports exactly**, and better than it reads: the protection
+  it gives up *is* the first strike. Wired, both halves together, because the
+  +2 on its own is a free bonus.
+- `archer-longbow` -- *"range increases to 3"* -- **is a design call, not a
+  wiring one.** +1 contradicts the card; a floor at 3 would give the Archer a
+  longer reach than the Mage, which is a balance change dressed as a port.
+  Left for Jeremy.
+- `archer-volley` -- *"any unit in range regardless of intervening units"* --
+  means nothing at range 1.
+
+`mage-archmage` says the same words as `archer-longbow` and **does** get the
++1, because the Mage's base really is 2 and 2+1 really is 3.
+
+### Who the Grave Knight can raise (Jeremy, 2026-10-29)
+
+Settled before the rule exists, because it is the question that decides which
+art is worth drawing. **The obvious reading -- anything it kills -- is wrong
+in six ways**, and they are rules in `src/model/raising.ts` rather than a list
+of ids, because the roster is eighty creatures and growing.
+
+**The Unbound are banished instead.** A Grave Knight that kills one ends it
+for good -- no dispersal, no reform -- and raises something that was already
+in the ground from long before any of this. One sprite rather than nine, no
+reference image, and the better joke: it cannot make a skeleton out of a
+ghost, so it digs one up. Prompt in `ART_PROMPTS.md`.
+
+And five exclusions: **no boats**, **no spies**, **no sappers** (it went off
+when it died), **no machinery**, and **not the Hive's Grub, Princess or
+Queen**.
+
+**The Bloat-caste is the exception to the machinery rule, and the reason the
+rule could not be structural.** All six siege creatures share `silhouette:
+'engine'`, which is a drawing hint that says nothing about biology -- the
+Bloat-caste is a bloated insect that walks up and bursts. So it is a named
+exception with a test that makes anybody adding a seventh siege creature
+decide which kind it is rather than inherit an answer.
+
+That leaves **45 creatures**: 13 Horde, 13 Kingdom, 9 Hivekin, 10 Wandering
+Folk. One sheet per creature, not per group size.
+
+**Four filenames in `skeletal versions/` do not resolve against the roster**
+and are Jeremy's to name: `dwarf mystic`, `gnome`, and the pair
+`soldier_spitter` / `worker_fodder`, which look like one sheet covering two
+castes and which the pipeline has no convention for.
+
+### What slice 5a did not do
+
+**Twenty-three upgrades still do nothing**, each with its reason in the test.
+They group into about seven jobs rather than twenty-three: the sapper's
+`detonate()`, the axethrower's throw machinery, a lasting-debuff status, a
+`maxHp(unit)` helper, the raised-skeleton rule, "an ability that does not cost
+the turn", and the damage pipeline.
+
+**`troll-brute` is the cheapest-looking and is not cheap.** `+2 HP` needs
+`maxHp(unit)`, because `unitType(u.type).hp` is written out in about fifteen
+places with subtly different meanings -- a heal ceiling, a split threshold, a
+drain limit, the damage-per-round scale. That is a refactor, and it is the
+same shape as the wants refactor that went first in slice 1.
+
+**Still nothing swept.** Every number slice 5a invented is in one object per
+rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with
+upgrades against a game where two thirds of them are inert.
+
+### One question for Jeremy: the Orc Guardian cannot move
+
+*"+2 defense, -1 movement"*, and **an orc has one movement point**. Read
+literally the Guardian has none at all, for the rest of the game: it cannot
+retreat, cannot be repositioned, cannot take the city it was built to hold if
+that city ever changes. "Finally, an orc who waits" is a good joke about a
+slow orc and a worse one about a statue.
+
+It ships floored at one, so a Guardian is slow in principle and unchanged in
+practice, and the floor applies **only** where an upgrade takes movement away
+-- an unconditional floor there gave the Hivekin Queen a movement point in a
+game with the box unticked, and three fixtures said so.
+
+Three ways out, and the choice is his: leave it floored and accept the cost is
+notional; give the orc a second movement point so -1 means something; or move
+the cost onto something else, since the pattern elsewhere in the bible is a
+trade rather than a tax.
+
+### And a weakness in how the fixtures protect us
+
+`tests/fixtures.test.ts` **writes** the `.w2c` files rather than comparing
+them, so a change that moves the game makes the suite rewrite its own oracle
+and pass. The Queen bug above was caught by `git diff --stat fixtures/` and
+not by any test. The signal is the diff; somebody has to look at it.
+
+**And "the fixture moved" has two very different meanings**, which cost an
+hour here. The Queen bug changed `seed` from 71 to 75: the late fixtures
+search a fixed list of seeds for one where both empires are still standing at
+turn 299, so a different seed means the *game* moved. Slice 5a's remaining
+diff is `fights` appearing on 20 units of 118, with the same seed, the same
+`rngState` and every other field identical: that is the save format carrying
+one more fact, not the game changing.
+
+So diff field by field before concluding anything. Bisecting by "does the file
+match HEAD" is a trap, because removing the write also removes the field --
+which looks exactly like fixing a behaviour change and is not.
 
 ### What slice 4 did not do
 
