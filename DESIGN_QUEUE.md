@@ -12805,12 +12805,43 @@ Archer's range, the orc's movement point, the Warden's percentage and this.
 All four were found by measuring rather than reading, and three of them only
 after they had been written and were passing their tests.
 
+### The fourth batch, and a fifth thing the engine would not do
+
+**`sapper-cadre`** -- one of a pair does not take the other with it, which is
+the whole point of being allowed to stand together. Everything else is still
+caught, and a blast still does not chain.
+
+**`troll-regen`**, where the rate was the whole question. A blow in this game
+is one point and lands about half the time, so a troll takes roughly half a
+point a round -- **anything faster than one point every two rounds is a troll
+that cannot be killed**. One in four is a quarter of a point a round. The
+number is invented, and that arithmetic is why it is not larger.
+
+Its test measures **rounds, not health**: a troll loses to a footman either
+way, and two corpses have the same health. What the knitting buys is time --
+thirty rounds against twenty-four.
+
+**`dragon-elder` cannot be wired, and this one is structural.** *"Flying over
+enemy cities costs double movement"*, and in this game **no unit may enter an
+enemy city tile by pathing at all**: `costFnFor` returns null for every one of
+them, flier included, because enemy ground is taken by attacking and never by
+walking over. The drawback describes a manoeuvre the game has no rule for, and
+wiring the breath half alone would hand the Horde a free buff -- the
+`archer-marksman` hazard, where a pair must land together or the upgrade is a
+bonus with no price.
+
+**And a miss of mine, found on the way.** The `maxHp` refactor left six sites
+still reading `type.hp` -- including the regeneration ceiling, so a Troll
+Brute would have healed two short of its own maximum for ever. Also the health
+bar, the sidebar's `12 / 15`, the AI's retreat threshold and the recruiting
+discount. All six read `maxHp` now.
+
 ### What is left
 
-**Nine upgrades still do nothing**, each with its reason in the test: the two
-sapper lines (impassable ground, and a notion of a pair), `troll-regen`,
-`troll-bonebreaker` above, the two Death Knight skeleton lines, `dragon-elder`
-and `dragon-rider`, and `archer-volley`, which means nothing at range 1.
+**Seven upgrades still do nothing**, each with its reason in the test:
+`sapper-tunnel` (impassable ground), `troll-bonebreaker` and `dragon-elder`
+and `archer-volley` (all three waiting on a design call), `dragon-rider`, and
+the two Death Knight skeleton lines.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with

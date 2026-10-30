@@ -4,6 +4,9 @@ import {
   BRAWLER,
   breathSpares,
   conditionDefence,
+  KNIT,
+  knitsMidFight,
+  sparedByBlast,
   SERGEANT,
   blastRadius,
   firstStrikesOf,
@@ -854,6 +857,14 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
       // being cut down swings weaker with every exchange, which is the whole
       // of DESIGN_QUEUE section 31: fixed odds plus health that scales with
       // the count is what made a big enough stack unbeatable by anything.
+      // Section 155, `troll-regen`: a troll knits while the fight is still
+      // going on. Before the exchange, so the point it gets back is a point
+      // it can spend on this round rather than on the next one.
+      for (const side of [attacker, defender]) {
+        if (knitsMidFight(side) && rounds % KNIT.everyRounds === 0 && side.hp > 0) {
+          side.hp = Math.min(maxHp(side), side.hp + KNIT.amount);
+        }
+      }
       const a = atkStatic * headcount(attacker);
       const d = defStatic * headcount(defender);
       // A defence of zero would make the fight a certainty; keep it a contest.
@@ -995,7 +1006,12 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
   // Section 155, `sapper-deep`: the bigger bundle reaches a tile further.
   const reach = blastRadius(sapper);
   const caught = state.units.filter(
-    (u) => u.id !== sapper.id && distance(u.x, u.y, sapper.x, sapper.y) <= reach,
+    (u) =>
+      u.id !== sapper.id &&
+      distance(u.x, u.y, sapper.x, sapper.y) <= reach &&
+      // Section 155, `sapper-cadre`: one of a pair does not take the other
+      // with it, which is the whole point of being allowed to stand together.
+      !sparedByBlast(sapper, u),
   );
   const killed: Unit[] = [];
   for (const victim of caught) {

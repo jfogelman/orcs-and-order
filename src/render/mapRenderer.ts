@@ -1320,12 +1320,12 @@ export class MapRenderer {
     );
 
     // Health bar, only when it matters.
-    if (u.hp < type.hp) {
+    if (u.hp < maxHp(u)) {
       const w = size * 0.7;
       const h = Math.max(3, size * 0.07);
       const bx = s.x + (size - w) / 2;
       const by = s.y + size * 0.06;
-      const frac = Math.max(0, u.hp / type.hp);
+      const frac = Math.max(0, u.hp / maxHp(u));
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(bx - 1, by - 1, w + 2, h + 2);
       ctx.fillStyle = frac > 0.6 ? '#5fbf4a' : frac > 0.3 ? '#d8b13a' : '#c9432c';

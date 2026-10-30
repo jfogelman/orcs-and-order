@@ -102,7 +102,7 @@ function healUnits(state: GameState, playerId: number): void {
     // together, and neither is anything else that has been left spent.
     if (hasStatus(unit, 'spent')) continue;
     const type = unitType(unit.type);
-    const max = type.hp;
+    const max = maxHp(unit);
     if (unit.hp >= max) continue;
     const rate = regenRateFor(state, unit) * type.regenMultiplier;
     // A rate of zero means zero. The floor below exists so that a very small

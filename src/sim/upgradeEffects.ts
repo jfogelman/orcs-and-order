@@ -398,3 +398,39 @@ export function breathSpares(unit: Unit): boolean {
 
 /** What a Champion's blessing is worth, and for how long. */
 export const CHAMPION = { defence: 1, turns: 1 };
+
+/**
+ * Whether a blast spares this neighbour. Section 155, `sapper-cadre`.
+ *
+ * *"Can be deployed in pairs without doubling detonation risk to each other."*
+ * A sapper's blast catches everything standing next to it, its own side
+ * included, so two sappers side by side are a liability to each other -- and
+ * a pair is exactly what you want when one bundle is not enough. A Cadre is
+ * not caught by another Cadre of its own side; everything else still is, and
+ * a blast still does not chain.
+ */
+export function sparedByBlast(sapper: Unit, victim: Unit): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (victim.owner !== sapper.owner) return false;
+  return hasUpgrade(sapper, 'sapper-cadre') && hasUpgrade(victim, 'sapper-cadre');
+}
+
+/**
+ * Health a troll knits back while the fight is still going on.
+ *
+ * `troll-regen` is *"healing applies mid-combat, not just end of turn"*, and
+ * the rate is the whole question. **A blow in this game is one point and
+ * lands about half the time**, so a troll taking roughly half a point a round
+ * becomes literally unkillable at anything faster than one point every two
+ * rounds. One in four is a quarter of a point a round: worth having, and well
+ * short of immortal.
+ *
+ * Invented, like every first number here, and the arithmetic above is why it
+ * is not larger rather than a measurement saying it should not be.
+ */
+export function knitsMidFight(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'troll-regen');
+}
+
+/** How often a knitting troll gets a point back, in rounds, and how much. */
+export const KNIT = { everyRounds: 4, amount: 1 };

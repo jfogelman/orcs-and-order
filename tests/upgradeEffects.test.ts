@@ -15,6 +15,9 @@ import {
   movesThisTurn,
   axesCarried,
   breathSpares,
+  KNIT,
+  knitsMidFight,
+  sparedByBlast,
   CHAMPION,
   conditionDefence,
   HEAVY,
@@ -111,11 +114,9 @@ const UNWIRED: Record<string, string> = {
   // ---- the sapper's bundle. All three are rules inside `detonate()`, which
   // is its own small machine: a radius, a self-destruct and a risk roll.
   'sapper-tunnel': 'moving through impassable ground is a movement rule, not a combat one',
-  'sapper-cadre': 'the paired-risk rule needs a notion of a pair, which nothing has',
 
 
   // ---- the troll
-  'troll-regen': 'healing mid-combat means a heal inside the round loop, which has none',
   // **Measured, after it was built and found never to fire.** A lasting
   // debuff on whatever a troll hit needs whatever a troll hit to still be
   // standing, and a probe over 2160 melee fights found **not one** that left
@@ -137,7 +138,16 @@ const UNWIRED: Record<string, string> = {
   'deathknight-soulbound': 'depends entirely on the above existing first',
 
   // ---- the dragon
-  'dragon-elder': 'breath damage plus a movement cost over enemy cities, which is two systems',
+  // **Measured, and the drawback cannot happen.** *"Flying over enemy cities
+  // costs double movement"*, and in this game **no unit may enter an enemy
+  // city tile by pathing at all** -- `costFnFor` returns null for every one
+  // of them, flier included, because enemy ground is taken by attacking and
+  // never by walking over. So the cost half describes a manoeuvre that does
+  // not exist, and wiring the breath half alone would hand the Horde a free
+  // buff -- which is the `archer-marksman` hazard, where a pair has to land
+  // together or the upgrade is a bonus with no price.
+  'dragon-elder':
+    'the drawback is a manoeuvre the game has no rule for: an enemy city tile cannot be flown over, only attacked',
   'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',
 
   // ---- the Kingdom's foot
@@ -206,10 +216,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 27 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(9);
+    // point. 29 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(7);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(6);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(27);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(29);
   });
 });
 
@@ -979,5 +989,68 @@ describe('the blessing, and the dragon that learned to aim', () => {
     expect(breathSpares(wyrm)).toBe(false);
     useAbility(state, champ, 'heal', mended);
     expect(hasStatus(mended, 'blessed')).toBe(false);
+  });
+});
+
+describe('the knitting troll and the sappers who stand together', () => {
+  it('spares a Cadre from another Cadre, and nobody else', () => {
+    const state = game();
+    const a = put(state, 0, 'sapper', 5, 5, 'sapper-cadre');
+    const b = put(state, 0, 'sapper', 6, 5, 'sapper-cadre');
+    const lone = put(state, 0, 'sapper', 4, 5);
+    const foe = put(state, 1, 'footman', 5, 6, 'sapper-cadre');
+    expect(sparedByBlast(a, b), 'the pair').toBe(true);
+    expect(sparedByBlast(a, lone), 'an ordinary sapper is still caught').toBe(false);
+    expect(sparedByBlast(lone, b), 'and still catches one').toBe(false);
+    expect(sparedByBlast(a, foe), 'never somebody else’s').toBe(false);
+  });
+
+  it('leaves its partner standing when one goes up', () => {
+    const state = game();
+    const a = put(state, 0, 'sapper', 5, 5, 'sapper-cadre');
+    const partner = put(state, 0, 'sapper', 6, 5, 'sapper-cadre');
+    const bystander = put(state, 1, 'footman', 5, 6);
+    const was = { partner: partner.hp, bystander: bystander.hp };
+    detonate(state, a);
+    expect(partner.hp, 'that is the whole point of a pair').toBe(was.partner);
+    expect(bystander.hp, 'and the blast is still a blast').toBeLessThan(was.bystander);
+  });
+
+  it('knits a troll back a point partway through a fight', () => {
+    const state = game();
+    const knitter = put(state, 0, 'troll', 5, 5, 'troll-regen');
+    const plain = put(state, 0, 'troll', 5, 12);
+    expect(knitsMidFight(knitter)).toBe(true);
+    expect(knitsMidFight(plain)).toBe(false);
+    const a = put(state, 1, 'footman', 6, 5);
+    const b = put(state, 1, 'footman', 6, 12);
+    const seed = state.rngState;
+    const knit = resolveCombat(state, knitter, a);
+    state.rngState = seed;
+    const flat = resolveCombat(state, plain, b);
+    // **Rounds, not health.** A lone troll is a single creature, so the odds
+    // never move during a fight and the same seed deals the same blows to
+    // both -- but a troll loses this matchup either way, and two corpses have
+    // the same health. What the knitting buys is time, so that is the claim.
+    expect(knit.rounds, 'stayed up longer for it').toBeGreaterThan(flat.rounds);
+  });
+
+  /**
+   * The arithmetic that set the rate. A blow is one point and lands about
+   * half the time, so a troll takes roughly half a point a round -- anything
+   * faster than one point every two rounds is a troll that cannot be killed.
+   */
+  it('knits slower than it is hit', () => {
+    expect(KNIT.amount / KNIT.everyRounds).toBeLessThan(0.5);
+  });
+
+  it('does neither with the box unticked', () => {
+    const state = game();
+    const a = put(state, 0, 'sapper', 5, 5, 'sapper-cadre');
+    const b = put(state, 0, 'sapper', 6, 5, 'sapper-cadre');
+    const knitter = put(state, 0, 'troll', 9, 9, 'troll-regen');
+    UPGRADES.enabled = false;
+    expect(sparedByBlast(a, b)).toBe(false);
+    expect(knitsMidFight(knitter)).toBe(false);
   });
 });

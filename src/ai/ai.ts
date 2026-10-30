@@ -1380,7 +1380,7 @@ const RUIN_RANGE = 10;
 function seekRuin(state: GameState, unit: Unit): boolean {
   const type = unitType(unit.type);
   if (type.settler || type.attack <= 0 || type.sails) return false;
-  if (unit.hp < type.hp * 0.75) return false;
+  if (unit.hp < maxHp(unit) * 0.75) return false;
   const seen = state.players[unit.owner].explored;
   const here = standingRuins(state)
     .filter((r) => seen[idx(r.x, r.y, state.width)] === 1)
