@@ -1,5 +1,6 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
 import { coveringFor } from './upgradeEffects';
+import { isRaised, raiseFrom } from './raising';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
@@ -712,6 +713,14 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // Section 152: the attacker is named, because for the Unbound whether it
       // could exorcise is the difference between a death and an absence.
       destroyUnit(state, defender, 'is wiped out', unit);
+      // Section 155: and a Grave Knight may not be finished with it.
+      //
+      // **Here and nowhere else**, which is the whole of the "only kills it
+      // makes itself, in combat" ruling: a unit can die six other ways --
+      // a blast, a breath, a militia, a status, a disband, a sinking ship --
+      // and every one of them goes through `destroyUnit` too. Excluded by not
+      // calling this rather than by a list of exceptions inside it.
+      raiseFrom(state, unit, defender);
       // Killing teaches most. Nothing is awarded for the blast above, which
       // the sapper's victims did not choose to be part of.
       awardXp(state, unit, XP.kill);
@@ -819,6 +828,19 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
 
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
+  // Section 155: and a raised skeleton does not take towns.
+  //
+  // It is a few turns of help, not an empire -- and a Soul-Bound Knight whose
+  // skeletons never expire would otherwise have a free standing army that
+  // conquers, which is a long way past "a weak skeletal copy". Refused rather
+  // than quietly ignored, so the player is told why it will not walk in.
+  if (capturing && isRaised(unit)) {
+    return {
+      kind: 'blocked',
+      reason: 'Whatever that is, it is not holding a town for you.',
+      retryable: false,
+    };
+  }
   // Nor does a town change hands while the peace holds.
   if (capturing && city && !hostile(state, unit.owner, city.owner)) {
     return {

@@ -365,6 +365,24 @@ export interface Unit {
    */
   axesThrown?: number;
   /**
+   * The Grave Knight that pulled this one out of the ground. Section 155.
+   *
+   * Truthy means **this unit is a raised skeleton**: half the numbers of
+   * whatever it is a copy of, no upkeep, no score, and it cannot take a city.
+   * Holds the raiser's unit id rather than a flag, because `deathknight-
+   * soulbound` bleeds a point a turn for each of its skeletons still standing
+   * and has to be able to count them.
+   *
+   * The raiser may be dead; a skeleton outlives the hand that raised it.
+   */
+  raised?: number;
+  /**
+   * The turn this raised unit crumbles. Absent on a Soul-Bound Knight's, which
+   * is the whole of that upgrade: they no longer expire, and the price is paid
+   * in the Knight's own health instead.
+   */
+  fadesOn?: number;
+  /**
    * Whether this unit has already used its one reprieve.
    *
    * Only ever set on a sapper that took Mostly Volatile. Absent means it still

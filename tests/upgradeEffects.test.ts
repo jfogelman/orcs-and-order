@@ -122,13 +122,7 @@ const UNWIRED: Record<string, string> = {
   // raised unit *is* -- its stats, its lifespan, the chance, and what the
   // ancient skeleton the Unbound leave behind is a copy of. Five invented
   // numbers and a structural decision, so it waits for Jeremy.
-  // **Fully specified as of 2026-10-30 and simply not built yet** -- see the
-  // Grave Knight section in DESIGN_QUEUE. Half the original's numbers, three
-  // turns, one kill in three, one HP a turn per skeleton for the Soul-Bound,
-  // and the ancient skeleton as a new never-buildable creature. This is the
-  // only entry in this list that is waiting on work rather than on an answer.
-  'deathknight-grave': 'decided and written up; not built yet',
-  'deathknight-soulbound': 'depends entirely on the above existing first',
+
 
   'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',
 };
@@ -181,10 +175,10 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 32 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(4);
+    // point. 34 of 36.
+    expect(Object.keys(UNWIRED)).toHaveLength(2);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(7);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(32);
+    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(34);
   });
 });
 

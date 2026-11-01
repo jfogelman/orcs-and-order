@@ -22,6 +22,7 @@ import { noteClash, noteFight } from './diplomacy';
 import { uncover } from './disguise';
 import { drownCargo } from './ships';
 import { BUILDINGS } from '../model/buildings';
+import { RAISED } from '../model/upgrades';
 import { hasPerk } from '../model/perks';
 import { defenseOf } from '../model/terrain';
 import { headcount, needsAmmo, unitType, maxHp } from '../model/units';
@@ -394,6 +395,11 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   // unticked, where nothing of section 155 is supposed to happen at all.
   const upgraded = upgradeAttack(state, attacker);
   if (upgraded !== 0) total = Math.max(COWED.floor, total + upgraded);
+  // Section 155: and a raised skeleton swings at half what it was a copy of.
+  // Read straight off the field rather than through `sim/raising`, which
+  // imports the mover, which imports this -- and `RAISED` is model data with
+  // no such problem.
+  if (attacker.raised !== undefined) total *= RAISED.scale;
   // Section 125: and the Old Queen's Shell, which is empire-wide and only ever
   // about two castes. Added to the base alongside `drilled` so it scales with
   // the headcount below, exactly as a point of drill does.
@@ -501,6 +507,8 @@ export function defenseStrength(
   const shielded =
     upgradeDefence(state, defender) + conditionDefence(defender) - piercesDefence(attacker);
   if (shielded !== 0) total = Math.max(0, total + shielded);
+  // Section 155, the other foot: half of what it was, holding the line too.
+  if (defender.raised !== undefined) total *= RAISED.scale;
   // Section 152: The Standing Watch, which guards one settlement and has not
   // been told what it used to guard. Added to the base, so it scales with the
   // stack the way a point of drill does on the other side -- and only where

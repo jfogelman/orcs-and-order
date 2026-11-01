@@ -1,4 +1,5 @@
 import { distance } from '../engine/grid';
+import { banishes } from './raising';
 import { FACTIONS } from '../model/factions';
 import { TERRAIN } from '../model/terrain';
 import type { City, GameState, Player, Scattered, Unit, UnitTypeId } from '../model/types';
@@ -142,6 +143,11 @@ export function scatters(state: GameState, unit: Unit, killer?: Unit): boolean {
   if (PHYSICAL.has(base)) return false;
   // The whole of section 150, asked here and nowhere else.
   if (killer && exorcises(state, killer)) return false;
+  // Section 155: and a Grave Knight does not scatter one either. It cannot
+  // make a skeleton out of a ghost, so it banishes -- no dispersal, no
+  // reform, that one is finished -- and digs something older up instead.
+  // Jeremy's ruling of 2026-10-29; the raising half is in `raiseFrom`.
+  if (banishes(killer)) return false;
   return true;
 }
 

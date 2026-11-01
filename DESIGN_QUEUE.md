@@ -12857,15 +12857,12 @@ off is a real price rather than the standstill `orc-guardian` would have been.
 
 ### What is left
 
-**Four upgrades**, and they are two jobs. `sapper-tunnel` wants a unit-aware
-notion of impassable ground. `dragon-rider` wants the ship mechanism, for
-something that flies.
+**Two upgrades.** `sapper-tunnel` wants a unit-aware notion of impassable
+ground. `dragon-rider` wants the ship mechanism, for something that flies.
 
-And the two Death Knight lines. **Everything they need is now decided** --
-see below -- but the build did not start, so the next session picks this up
-from a clean tree.
+And the two Death Knight lines, which are **built**: see below.
 
-### The Grave Knight, fully specified and not yet built
+### The Grave Knight, built
 
 Jeremy's two answers, 2026-10-30:
 
@@ -12901,6 +12898,49 @@ And four rulings that are not numbers:
   has to answer `false` when the killer is a Grave Knight -- the same seam
   `exorcises` already uses, which is why that rule is cheap.
 
+### What building it turned up
+
+**Two of the four rulings were already true and needed no code.** Score counts
+population, advances and buildings and has never counted units at all; and
+`spawnUnit` leaves `homeCity` null, so a raised skeleton is a free unit that
+no city supports. Worth checking rather than assuming -- the alternative was
+two rules enforcing something nothing was doing.
+
+**The third needed a refusal rather than a silence.** A raised skeleton
+walking onto a town is *blocked*, with a reason, rather than quietly failing:
+a Soul-Bound Knight whose skeletons never expire would otherwise have a free
+standing army that conquers, which is a long way past "a weak skeletal copy".
+
+**And the halving lives in three places, not one.** `maxHp` in the model,
+because `headcount` needs it; attack and defence in `combat.ts`, read straight
+off `unit.raised` rather than through `sim/raising` -- that module imports the
+mover, which imports combat, and `RAISED` is model data with no such problem.
+
+**The one thing only a test would have caught**: the fixture needs the hardest
+difficulty, because every other level staggers the latecomers and at turn one
+there is no Unbound seat on the board to banish.
+
+### And the one thing only the fixtures caught
+
+The Ancient Skeleton shipped with `cost: 20` and no `wild`, on the reasoning
+that a nominal cost keeps disband refunds and the AI's sense of worth sane.
+**Three rosters in this game select by faction and a few stats, not by "could
+a city ever build this"**: the ruins' old garrison, a spy's plausible
+disguise, and the Unbound's roster. So ruins began handing out Ancient
+Skeletons from turn one -- **with the upgrade lever off** -- and the whole
+game played out differently.
+
+Every test passed. Three fixtures moved, same seed and a diverged `rngState`,
+which is the only place it showed.
+
+The fix is to model it the way this game already models a creature a rule
+produces: **`wild: true` and `cost: 0`**, exactly like the raiders and the
+Sunken Legion. It is the zero cost that does the work -- `oldGarrison` filters
+on `cost >= starterUnit.cost`, so a nominal price walks straight in while
+`wild` alone does not stop it. Priced at nothing it falls out of all three by
+the same rule that already excludes every other rule-produced creature, rather
+than by three exclusions somebody has to remember.
+
 ### The sprite naming, decided with the rule rather than ahead of it
 
 One mapping for `art_src/unit upgrades/skeletal versions/`, with no special
@@ -12912,10 +12952,19 @@ skeleton.jpg` becomes `ancient-skeleton.png`, which is also the new creature's
 id. The two cases fall out of one rule rather than needing a branch, which is
 why it was worth waiting for the rule to decide it.
 
+**And a name may carry two creatures.** `soldier_spitter skeleton.jpg` writes
+both `soldier-skeleton.png` and `spitter-skeleton.png` -- Jeremy's call on
+2026-11-01, that two castes close enough to share a drawing should share one
+rather than cost a second generation. The underscore is the join, and it is
+the only place in this pipeline that means anything.
+
 Files whose names match no creature -- `dwarf mystic`, `gnome` -- convert to
 sprites nothing asks for, which is harmless: `art-present.test.ts` checks what
-the model wants, not what the folder holds. The `soldier_spitter` and
-`worker_fodder` pair still need Jeremy to say what they are.
+the model wants, not what the folder holds.
+
+**23 of the 45 raisable creatures have a sheet.** The rest wear their living
+sprite, which is the usual harmless-but-wrong, so the count is a control in
+the suite rather than a line here.
 
 **Still nothing swept.** Every number slice 5a invented is in one object per
 rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with

@@ -49,6 +49,20 @@ import type { FactionId, UnitTypeId } from './types';
  * unticked. The question this has to answer is "does it work", not "does it
  * move the baseline".
  */
+/**
+ * What a raised skeleton is worth, against what it is a copy of. Section 155.
+ *
+ * Jeremy's ruling of 2026-10-30: **half the original's numbers**, attack,
+ * defence and health alike. "A weak skeletal copy" then means something --
+ * raising a dragon is worth more than raising a peon -- and it needs no
+ * second table of stats, which for thirty-eight raisable creatures is the
+ * difference between a rule and a chore.
+ *
+ * Here in `model/` rather than with the other upgrade rules because `maxHp`
+ * needs it and nothing in `model/` may reach into `sim/`.
+ */
+export const RAISED = { scale: 0.5 };
+
 export const UPGRADES = {
   /** The new-game checkbox. Off is every measurement ever taken. */
   enabled: false,

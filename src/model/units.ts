@@ -1,5 +1,5 @@
 import type { DamageKind, FactionId, UnitTypeId } from './types';
-import { UPGRADES, UPGRADES_BY_ID } from './upgrades';
+import { RAISED, UPGRADES, UPGRADES_BY_ID } from './upgrades';
 
 /**
  * Units are singleton, Civ2 style: one tile, one unit, one health bar.
@@ -518,6 +518,51 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Comes up the stairs three turns after the noise starts, which is how ' +
       'long it takes to be certain you are still there.',
+  },
+  {
+    /**
+     * Section 155: what comes up when a Grave Knight kills one of the Unbound.
+     *
+     * It cannot make a skeleton out of a ghost, so it digs one up instead --
+     * something that was already in the ground long before any of this, and
+     * is not a copy of anything. That is why it needs its own entry: every
+     * other raised skeleton is a halved copy of whatever died, and this one
+     * has nothing to be half of.
+     *
+     * **`wild` and costed at nothing, which is how this game already models a
+     * creature a rule produces.** The Sunken Legion and the raiders are the
+     * same shape: they carry a faction for their art, no advance unlocks
+     * them, and nothing can buy one.
+     *
+     * That matters for more than tidiness. A first draft gave this a nominal
+     * cost of twenty and left `wild` off, and **three rosters that select by
+     * faction quietly took it**: the ruins' old garrison began handing out
+     * Ancient Skeletons, a spy could wear one as a disguise, and the game
+     * played out differently from turn one with the upgrade lever off. Three
+     * fixtures said so. Priced at nothing it falls out of all three by the
+     * same rule that already excludes every other rule-produced creature,
+     * rather than by three exclusions somebody has to remember.
+     */
+    id: 'ancient-skeleton',
+    wild: true,
+    name: 'Ancient Skeleton',
+    plural: 'Ancient Skeletons',
+    faction: 'orc',
+    role: 'melee',
+    attack: 4,
+    defense: 3,
+    hp: 12,
+    move: 1,
+    cost: 0,
+    sight: 1,
+    counts: [1],
+    artScale: 0.85,
+    silhouette: 'robed',
+    body: '#6b6256',
+    trim: '#8a6fb0',
+    blurb:
+      'Older than the war it has been dug into. Blackened, broken, and ' +
+      'patient about both.',
   },
   {
     id: 'goblin',
@@ -2539,8 +2584,13 @@ export function aliveCount(unit: { type: UnitTypeId; hp: number; upgrade?: strin
  * `headcount` and `aliveCount` need it and nothing in `model/` may reach into
  * `sim/`. `upgrades.ts` imports only types, so this costs no cycle.
  */
-export function maxHp(unit: { type: UnitTypeId; upgrade?: string }): number {
+export function maxHp(unit: { type: UnitTypeId; upgrade?: string; raised?: number }): number {
   const base = unitType(unit.type).hp;
+  // Section 155: a raised skeleton is half of what it was a copy of. Before
+  // the upgrade below, because a raised copy of an upgraded creature is a
+  // skeleton rather than an upgrade -- the thing that came out of the ground
+  // is not still carrying the branch its owner researched.
+  if (unit.raised !== undefined) return Math.max(1, Math.round(base * RAISED.scale));
   if (!UPGRADES.enabled || !unit.upgrade) return base;
   const bonus = UPGRADES_BY_ID[unit.upgrade]?.effect?.hp ?? 0;
   // Scaled by the headcount, like every other flat addition in this game:

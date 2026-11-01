@@ -1,5 +1,6 @@
 import { checkEndings, isEndingPiece } from './endings';
 import { movesThisTurn, RETRIEVER, retrievesAxe, upgradeMoves } from './upgradeEffects';
+import { payForTheRisen } from './raising';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
 import { empireBonus, isFolly, onOwnLand } from './follyEffects';
@@ -814,6 +815,10 @@ function warnAboutTheClock(state: GameState): void {
 }
 
 export function beginPlayerTurn(state: GameState, playerId: number): void {
+  // Section 155: whatever a Grave Knight pulled up is a turn older, and a
+  // Soul-Bound Knight pays for the ones still standing. Before anything moves,
+  // so a skeleton that crumbles this turn never gets to act in it.
+  payForTheRisen(state, playerId);
   const player = state.players[playerId];
   if (!player.alive) return;
 

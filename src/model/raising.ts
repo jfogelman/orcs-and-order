@@ -29,6 +29,12 @@ export function cannotBeRaised(def: UnitTypeDef): string | null {
   // It cannot make a skeleton out of a ghost, so it does not try.
   if (def.faction === 'unbound') return 'banished outright, and something older comes up instead';
 
+  // Section 155: and the thing that comes up when an Unbound is banished is
+  // not raised in turn. It was never alive in the ordinary way, it is already
+  // a skeleton, and a skeleton of a skeleton is the loop this rule exists
+  // inside -- see `raiseFrom`, which also refuses anything already raised.
+  if (def.base === ANCIENT) return 'already out of the ground, and a copy of nothing';
+
   if (def.sails) return 'a boat, and a skeleton of a boat is a boat';
   if (def.spy) return 'a spy; there is nothing to raise that anybody would recognise';
   // Named before the siege rule below, which would also catch the sapper.
@@ -61,6 +67,13 @@ export function canBeRaised(typeId: UnitTypeId): boolean {
  * kind it is rather than inherit an answer.
  */
 export const LIVING_ENGINES = new Set<string>(['bloatcaste']);
+
+/**
+ * The creature a banished Unbound leaves behind: something already in the
+ * ground, and a copy of nothing. Named here because the rule, the art and the
+ * exclusion above all have to agree on one string.
+ */
+export const ANCIENT = 'ancient-skeleton';
 
 /** The three castes the Hive does not leave a usable body of, with Jeremy's reasons. */
 const HIVE_EXEMPT: Record<string, string> = {

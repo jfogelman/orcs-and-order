@@ -6,6 +6,7 @@ import { hasPerk } from '../model/perks';
 import { FACTIONS, FACTION_IDS } from '../model/factions';
 import { TERRAIN_IDS } from '../model/terrain';
 import { aliveCount, maxHp, unitType } from '../model/units';
+import { ANCIENT } from '../model/raising';
 import type { City, GameState, Player, Unit } from '../model/types';
 import { Camera, TILE } from './camera';
 import { roadLinks } from './roadShape';
@@ -141,6 +142,12 @@ function clubVariant(u: Unit): string {
  * anybody ever draws the nine of them.
  */
 function artVariant(u: Unit): string {
+  // Section 155: a raised skeleton wears its own bones, whatever the creature
+  // was doing before. Ahead of the upgrade, because what came up is a
+  // skeleton rather than whichever branch its old owner had researched -- and
+  // the ancient one is a creature in its own right, so it needs no variant at
+  // all and falls through to its own sprite.
+  if (u.raised !== undefined && unitType(u.type).base !== ANCIENT) return '-skeleton';
   if (u.upgrade) {
     const base = unitType(u.type).base;
     if (u.upgrade.startsWith(`${base}-`)) return u.upgrade.slice(base.length);
