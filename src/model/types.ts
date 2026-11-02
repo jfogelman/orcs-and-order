@@ -365,6 +365,14 @@ export interface Unit {
    */
   axesThrown?: number;
   /**
+   * Whether this sapper has spent its one crossing. Section 155.
+   *
+   * `sapper-tunnel` goes under impassable ground once -- water, which is the
+   * only thing impassable to it -- and never again. Set the moment it steps
+   * on, so the pass is gone whether or not it ever steps off.
+   */
+  tunnelled?: boolean;
+  /**
    * The Grave Knight that pulled this one out of the ground. Section 155.
    *
    * Truthy means **this unit is a raised skeleton**: half the numbers of

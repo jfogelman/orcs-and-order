@@ -211,23 +211,11 @@ export function abilityNotes(def: UnitTypeDef): string[] {
       )}%)`);
     }
   }
-  // Section 155: what this creature can become, in a game that has upgrades.
-  //
-  // Read off `UPGRADE_DEFS` rather than written out, which is the rule this
-  // project keeps relearning: thirty-six names in a second list would be
-  // thirty-six chances for the card to describe an upgrade the game does not
-  // offer. Gated on the lever, so a game with the box unticked does not
-  // advertise a road it has no intention of opening.
-  if (UPGRADES.enabled) {
-    const road = upgradesFor(def.base);
-    const branches = road.filter((u) => u.line !== 'linear');
-    if (road.length > 0 && branches.length === 2) {
-      notes.push(
-        `can be improved to ${road[0].name}, and from there to either ${branches[0].name} or ` +
-          `${branches[1].name} — never both, and that choice is the whole empire's, for good`,
-      );
-    }
-  }
+  // Section 155 put a bullet here naming the three an upgrade road offers,
+  // and section 155 took it out again: `upgradeSection` is the fold on this
+  // same card, its summary says the same thing, and it then says what each
+  // one *does* -- which the bullet never could. Two sentences of one fact on
+  // one card is one too many.
   // Section 136: and the one that digs is not always the one that founds.
   if (def.works) notes.push('builds roads and improves the ground');
   // Section 137: **a spy's card said nothing a spy does.** Eight rungs of
@@ -503,7 +491,68 @@ function buildingEffects(b: BuildingDef): string[] {
   return out;
 }
 
-function unitCard(def: UnitTypeDef): string {
+/**
+ * What this creature can become, folded away until somebody asks. Section 155.
+ *
+ * **The card note was not enough.** It says a creature *can* be improved and
+ * names the three, which is the right amount for a line in a list -- but a
+ * player choosing a branch wants to know what each one does and which advance
+ * buys it, and until now the only place that existed was the tech tree, one
+ * card at a time, with no way to see the pair side by side.
+ *
+ * Folded rather than open because it is three rows on twelve creatures: open,
+ * it would be thirty-six rows of small print in front of somebody who came to
+ * the page to compare two units' attack. `<details>` costs no script and
+ * remembers nothing, which is the right amount of machinery for this.
+ *
+ * Read off `upgradesFor`, like everything else here, so a card can never
+ * describe an upgrade the game does not offer.
+ */
+function upgradeSection(def: UnitTypeDef): string {
+  if (!UPGRADES.enabled) return '';
+  const road = upgradesFor(def.base);
+  const branches = road.filter((u) => u.line !== 'linear');
+  if (road.length === 0 || branches.length !== 2) return '';
+  const linear = road.find((u) => u.line === 'linear');
+  if (!linear) return '';
+
+  // The sprite is the id, which is the whole reason these are variants rather
+  // than thirty-six new creatures: `orc-veteran.png` is already on disk and
+  // needs no lookup table. Dropped on error rather than replaced with a
+  // procedural placeholder, because `placeholderFor` wants a real
+  // `UnitTypeId` and an upgrade is deliberately not one.
+  const row = (u: (typeof road)[number], kind: string) => `
+    <div class="pedia-upgrade">
+      <div class="pedia-upgrade-head">
+        <img class="pedia-upgrade-art" src="${artPath(u.id)}" alt="" />
+        <span class="pedia-upgrade-name">${escapeHtml(u.name)}</span>
+        <span class="pedia-upgrade-kind">${escapeHtml(kind)}</span>
+      </div>
+      <div class="pedia-upgrade-needs">Needs ${escapeHtml(TECHS_BY_ID[u.needs]?.name ?? u.needs)}</div>
+      <div class="pedia-upgrade-does">${escapeHtml(u.blurb)}</div>
+      <div class="pedia-flavor">${escapeHtml(u.flavour)}</div>
+    </div>`;
+
+  return `
+    <details class="pedia-upgrades">
+      <summary>What it can become &mdash; ${escapeHtml(linear.name)}, then one of two</summary>
+      ${row(linear, 'first')}
+      <div class="pedia-upgrade-fork">and then <strong>one</strong> of these, for the whole empire, for good:</div>
+      ${branches.map((u) => row(u, 'a road')).join('')}
+    </details>`;
+}
+
+/**
+ * One creature's entry.
+ *
+ * `extra` is the group-size ladder, passed in rather than spliced into the
+ * finished HTML afterwards. It used to be a `.replace` on the returned
+ * string, which worked only while this function ended in exactly two closing
+ * divs -- section 155's upgrade fold added some of its own, and the ladder
+ * landed **inside** the fold, where a player would find it by expanding a
+ * list of upgrades.
+ */
+function unitCard(def: UnitTypeDef, extra = ''): string {
   const tech = unlockedBy(def.id);
   const notes = abilityNotes(def);
 
@@ -526,6 +575,8 @@ function unitCard(def: UnitTypeDef): string {
             : ''
         }
         <div class="pedia-flavor">${escapeHtml(def.blurb)}</div>
+        ${extra}
+        ${upgradeSection(def)}
       </div>
     </div>`;
 }
@@ -591,7 +642,7 @@ function creatureSection(faction: FactionId): string {
               )
               .join('')}<span class="pedia-ladder-note">group sizes</span></div>`
           : '';
-      return unitCard(base).replace('</div>\n    </div>', `${ladder}</div>\n    </div>`);
+      return unitCard(base, ladder);
     })
     .join('');
 }
@@ -2107,9 +2158,11 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
     onMount: (root) => {
       // Swap in the procedural drawing wherever there is no artwork yet, so a
       // gap in the art shows a sprite rather than a broken-image icon.
-      root.querySelectorAll<HTMLImageElement>('.pedia-row-icon').forEach((img) => {
-        img.addEventListener('error', () => img.remove());
-      });
+      root
+        .querySelectorAll<HTMLImageElement>('.pedia-row-icon, .pedia-upgrade-art')
+        .forEach((img) => {
+          img.addEventListener('error', () => img.remove());
+        });
       // A terrain used to carry one special, so its art was keyed by terrain.
       // Now that several are possible the files are keyed per special -- and the
       // old single file is tried once as a fallback, so nothing that already had

@@ -12855,10 +12855,82 @@ can express. An Elder Dragon is a **slower** dragon, which is also what
 "circling to line up the shot" should look like. Four movement points, so one
 off is a real price rather than the standstill `orc-guardian` would have been.
 
-### What is left
+### The last two
 
-**Two upgrades.** `sapper-tunnel` wants a unit-aware notion of impassable
-ground. `dragon-rider` wants the ship mechanism, for something that flies.
+**`dragon-rider` came in through the door that was already there.** Every
+piece of the cargo machinery -- `cargo`, `board`, `unload`, `landingTiles`,
+`refreshCargo` -- worked on anything with a hold and only ever asked `sails`,
+because until now a ship was the only thing that had one. So the dragon is
+let in through the same door rather than given a second one: `carrier()` is
+`sails || ridesAlong`, and `roomAboard` counts `seatsOn` instead of the
+type's own `carries`. Two log lines had to learn the difference, because a
+passenger set down by a dragon does not *wade* ashore and does not *go down
+with the ship*.
+
+A dragon will not carry another flier, which is the upgrade's own words --
+"one ground unit" -- and also stops two dragons giving each other lifts.
+
+**`sapper-tunnel` is one crossing of water**, which is the only ground
+impassable to a sapper in this game: mountains cost three and cross fine. A
+sapper going under a lake, once.
+
+**And it is deliberately invisible to the pathfinder.** A one-use pass and a
+route planner do not mix -- `costFnFor` would happily lay out a five-tile sea
+crossing on a budget of one, and the march would strand halfway. So only
+`tryStep` knows about it: a goto is never routed through water, the step has
+to be taken by hand, and the pass is spent the moment it is taken rather than
+when it is finished with.
+
+### The Orcpedia: a fold on every creature's card
+
+Jeremy asked for this once the effects were in, and he was right that the
+bullet was not enough. It named the three and stopped. A player choosing a
+branch wants to know what each one *does* and which advance buys it, and the
+only place that existed was the tech tree, one card at a time, with no way to
+see the pair side by side.
+
+So each creature's card carries a `<details>` fold: the linear upgrade, then
+*"and then **one** of these, for the whole empire, for good"*, then the two
+branches -- each with its advance, its blurb and its joke. Read off
+`upgradesFor`, so a card can never describe an upgrade the game does not
+offer. Shut by default, because three rows on twelve creatures is thirty-six
+rows of small print in front of somebody who came to compare two attacks.
+
+**The bullet came out.** The fold's own summary says what the bullet said;
+two sentences of one fact on one card is one too many.
+
+**Each row carries its own sprite**, which costs nothing to find: the sprite
+*is* the id, which is the whole reason these are variants rather than
+thirty-six new creatures. Dropped on error rather than replaced with a
+procedural placeholder, because `placeholderFor` wants a real `UnitTypeId`
+and an upgrade is deliberately not one.
+
+**And a colour bug that no test could have caught.** The upgrade's name was
+given `color: var(--ink)` on the reasoning that `--ink` is the text colour.
+It is not: it is `#12100c`, the dark ink for *light* surfaces, and on a card
+over a dark panel all three names rendered invisible -- while the DOM
+insisted each was sixty-odd pixels wide, present and `visibility: visible`.
+Only looking at the thing found it. It inherits its colour now, as
+`.pedia-name` above it does.
+
+**And it caught an old fragility on the way in.** The group-size ladder was
+spliced into the finished card with a `.replace` that matched its last two
+closing divs -- which worked exactly as long as the card ended in two closing
+divs. The fold added some of its own, and the ladder landed **inside** it: a
+player would have found "group sizes" by expanding a list of upgrades. It is
+passed into `unitCard` now rather than spliced onto the end of it.
+
+### Thirty-six of thirty-six
+
+The unwired list is empty, which is the state it should normally be in.
+
+**That cost the completeness test half its guard**, and it is worth knowing
+why. While something was on the list the two halves checked each other: a
+grep that always said yes made the stale-entry test name everything, and one
+that always said no made the orphan test do it. With the list empty the
+stale-entry test is vacuous and the orphan test is alone -- so a grep that
+had quietly broken would pass it having checked nothing. There is a canary
+now: an id that is certainly nowhere must be reported as nowhere.
 
 And the two Death Knight lines, which are **built**: see below.
 

@@ -62,6 +62,7 @@ import {
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
 import { buyUpgrade, upgradeBlocked, upgradeFee, upgradeOffered } from './sim/upgrading';
+import { seatsOn } from './sim/upgradeEffects';
 import {
   beginPlayerTurn,
   continuePlaying,
@@ -684,7 +685,11 @@ class App {
 
     // Going aboard one of our own ships: a step onto it from the shore.
     const ship = unitAt(this.state, x, y);
-    if (ship && ship.owner === unit.owner && unitType(ship.type).carries > 0) {
+    // Section 155: `seatsOn` rather than the type's own `carries`, so a
+    // Dragon Rider is something a footman can step onto. Everything past this
+    // point already worked on `canBoard` and `roomAboard`, both of which
+    // learned about the dragon in `ships.ts`.
+    if (ship && ship.owner === unit.owner && seatsOn(ship) > 0) {
       if (!canBoard(unit, ship)) {
         this.flash(roomAboard(ship) === 0 ? 'That ship is full.' : `${unitType(unit.type).name} cannot go aboard.`);
         return;

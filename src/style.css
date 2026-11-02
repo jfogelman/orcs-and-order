@@ -2333,3 +2333,87 @@ kbd {
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* Section 155: what a creature can become, folded away on its Orcpedia card.
+   Three rows on twelve creatures is thirty-six rows of small print if it is
+   open by default, in front of somebody who came to compare two attacks. */
+.pedia-upgrades {
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 5px;
+}
+
+.pedia-upgrades > summary {
+  font-size: 11.5px;
+  color: #b8d8f0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.pedia-upgrades > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pedia-upgrades > summary::before {
+  content: '▸ ';
+  color: var(--muted);
+}
+
+.pedia-upgrades[open] > summary::before {
+  content: '▾ ';
+}
+
+.pedia-upgrade {
+  margin: 5px 0 0 10px;
+  padding-left: 7px;
+  border-left: 2px solid rgba(184, 216, 240, 0.25);
+}
+
+.pedia-upgrade-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Small, because the creature's own art is already at the top of the card and
+   this is a variant of it: enough to tell three apart at a glance, not enough
+   to turn a fold into a gallery. */
+.pedia-upgrade-art {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+/* No colour of its own, which is the fix for having given it one.
+   `--ink` is #12100c -- the dark ink for light surfaces -- and on a card over
+   a dark panel it rendered the three names invisible while the DOM insisted
+   they were 62 pixels wide and perfectly visible. `.pedia-name` above sets
+   weight and size and inherits its colour; this does the same. */
+.pedia-upgrade-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pedia-upgrade-kind {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pedia-upgrade-needs {
+  font-size: 11px;
+  color: #b8d8f0;
+}
+
+.pedia-upgrade-does {
+  font-size: 11.5px;
+  color: #d0b98a;
+}
+
+.pedia-upgrade-fork {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 0 10px;
+}

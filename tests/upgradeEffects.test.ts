@@ -15,6 +15,9 @@ import {
   movesThisTurn,
   axesCarried,
   BONEBREAKER,
+  RIDER,
+  seatsOn,
+  tunnelsOnce,
   breathShare,
   breathSpares,
   VOLLEY,
@@ -48,6 +51,7 @@ import {
   resolveCombat,
 } from '../src/sim/combat';
 import { tryStep } from '../src/sim/movement';
+import { board, canBoard, landingTiles, unload } from '../src/sim/ships';
 import { beginPlayerTurn } from '../src/sim/turn';
 import { applyStatus, clearStatus, hasStatus } from '../src/sim/status';
 import { runAiTurn } from '../src/ai/ai';
@@ -115,16 +119,10 @@ function put(state: GameState, owner: number, type: string, x: number, y: number
  * outstanding, in the suite rather than in a markdown file, and it shrinks.
  */
 const UNWIRED: Record<string, string> = {
-  'sapper-tunnel': 'moving through impassable ground is a movement rule, not a combat one',
-
-  // ---- the Death Knight, and the whole raised-skeleton rule. `raising.ts`
-  // says who may be raised and the art is drawn; what is open is what a
-  // raised unit *is* -- its stats, its lifespan, the chance, and what the
-  // ancient skeleton the Unbound leave behind is a copy of. Five invented
-  // numbers and a structural decision, so it waits for Jeremy.
-
-
-  'dragon-rider': 'carrying a passenger is the ship mechanism, for something that flies',
+  // Empty, and left here rather than deleted -- the same rule
+  // `art-present.test.ts` follows for its known-gap lists. All thirty-six do
+  // something; this is where the thirty-seventh declares itself if the three
+  // newer factions' upgrades land before their effects do.
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -168,6 +166,22 @@ describe('every upgrade is accounted for', () => {
     expect(done, `these are wired now and should come off the list: ${done.join(', ')}`).toEqual([]);
   });
 
+  /**
+   * **A canary, and it earns its place now the list is empty.**
+   *
+   * While something was unwired, the two tests checked each other: if the
+   * grep always said yes the stale-entry test named everything, and if it
+   * always said no the orphan test did. With nothing left on the list the
+   * stale-entry test is vacuous, so the orphan test is alone -- and a grep
+   * that always said yes would let it pass having checked nothing.
+   *
+   * So: an id that is certainly nowhere must be reported as nowhere.
+   */
+  it('can still tell an id that is nowhere from one that is wired', () => {
+    expect(namedInCode('orc-berserker'), 'a real one, wired by rule').toBe(true);
+    expect(namedInCode('orc-this-upgrade-does-not-exist')).toBe(false);
+  });
+
   it('names only real upgrades in the unwired list', () => {
     const ids = new Set(UPGRADE_DEFS.map((u) => u.id));
     expect(Object.keys(UNWIRED).filter((id) => !ids.has(id))).toEqual([]);
@@ -175,10 +189,13 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // point. 34 of 36.
-    expect(Object.keys(UNWIRED)).toHaveLength(2);
+    // **All of them.** The list this test is built around is empty, which is
+    // the state it should normally be in -- and the orphan check above is
+    // what keeps it honest, because an empty list and an unchecked list look
+    // identical from here.
+    expect(Object.keys(UNWIRED)).toHaveLength(0);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(7);
-    expect(36 - Object.keys(UNWIRED).length, 'wired so far').toBe(34);
+    expect(36 - Object.keys(UNWIRED).length, 'wired').toBe(36);
   });
 });
 
@@ -1077,5 +1094,88 @@ describe('Jeremy’s three rulings of 2026-10-30', () => {
     expect(breathShare(elder, BREATH_CARRY)).toBe(BREATH_CARRY);
     expect(piercesDefence(breaker)).toBe(0);
     expect(upgradeMoves(elder)).toBe(0);
+  });
+});
+
+describe('the last two', () => {
+  it('lets a Dragon Rider take one ground unit, and only one', () => {
+    const state = game();
+    const rider = put(state, 0, 'dragon', 5, 5, 'dragon-rider');
+    const plain = put(state, 0, 'dragon', 12, 12);
+    expect(seatsOn(rider)).toBe(RIDER.carries);
+    expect(seatsOn(plain), 'an ordinary dragon carries nobody').toBe(0);
+    const orc = put(state, 0, 'orc', 6, 5);
+    const second = put(state, 0, 'orc', 4, 5);
+    expect(canBoard(orc, rider)).toBe(true);
+    expect(board(state, orc, rider)).toBe(true);
+    expect(rider.cargo?.length).toBe(1);
+    expect(canBoard(second, rider), 'one seat, and it is taken').toBe(false);
+  });
+
+  it('will not carry another flier, nor let a plain dragon carry at all', () => {
+    const state = game();
+    const rider = put(state, 0, 'dragon', 5, 5, 'dragon-rider');
+    const plain = put(state, 0, 'dragon', 12, 12);
+    const otherDragon = put(state, 0, 'dragon', 6, 5);
+    const orc = put(state, 0, 'orc', 11, 12);
+    expect(canBoard(otherDragon, rider), 'two dragons do not give each other lifts').toBe(false);
+    expect(canBoard(orc, plain)).toBe(false);
+  });
+
+  it('sets its passenger down on the ground beside it', () => {
+    const state = game();
+    const rider = put(state, 0, 'dragon', 5, 5, 'dragon-rider');
+    const orc = put(state, 0, 'orc', 6, 5);
+    board(state, orc, rider);
+    rider.x = 12;
+    rider.y = 12;
+    orc.moves = 1;
+    const spots = landingTiles(state, rider);
+    expect(spots.length, 'open ground all round it').toBeGreaterThan(0);
+    expect(unload(state, rider, orc.id, spots[0][0], spots[0][1])).toBe(true);
+    expect(rider.cargo, 'and the saddle is empty again').toBeUndefined();
+    expect(state.units.some((u) => u.id === orc.id)).toBe(true);
+  });
+
+  it('carries nobody with the box unticked', () => {
+    const state = game();
+    const rider = put(state, 0, 'dragon', 5, 5, 'dragon-rider');
+    const orc = put(state, 0, 'orc', 6, 5);
+    UPGRADES.enabled = false;
+    expect(seatsOn(rider)).toBe(0);
+    expect(canBoard(orc, rider)).toBe(false);
+  });
+
+  it('sends a Tunnel Sapper under water, once', () => {
+    const state = game();
+    const sapper = put(state, 0, 'sapper', 5, 5, 'sapper-tunnel');
+    const plain = put(state, 0, 'sapper', 5, 12);
+    // Water is the only ground impassable to a sapper -- mountains cost three
+    // and cross fine -- so this is the whole of "impassable terrain" here.
+    state.terrain[5 * state.width + 6] = 'water';
+    state.terrain[12 * state.width + 6] = 'water';
+    expect(tunnelsOnce(sapper)).toBe(true);
+    expect(tunnelsOnce(plain)).toBe(false);
+    expect(tryStep(state, plain, 6, 12).kind, 'an ordinary sapper cannot').toBe('blocked');
+    expect(tryStep(state, sapper, 6, 5).kind, 'and this one can').not.toBe('blocked');
+    expect(sapper.tunnelled, 'the pass is spent').toBe(true);
+  });
+
+  it('does not send it under twice', () => {
+    const state = game();
+    const sapper = put(state, 0, 'sapper', 5, 5, 'sapper-tunnel');
+    sapper.tunnelled = true;
+    state.terrain[5 * state.width + 6] = 'water';
+    expect(tunnelsOnce(sapper)).toBe(false);
+    expect(tryStep(state, sapper, 6, 5).kind).toBe('blocked');
+  });
+
+  it('keeps its feet dry with the box unticked', () => {
+    const state = game();
+    const sapper = put(state, 0, 'sapper', 5, 5, 'sapper-tunnel');
+    state.terrain[5 * state.width + 6] = 'water';
+    UPGRADES.enabled = false;
+    expect(tunnelsOnce(sapper)).toBe(false);
+    expect(tryStep(state, sapper, 6, 5).kind).toBe('blocked');
   });
 });

@@ -472,3 +472,42 @@ export function knitsMidFight(unit: Unit): boolean {
 
 /** How often a knitting troll gets a point back, in rounds, and how much. */
 export const KNIT = { everyRounds: 4, amount: 1 };
+
+/**
+ * Whether this unit carries a passenger, and how many. Section 155.
+ *
+ * `dragon-rider` is *"can carry one ground unit, dropping it in an adjacent
+ * tile"*, which is the ship mechanism exactly -- `cargo`, `board`, `unload`
+ * and `landingTiles` all work on anything that will hold somebody, and only
+ * ever asked `sails`. So the dragon is let in through the same door rather
+ * than given a second one.
+ */
+export function ridesAlong(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'dragon-rider');
+}
+
+/** Seats this unit has, counting the one its upgrade adds. */
+export function seatsOn(unit: Unit): number {
+  return unitType(unit.type).carries + (ridesAlong(unit) ? RIDER.carries : 0);
+}
+
+/**
+ * Whether this unit may make one crossing of ground it cannot stand on.
+ *
+ * `sapper-tunnel`, *"can move through impassable terrain once before
+ * detonating"*. The only ground impassable to a sapper in this game is water,
+ * both kinds -- mountains cost three to cross and cross fine -- so this is a
+ * sapper going under a lake, once.
+ *
+ * **The pathfinder is deliberately not told.** A one-use pass and a route
+ * planner do not mix: the planner would happily lay out a five-tile sea
+ * crossing on a budget of one. So a march is never routed through water, and
+ * the step has to be taken by hand -- which is also the only way the player
+ * finds out the pass has been spent.
+ */
+export function tunnelsOnce(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'sapper-tunnel') && unit.tunnelled !== true;
+}
+
+/** The seat a Dragon Rider adds. */
+export const RIDER = { carries: 1 };

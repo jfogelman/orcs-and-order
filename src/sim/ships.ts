@@ -1,4 +1,5 @@
 import { distance, idx, neighbors8 } from '../engine/grid';
+import { ridesAlong, seatsOn } from './upgradeEffects';
 import { TERRAIN } from '../model/terrain';
 import { unitType } from '../model/units';
 import type { City, GameState, Unit } from '../model/types';
@@ -28,14 +29,28 @@ export function sails(unit: Unit): boolean {
   return unitType(unit.type).sails;
 }
 
+/**
+ * Whether this unit will carry anybody at all.
+ *
+ * Section 155: a ship, or a Dragon Rider. Everything below this line worked
+ * on `sails` and nothing else, because until now a ship was the only thing
+ * with a hold -- so the dragon comes in through the same door rather than
+ * getting a second one of its own.
+ */
+export function carrier(unit: Unit): boolean {
+  return sails(unit) || ridesAlong(unit);
+}
+
 /** How many more units this ship will take. */
 export function roomAboard(ship: Unit): number {
-  return Math.max(0, unitType(ship.type).carries - (ship.cargo?.length ?? 0));
+  return Math.max(0, seatsOn(ship) - (ship.cargo?.length ?? 0));
 }
 
 /** Whether this unit could step aboard that ship at all. */
 export function canBoard(unit: Unit, ship: Unit): boolean {
-  if (ship.owner !== unit.owner || !sails(ship) || sails(unit)) return false;
+  if (ship.owner !== unit.owner || !carrier(ship) || sails(unit)) return false;
+  // A ground unit, which is what the upgrade says and what a ship has always
+  // taken. Two dragons do not give each other lifts.
   if (unitType(unit.type).flies) return false;
   return roomAboard(ship) > 0;
 }
@@ -93,7 +108,16 @@ export function unload(state: GameState, ship: Unit, passengerId: number, x: num
   unit.y = y;
   unit.moves = Math.max(0, unit.moves - 1);
   state.units.push(unit);
-  log(state, `${unitType(unit.type).name} wades ashore.`, 'info', unit.owner, undefined, [x, y]);
+  log(
+    state,
+    sails(ship)
+      ? `${unitType(unit.type).name} wades ashore.`
+      : `${unitType(unit.type).name} is set down, and would rather not discuss it.`,
+    'info',
+    unit.owner,
+    undefined,
+    [x, y],
+  );
   recomputeVisibility(state, unit.owner);
   return true;
 }
@@ -121,7 +145,16 @@ export function drownCargo(state: GameState, ship: Unit): void {
   if (cargo.length === 0) return;
   delete ship.cargo;
   for (const u of cargo) {
-    log(state, `${unitType(u.type).name} goes down with the ship.`, 'bad', u.owner, undefined, [ship.x, ship.y]);
+    log(
+      state,
+      sails(ship)
+        ? `${unitType(u.type).name} goes down with the ship.`
+        : `${unitType(u.type).name} was being carried, and is not any more.`,
+      'bad',
+      u.owner,
+      undefined,
+      [ship.x, ship.y],
+    );
   }
 }
 

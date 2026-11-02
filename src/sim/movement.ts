@@ -1,6 +1,7 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
 import { coveringFor } from './upgradeEffects';
 import { isRaised, raiseFrom } from './raising';
+import { tunnelsOnce } from './upgradeEffects';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
@@ -815,7 +816,25 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   if (type.sails && !TERRAIN[terrain].water) {
     return { kind: 'blocked', reason: `${type.name} keeps to the water.`, retryable: false };
   }
-  if (!canStandOn(type, terrain)) {
+  // Section 155, `sapper-tunnel`: one crossing of ground nothing else of its
+  // kind can cross -- water, which is the only thing impassable to a sapper.
+  //
+  // **Only here, and deliberately not in the pathfinder.** A one-use pass and
+  // a route planner do not mix: `costFnFor` would happily lay out a five-tile
+  // sea crossing on a budget of one. So a march is never routed through
+  // water, the step has to be taken by hand, and the pass is spent the moment
+  // it is taken rather than when it is finished with.
+  if (!canStandOn(type, terrain) && tunnelsOnce(unit)) {
+    unit.tunnelled = true;
+    log(
+      state,
+      `${type.name} goes under, and comes up somewhere it has no business being.`,
+      'good',
+      unit.owner,
+      'promote',
+      [x, y],
+    );
+  } else if (!canStandOn(type, terrain)) {
     return {
       kind: 'blocked',
       // A wader is refused too, but only by the deep, and is told which.
