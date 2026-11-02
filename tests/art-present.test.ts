@@ -179,7 +179,7 @@ describe('everything the model offers has a picture', () => {
  * that was a line in a markdown file. This is the number, in the suite, where
  * it is read every run rather than when somebody opens the file.
  */
-const UPGRADE_SHEETS = { attack: 36, hurt: 36 };
+const UPGRADE_SHEETS = { attack: 90, hurt: 89 };
 
 describe('every upgrade has been through the art pipeline', () => {
   const have = names(UNIT_ART);
@@ -193,8 +193,11 @@ describe('every upgrade has been through the art pipeline', () => {
     // Named rather than counted when they are short, so the failure says which.
     const attack = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_attack`)).map((u) => u.id);
     const hurt = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_hurt`)).map((u) => u.id);
-    expect(36 - attack.length, `no attack strip: ${attack.join(', ')}`).toBe(UPGRADE_SHEETS.attack);
-    expect(36 - hurt.length, `no weakened sheet: ${hurt.join(', ')}`).toBe(UPGRADE_SHEETS.hurt);
+    const all = UPGRADE_DEFS.length;
+    expect(all - attack.length, `no attack strip: ${attack.join(', ')}`).toBe(UPGRADE_SHEETS.attack);
+    // Eighty-nine of ninety: `warband-sergeant` is the one sheet in the
+    // second bible's drop that was never drawn.
+    expect(all - hurt.length, `no weakened sheet: ${hurt.join(', ')}`).toBe(UPGRADE_SHEETS.hurt);
   });
 
   /**

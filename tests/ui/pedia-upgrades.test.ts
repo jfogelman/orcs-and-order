@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openPedia } from '../../src/ui/pedia';
 import { createGame } from '../../src/sim/gamestate';
-import { UPGRADES, UPGRADES_BY_ID, upgradesFor } from '../../src/model/upgrades';
+import { UPGRADES, UPGRADES_BY_ID, UPGRADE_DEFS, upgradesFor } from '../../src/model/upgrades';
 import { TECHS_BY_ID } from '../../src/model/techs';
 import type { GameState } from '../../src/model/types';
 
@@ -49,12 +49,15 @@ function cardFor(root: HTMLElement, name: string): HTMLElement {
 }
 
 describe('the upgrade fold on a creature’s card', () => {
-  it('appears for every creature with a road, on both sides', () => {
+  it('appears for every creature with a road, on every side', () => {
     const root = book(true);
     const folds = root.querySelectorAll('.pedia-upgrades');
-    // Twelve families: seven of the Horde's, five of the Kingdom's. Every
-    // pane is in the document at once, hidden, so this counts both.
-    expect(folds).toHaveLength(12);
+    // **Counted off the data, not written down.** This said twelve -- seven
+    // of the Horde's families and five of the Kingdom's -- and slice 6 took
+    // it to thirty without the fold changing at all. Every pane is in the
+    // document at once, hidden, so this counts all five sides.
+    const families = new Set(UPGRADE_DEFS.map((u) => u.base));
+    expect(folds).toHaveLength(families.size);
   });
 
   it('is shut to begin with', () => {

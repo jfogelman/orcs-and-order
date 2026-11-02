@@ -118,11 +118,29 @@ function put(state: GameState, owner: number, type: string, x: number, y: number
  * declared unwired with a reason. The list below is a record of work
  * outstanding, in the suite rather than in a markdown file, and it shrinks.
  */
+/** The three factions section 155 slice 6 brought in, data and art only. */
+const SLICE_6 = new Set(['hivekin', 'wandering', 'unbound']);
+
 const UNWIRED: Record<string, string> = {
-  // Empty, and left here rather than deleted -- the same rule
-  // `art-present.test.ts` follows for its known-gap lists. All thirty-six do
-  // something; this is where the thirty-seventh declares itself if the three
-  // newer factions' upgrades land before their effects do.
+  // **Fifty-four at once, declared as a rule rather than fifty-four lines.**
+  //
+  // Slice 6 brought the three newer factions' upgrades in as data and art so
+  // the shape could be reviewed before any effect was written -- the same
+  // order slices 2 and 3 took for the Horde and the Kingdom, and for the same
+  // reason: thirty-six promises nobody could check would have been worse than
+  // none.
+  //
+  // This is a blanket, and a blanket is the thing this file is most wary of,
+  // so note what keeps it honest. The stale-entry test below asks whether any
+  // of these is *now* data or named in code, and the first one that gets an
+  // effect fails it -- which is the prompt to take it out of the blanket
+  // rather than leave the blanket quietly excusing it.
+  ...Object.fromEntries(
+    UPGRADE_DEFS.filter((u) => SLICE_6.has(u.faction)).map((u) => [
+      u.id,
+      'slice 6: transcribed and drawn, no effect written yet',
+    ]),
+  ),
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -133,8 +151,20 @@ const SOURCE = import.meta.glob('../src/**/*.ts', {
 }) as Record<string, string>;
 
 describe('every upgrade is accounted for', () => {
-  /** Files that may *mention* an id without that counting as wiring it. */
-  const DECLARATIONS = ['/src/model/upgrades.ts'];
+  /**
+   * Files that may *mention* an id without that counting as wiring it.
+   *
+   * `upgrades.ts` is obvious: it is where the ids are declared. `techs.ts`
+   * is not, and it became necessary in slice 6 -- the second bible's
+   * convention is that **the advance id equals the upgrade id it grants**
+   * (`fodder-hardened` is both), so every one of the fifty-four appears in
+   * `techs.ts` as an advance and the grep read all fifty-four as wired.
+   *
+   * The Horde's and the Kingdom's hid this: their advance is named for the
+   * joke rather than the unit, so `orc-veteran` and `doing-this-before` are
+   * different strings and a declaration never looked like a use.
+   */
+  const DECLARATIONS = ['/src/model/upgrades.ts', '/src/model/techs.ts'];
 
   const namedInCode = (id: string): boolean =>
     Object.entries(SOURCE).some(
@@ -189,13 +219,13 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // **All of them.** The list this test is built around is empty, which is
-    // the state it should normally be in -- and the orphan check above is
-    // what keeps it honest, because an empty list and an unchecked list look
-    // identical from here.
-    expect(Object.keys(UNWIRED)).toHaveLength(0);
+    // **Every one of the Horde's and the Kingdom's**, and none of the three
+    // newer factions' yet. The split is the point: thirty-six do something,
+    // fifty-four are waiting for slice 7, and nothing is unaccounted for.
+    expect(UPGRADE_DEFS).toHaveLength(90);
+    expect(Object.keys(UNWIRED)).toHaveLength(54);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(7);
-    expect(36 - Object.keys(UNWIRED).length, 'wired').toBe(36);
+    expect(90 - Object.keys(UNWIRED).length, 'wired').toBe(36);
   });
 });
 

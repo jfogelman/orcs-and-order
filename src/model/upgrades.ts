@@ -610,6 +610,658 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       'strike against it.',
     flavour: 'Read the book on getting hit. Skipped straight to the ending.',
   },
+
+  // =====================================================================
+  // Section 155 slice 6: the three newer factions, from Jeremy's second
+  // bible (`unit_upgrades_new_factions.md`, in the assets repo rather than
+  // this one -- which is how an earlier note in DESIGN_QUEUE came to record
+  // a path that does not resolve here, and how it was then reported as
+  // missing entirely).
+  //
+  // **Six, seven and five families rather than twelve each**, because the
+  // bible's own "Skipped on purpose" section excludes the workers, the
+  // spies, the naval transports, the siege attackers and the
+  // one-of-a-kinds -- and the Burrower and the Mystic, which already have
+  // upgrades of their own from sections 125 and 150.
+  //
+  // **Two families are renamed.** The bible calls them `skirmisher-*` and
+  // `brute-*`, and both of those names already belong to **wild orc
+  // raiders**. The renderer takes a creature off the front of an upgrade
+  // id, so a Wandering Folk mercenary would have resolved to a raider's
+  // sprite. They are `wf-skirmisher-*` and `wf-brute-*` here -- the prefix
+  // the creatures themselves already carry -- and the advances are renamed
+  // with them, so the bible's "the tech id equals the unit id it grants"
+  // still holds.
+
+  // ---- fodder (hivekin)
+  {
+    id: 'fodder-hardened',
+    base: 'fodder',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Hardened Fodder',
+    needs: 'fodder-hardened',
+    blurb: '+1 defence, +2 HP.',
+    flavour: 'The shell was cracked. It has been made less cracked.',
+  },
+  {
+    id: 'fodder-swarm',
+    base: 'fodder',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Swarm Fodder',
+    needs: 'fodder-swarm',
+    blurb:
+      '+2 attack for each other Swarm or ordinary Fodder in the ' +
+      'same stack (max +3).',
+    flavour: 'One is a shape. Several is a larger shape.',
+  },
+  {
+    id: 'fodder-burst',
+    base: 'fodder',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Bursting Fodder',
+    needs: 'fodder-burst',
+    blurb:
+      'When killed, deals a caustic burst to the attacker (1 ' +
+      'damage, ignores armour).',
+    flavour:
+      'It was always going to come apart. Now it comes apart on ' +
+      'someone.',
+  },
+
+  // ---- soldier (hivekin)
+  {
+    id: 'soldier-seasoned',
+    base: 'soldier',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Seasoned Soldier',
+    needs: 'soldier-seasoned',
+    blurb: '+1 attack, +1 defence.',
+    flavour: 'The shape has been used. The shape remembers.',
+  },
+  {
+    id: 'soldier-reaver',
+    base: 'soldier',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Reaver Soldier',
+    needs: 'soldier-reaver',
+    blurb: '+3 attack, -1 defence; bonus vs. cities.',
+    flavour:
+      'The blade is longer. The shell is the same size. This was ' +
+      'noted.',
+  },
+  {
+    id: 'soldier-carapace',
+    base: 'soldier',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Carapace Soldier',
+    needs: 'soldier-carapace',
+    blurb: '+3 defence, +3 HP, -1 move on rough terrain.',
+    flavour: 'It is difficult to hit. It is also difficult to move.',
+  },
+
+  // ---- spitter (hivekin)
+  {
+    id: 'spitter-long',
+    base: 'spitter',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Long Spitter',
+    needs: 'spitter-long',
+    blurb: '+1 attack, +1 range of effect.',
+    flavour: 'The gland is the same. The neck is longer.',
+  },
+  {
+    id: 'spitter-corrosive',
+    base: 'spitter',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Corrosive Spitter',
+    needs: 'spitter-corrosive',
+    blurb: 'Ignores half of the target\'s defence.',
+    flavour:
+      'It does not strike harder. It simply arrives in more ' +
+      'places.',
+  },
+  {
+    id: 'spitter-volley',
+    base: 'spitter',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Volley Spitter',
+    needs: 'spitter-volley',
+    blurb:
+      'Hits every enemy on the target tile and one adjacent tile ' +
+      'at reduced strength.',
+    flavour: 'The shape produces less per spit and spits more often.',
+  },
+
+  // ---- elite (hivekin)
+  {
+    id: 'elite-crested',
+    base: 'elite',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Crested Elite',
+    needs: 'elite-crested',
+    blurb: '+1 attack, +1 defence, +2 HP.',
+    flavour: 'The crest is taller. No one has said why that helps.',
+  },
+  {
+    id: 'elite-warform',
+    base: 'elite',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Warform Elite',
+    needs: 'elite-warform',
+    blurb: '+3 attack, +1 attack per consecutive win in one turn.',
+    flavour: 'It attacks more. It is not clear that it intends to stop.',
+  },
+  {
+    id: 'elite-bulwark',
+    base: 'elite',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Bulwark Elite',
+    needs: 'elite-bulwark',
+    blurb: '+3 defence, +4 HP; adjacent Hivekin take 1 less damage.',
+    flavour: 'The plates overlap. So does the responsibility.',
+  },
+
+  // ---- broodlord (hivekin)
+  {
+    id: 'broodlord-grown',
+    base: 'broodlord',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Grown Broodlord',
+    needs: 'broodlord-grown',
+    blurb: '+1 attack, +1 defence, +4 HP.',
+    flavour: 'It has not stopped growing. No one has asked it to.',
+  },
+  {
+    id: 'broodlord-many',
+    base: 'broodlord',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Many-Armed Broodlord',
+    needs: 'broodlord-many',
+    blurb: '+4 attack; may attack twice per turn against a stack.',
+    flavour: 'There were four arms. This was found insufficient.',
+  },
+  {
+    id: 'broodlord-keeper',
+    base: 'broodlord',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Brood-Keeper Broodlord',
+    needs: 'broodlord-keeper',
+    blurb: 'Heals adjacent Hivekin 2 HP per turn; +2 defence.',
+    flavour: 'It no longer needs to kill. It has things to tend.',
+  },
+
+  // ---- warden (hivekin)
+  {
+    id: 'warden-tempered',
+    base: 'warden',
+    line: 'linear',
+    faction: 'hivekin',
+    name: 'Tempered Warden',
+    needs: 'warden-tempered',
+    blurb: '+1 defence, +2 HP; exorcism strength +1.',
+    flavour: 'The secretion is the same. It has had longer to set.',
+  },
+  {
+    id: 'warden-purging',
+    base: 'warden',
+    line: 'a',
+    faction: 'hivekin',
+    name: 'Purging Warden',
+    needs: 'warden-purging',
+    blurb:
+      'Exorcism strength +3; +3 attack against incorporeal units, ' +
+      'which cannot reform on the tile.',
+    flavour:
+      'What it touches does not come back. The shape considers ' +
+      'this the point.',
+  },
+  {
+    id: 'warden-anchored',
+    base: 'warden',
+    line: 'b',
+    faction: 'hivekin',
+    name: 'Anchored Warden',
+    needs: 'warden-anchored',
+    blurb:
+      '+3 defence, +4 HP; the tile it holds cannot be entered by ' +
+      'incorporeal units.',
+    flavour:
+      'It stands where it is. Things that cannot stand there are ' +
+      'noted.',
+  },
+
+  // ---- wf-skirmisher (wandering)
+  {
+    id: 'wf-skirmisher-paid',
+    base: 'wf-skirmisher',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Paid Skirmisher',
+    needs: 'wf-skirmisher-paid',
+    blurb: '+1 attack, +1 defence.',
+    flavour:
+      'Paid on time, which they are not used to, and which they ' +
+      'are working out how to exploit.',
+  },
+  {
+    id: 'wf-skirmisher-cutpurse',
+    base: 'wf-skirmisher',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Cutpurse Skirmisher',
+    needs: 'wf-skirmisher-cutpurse',
+    blurb:
+      'Wins plunder +2 gold per kill; +1 attack in enemy ' +
+      'territory.',
+    flavour: 'Everything on the battlefield is technically unclaimed.',
+  },
+  {
+    id: 'wf-skirmisher-rearguard',
+    base: 'wf-skirmisher',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Rearguard Skirmisher',
+    needs: 'wf-skirmisher-rearguard',
+    blurb:
+      '+3 defence; the stack it is in may retreat from combat ' +
+      'without penalty.',
+    flavour: 'Somebody has to go last. It is in the contract.',
+  },
+
+  // ---- warband (wandering)
+  {
+    id: 'warband-seasoned',
+    base: 'warband',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Seasoned Warband',
+    needs: 'warband-seasoned',
+    blurb: '+1 attack, +1 defence, +2 HP.',
+    flavour: 'Experience, like everything else, is billed in arrears.',
+  },
+  {
+    id: 'warband-caravanguard',
+    base: 'warband',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Caravan Guard',
+    needs: 'warband-caravanguard',
+    blurb: '+3 defence; +2 defence to adjacent Wandering Folk.',
+    flavour:
+      'The job was originally to protect the wagons. It has since ' +
+      'been extended.',
+  },
+  {
+    id: 'warband-sergeant',
+    base: 'warband',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Sergeant-at-Arms',
+    needs: 'warband-sergeant',
+    blurb: '+3 attack; adjacent Wandering Folk attack at +1.',
+    flavour: 'Nobody voted. Several agreed, afterwards.',
+  },
+
+  // ---- slinger (wandering)
+  {
+    id: 'slinger-steady',
+    base: 'slinger',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Steady Slinger',
+    needs: 'slinger-steady',
+    blurb: '+1 attack, +1 range; fewer misses.',
+    flavour: 'The arrows are the same. The aim has been paid for.',
+  },
+  {
+    id: 'slinger-quiver',
+    base: 'slinger',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Quiver-Rich Slinger',
+    needs: 'slinger-quiver',
+    blurb:
+      '+3 attack; ignores the first round of enemy defence ' +
+      'bonuses from walls.',
+    flavour: 'Having the arrows turns out to matter.',
+  },
+  {
+    id: 'slinger-marksman',
+    base: 'slinger',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Marksman Slinger',
+    needs: 'slinger-marksman',
+    blurb:
+      '+5 attack against units on open ground; attacks one tile ' +
+      'further.',
+    flavour: 'Payment is per hit. Misses are not discussed.',
+  },
+
+  // ---- outcast (wandering)
+  {
+    id: 'outcast-hardened',
+    base: 'outcast',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Hardened Outcast',
+    needs: 'outcast-hardened',
+    blurb: '+1 attack, +2 defence, +2 HP.',
+    flavour: 'Being unwelcome has proven to be a transferable skill.',
+  },
+  {
+    id: 'outcast-grudge',
+    base: 'outcast',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Grudge Outcast',
+    needs: 'outcast-grudge',
+    blurb: '+3 attack; +3 more against Orc Horde units.',
+    flavour: 'It has a specific list of people. It is in no hurry.',
+  },
+  {
+    id: 'outcast-ironback',
+    base: 'outcast',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Ironback Outcast',
+    needs: 'outcast-ironback',
+    blurb: '+3 defence; ignores terrain movement penalty.',
+    flavour: 'If anyone wants it moved, they will need to move it.',
+  },
+
+  // ---- wf-brute (wandering)
+  {
+    id: 'wf-brute-seasoned',
+    base: 'wf-brute',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Seasoned Brute',
+    needs: 'wf-brute-seasoned',
+    blurb: '+1 attack, +1 defence, +4 HP.',
+    flavour: 'Has been fed on schedule. The results are visible.',
+  },
+  {
+    id: 'wf-brute-hauler',
+    base: 'wf-brute',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Hauler Brute',
+    needs: 'wf-brute-hauler',
+    blurb:
+      '+8 HP; adjacent Wandering Folk units heal +1 per turn in ' +
+      'its stack.',
+    flavour:
+      'Mostly it carries things. Sometimes it carries people who ' +
+      'disagree.',
+  },
+  {
+    id: 'wf-brute-wrecker',
+    base: 'wf-brute',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Wrecker Brute',
+    needs: 'wf-brute-wrecker',
+    blurb: '+4 attack; double attack against fortified cities.',
+    flavour: 'Charged by the wall, not by the hour.',
+  },
+
+  // ---- bonebound (wandering)
+  {
+    id: 'bonebound-charmed',
+    base: 'bonebound',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Charmed Bonebound',
+    needs: 'bonebound-charmed',
+    blurb: '+1 attack, +1 defence, +4 HP.',
+    flavour: 'Each charm is a favour. They are being collected.',
+  },
+  {
+    id: 'bonebound-regrowing',
+    base: 'bonebound',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Regrowing Bonebound',
+    needs: 'bonebound-regrowing',
+    blurb: 'Regenerates 3 HP per turn, even after combat.',
+    flavour: 'The troll is a long-term investment.',
+  },
+  {
+    id: 'bonebound-rattling',
+    base: 'bonebound',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Rattling Bonebound',
+    needs: 'bonebound-rattling',
+    blurb:
+      '+4 attack; enemy units attacking it suffer -1 attack for ' +
+      'one turn.',
+    flavour: 'The noise is considered part of the service.',
+  },
+
+  // ---- drake (wandering)
+  {
+    id: 'drake-harnessed',
+    base: 'drake',
+    line: 'linear',
+    faction: 'wandering',
+    name: 'Harnessed Drake',
+    needs: 'drake-harnessed',
+    blurb: '+1 attack, +1 defence, +4 HP.',
+    flavour: 'Same drake. Better harness. The harness is the product.',
+  },
+  {
+    id: 'drake-courier',
+    base: 'drake',
+    line: 'a',
+    faction: 'wandering',
+    name: 'Courier Drake',
+    needs: 'drake-courier',
+    blurb: '+2 move; may carry one additional unit.',
+    flavour: 'Letters are the product. The drake is the packaging.',
+  },
+  {
+    id: 'drake-fire',
+    base: 'drake',
+    line: 'b',
+    faction: 'wandering',
+    name: 'Fire-Hired Drake',
+    needs: 'drake-fire',
+    blurb:
+      '+4 attack; sets the target tile ablaze (1 damage next ' +
+      'turn).',
+    flavour: 'Billed separately. Extra for the fire.',
+  },
+
+  // ---- revenant (unbound)
+  {
+    id: 'revenant-settled',
+    base: 'revenant',
+    line: 'linear',
+    faction: 'unbound',
+    name: 'Settled Revenant',
+    needs: 'revenant-settled',
+    blurb: '+1 attack, +1 defence; reforms at +1 HP.',
+    flavour: 'It is slightly less likely to come apart. This is noted.',
+  },
+  {
+    id: 'revenant-insistent',
+    base: 'revenant',
+    line: 'a',
+    faction: 'unbound',
+    name: 'Insistent Revenant',
+    needs: 'revenant-insistent',
+    blurb:
+      'Reforms at Anchors in 1 turn instead of 2; +2 attack when ' +
+      'reformed.',
+    flavour: 'Nothing prevents it. This is a finding.',
+  },
+  {
+    id: 'revenant-clinging',
+    base: 'revenant',
+    line: 'b',
+    faction: 'unbound',
+    name: 'Clinging Revenant',
+    needs: 'revenant-clinging',
+    blurb:
+      '+3 defence; cannot be dispersed by non-Warden attacks ' +
+      'while defending a city.',
+    flavour: 'It was asked to leave. The request is on file.',
+  },
+
+  // ---- sylph (unbound)
+  {
+    id: 'sylph-quickened',
+    base: 'sylph',
+    line: 'linear',
+    faction: 'unbound',
+    name: 'Quickened Sylph',
+    needs: 'sylph-quickened',
+    blurb: '+1 attack, +1 move.',
+    flavour: 'It was there. It is now elsewhere.',
+  },
+  {
+    id: 'sylph-gale',
+    base: 'sylph',
+    line: 'a',
+    faction: 'unbound',
+    name: 'Gale Sylph',
+    needs: 'sylph-gale',
+    blurb:
+      '+4 attack against units on open ground; ignores terrain ' +
+      'movement costs.',
+    flavour: 'The weather has a position. It was not asked.',
+  },
+  {
+    id: 'sylph-stilled',
+    base: 'sylph',
+    line: 'b',
+    faction: 'unbound',
+    name: 'Stilled Sylph',
+    needs: 'sylph-stilled',
+    blurb:
+      '+3 defence; negates attacker\'s terrain bonus; invisible to ' +
+      'units more than 1 tile away.',
+    flavour: 'The air is still. This is also an event.',
+  },
+
+  // ---- naiad (unbound)
+  {
+    id: 'naiad-deepened',
+    base: 'naiad',
+    line: 'linear',
+    faction: 'unbound',
+    name: 'Deepened Naiad',
+    needs: 'naiad-deepened',
+    blurb: '+1 attack, +1 defence; water-adjacency bonus +1.',
+    flavour: 'It has been in the water longer. The water has noticed.',
+  },
+  {
+    id: 'naiad-tidal',
+    base: 'naiad',
+    line: 'a',
+    faction: 'unbound',
+    name: 'Tidal Naiad',
+    needs: 'naiad-tidal',
+    blurb:
+      '+4 attack when adjacent to water; may attack from water ' +
+      'tiles.',
+    flavour: 'The moon is cited. It has not commented.',
+  },
+  {
+    id: 'naiad-still',
+    base: 'naiad',
+    line: 'b',
+    faction: 'unbound',
+    name: 'Still-Water Naiad',
+    needs: 'naiad-still',
+    blurb: '+3 defence; heals 2 HP per turn adjacent to water.',
+    flavour: 'Nothing disturbs it. This is considered sufficient.',
+  },
+
+  // ---- yaksha (unbound)
+  {
+    id: 'yaksha-posted',
+    base: 'yaksha',
+    line: 'linear',
+    faction: 'unbound',
+    name: 'Posted Yaksha',
+    needs: 'yaksha-posted',
+    blurb: '+1 attack, +2 defence, +2 HP.',
+    flavour: 'It has been given an actual post. It seems to prefer this.',
+  },
+  {
+    id: 'yaksha-immovable',
+    base: 'yaksha',
+    line: 'a',
+    faction: 'unbound',
+    name: 'Immovable Yaksha',
+    needs: 'yaksha-immovable',
+    blurb: '+4 defence, +4 HP; units cannot move through its tile.',
+    flavour: 'The request to move was received. It was reviewed.',
+  },
+  {
+    id: 'yaksha-reckoner',
+    base: 'yaksha',
+    line: 'b',
+    faction: 'unbound',
+    name: 'Reckoner Yaksha',
+    needs: 'yaksha-reckoner',
+    blurb: '+3 attack; counter-attacks every attacker in a turn.',
+    flavour:
+      'Every attacker is entered in the record. The record is ' +
+      'balanced.',
+  },
+
+  // ---- jinn (unbound)
+  {
+    id: 'jinn-practiced',
+    base: 'jinn',
+    line: 'linear',
+    faction: 'unbound',
+    name: 'Practised Jinn',
+    needs: 'jinn-practiced',
+    blurb: '+1 attack, +1 defence, +2 HP.',
+    flavour: 'The terms are the same. It has read them more times.',
+  },
+  {
+    id: 'jinn-fineprint',
+    base: 'jinn',
+    line: 'a',
+    faction: 'unbound',
+    name: 'Fine-Print Jinn',
+    needs: 'jinn-fineprint',
+    blurb: '-2 attack to all enemies adjacent to it; +2 attack.',
+    flavour: 'The wording was agreed. The wording was read.',
+  },
+  {
+    id: 'jinn-taker',
+    base: 'jinn',
+    line: 'b',
+    faction: 'unbound',
+    name: 'Wish-Taker Jinn',
+    needs: 'jinn-taker',
+    blurb: '+4 attack; each kill grants +1 gold.',
+    flavour:
+      'Something was asked for. Something was taken. The two are ' +
+      'not identical.',
+  },
 ];
 
 /** By id, for the renderer and the city view. */

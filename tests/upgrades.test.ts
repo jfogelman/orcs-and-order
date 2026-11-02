@@ -31,15 +31,21 @@ describe('the unit upgrades, as data', () => {
     expect(UPGRADES.enabled).toBe(false);
   });
 
-  it('is twelve families of one linear upgrade and two branches', () => {
+  it('is thirty families of one linear upgrade and two branches', () => {
     const families = new Map<string, string[]>();
     for (const u of UPGRADE_DEFS) {
       const lines = families.get(u.base) ?? [];
       lines.push(u.line);
       families.set(u.base, lines);
     }
-    expect(UPGRADE_DEFS).toHaveLength(36);
-    expect(families.size).toBe(12);
+    // Twelve families for the Horde and the Kingdom (section 155 slice 2),
+    // and eighteen more for the three newer factions (slice 6): six Hivekin,
+    // seven Wandering Folk, five Unbound. Not twelve each -- the second
+    // bible's own "Skipped on purpose" section leaves out the workers, the
+    // spies, the naval transports, the siege attackers and the
+    // one-of-a-kinds.
+    expect(UPGRADE_DEFS).toHaveLength(90);
+    expect(families.size).toBe(30);
     const malformed = [...families]
       .filter(([, lines]) => [...lines].sort().join() !== 'a,b,linear')
       .map(([base, lines]) => `${base}: ${lines.join('/')}`);
@@ -145,6 +151,6 @@ describe('the unit upgrades, as data', () => {
       (u) => !u.name || !u.blurb || !u.blurb.endsWith('.') || !/[a-z0-9]/i.test(u.blurb),
     ).map((u) => `${u.id}: ${JSON.stringify(u.blurb)}`);
     expect(silent, `no usable description: ${silent.join('; ')}`).toEqual([]);
-    expect(Object.keys(UPGRADES_BY_ID)).toHaveLength(36);
+    expect(Object.keys(UPGRADES_BY_ID)).toHaveLength(90);
   });
 });

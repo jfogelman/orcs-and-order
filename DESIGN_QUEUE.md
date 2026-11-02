@@ -12920,6 +12920,68 @@ divs. The fold added some of its own, and the ladder landed **inside** it: a
 player would have found "group sizes" by expanding a list of upgrades. It is
 passed into `unitCard` now rather than spliced onto the end of it.
 
+### Slice 6: the three newer factions, as data and art
+
+Jeremy held the merge for this, and he was right to: thirty-six upgrades for
+two sides and none for the other three is not a game anybody should tick a box
+on. **54 upgrades and 54 advances**, which takes the five sides to 21 / 15 /
+18 / 21 / 15 across thirty families.
+
+Six, seven and five families rather than twelve each, because the second
+bible's own *"Skipped on purpose"* section leaves out the workers, the spies,
+the naval transports, the siege attackers and the one-of-a-kinds -- and the
+Burrower and the Mystic, which already had upgrades from sections 125 and 150.
+
+**Transcribed by script, as slice 2 was**, and every structural guard that
+slice wrote passed untouched: both-directions pairing, unique ids, real base
+creatures, advances that root in the tree, linear before branches. Only two
+hard-coded counts needed changing, which is the test suite doing exactly what
+it was built for.
+
+### Two families had to be renamed
+
+The bible calls them `skirmisher-*` and `brute-*`. **Both of those names are
+wild orc raiders in this game** -- the Wandering Folk's are `wf-skirmisher`
+and `wf-brute` precisely because the raiders got there first. The renderer
+takes a creature off the front of an upgrade id, so `skirmisher-paid` would
+have put a mercenary in a raider's sprite.
+
+They are `wf-skirmisher-*` and `wf-brute-*`, and the advances are renamed with
+them so the bible's *"the tech id equals the unit id it grants"* still holds.
+
+### The art needed no pipeline change
+
+Filed alongside the Horde's and the Kingdom's in `art_src/unit upgrades/`
+rather than under each faction. The upgrades are a cross-faction system and
+that tree is already scanned by name -- `process_upgrade_art` for the sprites
+and the advance icons, `EXTRA_SOURCE_DIRS` for the attack strips and the
+weakened sheets -- so filing them there is the whole of the wiring. Ninety
+upgrades' art in one place also beats thirty-six in one and fifty-four in
+three.
+
+**54 sprites, 54 attack strips, 54 advance icons, 53 of 54 weakened sheets.**
+
+Three files would have been skipped silently for their names, and each was
+taken on purpose rather than left to make the count quietly short:
+`fodder-swarm swarm.jpg` (suffixed for the wrong thing), `slinger-quiver
+attack (extra hands).jpg` (a parenthesised roll with no plain sibling), and
+`yaksha-posted -- remove drop.jpg` -- **which is a note to Jeremy rather than
+a filename**, and the icon may still have the drop he meant to remove.
+
+`warband-sergeant weakened` is the one sheet in the drop that was never drawn.
+
+### And a convention that broke the completeness test
+
+Every one of the fifty-four read as **already wired**, because the second
+bible's convention is that the advance id *equals* the upgrade id --
+`fodder-hardened` is both -- so `techs.ts` mentions all fifty-four and the
+grep counted a declaration as a use.
+
+The Horde's and the Kingdom's had hidden this: their advances are named for
+the joke rather than the unit, so `orc-veteran` and `doing-this-before` are
+different strings and a declaration could never look like a use. `techs.ts`
+joins `upgrades.ts` in the declarations list.
+
 ### Thirty-six of thirty-six
 
 The unwired list is empty, which is the state it should normally be in.
