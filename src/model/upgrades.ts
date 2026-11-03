@@ -824,7 +824,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     faction: 'hivekin',
     name: 'Tempered Warden',
     needs: 'warden-tempered',
-    blurb: '+1 defence, +2 HP; exorcism strength +1.',
+    blurb: '+1 defence, +2 HP; exorcises a little more surely.',
     flavour: 'The secretion is the same. It has had longer to set.',
     effect: { defence: 1, hp: 2 },
   },
@@ -836,8 +836,8 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Purging Warden',
     needs: 'warden-purging',
     blurb:
-      'Exorcism strength +3; +3 attack against incorporeal units, ' +
-      'which cannot reform on the tile.',
+      'Exorcises almost without fail; +3 attack against incorporeal ' +
+      'units, and nothing gathers in a town it is standing beside.',
     flavour:
       'What it touches does not come back. The shape considers ' +
       'this the point.',
@@ -850,8 +850,8 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Anchored Warden',
     needs: 'warden-anchored',
     blurb:
-      '+3 defence, +4 HP; the tile it holds cannot be entered by ' +
-      'incorporeal units.',
+      '+3 defence, +4 HP; incorporeal units cannot move through the ' +
+      'ground around it.',
     flavour:
       'It stands where it is. Things that cannot stand there are ' +
       'noted.',
@@ -1128,9 +1128,16 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     faction: 'unbound',
     name: 'Settled Revenant',
     needs: 'revenant-settled',
-    blurb: '+1 attack, +1 defence; reforms at +1 HP.',
+    // The bible says *"reforms at +1 HP"*, and a spirit reforms at **full**
+    // HP -- `spawnUnit` makes a whole one -- so a bonus paid on reform is a
+    // bonus paid into a unit that is already full. It is +1 HP, flatly, which
+    // is what the clause was reaching for and is worth it on the turn it is
+    // bought rather than on the turn it dies. The card says the thing the game
+    // does, because a card that promises a condition the game has not got is
+    // worse than a smaller card.
+    blurb: '+1 attack, +1 defence, +1 HP.',
     flavour: 'It is slightly less likely to come apart. This is noted.',
-    effect: { attack: 1, defence: 1 },
+    effect: { attack: 1, defence: 1, hp: 1 },
   },
   {
     id: 'revenant-insistent',
@@ -1139,9 +1146,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     faction: 'unbound',
     name: 'Insistent Revenant',
     needs: 'revenant-insistent',
-    blurb:
-      'Reforms at Anchors in 1 turn instead of 2; +2 attack when ' +
-      'reformed.',
+    blurb: 'Gathers again in 1 turn instead of 2; +2 attack once it has.',
     flavour: 'Nothing prevents it. This is a finding.',
   },
   {
@@ -1152,8 +1157,8 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     name: 'Clinging Revenant',
     needs: 'revenant-clinging',
     blurb:
-      '+3 defence; cannot be dispersed by non-Warden attacks ' +
-      'while defending a city.',
+      '+3 defence; holding one of its own cities, only a Hive Warden ' +
+      'can end it — anything else merely scatters it.',
     flavour: 'It was asked to leave. The request is on file.',
     effect: { defence: 3 },
   },

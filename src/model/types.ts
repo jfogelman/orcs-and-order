@@ -55,6 +55,17 @@ export interface Scattered {
   turn: number;
   /** Where it fell, for the message and for the camera. */
   at: readonly [number, number];
+  /**
+   * The upgrade it had chosen, so it comes back as what it was.
+   *
+   * **This was a bug, found while wiring section 155.** The comment on `rank`
+   * two lines up says *"a spirit that reforms has not forgotten"*, and it did
+   * forget: an upgraded Revenant scattered and stood up plain, having quietly
+   * refunded two gold of a permanent choice. It also makes the two Revenant
+   * upgrades askable at all -- both of them are about reforming, and the thing
+   * that reforms had no idea which upgrade it held.
+   */
+  upgrade?: string;
 }
 
 export interface Player {
@@ -372,6 +383,15 @@ export interface Unit {
    * on, so the pass is gone whether or not it ever steps off.
    */
   tunnelled?: boolean;
+  /**
+   * Whether this one has already come apart once and gathered again.
+   *
+   * Set by `reformScattered` and nowhere else, which is also why it needed
+   * adding: `revenant-insistent` is *"+2 attack when reformed"*, and until
+   * slice 6 a spirit that gathered again was indistinguishable from one that
+   * had been bought this morning. Only the Unbound ever have it.
+   */
+  reformed?: boolean;
   /**
    * Fights this unit has been in since its side's turn began. Section 155.
    *

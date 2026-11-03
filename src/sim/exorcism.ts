@@ -1,4 +1,6 @@
 import type { GameState, Unit } from '../model/types';
+import { exorcismStrength } from './upgradeEffects';
+import { withRng } from './gamestate';
 import { unitType } from '../model/units';
 import { hasFlag } from './rules';
 
@@ -64,6 +66,20 @@ export const EXORCISTS: Record<string, string | null> = {
 export const EXORCISM = {
   /** The switch, for sweeps. Off is the game with no answer to the Unbound. */
   enabled: true,
+  /**
+   * How often an exorcist actually sends one back. Section 155 slice 6.
+   *
+   * **This used to be a certainty**, and section 155's two Warden upgrades
+   * are both priced in "exorcism strength" -- a scale the game did not have.
+   * Jeremy's ruling of 2026-11-02 gave it one: an ordinary exorcist sends
+   * most of them back, a Tempered Warden more, a Purging Warden nearly
+   * always.
+   *
+   * It is a real change to section 150's shipped behaviour and not a
+   * reading, which is why it is a lever: **at 1 this is exactly the game
+   * before it**, and that is the arm to measure against.
+   */
+  chance: 0.75,
 };
 
 /** Whether this creature could ever exorcise, for anybody. */
@@ -79,6 +95,24 @@ export function couldExorcise(type: string): boolean {
  * ordinary way, and the thing it beat is getting up again somewhere else.
  */
 export function exorcises(state: GameState, unit: Unit): boolean {
+  if (!isExorcist(state, unit)) return false;
+  // Section 155 slice 6: and then it has to land. Rolled through the game's
+  // own stream so a save and a reload see the same answer.
+  const odds = Math.min(1, EXORCISM.chance + exorcismStrength(unit));
+  return odds >= 1 || withRng(state, (rng) => rng.chance(odds));
+}
+
+/**
+ * Whether this unit is an exorcist at all, before the roll.
+ *
+ * The pair to `couldExorcise` above and not the same question: that one asks
+ * whether a *creature* is ever one, from the table alone, and this one asks
+ * whether **this unit, owned by this player, right now** is -- which for the
+ * Mystic depends on an advance its side may not have. Split out in slice 6,
+ * when `exorcises` started rolling, so that everything merely *counting*
+ * exorcists has something to call that does not touch the random stream.
+ */
+export function isExorcist(state: GameState, unit: Unit): boolean {
   if (!EXORCISM.enabled) return false;
   const needs = EXORCISTS[unitType(unit.type).base];
   if (needs === undefined) return false;
@@ -87,7 +121,15 @@ export function exorcises(state: GameState, unit: Unit): boolean {
   return !!owner && hasFlag(owner, needs as Parameters<typeof hasFlag>[1]);
 }
 
-/** Every exorcist this side could field right now, for the advisors and the AI. */
+/**
+ * Every exorcist this side could field right now, for the advisors and the AI.
+ *
+ * `isExorcist` rather than `exorcises`, and the difference is not
+ * cosmetic since slice 6: `exorcises` **rolls**, and a question the advisor
+ * panel asks every repaint must not move the game's random stream. It is also
+ * the right question -- an advisor counting exorcists is counting units, not
+ * guessing how their next fight goes.
+ */
 export function exorcistsOf(state: GameState, playerId: number): Unit[] {
-  return state.units.filter((u) => u.owner === playerId && exorcises(state, u));
+  return state.units.filter((u) => u.owner === playerId && isExorcist(state, u));
 }

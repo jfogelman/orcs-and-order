@@ -126,13 +126,7 @@ function put(state: GameState, owner: number, type: string, x: number, y: number
  * numbers went in, which is the prompt to take them out rather than let a
  * blanket quietly excuse them.
  */
-const UNWIRED: Record<string, string> = {
-  'fodder-burst': 'a caustic burst on death; nothing hurts its killer today',
-  'spitter-corrosive': 'ignoring half a defence is a multiplier, not the flat pierce we have',
-  'spitter-volley': 'hitting a second tile at reduced strength is the Brawler’s backswing, ranged',
-  'bonebound-regrowing': 'regenerating after combat means ignoring `spent`, which nothing does',
-  'revenant-insistent': 'reform timing, which lives in `dispersal.ts` and counts turns its own way',
-};
+const UNWIRED: Record<string, string> = {};
 
 /**
  * **Upgrades whose number is in and whose rule is not.**
@@ -145,27 +139,7 @@ const UNWIRED: Record<string, string> = {
  * This list is the only record of that gap, so it is a list rather than a
  * rule -- and `says how many are left` counts it, so it cannot quietly grow.
  */
-const PART_WIRED: Record<string, string> = {
-  'soldier-carapace': 'minus a move on rough terrain',
-  'elite-bulwark': 'adjacent Hivekin take one less damage',
-  'warden-tempered': 'exorcism strength',
-  'warden-purging': 'exorcism strength, and no reforming on its tile',
-  'warden-anchored': 'incorporeal units cannot enter its tile',
-  'wf-skirmisher-cutpurse': 'plunder, two gold a kill',
-  'slinger-steady': 'fewer misses, which the bible does not quantify',
-  'slinger-quiver': 'ignoring a wall for the first round',
-  'outcast-ironback': 'ignoring the terrain movement penalty',
-  'wf-brute-wrecker': 'double against a fortified city',
-  'drake-courier': 'the extra seat',
-  'drake-fire': 'setting the tile alight',
-  'revenant-settled': 'reforming a point healthier',
-  'revenant-clinging': 'not being dispersed while it holds a city',
-  'sylph-gale': 'ignoring terrain movement costs',
-  'sylph-stilled': 'negating the attacker’s ground, and going unseen at range',
-  'naiad-deepened': 'the larger water bonus',
-  'naiad-tidal': 'attacking from water',
-  'jinn-taker': 'a gold a kill',
-};
+const PART_WIRED: Record<string, string> = {};
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
 const SOURCE = import.meta.glob('../src/**/*.ts', {
@@ -243,16 +217,18 @@ describe('every upgrade is accounted for', () => {
 
   it('says how many are left, out loud', () => {
     // Not a bar -- a number somebody has to come and change, which is the
-    // **Every one of the Horde's and the Kingdom's**, and none of the three
-    // newer factions' yet. The split is the point: thirty-six do something,
-    // fifty-four are waiting for slice 7, and nothing is unaccounted for.
+    // point of writing it down. **All ninety now do everything their card
+    // says**, across all five factions.
+    //
+    // Both lists being empty costs these tests most of their guard, and the
+    // canary below is what is left of it: while something was listed, the two
+    // halves checked each other. Anything added to either list from here is
+    // work outstanding, never a drawer to sweep a hard card into.
     expect(UPGRADE_DEFS).toHaveLength(90);
-    expect(Object.keys(UNWIRED), 'nothing at all yet').toHaveLength(5);
-    expect(Object.keys(PART_WIRED), 'the number but not the rule').toHaveLength(19);
+    expect(Object.keys(UNWIRED), 'nothing with no answer at all').toHaveLength(0);
+    expect(Object.keys(PART_WIRED), 'and nothing half-answered').toHaveLength(0);
     expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(50);
-    // Sixty-six of ninety do everything their card says. The other
-    // twenty-four are accounted for above, nineteen of them in part.
-    expect(90 - Object.keys(UNWIRED).length - Object.keys(PART_WIRED).length).toBe(66);
+    expect(90 - Object.keys(UNWIRED).length - Object.keys(PART_WIRED).length).toBe(90);
   });
 });
 

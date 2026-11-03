@@ -5,6 +5,7 @@ import { TERRAIN } from '../model/terrain';
 import type { City, GameState, Player, Scattered, Unit, UnitTypeId } from '../model/types';
 import { CREATURES, unitType } from '../model/units';
 import { exorcises } from './exorcism';
+import { clingsOn, reformDelayFor, shutsTheDoor } from './upgradeEffects';
 import { empireBonus } from './follyEffects';
 import { log, spawnUnit, withRng } from './gamestate';
 import { hasFlag } from './rules';
@@ -141,6 +142,10 @@ export function scatters(state: GameState, unit: Unit, killer?: Unit): boolean {
   if (!dispersingSide(state.players[unit.owner])) return false;
   const base = unitType(unit.type).base;
   if (PHYSICAL.has(base)) return false;
+  // Section 155, `revenant-clinging`: and this one, in its own town, is not
+  // going anywhere. Asked **before** the two rungs below, because beating
+  // them is the whole of what it buys -- Jeremy's ruling of 2026-11-02.
+  if (clingsOn(state, unit, killer)) return true;
   // The whole of section 150, asked here and nowhere else.
   if (killer && exorcises(state, killer)) return false;
   // Section 155: and a Grave Knight does not scatter one either. It cannot
@@ -180,6 +185,14 @@ export function reformSites(state: GameState, playerId: number): City[] {
   const circles: City[] = [];
   for (const c of state.cities) {
     if (c.owner !== playerId) continue;
+    // Section 155: and not with a Purging Warden sitting outside it. The
+    // bible's clause is *"prevents reforming on its tile"*, which read
+    // literally is already true -- nothing reforms on an occupied tile, and an
+    // enemy standing in your city has taken it. Adjacent is Jeremy's ruling of
+    // 2026-11-02 for "stack", applied again: a Warden camped beside the town
+    // is the picture the clause is painting, and it makes the upgrade a siege
+    // the Unbound have to answer rather than a sentence that does nothing.
+    if (shutsTheDoor(state, c)) continue;
     if (c.buildings.includes(REFORM_SITES[0])) {
       totems.push(c);
       continue;
@@ -278,6 +291,7 @@ export function scatter(state: GameState, unit: Unit, killer?: Unit): boolean {
     rank: unit.rank,
     turn: state.turn,
     at: where,
+    upgrade: unit.upgrade,
   });
   log(state, `${type.name} scatters rather than falling.`, 'info', unit.owner, undefined, where);
   return true;
@@ -332,9 +346,14 @@ export function reformScattered(state: GameState, playerId: number): void {
     return;
   }
 
-  const trying = player.scattered.filter((s) => s.turn < state.turn);
+  // Section 155: how long it waits is the spirit's own business now, because
+  // `revenant-insistent` buys a shorter wait. `reformDelayFor` is 2 turns for
+  // an ordinary one and 1 for that upgrade; at `REFORM.turns = 1` this line is
+  // exactly the `s.turn < state.turn` it replaced.
+  const ready = (s: Scattered) => s.turn + reformDelayFor(s.upgrade) <= state.turn;
+  const trying = player.scattered.filter(ready);
   if (trying.length === 0) return;
-  player.scattered = player.scattered.filter((s) => s.turn >= state.turn);
+  player.scattered = player.scattered.filter((s) => !ready(s));
 
   const fail = reformFailOdds(state, playerId);
   for (const spirit of trying) {
@@ -366,6 +385,9 @@ export function reformScattered(state: GameState, playerId: number): void {
     }
     const back = spawnUnit(state, playerId, spirit.type, site.x, site.y);
     back.rank = spirit.rank;
+    back.upgrade = spirit.upgrade;
+    // It has been through this before, which `revenant-insistent` is paid for.
+    back.reformed = true;
     log(
       state,
       `${name} gathers again in ${site.name}, and resumes where it left off.`,

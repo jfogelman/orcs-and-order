@@ -1,6 +1,8 @@
 import { checkEndings, isEndingPiece } from './endings';
 import {
+  knitsRegardless,
   movesThisTurn,
+  REGROWING,
   RETRIEVER,
   retrievesAxe,
   tendTheWounded,
@@ -107,7 +109,9 @@ function healUnits(state: GameState, playerId: number): void {
     if (unit.owner !== playerId) continue;
     // A troll that has just torn itself in half is in no state to knit back
     // together, and neither is anything else that has been left spent.
-    if (hasStatus(unit, 'spent')) continue;
+    // Section 155 slice 6, `bonebound-regrowing`: the troll is a long-term
+    // investment, and knits whether or not it has just been in a fight.
+    if (hasStatus(unit, 'spent') && !knitsRegardless(unit)) continue;
     const type = unitType(unit.type);
     const max = maxHp(unit);
     if (unit.hp >= max) continue;
@@ -116,7 +120,17 @@ function healUnits(state: GameState, playerId: number): void {
     // unit still recovers *something* from a small percentage, and without
     // this guard it would quietly heal anyone out of supply by a point a turn.
     if (rate <= 0) continue;
-    unit.hp = Math.min(max, unit.hp + Math.max(1, Math.round(max * rate)));
+    const healed = Math.max(1, Math.round(max * rate));
+    // `bonebound-regrowing` is a **floor**, not a replacement. Written as a
+    // replacement it healed a troll in a barracks town *less* than no upgrade
+    // at all -- the ordinary heal is a share of a growing maximum, so it
+    // overtakes three points as soon as anything raises the rate, and an
+    // upgrade that is worse than not buying it is the one outcome none of
+    // these ninety may have.
+    unit.hp = Math.min(
+      max,
+      unit.hp + (knitsRegardless(unit) ? Math.max(healed, REGROWING.heals) : healed),
+    );
   }
 }
 

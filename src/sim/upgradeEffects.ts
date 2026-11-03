@@ -108,6 +108,15 @@ export function upgradeAttack(state: GameState, unit: Unit, against?: Unit): num
   // and reading it as a per-round effect would make it an ordinary +2.
   if (hasUpgrade(unit, 'knight-vanguard')) bonus += VANGUARD.attack;
 
+  // `revenant-insistent`: +2 attack *when reformed*, which is a condition the
+  // game could not see until slice 6 taught reform to carry the upgrade home.
+  // A spirit bought this morning gets nothing; one that has already been put
+  // down once and gathered again comes back cross about it, which is the only
+  // upgrade in the set that is better the worse the war has gone.
+  if (hasUpgrade(unit, 'revenant-insistent') && unit.reformed === true) {
+    bonus += INSISTENT.whenReformed;
+  }
+
   // `ogre-grinder`: +1 for each enemy standing next to it. Surrounding it was,
   // in retrospect, the mistake.
   if (hasUpgrade(unit, 'ogre-grinder')) {
@@ -158,6 +167,10 @@ export function upgradeAttack(state: GameState, unit: Unit, against?: Unit): num
   // `naiad-tidal`: a Naiad is only really itself near its own water, and this
   // one more so. Reuses `besideWater`, which section 152 already defined.
   if (hasUpgrade(unit, 'naiad-tidal') && besideWater(state, unit)) bonus += TIDAL.besideWater;
+  // `naiad-deepened`: it has been in the water longer, and the water has
+  // noticed. Both ways round, like section 152's own waterside rule -- what
+  // the bonus is about is the Naiad being somewhere it belongs.
+  bonus += deepWater(state, unit);
 
   // `wf-skirmisher-cutpurse`: everything on the battlefield is technically
   // unclaimed, and a battlefield is somewhere that is not home.
@@ -203,7 +216,7 @@ export function upgradeAttack(state: GameState, unit: Unit, against?: Unit): num
 /** The same, for defence. */
 export function upgradeDefence(state: GameState, unit: Unit): number {
   if (!UPGRADES.enabled) return 0;
-  let bonus = upgradeStat(unit, 'defence');
+  let bonus = upgradeStat(unit, 'defence') + deepWater(state, unit);
 
   if (hasUpgrade(unit, 'orc-berserker') && unit.hp < maxHp(unit) / 2) {
     bonus -= BERSERK_RAGE.defence;
@@ -574,7 +587,10 @@ export const KNIT = { everyRounds: 4, amount: 1 };
  * than given a second one.
  */
 export function ridesAlong(unit: Unit): boolean {
-  return UPGRADES.enabled && hasUpgrade(unit, 'dragon-rider');
+  if (!UPGRADES.enabled) return false;
+  // Section 155 slice 6: and the Courier Drake, whose whole trade is carrying
+  // things. Letters are the product; the drake is the packaging.
+  return hasUpgrade(unit, 'dragon-rider') || hasUpgrade(unit, 'drake-courier');
 }
 
 /** Seats this unit has, counting the one its upgrade adds. */
@@ -739,6 +755,8 @@ export const RECKONER = { hurtsEachAfterTheFirst: 2 };
 export function zoneOfControl(state: GameState, mover: Unit, x: number, y: number): boolean {
   if (!UPGRADES.enabled) return false;
   if (cityAt(state, x, y)) return false;
+  // Section 155 slice 6: and a Hive Warden holds it against the dead.
+  if (anchoredAgainst(state, mover, x, y)) return true;
   return state.units.some(
     (u) =>
       u.owner !== mover.owner &&
@@ -747,4 +765,272 @@ export function zoneOfControl(state: GameState, mover: Unit, x: number, y: numbe
       distance(u.x, u.y, x, y) === 1 &&
       !(u.x === x && u.y === y),
   );
+}
+
+/**
+ * Gold a kill is worth to the one who made it. Section 155 slice 6.
+ *
+ * Two upgrades, one in each mercenary faction and both about the same joke:
+ * `wf-skirmisher-cutpurse` (*"everything on the battlefield is technically
+ * unclaimed"*) and `jinn-taker` (*"something was asked for, something was
+ * taken"*). Paid for any kill, where `claimBounty` beside it pays only for
+ * raiders -- a cutpurse does not check whose coat it is going through.
+ */
+export function plunderFor(unit: Unit): number {
+  if (!UPGRADES.enabled) return 0;
+  if (hasUpgrade(unit, 'wf-skirmisher-cutpurse')) return CUTPURSE.plunder;
+  if (hasUpgrade(unit, 'jinn-taker')) return TAKER.plunder;
+  return 0;
+}
+
+/** Whether a Bulwark Elite is standing beside this one, shrugging blows for it. */
+export function shieldedByBulwark(state: GameState, unit: Unit): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (state.players[unit.owner]?.faction !== 'hivekin') return false;
+  return neighbours(state, unit, 'friendly').some((n) => hasUpgrade(n, 'elite-bulwark'));
+}
+
+/**
+ * A multiplier on whatever the walls were worth to this defender.
+ *
+ * `slinger-quiver`: *"ignores the first round of enemy defence bonuses from
+ * walls"*. A round is not a thing `defenseStrength` can see -- it is computed
+ * once and held for the fight -- so this is the whole wall rather than its
+ * first round, and that is a real difference worth saying out loud. Having
+ * the arrows turns out to matter rather more than the bible priced.
+ */
+export function ignoresWalls(attacker: Unit | undefined): boolean {
+  return UPGRADES.enabled && attacker !== undefined && hasUpgrade(attacker, 'slinger-quiver');
+}
+
+/** How much of a defence a Corrosive Spitter simply arrives past. */
+export function corrodesDefence(attacker: Unit | undefined): number {
+  if (!UPGRADES.enabled || !attacker) return 1;
+  return hasUpgrade(attacker, 'spitter-corrosive') ? CORROSIVE.leaves : 1;
+}
+
+/** Whether this attacker is here for the walls rather than for the people. */
+export function wrecksCities(attacker: Unit, defenderCity: boolean): boolean {
+  return UPGRADES.enabled && defenderCity && hasUpgrade(attacker, 'wf-brute-wrecker');
+}
+
+export const TAKER = { plunder: 1 };
+export const BULWARK = { shrugs: 1 };
+export const CORROSIVE = { leaves: 0.5 };
+export const WRECKER = { againstCities: 2 };
+export const FIRE_HIRED = { turns: 2 };
+
+/**
+ * What this unit does to whatever killed it. Section 155 slice 6.
+ *
+ * `fodder-burst`: *"when killed, deals a caustic burst to the attacker (1
+ * damage, ignores armour)"*. It was always going to come apart; now it comes
+ * apart on someone. Deliberately not a `detonate` -- that takes the
+ * neighbourhood and this takes the one who swung.
+ */
+export function burstsOnDeath(unit: Unit): number {
+  return UPGRADES.enabled && hasUpgrade(unit, 'fodder-burst') ? BURST.damage : 0;
+}
+
+/** Whether this unit leaves the ground it struck alight. */
+export function setsAlight(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'drake-fire');
+}
+
+/** Whether this unit knits back together even having just been in a fight. */
+export function knitsRegardless(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'bonebound-regrowing');
+}
+
+/**
+ * What a tile costs this unit to enter, against what it costs anybody else.
+ *
+ * Three upgrades move on their own terms. `outcast-ironback` and `sylph-gale`
+ * ignore the ground entirely -- dressed for the road, and weather with a
+ * position -- and `soldier-carapace` is slower over anything rough, which is
+ * the price of all that shell.
+ *
+ * A **cost** rather than a block, which is why this one is safe to tell the
+ * pathfinder: a route that is dearer than expected is still a route, where a
+ * tile that is closed can strand a march. See `zoneOfControl` for the other
+ * side of that trade.
+ */
+export function groundCostFor(unit: Unit, base: number): number {
+  if (!UPGRADES.enabled || base <= 1) return base;
+  if (hasUpgrade(unit, 'outcast-ironback') || hasUpgrade(unit, 'sylph-gale')) return 1;
+  if (hasUpgrade(unit, 'soldier-carapace')) return base + CARAPACE.overRough;
+  return base;
+}
+
+/** Whether this unit may stand in water the way a ship does. */
+export function swims(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'naiad-tidal');
+}
+
+/**
+ * Whether the ground gives this attacker's target nothing. Section 155.
+ *
+ * `sylph-stilled`: *"negates attacker's terrain bonus"*. The air is still,
+ * and so is whatever advantage the hill was supposed to give.
+ */
+export function flattensGround(defender: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(defender, 'sylph-stilled');
+}
+
+export const BURST = { damage: 1 };
+export const CARAPACE = { overRough: 1 };
+export const REGROWING = { heals: 3 };
+
+/** What a Deepened Naiad is worth for having been in the water longer. */
+export function deepWater(state: GameState, unit: Unit): number {
+  if (!UPGRADES.enabled) return 0;
+  return hasUpgrade(unit, 'naiad-deepened') && besideWater(state, unit) ? DEEPENED.beside : 0;
+}
+
+/**
+ * Whether this unit goes unseen from more than a tile away. Section 155.
+ *
+ * `sylph-stilled`: *"invisible to units more than 1 tile away"*. The air is
+ * still, and so is it. Read beside `appearsTo` and the Burrower's sinking,
+ * which are the two things in this game that are already there and not seen.
+ */
+export function unseenAtRange(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'sylph-stilled');
+}
+
+/**
+ * Whether this unit's blow carries on into a bystander.
+ *
+ * `ogre-brawler` catches one on the backswing, and `spitter-volley` -- *"hits
+ * every enemy on the target tile and one adjacent tile at reduced strength"*
+ * -- is the same shape once you notice that **every enemy on a tile is one
+ * enemy**, because this game puts one unit on a tile. So the two share a
+ * rule rather than having one each.
+ */
+export function catchesBystander(unit: Unit): number {
+  if (!UPGRADES.enabled) return 0;
+  if (hasUpgrade(unit, 'ogre-brawler')) return BRAWLER.share;
+  if (hasUpgrade(unit, 'spitter-volley')) return VOLLEY_SPIT.share;
+  return 0;
+}
+
+export const DEEPENED = { beside: 1 };
+export const VOLLEY_SPIT = { share: 0.5 };
+
+/**
+ * What a Warden adds to the odds of sending something back for good.
+ *
+ * The bible prices both Warden branches in "exorcism strength", and before
+ * slice 6 `exorcises()` was a boolean -- a unit either sent a spirit back or
+ * it did not. Jeremy's ruling of 2026-11-02 made exorcism a chance so that
+ * the word means something; these are what the two upgrades buy on top of
+ * `EXORCISM.chance`.
+ */
+export function exorcismStrength(unit: Unit): number {
+  if (!UPGRADES.enabled) return 0;
+  if (hasUpgrade(unit, 'warden-purging')) return WARDEN_STRENGTH.purging;
+  if (hasUpgrade(unit, 'warden-tempered')) return WARDEN_STRENGTH.tempered;
+  return 0;
+}
+
+/** Turns a spirit waits before it may try to gather again. */
+export function reformDelayFor(upgrade: string | undefined): number {
+  if (!UPGRADES.enabled || upgrade === undefined) return REFORM.turns;
+  return upgrade === 'revenant-insistent' ? REFORM.insistent : REFORM.turns;
+}
+
+export const WARDEN_STRENGTH = { tempered: 0.1, purging: 0.25 };
+/**
+ * How long a scattered spirit waits. Section 155 slice 6.
+ *
+ * **It used to be the next turn, always** -- `scattered.filter(s => s.turn <
+ * state.turn)` -- so `revenant-insistent`'s *"reforms in 1 turn instead of
+ * 2"* described a delay that did not exist. Jeremy's ruling of 2026-11-02 is
+ * to give the ordinary spirit the two turns the bible assumes, so that the
+ * upgrade's one is worth something.
+ *
+ * A real change to section 152's shipped behaviour, so it is a lever: **at 1
+ * this is exactly the game before it.**
+ */
+export const REFORM = { turns: 2, insistent: 1 };
+/** What an Insistent Revenant is paid for having done this before. */
+export const INSISTENT = { whenReformed: 2 };
+
+/**
+ * Whether somebody is standing outside this town stopping anything gathering
+ * in it. Section 155 slice 6.
+ *
+ * `warden-purging`, read as adjacency -- see the note at the call site in
+ * `dispersal.ts` for why, and why the literal reading was a no-op. It asks
+ * about a city rather than a unit because that is the question `reformSites`
+ * is answering, and because the Warden does not care whose spirit it is.
+ */
+export function shutsTheDoor(state: GameState, city: { x: number; y: number; owner: number }): boolean {
+  if (!UPGRADES.enabled) return false;
+  return state.units.some(
+    (u) =>
+      u.owner !== city.owner &&
+      u.hp > 0 &&
+      hasUpgrade(u, 'warden-purging') &&
+      distance(u.x, u.y, city.x, city.y) <= 1,
+  );
+}
+
+/**
+ * Ground an Anchored Warden has closed to the dead. Section 155 slice 6.
+ *
+ * *"Incorporeal units cannot enter its tile"* is the third clause in this
+ * bible that describes something already true -- one unit to a tile, so
+ * nobody enters anybody's -- so it is read the way the Immovable Yaksha's was:
+ * as ground held rather than as a tile occupied. The difference from the
+ * Yaksha is who it stops. A Warden closes the ground **to spirits only**,
+ * which is the whole of what it is for, and leaves everybody else to walk past
+ * it.
+ */
+export function anchoredAgainst(state: GameState, mover: Unit, x: number, y: number): boolean {
+  if (!isSpirit(state, mover)) return false;
+  return state.units.some(
+    (u) =>
+      u.owner !== mover.owner &&
+      u.hp > 0 &&
+      hasUpgrade(u, 'warden-anchored') &&
+      distance(u.x, u.y, x, y) === 1 &&
+      !(u.x === x && u.y === y),
+  );
+}
+
+/**
+ * The one named thing that can still end a Clinging Revenant.
+ *
+ * The Hive Warden, because the card says *"non-Warden attacks"* and that is
+ * the only reading of it with any content. Flipped from *"cannot be
+ * dispersed"* on Jeremy's ruling of 2026-11-02: for this faction being
+ * dispersed is how a unit **survives**, so the clause as written was a
+ * penalty with a defence bonus stapled to it.
+ */
+export const CLINGING = { endsIt: 'warden' };
+
+/**
+ * Whether this spirit, beaten by this thing, scatters where it would have
+ * died. Section 155.
+ *
+ * Two conditions, and both are what keep it from being *"impossible to
+ * kill"* -- the one thing `UNBOUND_PLAN.md` says the faction may never be:
+ *
+ * - **In a city of its own.** Caught in the field it is as mortal as any of
+ *   them, so the answer to one is to not fight it indoors.
+ * - **Not against a Warden.** The Hive keeps its hard counter outright, and a
+ *   Purging Warden beside the town shuts the doorway it would gather
+ *   through -- the two halves of this slice meeting each other.
+ *
+ * And it still needs **somewhere to gather**, since all this does is put it in
+ * the scattered list. An Unbound player who never built a site has bought
+ * three points of defence and an interesting death.
+ */
+export function clingsOn(state: GameState, unit: Unit, killer?: Unit): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (!hasUpgrade(unit, 'revenant-clinging')) return false;
+  const city = cityAt(state, unit.x, unit.y);
+  if (!city || city.owner !== unit.owner) return false;
+  return killer === undefined || unitType(killer.type).base !== CLINGING.endsIt;
 }

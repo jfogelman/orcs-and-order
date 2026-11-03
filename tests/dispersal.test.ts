@@ -24,6 +24,8 @@ import { TERRAIN } from '../src/model/terrain';
 import { CREATURES, unitType } from '../src/model/units';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
+import { EXORCISM } from '../src/sim/exorcism';
+import { REFORM } from '../src/sim/upgradeEffects';
 import { FACTIONS } from '../src/model/factions';
 import type { City, GameState, Unit } from '../src/model/types';
 
@@ -123,6 +125,36 @@ function withOdds<T>(fail: number, fn: () => T): T {
   }
 }
 
+/**
+ * Run something with exorcism certain, and put the lever back.
+ *
+ * Needed from section 155 on, where `exorcises` stopped being a boolean and
+ * became a roll -- see `EXORCISM.chance`. Every test below that uses it is
+ * about **the ladder**, not the odds: that an exorcist's kill is the rung
+ * where a spirit simply dies. At one, this file is testing exactly the game
+ * section 152 shipped, and the odds have their own tests next door.
+ */
+function surely<T>(fn: () => T): T {
+  const was = EXORCISM.chance;
+  EXORCISM.chance = 1;
+  try {
+    return fn();
+  } finally {
+    EXORCISM.chance = was;
+  }
+}
+
+/**
+ * Turns on, far enough that anybody scattered may try to gather.
+ *
+ * `REFORM.turns` rather than 1 since section 155, which gave an ordinary
+ * spirit a two-turn wait so that `revenant-insistent`'s shorter one means
+ * something. At 1 these are the `state.turn += 1` lines they replaced.
+ */
+function waitItOut(state: GameState): void {
+  state.turn += REFORM.turns;
+}
+
 const theirsOf = (state: GameState, base: string) =>
   state.units.filter((u) => u.owner === 0 && unitType(u.type).base === base);
 
@@ -155,7 +187,9 @@ describe('losing is not dying', () => {
     const state = theirs();
     const seat = town(state, [REFORM_SITES[0]]);
     const spirit = ours(state, 'revenant', seat.x + 4, seat.y + 4);
-    destroyUnit(state, spirit, 'is wiped out', other(state, 1, 'paladin', spirit.x, spirit.y));
+    surely(() =>
+      destroyUnit(state, spirit, 'is wiped out', other(state, 1, 'paladin', spirit.x, spirit.y)),
+    );
     expect(scatteredOf(state, 0)).toHaveLength(0);
   });
 
@@ -255,7 +289,7 @@ describe('gathering again', () => {
     spirit.rank = 2;
     destroyUnit(state, spirit, 'is wiped out');
     withOdds(0, () => {
-      state.turn += 1;
+      waitItOut(state);
       reformScattered(state, 0);
     });
     const back = theirsOf(state, SPARE);
@@ -277,7 +311,7 @@ describe('gathering again', () => {
     const seat = town(state, [REFORM_SITES[0]]);
     destroyUnit(state, ours(state, SPARE, seat.x + 4, seat.y + 4), 'is wiped out');
     withOdds(1, () => {
-      state.turn += 1;
+      waitItOut(state);
       reformScattered(state, 0);
     });
     expect(theirsOf(state, SPARE)).toHaveLength(0);
@@ -305,7 +339,7 @@ describe('gathering again', () => {
     }
     expect(scatteredOf(state, 0)).toHaveLength(3);
     withOdds(0, () => {
-      state.turn += 1;
+      waitItOut(state);
       reformScattered(state, 0);
     });
     expect(theirsOf(state, SPARE)).toHaveLength(1);
@@ -378,7 +412,9 @@ describe('the three that are exceptions', () => {
     const state = theirs();
     const seat = town(state, [REFORM_SITES[0]]);
     const ruler = ours(state, UNIQUE, seat.x + 4, seat.y + 4);
-    destroyUnit(state, ruler, 'is wiped out', other(state, 1, 'paladin', ruler.x, ruler.y));
+    surely(() =>
+      destroyUnit(state, ruler, 'is wiped out', other(state, 1, 'paladin', ruler.x, ruler.y)),
+    );
     expect(theirsOf(state, UNIQUE)).toHaveLength(0);
     expect(scatteredOf(state, 0)).toHaveLength(0);
   });
@@ -411,7 +447,9 @@ describe('the three that are exceptions', () => {
     // Away rather than dead still counts: a second built while the first is
     // scattered would be two of them a turn later.
     town(state, [REFORM_SITES[0]]);
-    destroyUnit(state, ruler, 'is wiped out', other(state, 1, 'paladin', ruler.x, ruler.y));
+    surely(() =>
+      destroyUnit(state, ruler, 'is wiped out', other(state, 1, 'paladin', ruler.x, ruler.y)),
+    );
     expect(holdsUnique(state, 0)).toBe(false);
     expect(offered()).toBe(true);
   });

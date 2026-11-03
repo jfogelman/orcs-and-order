@@ -12387,7 +12387,14 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
-> **Slice 5a** (this one) is the first of the effects: 13 of 36 do something,
+> **Slice 8** finishes the effects: **90 of 90**. Two of the last nine priced
+> themselves in scales the game did not have -- exorcism was a boolean, reform
+> was always the next turn -- so both became levers with the shipped game at
+> one end, and a third card turned out to mean the opposite of what it said.
+> See *Slice 8* below, and in particular the bug it found: **a reformed spirit
+> had been losing its upgrade.**
+>
+> **Slice 5a** is the first of the effects: 13 of 36 do something,
 > and the other 23 are listed in `tests/upgradeEffects.test.ts` with a reason
 > each. See *Slice 5a, in detail* below, and in particular **the Archer**,
 > which turns out not to be a ranged unit in this game at all.
@@ -12981,6 +12988,210 @@ The Horde's and the Kingdom's had hidden this: their advances are named for
 the joke rather than the unit, so `orc-veteran` and `doing-this-before` are
 different strings and a declaration could never look like a use. `techs.ts`
 joins `upgrades.ts` in the declarations list.
+
+### Slice 8: the last nine, and two systems that had to grow a dial
+
+**All ninety upgrades now do everything their card says.** The last of them
+needed a ruling rather than a rule; it is at the bottom of this entry.
+
+The nine that were outstanding split cleanly into three that were ordinary
+wiring and **six that priced themselves in units the game did not have**. Four
+of those six are the Hive Warden's and the Revenant's, and between them they
+named two scales that did not exist:
+
+- *"Exorcism strength +1"* and *"+3"*, on a system where `exorcises()` was a
+  **boolean**. There was no strength to add to. A unit either sent a spirit
+  back or it did not.
+- *"Reforms in 1 turn instead of 2"*, on a system where reform was
+  `s.turn < state.turn` -- always the next turn. There was no 2 to improve on.
+
+Jeremy's ruling of 2026-11-02 was to **build the scales rather than drop the
+cards**, and both come with the same safeguard: each is a lever whose *old end
+is the shipped game*. `EXORCISM.chance = 1` is section 150 exactly, and
+`REFORM.turns = 1` is section 152 exactly. That matters more than usual here,
+because these are the only two changes in ninety upgrades that alter what a
+unit with **no upgrade at all** does, and both touch the Unbound's core rule.
+Neither new number is measured: an exorcist now lands it three times in four,
+and a Warden buys that back.
+
+### Making a dial out of a boolean found three things, none of them the dial
+
+**A reformed spirit had been losing its upgrade.** `Scattered` carried `type`
+and `rank`, and the comment on `rank` says *"a spirit that reforms has not
+forgotten"* -- it did forget. Two gold of a permanent, empire-wide choice was
+being quietly refunded by dying. Found only because both Revenant upgrades are
+*about* reforming, so the thing that reforms needed to know which upgrade it
+held. Fixed, and the Orcpedia now says so out loud.
+
+**A read-only query would have rolled the dice.** `exorcistsOf` is what the
+advisor panel counts exorcists with, and it filtered on `exorcises` -- which
+now consumes randomness. A panel repaint would have moved the game's random
+stream. Split into `isExorcist`, the capability question, which is also the
+question an advisor was actually asking. The pair to watch for next time any
+predicate in this engine learns to roll.
+
+**Six shipped tests asserted the old certainty**, and one in four runs would
+have failed. They are about the *ladder* -- that an exorcist's kill is the rung
+where a spirit simply dies -- not about the odds, so they now pin the lever at
+one and say why in a helper. A test that drifts into testing a probability it
+did not mean to test is worse than no test.
+
+### Four cards were describing a different game, and now do not
+
+`warden-tempered` promised "exorcism strength +1" in a unit nobody can read;
+`warden-purging` promised that spirits "cannot reform on the tile", which read
+literally was **already true** -- nothing reforms on an occupied tile, and an
+enemy standing in your city has taken it. `warden-anchored`'s *"the tile it
+holds cannot be entered"* was the same sentence again: one unit to a tile, so
+nobody enters anybody's. That is the **third and fourth** clause in this bible
+to describe something the game already does, after the Yaksha's two.
+
+Both are read as **ground held rather than a tile occupied**, which is the
+reading Jeremy already gave the Immovable Yaksha, and the Purging one as
+**adjacency**, which is the reading he already gave "stack". So a Purging
+Warden camped outside a town shuts the doorway -- the closest thing in this
+game to besieging a mechanic -- and an Anchored Warden closes the ground
+around it **to spirits only**, leaving everybody else to walk past.
+
+And `revenant-insistent` promised *"+2 attack when reformed"* while carrying
+**no effect data at all**. "When reformed" was unaskable until this slice
+taught reform to carry the upgrade home; now the spirit also carries a
+`reformed` flag, so an Insistent Revenant bought this morning gets nothing and
+one that has already been put down once comes back cross about it. It is the
+only upgrade in ninety that is worth more the worse the war has gone, which is
+the right card for that faction to have.
+
+`revenant-settled`'s *"reforms at +1 HP"* got the opposite treatment: a spirit
+reforms at **full** HP, so a bonus paid on reform is paid into a unit that is
+already full. It is +1 HP flatly, and the card says that, because a card
+promising a condition the game has not got is worse than a smaller card.
+
+### Three fixtures moved, and the cause was not in this section at all
+
+The three six-player games diverged wholesale -- eighteen cities became twenty,
+production differs everywhere -- which means the random stream forked early
+rather than anything changing locally. Four candidates, all of them mine, so
+the paths were **instrumented rather than reasoned about**, which is the
+section 147 lesson and took one 24-second run:
+
+> `regrow=0 regrowDiffers=0 zeroWinner=2 zeroWinnerDestroyed=1 cling=0 burst=0`
+
+`bonebound-regrowing`, `revenant-clinging` and `fodder-burst` never fire in
+these games at all. The mover is the fourth, and it is **not an upgrade**:
+
+**Twice in these three games an attacker won its fight and finished at nought
+hit points or below. Once, it was left standing on the board.** The other had
+already been removed by a blast, which is the one case `movement.ts` had a
+branch for.
+
+That is a bug the game has had since **section 11**, when losing stopped
+meaning dying. `resolveCombat` decides `attackerWon` from the defender's
+health, and nothing then asked after the winner's: an attacker that traded its
+last point for the kill was reported as the victor, kept its tile, and sat
+there on nought for the rest of the game -- unkillable, since every death path
+in this engine runs through `destroyUnit` and nothing was calling it, and
+invisible, since the renderer draws whatever is in `state.units`.
+
+`fodder-burst` is what found it. Wiring *"it was always going to come apart"*
+meant asking what happens to a winner that a corpse finishes off, which is a
+question nobody had asked of the ordinary case either. The fix is in the
+ordinary case and asks about the **health rather than the cause**, so the next
+thing that kills a winner after its own fight needs no third clause.
+
+So the fixture movement is a **correction, not a regression**: one unit that
+should have been dead for a hundred and forty sections is dead, and three
+long games play out differently from the turn it dies. Worth saying plainly
+because a fixture diff this large normally means something went wrong, and
+here the diff is the evidence it went right.
+
+### And then the probe said both dials have nothing to turn
+
+With only the two new levers in the tree -- before the zero-health winner above
+was fixed -- the fixtures came back **byte-identical**, which looked like a
+clean result and is not one. An exorcist's kill now draws a random number, so a
+single one in two hundred turns of six-player play would have shifted the
+stream. Unmoved fixtures therefore say **the rule never fired**.
+
+So `tools/unboundprobe.run.test.ts`, twelve games, as it ships:
+
+> `scattered 0.0 a game, gathered again 0.0, lost 0.8`
+> `ever had somewhere to gather: 12/12, first on turn 43`
+
+Read against the figure recorded in section 152 above -- `0/12` sites and the
+same `0.0` scattered -- **half of that has been fixed and the half that
+matters has not.** The standing want works: every game now raises a doorway,
+and raises it by turn 43. And in twelve games **not one spirit scattered with
+a doorway open**, while 0.8 a game came apart with nowhere to go.
+
+**What that is and is not evidence of**, because this is a rare-event count and
+section 147 is a memory about exactly this. The per-seed rows show the losses
+in four games of the twelve -- 3, 4, 2 and 1 -- so the whole sample is about
+**ten spirit deaths**, not hundreds. Nought of ten is consistent with the
+doorway being open at the moment of death as often as a quarter of the time;
+it does not establish *never*. What it does establish is the thing this slice
+needed to know and is not a probability at all: **both new levers had zero
+opportunities to act in twelve games.** A dial needs one event to turn it, and
+there were none.
+
+The cause is in `reformSites` and has been all along: *"a Retrieval Circle only
+works while nothing stands in its city, and this AI keeps a garrison in every
+city."* The comment on `DISPERSAL.aiWants` says exactly that and was written
+about a *different* failure -- the want would have measured zero usable sites
+and laid circles forever. It is the same sentence from the other end: the site
+is usable at some point in every game, and never at the moment a spirit dies.
+
+**Which means neither of this slice's two levers can be measured yet, and
+neither is a balance risk today.** An exorcism roll needs an exorcist beating
+a spirit that would otherwise have scattered; a reform delay needs something in
+the scattered list. Both are at zero. Sweeping `EXORCISM.chance` or
+`REFORM.turns` now would be measuring noise against noise, which section 152
+already said of `failBase` for the same reason.
+
+The fix is not in this section, and it is one of two things, neither measured:
+
+- **Keep the Circle town clear.** Teach the AI that a city with a Circle and
+  no Totem is a doorway rather than a barracks. Cheapest, and it makes the
+  building's awkwardness a decision the AI actually takes, which was the point
+  of there being two buildings.
+- **Get the Totem earlier.** The Totem has no empty-city condition, so an
+  Unbound empire that reaches one has the mechanic unconditionally. A research
+  priority rather than an AI rule.
+
+Worth noting what this does *not* say: the faction is not broken, and nothing
+here is a regression. They have been playing as "an ordinary army that is
+slightly better at scouting" since section 152, which is the arm that bible
+deliberately made measurable. This slice did not change that and could not
+have; it only made it visible by giving the rule a dial and watching the dial
+not move.
+
+### The ninetieth, and the card meant the opposite of what it said
+
+`revenant-clinging` was *"+3 defence; cannot be dispersed by non-Warden attacks
+while defending a city"* -- and for this faction **dispersal is how a unit
+survives**, so a Revenant that cannot be dispersed is a Revenant that dies
+instead. As written it was a penalty with a defence bonus stapled to it.
+
+**Jeremy's ruling, 2026-11-02: flip it.** Holding one of its own cities, a
+Clinging Revenant cannot be *destroyed* -- everything scatters it instead,
+exorcist or not.
+
+Flipping it also turns out to be the only reading with anything in it, which is
+worth recording because the literal one looked wireable. An ordinary attack
+*already* only scatters a spirit, so "cannot be dispersed by non-Warden
+attacks" was describing the behaviour the faction already had; the clause can
+only be about the three things that genuinely end one, and those are the
+exorcists, the Grave Knight's banishment, and having nowhere to gather.
+
+So the Warden exception is doing real work rather than flavour: it is the one
+unit in ninety upgrades that can still end it indoors, and a **Purging
+Warden** beside the town shuts the doorway it would gather through. The two
+halves of this slice turn out to be each other's answer, which was not
+designed and is the nicest thing about it.
+
+Two limits keep it off the faction's own forbidden word, *"impossible to
+kill"*: it works **only in a city of its own**, so the answer is to not fight
+it indoors, and it still needs **somewhere to gather**, so an Unbound player
+with no site has bought three points of defence and an interesting death.
 
 ### Slice 7: the new factions' effects, and a third category
 

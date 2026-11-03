@@ -1,4 +1,6 @@
 import type { GameState, Unit, UnitTypeId } from '../model/types';
+import { unseenAtRange } from './upgradeEffects';
+import { distance } from '../engine/grid';
 import { unitType } from '../model/units';
 import { TERRAIN } from '../model/terrain';
 import { idx, inBounds } from '../engine/grid';
@@ -111,6 +113,16 @@ export function seenBy(state: GameState, unit: Unit, viewerId: number): boolean 
   // implemented in four places is four different rules within a month. The
   // renderer, the AI's target search, the sighting report and the mover's
   // blocker check all come through this line.
+  // Section 155 slice 6, `sylph-stilled`: the air is still, and so is it.
+  // *"Invisible to units more than 1 tile away"* -- so somebody has to be
+  // standing almost on top of it. Here rather than anywhere else for the
+  // reason the note above gives: this is the line the renderer, the AI, the
+  // sighting report and the mover all come through.
+  if (unseenAtRange(unit) && !state.units.some(
+    (u) => u.owner === viewerId && u.hp > 0 && distance(u.x, u.y, unit.x, unit.y) <= 1,
+  )) {
+    return false;
+  }
   return !hiddenFrom(unit, viewerId);
 }
 

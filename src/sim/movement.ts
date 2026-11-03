@@ -1,7 +1,7 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
 import { coveringFor } from './upgradeEffects';
 import { isRaised, raiseFrom } from './raising';
-import { tunnelsOnce, zoneOfControl } from './upgradeEffects';
+import { groundCostFor, swims, tunnelsOnce, zoneOfControl } from './upgradeEffects';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
@@ -129,7 +129,9 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
-    const base = type.flies || type.sails ? 1 : stepCost(state, owner, fromX, fromY, x, y);
+    const base = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, fromX, fromY, x, y));
     // Section 123: a doorway with something asleep behind it is ground you walk
     // *around*, not over.
     //
@@ -302,7 +304,9 @@ export function estimateTurns(
   for (let i = 1; i < route.length; i++) {
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, px, py, x, y));
     if (left <= 0) {
       turns++;
       left = perTurn;
@@ -333,7 +337,9 @@ export function stepsThisTurn(
     if (left <= 0) break;
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, px, py, x, y));
     // Any movement left always buys one more step, however rough the ground.
     left -= Math.min(cost, left);
   }
@@ -731,7 +737,18 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       lastWords(state, unit, defender);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
-      if (blastVictims.some((v) => v.id === unit.id)) {
+      //
+      // Two ways now, and the second one needed this widening. A blast it was
+      // standing beside takes it off the board inside `detonate`; a
+      // `fodder-burst` Hivekin coming apart on it happens in `resolveCombat`
+      // and only takes its health, so without this the winner was left
+      // standing on nought hit points, holding a tile, forever. Asked on the
+      // health rather than on the cause, so the next thing that kills a
+      // winner after its own fight needs no third clause here.
+      if (unit.hp <= 0 && state.units.includes(unit)) {
+        destroyUnit(state, unit, 'does not survive its own victory', defender);
+      }
+      if (unit.hp <= 0 || blastVictims.some((v) => v.id === unit.id)) {
         recomputeVisibility(state, unit.owner);
         recomputeVisibility(state, defender.owner);
         return { kind: 'combat', result, defenderDied: true, attackerDied: true };
@@ -824,7 +841,11 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   // sea crossing on a budget of one. So a march is never routed through
   // water, the step has to be taken by hand, and the pass is spent the moment
   // it is taken rather than when it is finished with.
-  if (!canStandOn(type, terrain) && tunnelsOnce(unit)) {
+  if (!canStandOn(type, terrain) && swims(unit)) {
+    // Section 155 slice 6, `naiad-tidal`: a water spirit belongs in water.
+    // Jeremy's ruling of 2026-11-02 -- it holds water tiles the way a ship
+    // does, and fights from them.
+  } else if (!canStandOn(type, terrain) && tunnelsOnce(unit)) {
     unit.tunnelled = true;
     log(
       state,
@@ -1024,7 +1045,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     }
   }
 
-  const cost = type.flies || type.sails ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
+  // Section 155 slice 6: three upgrades move on their own terms. A cost
+  // rather than a block, so the pathfinder is told -- a dearer route is still
+  // a route, where a closed tile can strand a march.
+  const cost = type.flies || type.sails
+    ? 1
+    : groundCostFor(unit, stepCost(state, owner, unit.x, unit.y, x, y));
   unit.x = x;
   unit.y = y;
   unit.moves = snapMoves(unit.moves - cost);

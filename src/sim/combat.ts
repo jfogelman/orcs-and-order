@@ -1,7 +1,6 @@
 import { distance, idx } from '../engine/grid';
 import {
   axesCarried,
-  BRAWLER,
   breathShare,
   breathSpares,
   conditionDefence,
@@ -9,8 +8,20 @@ import {
   knitsMidFight,
   sparedByBlast,
   SERGEANT,
+  BULWARK,
   blastRadius,
+  burstsOnDeath,
+  catchesBystander,
+  FIRE_HIRED,
+  flattensGround,
+  setsAlight,
   breaksOff,
+  corrodesDefence,
+  ignoresWalls,
+  plunderFor,
+  shieldedByBulwark,
+  WRECKER,
+  wrecksCities,
   RECKONER,
   reckons,
   firstStrikesOf,
@@ -373,7 +384,15 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   const defenderCity = cityAt(state, defender.x, defender.y);
   const berserk = hasFlag(owner, 'berserk');
 
-  const siegeMult = defenderCity ? type.siegeBonus : 1;
+  // Section 155 slice 6, `wf-brute-wrecker`: charged by the wall, not by the
+  // hour. Through the siege multiplier, which is the figure this game already
+  // uses for "brought along to knock something down".
+  const siegeMult =
+    defenderCity && wrecksCities(attacker, true)
+      ? type.siegeBonus * WRECKER.againstCities
+      : defenderCity
+        ? type.siegeBonus
+        : 1;
 
   // Charging out of your own city with something encouraging behind you. The
   // Horde's answer to walls: no help at all if you sit still, considerable
@@ -490,8 +509,11 @@ export function defenseStrength(
   // ignoring the question. Note it takes nothing off the defender's own
   // strength, the ground it stands on or its fortifying: only the buildings.
   const throughWalls = attacker !== undefined && unitType(attacker.type).ignoresWalls;
+  // Section 155 slice 6, `slinger-quiver`: having the arrows turns out to
+  // matter. `defenseStrength` is computed once and held for the fight, so
+  // there is no "first round" to ignore -- this is the whole wall.
   const wallsMult =
-    city && !throughWalls
+    city && !throughWalls && !ignoresWalls(attacker)
       ? workingBuildings(state, city).reduce((mult, id) => {
           const def = BUILDINGS[id];
           if (!def?.defenseMult) return mult;
@@ -515,6 +537,10 @@ export function defenseStrength(
   if (shielded !== 0) total = Math.max(0, total + shielded);
   // Section 155, the other foot: half of what it was, holding the line too.
   if (defender.raised !== undefined) total *= RAISED.scale;
+  // Slice 6, `spitter-corrosive`: it does not strike harder, it simply
+  // arrives in more places. Applied after the multipliers rather than to the
+  // base, because what is being got past is the whole of the defence.
+  total *= corrodesDefence(attacker);
   // Section 152: The Standing Watch, which guards one settlement and has not
   // been told what it used to guard. Added to the base, so it scales with the
   // stack the way a point of drill does on the other side -- and only where
@@ -532,7 +558,10 @@ export function defenseStrength(
   if (hasPerk(defender, 'dug-in')) total *= PERK_BONUS;
   // Through `defenseOf`, so a tile whose special is a rule rather than a
   // number -- section 66's defensive ground -- reaches the fight.
-  total *= ground;
+  // Section 155 slice 6, `sylph-stilled`: the air is still, and so is
+  // whatever the hill was going to be worth. Its own defence still counts --
+  // this takes away the attacker's view of the ground, not the spirit.
+  total *= flattensGround(defender) ? 1 : ground;
   if (fortified) total *= FORTIFY_BONUS_REF.value;
   total *= wallsMult;
   if (berserk) total *= 0.75;
@@ -639,7 +668,11 @@ export const CLUB_QUAKE = 0.12;
  * a swing that barely landed barely splashes.
  */
 function brawlerSwing(state: GameState, attacker: Unit, defender: Unit): void {
-  if (!hasUpgrade(attacker, 'ogre-brawler') || attacker.hp <= 0) return;
+  // Section 155 slice 6: the Volley Spitter shares this. *"Hits every enemy
+  // on the target tile and one adjacent tile"* -- and every enemy on a tile
+  // is one enemy, because this game puts one unit on a tile.
+  const share = catchesBystander(attacker);
+  if (share <= 0 || attacker.hp <= 0) return;
   const dealt = maxHp(defender) - Math.max(0, defender.hp);
   if (dealt <= 0) return;
   const bystander = state.units
@@ -657,7 +690,7 @@ function brawlerSwing(state: GameState, attacker: Unit, defender: Unit): void {
         a.hp - b.hp,
     )[0];
   if (!bystander) return;
-  applyDamage(bystander, Math.max(1, Math.round(dealt * BRAWLER.share)), damageKindOf(attacker));
+  applyDamage(bystander, Math.max(1, Math.round(dealt * share)), damageKindOf(attacker));
   log(
     state,
     `${unitType(attacker.type).name} catches ${unitType(bystander.type).name} on the backswing.`,
@@ -798,7 +831,14 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // the resistance *did* halve is not halved twice.
   const shrugged = new Map<number, number>();
   const hurt = (unit: Unit, amount: number, kind: DamageKind): number => {
-    const asked = reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount;
+    let asked = reprieve.delete(unit.id) ? Math.max(0, amount - SERGEANT.ignores) : amount;
+    // Slice 6, `elite-bulwark`: the plates overlap, and so does the
+    // responsibility. Unlike the Sergeant's one-off reprieve above this holds
+    // for every blow, which is what makes it the Hive's defensive branch
+    // rather than a smaller copy of the Kingdom's.
+    if (asked > 0 && shieldedByBulwark(state, unit)) {
+      asked = Math.max(0, asked - BULWARK.shrugs);
+    }
     const ward = wardShare(unit);
     // Did the percentage achieve anything? If rounding gave the blow back
     // whole, the ward has to be paid some other way.
@@ -947,8 +987,46 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // reading a spy's post, and "survived two combats" is meant to mean combats.
   // Counted for both sides, since surviving somebody else's attack is the way
   // a Footman is most likely to earn it.
+  // Slice 6: a cutpurse does not check whose coat it is going through.
+  if (defender.hp <= 0 && attacker.hp > 0) {
+    const purse = plunderFor(attacker);
+    const owner = state.players[attacker.owner];
+    if (purse > 0 && owner) {
+      owner.gold += purse;
+      log(
+        state,
+        `${unitType(attacker.type).name} comes away ${purse} gold better off.`,
+        'good',
+        attacker.owner,
+        'coin',
+        [attacker.x, attacker.y],
+      );
+    }
+  }
+
   if (attacker.hp > 0) attacker.fights = (attacker.fights ?? 0) + 1;
   if (defender.hp > 0) defender.fights = (defender.fights ?? 0) + 1;
+
+  // Section 155 slice 6, `fodder-burst`: it was always going to come apart.
+  for (const [gone, killer] of [
+    [attacker, defender],
+    [defender, attacker],
+  ] as const) {
+    const burst = gone.hp <= 0 ? burstsOnDeath(gone) : 0;
+    if (burst > 0 && killer.hp > 0) {
+      // Straight onto the health: the bible says it ignores armour, and
+      // `applyDamage` is where resistance lives.
+      killer.hp -= burst;
+      log(
+        state,
+        `${unitType(gone.type).name} comes apart on ${unitType(killer.type).name}.`,
+        'combat',
+        gone.owner,
+        undefined,
+        [killer.x, killer.y],
+      );
+    }
+  }
 
   // Section 155 slice 6, `yaksha-reckoner`: every attacker is entered in the
   // record, and the record is balanced. Counted for the defender only --
@@ -974,6 +1052,18 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   applySpellEffects(state, defender, attacker);
   clubEffects(state, attacker, defender);
   brawlerSwing(state, attacker, defender);
+  // Section 155 slice 6, `drake-fire`: billed separately, extra for the fire.
+  if (setsAlight(attacker) && defender.hp > 0) {
+    applyStatus(defender, 'burning', FIRE_HIRED.turns);
+    log(
+      state,
+      `${unitType(defender.type).name} is left burning.`,
+      'combat',
+      attacker.owner,
+      undefined,
+      [defender.x, defender.y],
+    );
+  }
   return {
     attackerId: attacker.id,
     defenderId: defender.id,

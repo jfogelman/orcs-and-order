@@ -911,9 +911,14 @@ export const UNBOUND_RULES = topicPane('unbound', '', [
   <em>destroyed</em>, and that is the whole of the difference you will see at
   the time.</p>
   <p class="flavor">It does not keep for later. A scattered spirit tries to
-  gather <strong>once</strong>, at the start of its own next turn, and if it
-  cannot it is gone for good. A long war does not end with a second army
-  arriving all at once.</p>`,
+  gather <strong>once</strong>, and if it cannot it is gone for good. A long
+  war does not end with a second army arriving all at once.</p>
+  <p class="flavor">It tries <strong>two turns</strong> after it came apart, so
+  a spirit beaten on Tuesday is not back in the line on Wednesday. An
+  <strong>Insistent Revenant</strong> is the one thing that does not wait that
+  long. Coming back brings <em>everything</em> with it &mdash; the promotions
+  it had earned and the upgrade it was bought, so a chosen variant is not
+  quietly refunded by dying.</p>`,
   },
   {
     title: 'Coming back',
@@ -941,12 +946,27 @@ export const UNBOUND_RULES = topicPane('unbound', '', [
     title: 'Sending them back for good',
     body: `
   <p class="flavor"><strong>Every side has exactly one answer, and it is the
-  only answer.</strong> Beat an Unbound unit with one of these and it is simply
-  dead; beat it with anything else and it is somewhere else.</p>
+  only answer.</strong> Beat an Unbound unit with one of these and it will
+  probably be simply dead; beat it with anything else and it is somewhere
+  else.</p>
   <div class="pedia-rows">${EXORCIST_ROWS}</div>
+  <p class="flavor"><strong>Probably</strong>, because it is not quite certain.
+  An exorcist sends most of them back for good and sometimes fumbles it, which
+  is worth knowing before you spend your one answer on their one Archon. Two
+  Hive Warden upgrades buy the certainty back: a <strong>Tempered
+  Warden</strong> misses less often and a <strong>Purging Warden</strong> very
+  nearly never does. The Purging one also stands outside a town and stops
+  anything gathering in it at all, which is the closest thing in the game to
+  besieging a doorway.</p>
   <p class="flavor">Nothing else does it &mdash; not a dragon, not a wall, not
   a stack of ten. A war against them fought without the one unit that can end
-  them is a war of attrition against something that is not being attrited.</p>`,
+  them is a war of attrition against something that is not being attrited.</p>
+  <p class="flavor">And one of theirs answers even that. A <strong>Clinging
+  Revenant</strong> holding one of its own cities cannot be ended by
+  <em>any</em> of the above except the Hive's Warden &mdash; everything else,
+  exorcist or not, merely scatters it. It still needs somewhere to gather, and
+  out in the open it dies like the rest of them, so the answer to one is to
+  not fight it indoors.</p>`,
   },
   {
     title: 'The three that are exceptions',
