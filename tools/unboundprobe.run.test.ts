@@ -5,7 +5,9 @@ import { DISPERSAL, GUEST_LIST, REFORM_SITES, reformSites } from '../src/sim/dis
 import { couldExorcise } from '../src/sim/exorcism';
 import { endingFor, endingWorks } from '../src/sim/endings';
 import type { GameState } from '../src/model/types';
-import { NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
+
+declare const process: { env: Record<string, string | undefined> };
+import { HELD_OUT_BASES, NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
 // **Call this before measuring anything.** `playGame` reads the levers as they
 // stand, and the levers as they stand are not the game the sweeps measure. A
 // probe that skips it is answering a question about a different game -- see
@@ -162,7 +164,14 @@ describe('what the Unbound actually do', () => {
     control();
     NEW_GAME.playerFaction = 'unbound';
     const tally = blank();
-    const seeds = seedSet('unbound', TUNED_BASES, 4).seeds;
+    // Section 163: the held-out set on demand, because a figure from one set
+    // is a figure nobody should act on -- what this project believes is a
+    // swing **both** sets agree about. Run as:
+    //   PROBE_SEEDS=held-out npx vitest run --config vitest.sweep.config.ts \
+    //     tools/unboundprobe.run.test.ts
+    const held = process.env.PROBE_SEEDS === 'held-out';
+    const which = held ? 'held-out' : 'unbound';
+    const seeds = seedSet(which, held ? HELD_OUT_BASES : TUNED_BASES, 4).seeds;
     const lines: string[] = [];
 
     try {
@@ -377,7 +386,7 @@ describe('what the Unbound actually do', () => {
     const n = seeds.length;
     const avg = (x: number) => (x / n).toFixed(1);
     const report = [
-      `# The Unbound, ${n} games`,
+      `# The Unbound, ${n} games (${which} seeds)`,
       '',
       `Levers as measured: failBase ${DISPERSAL.failBase}, sigil ${DISPERSAL.sigil}, ` +
         `ankh ${DISPERSAL.ankh}, floor ${DISPERSAL.failFloor}, party reach ${GUEST_LIST.reach}.`,
@@ -450,7 +459,11 @@ describe('what the Unbound actually do', () => {
     ].join('\n');
 
     if (!existsSync('tools/out')) mkdirSync('tools/out', { recursive: true });
-    writeFileSync('tools/out/unbound-probe.md', `${report}\n`, 'utf8');
+    writeFileSync(
+      held ? 'tools/out/unbound-probe-held-out.md' : 'tools/out/unbound-probe.md',
+      `${report}\n`,
+      'utf8',
+    );
     console.log(report);
   }, 1_800_000);
 });

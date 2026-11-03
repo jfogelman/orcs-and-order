@@ -13449,16 +13449,33 @@ which is "the Totem if you can, the Circle if you cannot" expressed in the want
 list's own machinery rather than new machinery. The three wants above it keep
 the priority section 154 gave them.
 
-| twelve games | before | after |
-|---|---|---|
-| a Totem ever stood | 5/12, turn 129 | **11/12, turn 113** |
-| doorway open | 36% of turns | **52%** |
-| lost with nowhere to go | 36.9 a game | **24.3** |
-| came back, of those that scattered | 84.8% | **88.9%** |
+**Both seed sets, twelve games each**, the lever at 0 against 1:
 
-A third fewer spirits lost for want of a doorway. **One seed set** — the effect
-is large and the mechanism directly measured, but it wants a second before the
-number is settled.
+| | tuned 0 | tuned 1 | held-out 0 | held-out 1 |
+|---|---|---|---|---|
+| a Totem ever stood | 5/12, t129 | **11/12, t113** | 4/12, t162 | **10/12, t122** |
+| doorway open | 36% | **52%** | 31% | **49%** |
+| lost with nowhere to go | 36.9 | **24.3** | 43.4 | **25.6** |
+| came back, of those that scattered | 84.8% | **88.9%** | 83.6% | **87.8%** |
+
+A third to two fifths fewer spirits lost for want of a doorway, and **the
+return rate moves +4.1 and +4.2 points** — the same amount on independent
+seeds. That is the second column this project asks for before believing a
+swing, and the mechanism reproduces too: **320 Circle towns blocked by one of
+their own and none by an enemy** on the tuned set, **399 and none** on the
+held-out.
+
+The held-out set makes the case more strongly than the tuned one did, which is
+the right way round: left alone, those empires raise a Totem in 4 of 12 games
+and not until turn 162.
+
+**What is not claimed.** Cities, units and survivors are up in both want arms,
+but the ending columns disagree between the sets — 5/12 against 5/12 on tuned,
+8/12 against 6/12 on held-out — so none of it is read as an effect. A Totem
+costs 120 shields and 2 upkeep and **that bill is unmeasured**; what has been
+measured is only what it buys.
+
+Run the second set with `PROBE_SEEDS=held-out`, which the probe now takes.
 
 ### Still open, and now queued as sections 164 and 165
 
