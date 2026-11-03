@@ -14162,3 +14162,63 @@ was at 27%.
 - **Nobody re-asks a balance target when a faction is added.** Three sections
   running have found a number anchored to a world that then moved. A sixth
   faction will do it again to this one.
+
+## 162. Click a picture in the Orcpedia and look at it — SHIPPED
+
+Jeremy's ask, 2026-11-03, and it comes straight out of section 155: *"clicking
+on an image in orcpedia does a small popout modal window, just so we can see
+them more easily (esp the shrunken upgrade images), closes on a second click or
+closing the orcpedia."*
+
+He is right about which pictures. The upgrade fold draws what a creature can
+become **three times over on its own card at 26 pixels square** — deliberately,
+since the fold is there to tell three variants apart at a glance and a gallery
+would have buried the card. The cost of that decision is that the art nobody
+can see is the art this project spends the most effort on.
+
+Any picture in the book now pops out at 384 pixels with its name under it.
+A second click, a click on the darkened background, or <kbd>Esc</kbd> puts it
+away; a second <kbd>Esc</kbd> closes the book, which is what the first one did
+before there were pictures to close.
+
+### The only real decision: whose child it is
+
+**Not a second modal.** `openModal` allows exactly one at a time and closes
+whatever is up to make room for the new one, so showing a picture *from* the
+book would have closed the book to show it.
+
+So the overlay is a **child of the pedia's own backdrop**, and that one choice
+answers three things at once:
+
+- *"Closes when the Orcpedia closes"* is free. A child goes when its parent
+  goes. There is no listener to unhook and nothing to remember, which matters
+  because `onMount` has **no teardown hook** to do it in.
+- Escape is handled **on the overlay**, which is focused when it opens, rather
+  than on `window`. A global listener added in `onMount` would outlive the
+  pedia that added it, and the second one would outlive the first.
+- A click on it never reaches the backdrop's own dismiss handler, which fires
+  only when the backdrop is itself the target.
+
+### The caption is read off the page, not written into the markup
+
+Every picture in the book already sits beside its own name — a row's
+`.pedia-tech-name`, an upgrade's `.pedia-upgrade-name`, a special's
+`.pedia-special-name`, a card's `.pedia-name` — so **two selector rules cover
+all seven places that draw an image**. The alternative was a `data-` attribute
+on seven `<img>` tags, which is seven more things to keep in step and the exact
+shape of mistake `tools/manifest.ts` exists to stop making.
+
+### A guard with nothing to guard yet, said out loud
+
+Images inside a link or a button are skipped, so following a cross-reference
+cannot quietly become looking at it. **Nothing in the book draws one today**,
+so that branch never runs. It is written because the building chips in the city
+panel are exactly that shape — an icon inside an `<a>` — and the day one is
+quoted in here is the day a link stops working.
+
+A test of it in isolation **passed against the code with no popout at all**, so
+it was deleted rather than kept: a test that cannot fail is worse than no test,
+because the next person counts it. The remaining nine all fail against the
+commit before them, which was checked rather than assumed.
+
+Documented in the Orcpedia's own Controls pane, beside the mouse and the keys.

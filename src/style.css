@@ -2417,3 +2417,69 @@ kbd {
   color: var(--muted);
   margin: 6px 0 0 10px;
 }
+
+/* Section 162. Clicking a picture in the Orcpedia pops it out at a size you
+   can look at.
+   Added for the upgrade sprites in particular: those are 26 pixels square in
+   the fold, which is enough to tell three variants apart at a glance and not
+   enough to see what was drawn. */
+.pedia-zoomable {
+  cursor: zoom-in;
+}
+
+/* Inside the pedia's own backdrop, so it needs to sit above `.modal`, which
+   is its sibling there -- and so it goes when the book does. */
+.pedia-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 5, 4, 0.78);
+  cursor: zoom-out;
+}
+
+/* `display: flex` above beats the browser's own rule for `[hidden]`, so the
+   hidden state has to be said again here or the overlay never goes away. */
+.pedia-zoom[hidden] {
+  display: none;
+}
+
+.pedia-zoom-frame {
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 2px solid var(--edge);
+  border-radius: 5px;
+  background: linear-gradient(180deg, #2b241c, #1b1712);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Square and contained, because what comes through here is anything from a
+   20-pixel special to a 64-pixel creature and they should all land in the same
+   frame. Pixelated on purpose: blown up eight times, a sprite should look
+   drawn rather than smeared. */
+.pedia-zoom-art {
+  display: block;
+  width: min(60vmin, 384px);
+  height: min(60vmin, 384px);
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.pedia-zoom-caption {
+  font-family: var(--title-font);
+  font-size: 14px;
+  color: var(--gold);
+  text-align: center;
+}
+
+.pedia-zoom-caption[hidden] {
+  display: none;
+}

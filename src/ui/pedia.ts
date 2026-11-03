@@ -1985,6 +1985,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           screen, each side starts on an island of its own and ships are the only way to
           meet.
         </p>` },
+      { title: 'Looking at the pictures', body: `<p class="flavor">
+          <strong>Click any picture in this book and it pops out larger.</strong> Click
+          it again, click anywhere on the darkened background, or press
+          <kbd>Esc</kbd> to put it away &mdash; a second <kbd>Esc</kbd> closes the book
+          itself. It is here mostly for the <em>upgrades</em>: what a creature can
+          become is drawn three times over on its own card, small enough to tell apart
+          and too small to look at, and this is how you look at them.
+        </p>` },
       { title: 'Every key', body: `<div class="pedia-controls">${controlsMarkup()}</div>` },
     ],
   );
@@ -2202,6 +2210,97 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         img.addEventListener('error', () => {
           const id = img.dataset.unit;
           if (id) img.src = placeholderFor(id);
+        });
+      });
+
+      // ------------------------------------------------- the popout, section 162
+      //
+      // A child of the pedia's own backdrop rather than a second modal, for two
+      // reasons. `openModal` allows exactly one at a time and closes whatever is
+      // up to make room, so a picture from the book would have closed the book.
+      // And a child dies with its parent, which is the whole of *"closes when
+      // the Orcpedia closes"* -- no listener to unhook, nothing to remember.
+      const zoom = document.createElement('div');
+      zoom.className = 'pedia-zoom';
+      zoom.tabIndex = -1;
+      zoom.hidden = true;
+      zoom.innerHTML = `
+        <figure class="pedia-zoom-frame">
+          <img class="pedia-zoom-art" alt="" />
+          <figcaption class="pedia-zoom-caption"></figcaption>
+        </figure>`;
+      root.appendChild(zoom);
+      const zoomArt = zoom.querySelector<HTMLImageElement>('.pedia-zoom-art');
+      const zoomCaption = zoom.querySelector<HTMLElement>('.pedia-zoom-caption');
+
+      const hideZoom = () => {
+        zoom.hidden = true;
+        delete zoom.dataset.showing;
+        // Removed rather than blanked: `src = ''` resolves to the page itself,
+        // so the browser fetches the document and the art errors out.
+        zoomArt?.removeAttribute('src');
+      };
+
+      /**
+       * The name to put under the picture, read off the DOM.
+       *
+       * Every image in here already sits beside its own name -- a row's
+       * `.pedia-tech-name`, an upgrade's `.pedia-upgrade-name`, a special's
+       * `.pedia-special-name`, a card's `.pedia-name` -- so two rules cover all
+       * seven places that draw one. Writing the name into each `<img>` as a data
+       * attribute would have been seven more things to keep in step, which is
+       * the mistake `tools/manifest.ts` exists to stop making.
+       */
+      const captionFor = (img: HTMLImageElement): string =>
+        img.parentElement
+          ?.querySelector('.pedia-tech-name, .pedia-upgrade-name, .pedia-special-name')
+          ?.textContent?.trim() ??
+        img.closest('.pedia-card')?.querySelector('.pedia-name')?.textContent?.trim() ??
+        '';
+
+      const toggleZoom = (img: HTMLImageElement) => {
+        if (!zoomArt || !zoomCaption) return;
+        const src = img.currentSrc || img.src;
+        // The same picture again closes it. Mostly belt and braces, since the
+        // overlay covers the thing that was clicked and takes the second click
+        // itself -- but it is the behaviour asked for, and it holds if the
+        // overlay is ever made smaller than the screen.
+        if (!zoom.hidden && zoom.dataset.showing === src) {
+          hideZoom();
+          return;
+        }
+        zoomArt.src = src;
+        zoom.dataset.showing = src;
+        const caption = captionFor(img);
+        zoomCaption.textContent = caption;
+        zoomCaption.hidden = caption === '';
+        zoom.hidden = false;
+        // Focused so that Escape arrives here rather than at the book. On the
+        // overlay rather than on `window` because `onMount` has no teardown
+        // hook, and a global listener would outlive the pedia that added it.
+        zoom.focus();
+      };
+
+      zoom.addEventListener('click', hideZoom);
+      zoom.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // The picture only. A second Escape reaches the book and closes it,
+        // which is what the first one did before there were pictures to close.
+        e.stopPropagation();
+        hideZoom();
+      });
+
+      root.querySelectorAll<HTMLImageElement>('.pedia-pane img').forEach((img) => {
+        // Not a picture that is already somebody's button. A building chip and
+        // a cross-reference are links with an icon inside them, and swallowing
+        // the click would turn following one into looking at it.
+        if (img.closest('[data-see], [data-jump], a, button, summary')) return;
+        img.classList.add('pedia-zoomable');
+        img.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Or the backdrop behind takes it as a click to dismiss the pedia.
+          e.stopPropagation();
+          toggleZoom(img);
         });
       });
 
