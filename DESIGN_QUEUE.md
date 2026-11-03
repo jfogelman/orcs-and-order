@@ -12101,6 +12101,14 @@ First run, twelve games:
 
 > `ever had somewhere to gather: 0/12` — `scattered 0.0 a game`
 
+**The second of those two figures was an artefact and section 163 corrects
+it.** The probe's log reader stopped counting once `log()` trimmed at 400
+entries, so every log-derived number here reported the opening of a game as
+the whole of it. `0/12` is sound -- it was counted off `state.cities` -- and
+with no site anywhere a spirit genuinely could not gather, so the conclusion
+of this section survives. **The same figure quoted after the want was added
+does not**: the rule fires ~87 times a game.
+
 `chooseProduction` ranks buildings on gold, science, defence and a barracks. A
 Retrieval Circle carries none of those, so by every number the AI reads it is
 fifty-five shields of nothing. **Fourth instance**: the Burrower-caste in 125,
@@ -13336,3 +13344,135 @@ was at 27%.
 - **Nobody re-asks a balance target when a faction is added.** Three sections
   running have found a number anchored to a world that then moved. A sixth
   faction will do it again to this one.
+
+## 163. The doorway, and a probe that had been lying for two sections — SHIPPED
+
+Jeremy asked to address "the AI garrisoning issue" — section 155's parting
+finding that the Unbound's reform sites were built but never usable. Four
+probes later the garrisoning turned out not to be the issue, the finding it
+came from turned out to be an artefact, and the artefact turned out to live in
+the sweep as well.
+
+### The probe had stopped counting, and nothing could tell
+
+`tools/unboundprobe.run.test.ts` read the game log forward by index:
+
+```ts
+for (const entry of state.log.slice(read)) { … }
+read = state.log.length;
+```
+
+`log()` splices the front off at **400 entries** and leaves the length at
+exactly 400. So in a six-player war the length pins at 400, `read` pins at 400,
+and `slice(read)` returns nothing **for the rest of the game**. Every
+log-derived figure counted the opening and reported it as the whole.
+
+Its own comment had considered a trim and dismissed it — *"a 400-entry window
+and a handful of lines a turn never reaches"*. A handful of lines a turn, times
+six sides, times two hundred turns, reaches it before turn fifty.
+
+**What it had been reporting, against the truth:**
+
+| | reported | actual |
+|---|---|---|
+| scattered a game | 0.0 | **87.3** |
+| gathered again | 0.0 | **77.6** |
+| lost | 0.8 | **34.0** |
+| average turn of a loss | 60 | **154** |
+
+The faction's core rule fires constantly and **89% of spirits come back**. The
+mechanic was never broken. Section 152 recorded it as never happening, section
+155 repeated that and concluded that neither of its two new levers was worth
+sweeping, and **that recommendation went to Jeremy, into a memory, and into a
+pull request body.** All three are corrected.
+
+**How it was caught, and the only way it could have been.** A counter placed
+inside `scatters()` disagreed with the log count by three orders of magnitude.
+Nothing else would have: the probe is green either way, writes a tidy report,
+and `0.0` is *exactly* what a mechanic that never fires looks like. A broken
+counter and a dead mechanic produce the same number.
+
+With the reader fixed the two agree exactly — 1535 deaths reach the rule, 192
+are Effigies, 296 find no site, and 87.3 a game scatter — which is the check
+that says the fix is right.
+
+### The same bug is in the sweep, with a guard that cannot fire
+
+`tools/sweep.ts` counts `combats` and `sacks` the same way, and had a guard:
+
+```ts
+if (before < readLog) readLog = 0;
+```
+
+It fires only when the log **shrinks**, and a trim to exactly 400 never shrinks
+it below a `readLog` that is also 400. So from the moment the log fills, both
+columns stop counting. **Every sweep this project has run has been reporting
+roughly the opening of each game as its fight count.**
+
+Fixed the same way, and the fix was already in the codebase:
+`hiveprobe.run.test.ts` anchors on the **last entry by reference**, which
+survives a trim because a trim drops the oldest and never the newest. That
+lesson was learned once and not carried across.
+
+**Not audited:** which recorded findings leant on `combats` or `sacks`. A
+comparison between two arms may survive if both under-counted alike; anything
+quoting an absolute fight count, or where the arms differed in *when* their
+wars happened, wants re-reading.
+
+### And then the actual question, which turned out to be real
+
+With a reader that counts, the doorway matters after all. Three hypotheses died
+first, each measured:
+
+| | measured | verdict |
+|---|---|---|
+| the Totem is never researched | learned in **12/12** | no |
+| the AI garrisons every city | door open **36%** of turns | no |
+| spirits die before a site exists | **0** did | no |
+
+What is true: at the moment of a loss, **320 Circle towns were blocked by one
+of their own and none by an enemy.** The AI's units converge on its towns when
+there is a war on, and a war is when spirits die — so the Circle is open when
+it is not needed and shut when it is. `ai.ts` already knew the cities are
+mostly empty; what it does not say is that they are full exactly when it counts.
+
+### The fix: want the building that has no condition
+
+`DISPERSAL.aiWants` counted the two buildings as interchangeable and they are
+not. A Circle works while its town is empty; a Totem works always; **two
+Circles satisfy the want while leaving a doorway one of your own soldiers can
+shut.** A single count cannot say that, so there is a second want.
+
+`reform-doorway` asks for one Anchor Totem, sits immediately before
+`reform-site`, and **falls through to it** where a yard cannot build one —
+which is "the Totem if you can, the Circle if you cannot" expressed in the want
+list's own machinery rather than new machinery. The three wants above it keep
+the priority section 154 gave them.
+
+| twelve games | before | after |
+|---|---|---|
+| a Totem ever stood | 5/12, turn 129 | **11/12, turn 113** |
+| doorway open | 36% of turns | **52%** |
+| lost with nowhere to go | 36.9 a game | **24.3** |
+| came back, of those that scattered | 84.8% | **88.9%** |
+
+A third fewer spirits lost for want of a doorway. **One seed set** — the effect
+is large and the mechanism directly measured, but it wants a second before the
+number is settled.
+
+### Still open
+
+- **The hard counter never fires.** An exorcist killed **0 of 1535** Unbound
+  units in twelve games. `UNBOUND_PLAN.md` promises *"there is always a hard
+  counter, so 'hard to kill' never quietly becomes 'impossible to kill'"*, and
+  in a played game there is not one. Exorcists exist — a Paladin stands in most
+  games — they simply never meet a spirit and kill it. **This is a bigger
+  problem than the doorway was** and is its own section.
+- **The Spirit Party has never taken in a guest.** `0` across twelve games,
+  now that the counter works.
+- **Two death paths skip the rule.** `detonate` and `clubEffects` remove units
+  with a direct `state.units.splice` rather than `destroyUnit`, so a spirit
+  killed by a sapper's blast or an ogre's club quake never scatters and is
+  logged *"does not get up"* — which is precisely what this faction's rule says
+  is not guaranteed. 1726 units left the board against 1535 that reached
+  `destroyUnit`; the 191 difference is these paths and the disbands.

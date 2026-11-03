@@ -76,11 +76,16 @@ describe('the standing wants', () => {
    * city builds first, which is a balance change wearing a refactor's
    * clothes, so it is pinned here rather than left to a reading of a comment.
    */
-  it('asks them in the order the four sections added them', () => {
+  it('asks them in the order the sections added them', () => {
+    // `reform-doorway` is last but one on purpose: it asks for the Anchor
+    // Totem and **falls through to `reform-site`** where a yard cannot build
+    // one, which is how "the Totem if you can, the Circle if you cannot" is
+    // expressed. The three above it keep the priority section 154 gave them.
     expect(STANDING_WANTS.map((w) => w.id)).toEqual([
       'burrower',
       'spy',
       'unseen-agent',
+      'reform-doorway',
       'reform-site',
     ]);
   });
@@ -94,6 +99,7 @@ describe('the standing wants', () => {
     // would fail for the wrong reason.
     const whose: Record<string, 'human' | 'unbound' | 'hivekin'> = {
       burrower: 'hivekin',
+      'reform-doorway': 'unbound',
       'reform-site': 'unbound',
       spy: 'human',
       'unseen-agent': 'human',
