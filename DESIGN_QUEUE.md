@@ -13460,9 +13460,9 @@ A third fewer spirits lost for want of a doorway. **One seed set** — the effec
 is large and the mechanism directly measured, but it wants a second before the
 number is settled.
 
-### Still open
+### Still open, and now queued as sections 164 and 165
 
-- **The hard counter never fires.** An exorcist killed **0 of 1535** Unbound
+- **The hard counter never fires** — section 164. An exorcist killed **0 of 1535** Unbound
   units in twelve games. `UNBOUND_PLAN.md` promises *"there is always a hard
   counter, so 'hard to kill' never quietly becomes 'impossible to kill'"*, and
   in a played game there is not one. Exorcists exist — a Paladin stands in most
@@ -13470,9 +13470,86 @@ number is settled.
   problem than the doorway was** and is its own section.
 - **The Spirit Party has never taken in a guest.** `0` across twelve games,
   now that the counter works.
-- **Two death paths skip the rule.** `detonate` and `clubEffects` remove units
+- **Two death paths skip the rule** — section 165. `detonate` and `clubEffects` remove units
   with a direct `state.units.splice` rather than `destroyUnit`, so a spirit
   killed by a sapper's blast or an ogre's club quake never scatters and is
   logged *"does not get up"* — which is precisely what this faction's rule says
   is not guaranteed. 1726 units left the board against 1535 that reached
   `destroyUnit`; the 191 difference is these paths and the disbands.
+
+## 164. The hard counter has never once fired — QUEUED
+
+**An exorcist killed 0 of 1535 Unbound units in twelve games.** Counted inside
+`scatters()` in section 163, so it is not a log-reader artefact like the figure
+it replaced.
+
+`UNBOUND_PLAN.md` builds the faction on one rule and makes **one promise about
+it**: *"there is always a hard counter (exorcism), so 'hard to kill' never
+quietly becomes 'impossible to kill.'"* Section 150 shipped the counter first,
+explicitly for that reason. In a played game it does not exist.
+
+It is not that the units are missing. Exorcists stand in most games — a Paladin
+in 1.0 games out of 12 at the high-water mark, a Mystic in 0.4, a Warden in
+0.1. They simply never **meet a spirit and beat it**. Three candidate reasons,
+none measured:
+
+- **Nobody builds many.** A Paladin is an expensive soldier whose special
+  property is invisible to `chooseProduction`, which is the fifth instance of
+  the pattern `src/ai/wants.ts` was created to retire. The want list has no
+  entry for an exorcist.
+- **They are never in the right place.** One Paladin in an empire cannot be at
+  the fight that matters, and nothing routes it towards the Unbound.
+- **The AI does not know what it is for.** `attackOdds` sees a soldier. Nothing
+  in the target search prefers an Unbound unit when the attacker happens to be
+  the one thing that can end it.
+
+Worth knowing before any of that is built: at **89% return**, the mechanic the
+counter is meant to counter is working as designed. This is not a faction that
+is quietly unbeatable — they are beaten by having their cities taken like
+anybody else. What is missing is the *answer the bible promised*, which is a
+design promise rather than a balance problem.
+
+**First move is a probe, not a fix.** Count, per game: exorcists built, turns
+an exorcist is within reach of a spirit, fights an exorcist takes against one,
+and what it would have taken for `exorcises()` to be asked at all. Section 163
+left the counters in place to make that cheap.
+
+---
+
+## 165. Two death paths skip the faction's own rule — QUEUED
+
+`destroyUnit` is *"the one door out of the game"* and its comment says so:
+
+> The hook is here rather than at the two call sites in `movement.ts` because
+> this is the one door out of the game: a rule installed at the call sites
+> would have been true of a fight and false of everything else, and the three
+> sections after it would each have found a new way to kill something.
+
+**Two things found a new way anyway.** `detonate` (a sapper going up) and
+`clubEffects` (an ogre's club quake) remove their victims with a direct
+`state.units.splice` and never call it. So an Unbound unit killed by either:
+
+- **does not scatter**, whatever sites are standing;
+- is not offered to a Spirit Party by `inviteIn`;
+- earns its killer no experience and no bounty;
+- and is logged **"does not get up"** — which is precisely the sentence this
+  faction's rule exists to make untrue.
+
+Measured in section 163: **1726 of their units left the board against 1535 that
+reached `destroyUnit`.** The 191 difference is these two paths plus the
+disbands in `city.ts`, so it is a few per cent of deaths rather than a
+headline — but it is silent, and it is the same shape as the zero-health winner
+that section 155 found: a death that did not go through the one function every
+death is supposed to go through.
+
+**Not simply "call `destroyUnit`".** Both splice *during* a loop over victims,
+and `destroyUnit` logs, scatters, invites and can spawn a unit — reentering it
+mid-blast is how a one-line fix becomes a different bug. The shape that
+probably works is to collect the dead and run them through `destroyUnit` after
+the blast is resolved, which is what `movement.ts` already does around
+`detonate`'s return value.
+
+**Also worth checking while in there:** both compute their damage from
+`unitType(victim.type).hp` rather than `maxHp(victim)`, so they ignore a raised
+copy's halved health and an upgrade's added health. Section 155 added `maxHp`
+for exactly this and these two were missed.
