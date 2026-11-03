@@ -12982,6 +12982,55 @@ the joke rather than the unit, so `orc-veteran` and `doing-this-before` are
 different strings and a declaration could never look like a use. `techs.ts`
 joins `upgrades.ts` in the declarations list.
 
+### Slice 7: the new factions' effects, and a third category
+
+**66 of 90 upgrades now do everything their card says**, up from 36. The flat
+half of every one is data -- 50 defs carry an `effect` -- and the rules reuse
+the seams slice 5 opened, which is most of why 54 more effects was a smaller
+job than the first 36 were.
+
+**The completeness test grew a third list, and that is an admission.** It can
+tell whether an upgrade is *mentioned* anywhere; it cannot tell whether what
+it does is *all* its card promises. A Carapace Soldier really is three points
+harder to kill and does not yet mind rough ground. So `PART_WIRED` names the
+nineteen whose number is in and whose rule is not, each with the missing
+clause, beside the five with no effect at all. Both are counted, so neither
+can grow quietly.
+
+### Jeremy's four rulings, 2026-11-02
+
+**"Stack" means adjacent**, because this game is one unit to a tile and says
+so out loud. One ruling covered four upgrades.
+
+**Extra attacks became extra opening blows** -- and that list grew to *five*.
+The Spitter and the Slinger have `range: 1` exactly as the Archer does, so
+three more "+1 range" clauses described nothing. Jeremy had already ruled that
+shape twice for the Archer, both times the same way, so it was applied by
+precedent rather than asked a third time. `OPENS_TWICE` is the record of which
+five took the reading and why.
+
+**The Reckoner** counts who has come for it this turn and charges everyone
+after the first, since every defender already fights back every time.
+
+**The Rearguard is now the only thing in the game that carries the
+withdrawal.** `better-part-of-valour` has existed since section 11 and fired
+**zero times in 2160 fights** because nothing had it. A mercenary paid to go
+last is the right owner, and this makes a dead rule live rather than adding a
+second beside it.
+
+### The zone of control, which is the one with reach
+
+`yaksha-immovable` is the only upgrade in ninety whose effect touches units
+other than its own, so two deliberate limits:
+
+- **Asked in `tryStep`, not the pathfinder.** A planner that knew about it
+  would thread around one and look clairvoyant; one that did not would strand
+  a march against it. The same trade `sapper-tunnel` makes.
+- **It never closes a city tile.** A rule that can strand a unit in its own
+  town is a bug wearing a mechanic's coat.
+
+Fixtures unmoved, which is the check that matters for a movement rule.
+
 ### Thirty-six of thirty-six
 
 The unwired list is empty, which is the state it should normally be in.

@@ -1,5 +1,11 @@
 import { checkEndings, isEndingPiece } from './endings';
-import { movesThisTurn, RETRIEVER, retrievesAxe, upgradeMoves } from './upgradeEffects';
+import {
+  movesThisTurn,
+  RETRIEVER,
+  retrievesAxe,
+  tendTheWounded,
+  upgradeMoves,
+} from './upgradeEffects';
 import { payForTheRisen } from './raising';
 import { collectDebts } from './turning';
 import { checkFollies } from './follies';
@@ -179,6 +185,8 @@ function refreshUnits(state: GameState, player: Player): void {
     // again, so a Guardian that covers every turn simply does.
     delete unit.covering;
     if (unit.order === 'skip') unit.order = 'none';
+    // Section 155 slice 6: a new turn, and nobody has come for it yet.
+    delete unit.foughtThisTurn;
     // Digging carries on at the top of the owner's turn, and a road is laid the
     // turn its last shift is done.
     if (unit.order === 'road') {
@@ -819,6 +827,9 @@ export function beginPlayerTurn(state: GameState, playerId: number): void {
   // Soul-Bound Knight pays for the ones still standing. Before anything moves,
   // so a skeleton that crumbles this turn never gets to act in it.
   payForTheRisen(state, playerId);
+  // Section 155 slice 6: and whoever tends the wounded does so before anybody
+  // marches, so a point of health arrives in time to be spent.
+  tendTheWounded(state, playerId);
   const player = state.players[playerId];
   if (!player.alive) return;
 

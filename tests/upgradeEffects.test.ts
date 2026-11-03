@@ -118,29 +118,53 @@ function put(state: GameState, owner: number, type: string, x: number, y: number
  * declared unwired with a reason. The list below is a record of work
  * outstanding, in the suite rather than in a markdown file, and it shrinks.
  */
-/** The three factions section 155 slice 6 brought in, data and art only. */
-const SLICE_6 = new Set(['hivekin', 'wandering', 'unbound']);
-
+/**
+ * Slice 6 upgrades with **no effect of any kind** yet.
+ *
+ * Shrunk from the blanket of fifty-four as each one landed, which is the
+ * stale-entry test below doing its job: it named forty-nine the moment their
+ * numbers went in, which is the prompt to take them out rather than let a
+ * blanket quietly excuse them.
+ */
 const UNWIRED: Record<string, string> = {
-  // **Fifty-four at once, declared as a rule rather than fifty-four lines.**
-  //
-  // Slice 6 brought the three newer factions' upgrades in as data and art so
-  // the shape could be reviewed before any effect was written -- the same
-  // order slices 2 and 3 took for the Horde and the Kingdom, and for the same
-  // reason: thirty-six promises nobody could check would have been worse than
-  // none.
-  //
-  // This is a blanket, and a blanket is the thing this file is most wary of,
-  // so note what keeps it honest. The stale-entry test below asks whether any
-  // of these is *now* data or named in code, and the first one that gets an
-  // effect fails it -- which is the prompt to take it out of the blanket
-  // rather than leave the blanket quietly excusing it.
-  ...Object.fromEntries(
-    UPGRADE_DEFS.filter((u) => SLICE_6.has(u.faction)).map((u) => [
-      u.id,
-      'slice 6: transcribed and drawn, no effect written yet',
-    ]),
-  ),
+  'fodder-burst': 'a caustic burst on death; nothing hurts its killer today',
+  'spitter-corrosive': 'ignoring half a defence is a multiplier, not the flat pierce we have',
+  'spitter-volley': 'hitting a second tile at reduced strength is the Brawler’s backswing, ranged',
+  'bonebound-regrowing': 'regenerating after combat means ignoring `spent`, which nothing does',
+  'revenant-insistent': 'reform timing, which lives in `dispersal.ts` and counts turns its own way',
+};
+
+/**
+ * **Upgrades whose number is in and whose rule is not.**
+ *
+ * A third category, and an honest one: the completeness test above can tell
+ * whether an upgrade is mentioned anywhere, and cannot tell whether what it
+ * does is all of what its card promises. A Carapace Soldier really is three
+ * points harder to kill; it does not yet mind rough ground.
+ *
+ * This list is the only record of that gap, so it is a list rather than a
+ * rule -- and `says how many are left` counts it, so it cannot quietly grow.
+ */
+const PART_WIRED: Record<string, string> = {
+  'soldier-carapace': 'minus a move on rough terrain',
+  'elite-bulwark': 'adjacent Hivekin take one less damage',
+  'warden-tempered': 'exorcism strength',
+  'warden-purging': 'exorcism strength, and no reforming on its tile',
+  'warden-anchored': 'incorporeal units cannot enter its tile',
+  'wf-skirmisher-cutpurse': 'plunder, two gold a kill',
+  'slinger-steady': 'fewer misses, which the bible does not quantify',
+  'slinger-quiver': 'ignoring a wall for the first round',
+  'outcast-ironback': 'ignoring the terrain movement penalty',
+  'wf-brute-wrecker': 'double against a fortified city',
+  'drake-courier': 'the extra seat',
+  'drake-fire': 'setting the tile alight',
+  'revenant-settled': 'reforming a point healthier',
+  'revenant-clinging': 'not being dispersed while it holds a city',
+  'sylph-gale': 'ignoring terrain movement costs',
+  'sylph-stilled': 'negating the attacker’s ground, and going unseen at range',
+  'naiad-deepened': 'the larger water bonus',
+  'naiad-tidal': 'attacking from water',
+  'jinn-taker': 'a gold a kill',
 };
 
 /** Every `.ts` file in the game, as text, so the test can see what names code uses. */
@@ -223,9 +247,12 @@ describe('every upgrade is accounted for', () => {
     // newer factions' yet. The split is the point: thirty-six do something,
     // fifty-four are waiting for slice 7, and nothing is unaccounted for.
     expect(UPGRADE_DEFS).toHaveLength(90);
-    expect(Object.keys(UNWIRED)).toHaveLength(54);
-    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(7);
-    expect(90 - Object.keys(UNWIRED).length, 'wired').toBe(36);
+    expect(Object.keys(UNWIRED), 'nothing at all yet').toHaveLength(5);
+    expect(Object.keys(PART_WIRED), 'the number but not the rule').toHaveLength(19);
+    expect(UPGRADE_DEFS.filter((u) => u.effect)).toHaveLength(50);
+    // Sixty-six of ninety do everything their card says. The other
+    // twenty-four are accounted for above, nineteen of them in part.
+    expect(90 - Object.keys(UNWIRED).length - Object.keys(PART_WIRED).length).toBe(66);
   });
 });
 

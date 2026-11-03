@@ -10,6 +10,9 @@ import {
   sparedByBlast,
   SERGEANT,
   blastRadius,
+  breaksOff,
+  RECKONER,
+  reckons,
   firstStrikesOf,
   hasUpgrade,
   shrugsFirstBlow,
@@ -393,7 +396,10 @@ export function attackStrength(state: GameState, attacker: Unit, defender: Unit)
   // An unconditional `Math.max(COWED.floor, ...)` here would quietly raise the
   // attack of anything whose base is below one -- in a game with the box
   // unticked, where nothing of section 155 is supposed to happen at all.
-  const upgraded = upgradeAttack(state, attacker);
+  // Section 155 slice 6: the defender is passed now, because nine of the new
+  // factions' upgrades are conditional on *what they are swinging at* -- a
+  // city, a Horde unit, a spirit, something standing in the open.
+  const upgraded = upgradeAttack(state, attacker, defender);
   if (upgraded !== 0) total = Math.max(COWED.floor, total + upgraded);
   // Section 155: and a raised skeleton swings at half what it was a copy of.
   // Read straight off the field rather than through `sim/raising`, which
@@ -887,7 +893,13 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
         // is Civ4's withdrawal, and it is the only reading of section 11's
         // brief that can actually happen. The caller does the stepping back,
         // and kills it after all if there is nowhere to go.
-        if (attacker.hp <= 0 && hasPerk(attacker, 'better-part-of-valour')) {
+        // Section 155 slice 6: and the mercenary who is paid to go last. The
+        // perk beside it has been in the game since section 11 and fired zero
+        // times in 2160 fights, because nothing carries it.
+        if (
+          attacker.hp <= 0 &&
+          (hasPerk(attacker, 'better-part-of-valour') || breaksOff(attacker))
+        ) {
           attacker.hp = 1;
           withdrew = true;
           break;
@@ -937,6 +949,24 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit):
   // a Footman is most likely to earn it.
   if (attacker.hp > 0) attacker.fights = (attacker.fights ?? 0) + 1;
   if (defender.hp > 0) defender.fights = (defender.fights ?? 0) + 1;
+
+  // Section 155 slice 6, `yaksha-reckoner`: every attacker is entered in the
+  // record, and the record is balanced. Counted for the defender only --
+  // being swarmed is the thing this punishes, and a unit attacks once a turn
+  // so an attacker can never be the one swarmed.
+  const swarmed = (defender.foughtThisTurn ?? 0) + 1;
+  defender.foughtThisTurn = swarmed;
+  if (reckons(defender) && swarmed > 1 && attacker.hp > 0) {
+    applyDamage(attacker, RECKONER.hurtsEachAfterTheFirst, damageKindOf(defender));
+    log(
+      state,
+      `${unitType(attacker.type).name} is entered in the record, and the record is balanced.`,
+      'combat',
+      defender.owner,
+      undefined,
+      [attacker.x, attacker.y],
+    );
+  }
 
   // Whatever the magical one did, it leaves behind. Both directions: a mage
   // that fought off an orc has still set it alight.

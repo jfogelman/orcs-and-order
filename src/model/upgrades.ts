@@ -643,6 +643,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'fodder-hardened',
     blurb: '+1 defence, +2 HP.',
     flavour: 'The shell was cracked. It has been made less cracked.',
+    effect: { defence: 1, hp: 2 },
   },
   {
     id: 'fodder-swarm',
@@ -681,6 +682,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'soldier-seasoned',
     blurb: '+1 attack, +1 defence.',
     flavour: 'The shape has been used. The shape remembers.',
+    effect: { attack: 1, defence: 1 },
   },
   {
     id: 'soldier-reaver',
@@ -693,6 +695,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'The blade is longer. The shell is the same size. This was ' +
       'noted.',
+    effect: { attack: 3, defence: -1 },
   },
   {
     id: 'soldier-carapace',
@@ -703,6 +706,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'soldier-carapace',
     blurb: '+3 defence, +3 HP, -1 move on rough terrain.',
     flavour: 'It is difficult to hit. It is also difficult to move.',
+    effect: { defence: 3, hp: 3 },
   },
 
   // ---- spitter (hivekin)
@@ -715,6 +719,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'spitter-long',
     blurb: '+1 attack, +1 range of effect.',
     flavour: 'The gland is the same. The neck is longer.',
+    effect: { attack: 1 },
   },
   {
     id: 'spitter-corrosive',
@@ -751,6 +756,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'elite-crested',
     blurb: '+1 attack, +1 defence, +2 HP.',
     flavour: 'The crest is taller. No one has said why that helps.',
+    effect: { attack: 1, defence: 1, hp: 2 },
   },
   {
     id: 'elite-warform',
@@ -761,6 +767,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'elite-warform',
     blurb: '+3 attack, +1 attack per consecutive win in one turn.',
     flavour: 'It attacks more. It is not clear that it intends to stop.',
+    effect: { attack: 3 },
   },
   {
     id: 'elite-bulwark',
@@ -771,6 +778,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'elite-bulwark',
     blurb: '+3 defence, +4 HP; adjacent Hivekin take 1 less damage.',
     flavour: 'The plates overlap. So does the responsibility.',
+    effect: { defence: 3, hp: 4 },
   },
 
   // ---- broodlord (hivekin)
@@ -783,6 +791,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'broodlord-grown',
     blurb: '+1 attack, +1 defence, +4 HP.',
     flavour: 'It has not stopped growing. No one has asked it to.',
+    effect: { attack: 1, defence: 1, hp: 4 },
   },
   {
     id: 'broodlord-many',
@@ -793,6 +802,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'broodlord-many',
     blurb: '+4 attack; may attack twice per turn against a stack.',
     flavour: 'There were four arms. This was found insufficient.',
+    effect: { attack: 4 },
   },
   {
     id: 'broodlord-keeper',
@@ -803,6 +813,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'broodlord-keeper',
     blurb: 'Heals adjacent Hivekin 2 HP per turn; +2 defence.',
     flavour: 'It no longer needs to kill. It has things to tend.',
+    effect: { defence: 2 },
   },
 
   // ---- warden (hivekin)
@@ -815,6 +826,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'warden-tempered',
     blurb: '+1 defence, +2 HP; exorcism strength +1.',
     flavour: 'The secretion is the same. It has had longer to set.',
+    effect: { defence: 1, hp: 2 },
   },
   {
     id: 'warden-purging',
@@ -843,6 +855,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'It stands where it is. Things that cannot stand there are ' +
       'noted.',
+    effect: { defence: 3, hp: 4 },
   },
 
   // ---- wf-skirmisher (wandering)
@@ -857,6 +870,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'Paid on time, which they are not used to, and which they ' +
       'are working out how to exploit.',
+    effect: { attack: 1, defence: 1 },
   },
   {
     id: 'wf-skirmisher-cutpurse',
@@ -881,6 +895,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+3 defence; the stack it is in may retreat from combat ' +
       'without penalty.',
     flavour: 'Somebody has to go last. It is in the contract.',
+    effect: { defence: 3 },
   },
 
   // ---- warband (wandering)
@@ -893,6 +908,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'warband-seasoned',
     blurb: '+1 attack, +1 defence, +2 HP.',
     flavour: 'Experience, like everything else, is billed in arrears.',
+    effect: { attack: 1, defence: 1, hp: 2 },
   },
   {
     id: 'warband-caravanguard',
@@ -905,6 +921,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'The job was originally to protect the wagons. It has since ' +
       'been extended.',
+    effect: { defence: 3 },
   },
   {
     id: 'warband-sergeant',
@@ -915,6 +932,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'warband-sergeant',
     blurb: '+3 attack; adjacent Wandering Folk attack at +1.',
     flavour: 'Nobody voted. Several agreed, afterwards.',
+    effect: { attack: 3 },
   },
 
   // ---- slinger (wandering)
@@ -927,6 +945,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'slinger-steady',
     blurb: '+1 attack, +1 range; fewer misses.',
     flavour: 'The arrows are the same. The aim has been paid for.',
+    effect: { attack: 1 },
   },
   {
     id: 'slinger-quiver',
@@ -939,6 +958,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+3 attack; ignores the first round of enemy defence ' +
       'bonuses from walls.',
     flavour: 'Having the arrows turns out to matter.',
+    effect: { attack: 3 },
   },
   {
     id: 'slinger-marksman',
@@ -963,6 +983,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'outcast-hardened',
     blurb: '+1 attack, +2 defence, +2 HP.',
     flavour: 'Being unwelcome has proven to be a transferable skill.',
+    effect: { attack: 1, defence: 2, hp: 2 },
   },
   {
     id: 'outcast-grudge',
@@ -973,6 +994,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'outcast-grudge',
     blurb: '+3 attack; +3 more against Orc Horde units.',
     flavour: 'It has a specific list of people. It is in no hurry.',
+    effect: { attack: 3 },
   },
   {
     id: 'outcast-ironback',
@@ -983,6 +1005,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'outcast-ironback',
     blurb: '+3 defence; ignores terrain movement penalty.',
     flavour: 'If anyone wants it moved, they will need to move it.',
+    effect: { defence: 3 },
   },
 
   // ---- wf-brute (wandering)
@@ -995,6 +1018,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'wf-brute-seasoned',
     blurb: '+1 attack, +1 defence, +4 HP.',
     flavour: 'Has been fed on schedule. The results are visible.',
+    effect: { attack: 1, defence: 1, hp: 4 },
   },
   {
     id: 'wf-brute-hauler',
@@ -1009,6 +1033,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'Mostly it carries things. Sometimes it carries people who ' +
       'disagree.',
+    effect: { hp: 8 },
   },
   {
     id: 'wf-brute-wrecker',
@@ -1019,6 +1044,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'wf-brute-wrecker',
     blurb: '+4 attack; double attack against fortified cities.',
     flavour: 'Charged by the wall, not by the hour.',
+    effect: { attack: 4 },
   },
 
   // ---- bonebound (wandering)
@@ -1031,6 +1057,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'bonebound-charmed',
     blurb: '+1 attack, +1 defence, +4 HP.',
     flavour: 'Each charm is a favour. They are being collected.',
+    effect: { attack: 1, defence: 1, hp: 4 },
   },
   {
     id: 'bonebound-regrowing',
@@ -1053,6 +1080,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+4 attack; enemy units attacking it suffer -1 attack for ' +
       'one turn.',
     flavour: 'The noise is considered part of the service.',
+    effect: { attack: 4 },
   },
 
   // ---- drake (wandering)
@@ -1065,6 +1093,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'drake-harnessed',
     blurb: '+1 attack, +1 defence, +4 HP.',
     flavour: 'Same drake. Better harness. The harness is the product.',
+    effect: { attack: 1, defence: 1, hp: 4 },
   },
   {
     id: 'drake-courier',
@@ -1075,6 +1104,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'drake-courier',
     blurb: '+2 move; may carry one additional unit.',
     flavour: 'Letters are the product. The drake is the packaging.',
+    effect: { moves: 2 },
   },
   {
     id: 'drake-fire',
@@ -1087,6 +1117,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+4 attack; sets the target tile ablaze (1 damage next ' +
       'turn).',
     flavour: 'Billed separately. Extra for the fire.',
+    effect: { attack: 4 },
   },
 
   // ---- revenant (unbound)
@@ -1099,6 +1130,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'revenant-settled',
     blurb: '+1 attack, +1 defence; reforms at +1 HP.',
     flavour: 'It is slightly less likely to come apart. This is noted.',
+    effect: { attack: 1, defence: 1 },
   },
   {
     id: 'revenant-insistent',
@@ -1123,6 +1155,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+3 defence; cannot be dispersed by non-Warden attacks ' +
       'while defending a city.',
     flavour: 'It was asked to leave. The request is on file.',
+    effect: { defence: 3 },
   },
 
   // ---- sylph (unbound)
@@ -1135,6 +1168,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'sylph-quickened',
     blurb: '+1 attack, +1 move.',
     flavour: 'It was there. It is now elsewhere.',
+    effect: { attack: 1, moves: 1 },
   },
   {
     id: 'sylph-gale',
@@ -1159,6 +1193,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
       '+3 defence; negates attacker\'s terrain bonus; invisible to ' +
       'units more than 1 tile away.',
     flavour: 'The air is still. This is also an event.',
+    effect: { defence: 3 },
   },
 
   // ---- naiad (unbound)
@@ -1171,6 +1206,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'naiad-deepened',
     blurb: '+1 attack, +1 defence; water-adjacency bonus +1.',
     flavour: 'It has been in the water longer. The water has noticed.',
+    effect: { attack: 1, defence: 1 },
   },
   {
     id: 'naiad-tidal',
@@ -1193,6 +1229,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'naiad-still',
     blurb: '+3 defence; heals 2 HP per turn adjacent to water.',
     flavour: 'Nothing disturbs it. This is considered sufficient.',
+    effect: { defence: 3 },
   },
 
   // ---- yaksha (unbound)
@@ -1205,6 +1242,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'yaksha-posted',
     blurb: '+1 attack, +2 defence, +2 HP.',
     flavour: 'It has been given an actual post. It seems to prefer this.',
+    effect: { attack: 1, defence: 2, hp: 2 },
   },
   {
     id: 'yaksha-immovable',
@@ -1215,6 +1253,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'yaksha-immovable',
     blurb: '+4 defence, +4 HP; units cannot move through its tile.',
     flavour: 'The request to move was received. It was reviewed.',
+    effect: { defence: 4, hp: 4 },
   },
   {
     id: 'yaksha-reckoner',
@@ -1227,6 +1266,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'Every attacker is entered in the record. The record is ' +
       'balanced.',
+    effect: { attack: 3 },
   },
 
   // ---- jinn (unbound)
@@ -1239,6 +1279,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'jinn-practiced',
     blurb: '+1 attack, +1 defence, +2 HP.',
     flavour: 'The terms are the same. It has read them more times.',
+    effect: { attack: 1, defence: 1, hp: 2 },
   },
   {
     id: 'jinn-fineprint',
@@ -1249,6 +1290,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     needs: 'jinn-fineprint',
     blurb: '-2 attack to all enemies adjacent to it; +2 attack.',
     flavour: 'The wording was agreed. The wording was read.',
+    effect: { attack: 2 },
   },
   {
     id: 'jinn-taker',
@@ -1261,6 +1303,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     flavour:
       'Something was asked for. Something was taken. The two are ' +
       'not identical.',
+    effect: { attack: 4 },
   },
 ];
 

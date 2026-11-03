@@ -1,7 +1,7 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
 import { coveringFor } from './upgradeEffects';
 import { isRaised, raiseFrom } from './raising';
-import { tunnelsOnce } from './upgradeEffects';
+import { tunnelsOnce, zoneOfControl } from './upgradeEffects';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
@@ -841,6 +841,17 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       reason: type.wades
         ? `${type.name} keeps to the shallows.`
         : `${type.name} cannot cross open water.`,
+      retryable: false,
+    };
+  }
+
+  // Section 155 slice 6, `yaksha-immovable`: the ground around it is spoken
+  // for. Refused rather than silently impassable, so a player is told why a
+  // tile they can plainly see will not take them.
+  if (zoneOfControl(state, unit, x, y)) {
+    return {
+      kind: 'blocked',
+      reason: 'Something is standing far too still nearby, and this ground is spoken for.',
       retryable: false,
     };
   }

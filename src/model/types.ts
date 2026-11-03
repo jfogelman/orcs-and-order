@@ -373,6 +373,15 @@ export interface Unit {
    */
   tunnelled?: boolean;
   /**
+   * Fights this unit has been in since its side's turn began. Section 155.
+   *
+   * Only `yaksha-reckoner` reads it -- *"counter-attacks every attacker in a
+   * turn"* -- and "in a turn" is a fact about the turn, so it is counted here
+   * and cleared where every other per-turn thing is. Distinct from `fights`,
+   * which is a career total two other upgrades read.
+   */
+  foughtThisTurn?: number;
+  /**
    * The Grave Knight that pulled this one out of the ground. Section 155.
    *
    * Truthy means **this unit is a raised skeleton**: half the numbers of

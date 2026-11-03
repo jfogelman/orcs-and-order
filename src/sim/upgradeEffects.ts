@@ -1,8 +1,12 @@
 import { UPGRADES, UPGRADES_BY_ID } from '../model/upgrades';
 import type { UpgradeDef, UpgradeEffect } from '../model/upgrades';
 import { unitType, maxHp } from '../model/units';
-import { isMounted } from './follyEffects';
+import { isMounted, onOwnLand } from './follyEffects';
 import { hasStatus } from './status';
+import { besideWater } from './dispersal';
+import { cityAt } from './gamestate';
+import { defenseOf } from '../model/terrain';
+import { idx } from '../engine/grid';
 import type { GameState, Unit } from '../model/types';
 import { distance } from '../engine/grid';
 
@@ -80,7 +84,7 @@ export function neighbours(
  * for the same reason -- the cheapest units should be made worse, not switched
  * off entirely.
  */
-export function upgradeAttack(state: GameState, unit: Unit): number {
+export function upgradeAttack(state: GameState, unit: Unit, against?: Unit): number {
   if (!UPGRADES.enabled) return 0;
   let bonus = upgradeStat(unit, 'attack');
 
@@ -110,7 +114,66 @@ export function upgradeAttack(state: GameState, unit: Unit): number {
     bonus += GRINDER.perEnemy * neighbours(state, unit, 'enemy').length;
   }
 
+  // ---------------------------------------------------------------- slice 6
+  //
+  // The three newer factions. Everything below reuses the seams the Horde's
+  // and the Kingdom's set opened in slice 5 -- an adjacency loop, a condition
+  // on the ground, a condition on the target -- which is most of why fifty-four
+  // more effects is a smaller job than the first thirty-six were.
+
+  // `fodder-swarm`: *"+2 attack for each other Swarm or ordinary Fodder in the
+  // same stack"*. **This game is one unit to a tile**, so Jeremy's ruling of
+  // 2026-11-02 reads "stack" as "adjacent" -- the idiom the Ogre Warlord and
+  // the Dread Knight already use. The cap is the bible's own.
+  if (hasUpgrade(unit, 'fodder-swarm')) {
+    const shapes = neighbours(state, unit, 'friendly').filter(
+      (n) => unitType(n.type).base === 'fodder',
+    ).length;
+    bonus += Math.min(SWARM.cap, SWARM.each * shapes);
+  }
+
+  // `elite-warform` and `broodlord-many` are not here: Jeremy read their extra
+  // attacks as extra *opening* blows, which `firstStrikesOf` grants.
+
+  // `soldier-reaver`: *"bonus vs. cities"*, which is the Reaver's whole point
+  // -- a longer blade on the same shell, pointed at a wall.
+  if (hasUpgrade(unit, 'soldier-reaver') && cityAt(state, against?.x ?? -1, against?.y ?? -1)) {
+    bonus += REAVER.againstCities;
+  }
+
+  // `outcast-grudge`: it has a specific list of people, and the list is the
+  // Horde. Faction rather than ownership, because the grudge is about who
+  // they are rather than whose side they are on this week.
+  if (hasUpgrade(unit, 'outcast-grudge') && against && unitType(against.type).faction === 'orc') {
+    bonus += GRUDGE.againstTheHorde;
+  }
+
+  // `sylph-gale` and `slinger-marksman`: open ground, which here means ground
+  // that gives its defender nothing. A tile whose terrain multiplier is one.
+  if (against && openGround(state, against)) {
+    if (hasUpgrade(unit, 'sylph-gale')) bonus += GALE.inTheOpen;
+    if (hasUpgrade(unit, 'slinger-marksman')) bonus += MARKSMAN_SHOT.inTheOpen;
+  }
+
+  // `naiad-tidal`: a Naiad is only really itself near its own water, and this
+  // one more so. Reuses `besideWater`, which section 152 already defined.
+  if (hasUpgrade(unit, 'naiad-tidal') && besideWater(state, unit)) bonus += TIDAL.besideWater;
+
+  // `wf-skirmisher-cutpurse`: everything on the battlefield is technically
+  // unclaimed, and a battlefield is somewhere that is not home.
+  if (hasUpgrade(unit, 'wf-skirmisher-cutpurse') && !onOwnLand(state, unit.owner, unit.x, unit.y)) {
+    bonus += CUTPURSE.abroad;
+  }
+
+  // `warden-purging`: what it touches does not come back, and the things that
+  // come back are the Unbound.
+  if (hasUpgrade(unit, 'warden-purging') && against && isSpirit(state, against)) {
+    bonus += PURGING.againstSpirits;
+  }
+
   for (const near of neighbours(state, unit, 'friendly')) {
+    // `warband-sergeant`: nobody voted, several agreed afterwards.
+    if (hasUpgrade(near, 'warband-sergeant')) bonus += SERGEANT_AT_ARMS.attack;
     // `ogre-warlord`: everything of its own standing beside it swings harder.
     // The bible says "adjacent orc units"; read as units of the warlord's own
     // side, because a Kingdom army with an ogre in it does not arise and a
@@ -124,8 +187,15 @@ export function upgradeAttack(state: GameState, unit: Unit): number {
   if (!hasUpgrade(unit, 'paladin-templar')) {
     for (const near of neighbours(state, unit, 'enemy')) {
       if (hasUpgrade(near, 'deathknight-dread')) bonus -= DREAD.attack;
+      // `jinn-fineprint`: the wording was agreed, and the wording was read.
+      if (hasUpgrade(near, 'jinn-fineprint')) bonus -= FINE_PRINT.attack;
     }
   }
+
+  // `bonebound-rattling`: the noise is considered part of the service. Unlike
+  // the auras above this one is about *who it is swinging at* rather than who
+  // is standing nearby, so a Bonebound rattles only at whoever came for it.
+  if (against && hasUpgrade(against, 'bonebound-rattling')) bonus -= RATTLING.attack;
 
   return bonus;
 }
@@ -152,6 +222,17 @@ export function upgradeDefence(state: GameState, unit: Unit): number {
   for (const near of neighbours(state, unit, 'friendly')) {
     if (hasUpgrade(near, 'footman-shieldwall') && unitType(unit.type).base === 'footman') {
       bonus += SHIELDWALL.defence;
+      break;
+    }
+  }
+
+  // `warband-caravanguard`: the job was originally to protect the wagons, and
+  // has since been extended. Unlike the shieldwall above it does not care what
+  // kind of thing it is standing in front of -- a caravan guard guards the
+  // caravan, which is whoever is with it.
+  for (const near of neighbours(state, unit, 'friendly')) {
+    if (hasUpgrade(near, 'warband-caravanguard')) {
+      bonus += CARAVAN_GUARD.defence;
       break;
     }
   }
@@ -220,6 +301,16 @@ export function firstStrikesOf(unit: Unit, against?: Unit): number {
   // what an Archer has instead of range is the free opening blow -- so a
   // Volley Archer gets two of them.
   if (hasUpgrade(unit, 'archer-volley')) n += VOLLEY.firstStrikes;
+  // Section 155 slice 6. **Five more that cannot have range.** The Spitter and
+  // the Slinger have `range: 1` exactly as the Archer does, so "+1 range of
+  // effect" and "attacks one tile further" describe nothing -- and Jeremy
+  // ruled that shape twice for the Archer, both times as a free opening blow.
+  // Applied here by precedent rather than asked a third time.
+  //
+  // `elite-warform` and `broodlord-many` are his explicit ruling of
+  // 2026-11-02: a unit in this game attacks once a turn, so "attacks more"
+  // becomes "gets in first, twice".
+  for (const id of OPENS_TWICE) if (hasUpgrade(unit, id)) n += 1;
   return Math.max(0, n);
 }
 
@@ -511,3 +602,149 @@ export function tunnelsOnce(unit: Unit): boolean {
 
 /** The seat a Dragon Rider adds. */
 export const RIDER = { carries: 1 };
+
+/**
+ * Ground that gives its defender nothing. Section 155 slice 6.
+ *
+ * Two upgrades say "on open ground" -- `sylph-gale` and `slinger-marksman` --
+ * and the game has no such category, but it has the thing the category is
+ * about: `defenseOf` is the multiplier a tile hands whoever stands on it, and
+ * open ground is a tile that hands over one.
+ */
+export function openGround(state: GameState, unit: Unit): boolean {
+  const i = idx(unit.x, unit.y, state.width);
+  return defenseOf(state.terrain[i], state.specials[i]) <= 1;
+}
+
+/** Whether this unit is one of the things that comes back. */
+export function isSpirit(state: GameState, unit: Unit): boolean {
+  return state.players[unit.owner]?.faction === 'unbound';
+}
+
+/**
+ * Upgrades whose extra reach or extra attack became an extra opening blow.
+ *
+ * Three because their creature has `range: 1` and the bible gave it range;
+ * two because Jeremy read "attacks twice" that way rather than teaching the
+ * game a second attack per turn for two units.
+ */
+export const OPENS_TWICE = [
+  'spitter-long',
+  'slinger-steady',
+  'slinger-marksman',
+  'elite-warform',
+  'broodlord-many',
+] as const;
+
+/** Section 155 slice 6's numbers, every one a first answer from the bible. */
+export const SWARM = { each: 2, cap: 3 };
+export const REAVER = { againstCities: 2 };
+export const GRUDGE = { againstTheHorde: 3 };
+export const GALE = { inTheOpen: 4 };
+export const MARKSMAN_SHOT = { inTheOpen: 5 };
+export const TIDAL = { besideWater: 4 };
+export const CUTPURSE = { abroad: 1, plunder: 2 };
+export const PURGING = { againstSpirits: 3 };
+export const SERGEANT_AT_ARMS = { attack: 1 };
+export const CARAVAN_GUARD = { defence: 2 };
+export const FINE_PRINT = { attack: 2 };
+export const RATTLING = { attack: 1 };
+
+/**
+ * The three upgrades that mend whoever is standing next to them, and the one
+ * that mends itself. Section 155 slice 6.
+ *
+ * Run at the top of a side's turn, beside the Grave Knight's bookkeeping.
+ * Adjacent rather than "in its stack", which is Jeremy's ruling of 2026-11-02
+ * and the only reading this game has -- one unit to a tile.
+ *
+ * Capped at `maxHp` like every other heal, and it does not care whether the
+ * patient is `spent`: that status stops a troll tearing itself in half twice,
+ * and has nothing to say about somebody else's bandages.
+ */
+export function tendTheWounded(state: GameState, playerId: number): void {
+  if (!UPGRADES.enabled) return;
+  const mine = state.units.filter((u) => u.owner === playerId && u.hp > 0);
+  for (const healer of mine) {
+    const keeper = hasUpgrade(healer, 'broodlord-keeper');
+    const hauler = hasUpgrade(healer, 'wf-brute-hauler');
+    if (!keeper && !hauler) continue;
+    const amount = keeper ? KEEPER.heals : HAULER.heals;
+    for (const near of neighbours(state, healer, 'friendly')) {
+      if (near.hp <= 0 || near.hp >= maxHp(near)) continue;
+      near.hp = Math.min(maxHp(near), near.hp + amount);
+    }
+  }
+  // `naiad-still`: nothing disturbs it, and the water puts it back together.
+  for (const unit of mine) {
+    if (!hasUpgrade(unit, 'naiad-still') || !besideWater(state, unit)) continue;
+    unit.hp = Math.min(maxHp(unit), unit.hp + STILL_WATER.heals);
+  }
+}
+
+/**
+ * Whether this unit walks away from a fight it lost. Section 155 slice 6.
+ *
+ * `better-part-of-valour` has been in the game since section 11 and **fired
+ * zero times in a probe of 2160 fights** -- no creature carries the perk.
+ * Jeremy's ruling of 2026-11-02 gives it to the mercenary who is paid to go
+ * last, which makes a dead rule live rather than adding a second one beside
+ * it. The bible says "retreat without penalty"; this game's version of that
+ * is surviving on one hit point and stepping back, which the mover already
+ * knows how to do.
+ */
+export function breaksOff(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'wf-skirmisher-rearguard');
+}
+
+/**
+ * What a Reckoner takes out of everyone who came for it after the first.
+ *
+ * *"Counter-attacks every attacker in a turn"*, and every defender in this
+ * game already fights back every time -- measured, including a unit attacked
+ * twice in one turn. So the clause as written is a no-op, and Jeremy's ruling
+ * of 2026-11-02 is that being swarmed should cost the swarm: the second
+ * attacker of a turn and every one after pays for the privilege.
+ *
+ * Counted on the unit because "in a turn" is a fact about the turn, and reset
+ * where every other per-turn thing is.
+ */
+export function reckons(unit: Unit): boolean {
+  return UPGRADES.enabled && hasUpgrade(unit, 'yaksha-reckoner');
+}
+
+/** What each of them is worth. All first answers. */
+export const KEEPER = { heals: 2 };
+export const HAULER = { heals: 1 };
+export const STILL_WATER = { heals: 2 };
+export const RECKONER = { hurtsEachAfterTheFirst: 2 };
+
+/**
+ * Whether an enemy Immovable Yaksha forbids this tile. Section 155 slice 6.
+ *
+ * *"Units cannot move through its tile"* -- which **everything in this game
+ * already cannot**: one unit to a tile, and nobody passes through anybody.
+ * So the clause as written is a no-op, and Jeremy's ruling of 2026-11-02 made
+ * it the thing it was reaching for: a real zone of control, the eight tiles
+ * around it closed to the other side.
+ *
+ * **This is the only upgrade in ninety whose reach is wider than itself**, so
+ * two deliberate limits. It is asked in `tryStep` and *not* in the
+ * pathfinder: a route planner that knew about it would thread around one and
+ * look clairvoyant, and one that did not would strand a march against it --
+ * the same trade `sapper-tunnel` makes, for the same reason. And it never
+ * closes a tile somebody is standing on or a city, because a rule that can
+ * strand a unit in its own town is a bug wearing a mechanic's coat.
+ */
+export function zoneOfControl(state: GameState, mover: Unit, x: number, y: number): boolean {
+  if (!UPGRADES.enabled) return false;
+  if (cityAt(state, x, y)) return false;
+  return state.units.some(
+    (u) =>
+      u.owner !== mover.owner &&
+      u.hp > 0 &&
+      hasUpgrade(u, 'yaksha-immovable') &&
+      distance(u.x, u.y, x, y) === 1 &&
+      !(u.x === x && u.y === y),
+  );
+}
