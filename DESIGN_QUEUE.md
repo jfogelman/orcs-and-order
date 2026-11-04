@@ -13604,21 +13604,31 @@ all of this the day it is given an exorcist.**
 | adjacent to a spirit | **0 turns** | **134 (4%)** |
 | spirit deaths with one beside | **0 of 2005** | **86 of 2015** |
 
-**And it did not break the faction it counters.** Accounting their non-Effigy
-deaths across the twelve:
+**What it did to the faction it counters**, both sets, their non-Effigy
+deaths across twelve games each:
 
-| | counter broken | counter working |
-|---|---|---|
-| units of theirs that left the board | 1726 | 1730 |
-| scattered | 1048 | 1046 |
-| died with no site | 292 | 329 |
-| **killed outright by an exorcist** | **~0** | **~53** |
-| came back, of those that scattered | 88.9% | **89.2%** |
+| | tuned, broken | tuned, working | held-out, broken | held-out, working |
+|---|---|---|---|---|
+| units that left the board | 1726 | 1730 | 1544 | 1540 |
+| scattered | 1048 | 1046 | 973 | 991 |
+| died with no site | 292 | 329 | 282 | 262 |
+| **killed outright by an exorcist** | **~0** | **~53** | **~0** | **~57** |
+| came back, of those that scattered | 88.9% | 89.2% | 87.8% | 85.4% |
 
-Roughly **four and a half spirits a game now die for good** where none did, and
-the mechanic is otherwise untouched: the same number come apart and the same
-share gather again. Their cities and units are up a little, which is read as
-divergence rather than effect — the arms are different games.
+**The kill count replicates** -- about fifty-five a dozen games on either set,
+from none -- and that is the claim this section rests on.
+
+**Nothing about whether it hurt them replicates.** Their own columns move in
+*opposite directions* between the sets: cities 5.3 to 6.7 and units 55.4 to
+64.1 on the tuned seeds, cities 6.1 to 5.6 and units 50.5 to 45.0 on the
+held-out; the return rate goes +0.3 points one way and -2.4 the other. Two
+sets disagreeing in **sign** is what noise looks like, so **no claim is made
+that this is or is not a nerf.** Twelve games of diverging arms cannot say.
+
+What can be said is narrower and is the part that mattered: the mechanic is
+untouched. Roughly the same number come apart and roughly the same share
+gather again on both sets. The counter kills about four and a half a game and
+does not otherwise reach into the rule.
 
 **The held-out set agrees**, and a shade more strongly:
 
@@ -13635,11 +13645,10 @@ the **same number** for the Warden, the Bone-Speaker and the Mystic. The want
 buys one the turn it can, which is what a want that the chooser could never
 see looks like once it is declared.
 
-**One seed set for the balance columns**, which were measured on the tuned
-set only. The *existence* figures needed no second set anyway: the Horde
-building nought Bone-Speakers in twelve games is a consequence of
-`bone-speaker` being in no priority list, which is a fact about the list and
-not about the seeds.
+Both the existence figures and the balance columns now have two sets. The
+existence ones needed no second set anyway: the Horde building nought
+Bone-Speakers in twelve games is a consequence of `bone-speaker` being in no
+priority list, which is a fact about the list and not about the seeds.
 
 ### Worth knowing before section 155 merges
 
