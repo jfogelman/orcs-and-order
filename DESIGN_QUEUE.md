@@ -1121,7 +1121,10 @@ Points worth settling before building:
   raiders sacking it, or sappers bringing its walls down. The catapult picture is
   the `sally` effect, played over a city when a garrison charges out past its Broken
   Catapult, which is the one thing that building does.
-- **Manual city tile assignment.** Citizens are auto-assigned greedily.
+- ~~**Manual city tile assignment.**~~ Built: `city.chosenTiles` holds what the
+  player picked, `workedFor` honours it ahead of the greedy assignment, and the
+  city panel draws the fat cross as a grid of clickable tiles. *Marked done
+  2026-11-04, having been done some time before that and never crossed off.*
 - **Unit movement animation.** Units teleport between tiles.
 - **End-of-turn summary.** What happened while you were not looking.
 - **Naval units**, which would make the map's islands mean something.
@@ -12388,7 +12391,7 @@ piece of refactoring in this file I would argue for on its own merits.
 
 ---
 
-## 155. Upgraded units, as an option — IN PROGRESS
+## 155. Upgraded units, as an option — SHIPPED
 
 > **Jeremy's three rulings, 2026-10-28.** The branch choice is **empire-wide
 > and permanent**; units already built **upgrade in a friendly city for a
