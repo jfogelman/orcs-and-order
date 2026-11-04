@@ -12101,6 +12101,14 @@ First run, twelve games:
 
 > `ever had somewhere to gather: 0/12` — `scattered 0.0 a game`
 
+**The second of those two figures was an artefact and section 163 corrects
+it.** The probe's log reader stopped counting once `log()` trimmed at 400
+entries, so every log-derived number here reported the opening of a game as
+the whole of it. `0/12` is sound -- it was counted off `state.cities` -- and
+with no site anywhere a spirit genuinely could not gather, so the conclusion
+of this section survives. **The same figure quoted after the want was added
+does not**: the rule fires ~87 times a game.
+
 `chooseProduction` ranks buildings on gold, science, defence and a barracks. A
 Retrieval Circle carries none of those, so by every number the AI reads it is
 fifty-five shields of nothing. **Fourth instance**: the Burrower-caste in 125,
@@ -13336,3 +13344,229 @@ was at 27%.
 - **Nobody re-asks a balance target when a faction is added.** Three sections
   running have found a number anchored to a world that then moved. A sixth
   faction will do it again to this one.
+
+## 163. The doorway, and a probe that had been lying for two sections — SHIPPED
+
+Jeremy asked to address "the AI garrisoning issue" — section 155's parting
+finding that the Unbound's reform sites were built but never usable. Four
+probes later the garrisoning turned out not to be the issue, the finding it
+came from turned out to be an artefact, and the artefact turned out to live in
+the sweep as well.
+
+### The probe had stopped counting, and nothing could tell
+
+`tools/unboundprobe.run.test.ts` read the game log forward by index:
+
+```ts
+for (const entry of state.log.slice(read)) { … }
+read = state.log.length;
+```
+
+`log()` splices the front off at **400 entries** and leaves the length at
+exactly 400. So in a six-player war the length pins at 400, `read` pins at 400,
+and `slice(read)` returns nothing **for the rest of the game**. Every
+log-derived figure counted the opening and reported it as the whole.
+
+Its own comment had considered a trim and dismissed it — *"a 400-entry window
+and a handful of lines a turn never reaches"*. A handful of lines a turn, times
+six sides, times two hundred turns, reaches it before turn fifty.
+
+**What it had been reporting, against the truth:**
+
+| | reported | actual |
+|---|---|---|
+| scattered a game | 0.0 | **87.3** |
+| gathered again | 0.0 | **77.6** |
+| lost | 0.8 | **34.0** |
+| average turn of a loss | 60 | **154** |
+
+The faction's core rule fires constantly and **89% of spirits come back**. The
+mechanic was never broken. Section 152 recorded it as never happening, section
+155 repeated that and concluded that neither of its two new levers was worth
+sweeping, and **that recommendation went to Jeremy, into a memory, and into a
+pull request body.** All three are corrected.
+
+**How it was caught, and the only way it could have been.** A counter placed
+inside `scatters()` disagreed with the log count by three orders of magnitude.
+Nothing else would have: the probe is green either way, writes a tidy report,
+and `0.0` is *exactly* what a mechanic that never fires looks like. A broken
+counter and a dead mechanic produce the same number.
+
+With the reader fixed the two agree exactly — 1535 deaths reach the rule, 192
+are Effigies, 296 find no site, and 87.3 a game scatter — which is the check
+that says the fix is right.
+
+### The same bug is in the sweep, with a guard that cannot fire
+
+`tools/sweep.ts` counts `combats` and `sacks` the same way, and had a guard:
+
+```ts
+if (before < readLog) readLog = 0;
+```
+
+It fires only when the log **shrinks**, and a trim to exactly 400 never shrinks
+it below a `readLog` that is also 400. So from the moment the log fills, both
+columns stop counting. **Every sweep this project has run has been reporting
+roughly the opening of each game as its fight count.**
+
+Fixed the same way, and the fix was already in the codebase:
+`hiveprobe.run.test.ts` anchors on the **last entry by reference**, which
+survives a trim because a trim drops the oldest and never the newest. That
+lesson was learned once and not carried across.
+
+**Not audited:** which recorded findings leant on `combats` or `sacks`. A
+comparison between two arms may survive if both under-counted alike; anything
+quoting an absolute fight count, or where the arms differed in *when* their
+wars happened, wants re-reading.
+
+### And then the actual question, which turned out to be real
+
+With a reader that counts, the doorway matters after all. Three hypotheses died
+first, each measured:
+
+| | measured | verdict |
+|---|---|---|
+| the Totem is never researched | learned in **12/12** | no |
+| the AI garrisons every city | door open **36%** of turns | no |
+| spirits die before a site exists | **0** did | no |
+
+What is true: at the moment of a loss, **320 Circle towns were blocked by one
+of their own and none by an enemy.** The AI's units converge on its towns when
+there is a war on, and a war is when spirits die — so the Circle is open when
+it is not needed and shut when it is. `ai.ts` already knew the cities are
+mostly empty; what it does not say is that they are full exactly when it counts.
+
+### The fix: want the building that has no condition
+
+`DISPERSAL.aiWants` counted the two buildings as interchangeable and they are
+not. A Circle works while its town is empty; a Totem works always; **two
+Circles satisfy the want while leaving a doorway one of your own soldiers can
+shut.** A single count cannot say that, so there is a second want.
+
+`reform-doorway` asks for one Anchor Totem, sits immediately before
+`reform-site`, and **falls through to it** where a yard cannot build one —
+which is "the Totem if you can, the Circle if you cannot" expressed in the want
+list's own machinery rather than new machinery. The three wants above it keep
+the priority section 154 gave them.
+
+**Both seed sets, twelve games each**, the lever at 0 against 1:
+
+| | tuned 0 | tuned 1 | held-out 0 | held-out 1 |
+|---|---|---|---|---|
+| a Totem ever stood | 5/12, t129 | **11/12, t113** | 4/12, t162 | **10/12, t122** |
+| doorway open | 36% | **52%** | 31% | **49%** |
+| lost with nowhere to go | 36.9 | **24.3** | 43.4 | **25.6** |
+| came back, of those that scattered | 84.8% | **88.9%** | 83.6% | **87.8%** |
+
+A third to two fifths fewer spirits lost for want of a doorway, and **the
+return rate moves +4.1 and +4.2 points** — the same amount on independent
+seeds. That is the second column this project asks for before believing a
+swing, and the mechanism reproduces too: **320 Circle towns blocked by one of
+their own and none by an enemy** on the tuned set, **399 and none** on the
+held-out.
+
+The held-out set makes the case more strongly than the tuned one did, which is
+the right way round: left alone, those empires raise a Totem in 4 of 12 games
+and not until turn 162.
+
+**What is not claimed.** Cities, units and survivors are up in both want arms,
+but the ending columns disagree between the sets — 5/12 against 5/12 on tuned,
+8/12 against 6/12 on held-out — so none of it is read as an effect. A Totem
+costs 120 shields and 2 upkeep and **that bill is unmeasured**; what has been
+measured is only what it buys.
+
+Run the second set with `PROBE_SEEDS=held-out`, which the probe now takes.
+
+### Still open, and now queued as sections 164 and 165
+
+- **The hard counter never fires** — section 164. An exorcist killed **0 of 1535** Unbound
+  units in twelve games. `UNBOUND_PLAN.md` promises *"there is always a hard
+  counter, so 'hard to kill' never quietly becomes 'impossible to kill'"*, and
+  in a played game there is not one. Exorcists exist — a Paladin stands in most
+  games — they simply never meet a spirit and kill it. **This is a bigger
+  problem than the doorway was** and is its own section.
+- **The Spirit Party has never taken in a guest.** `0` across twelve games,
+  now that the counter works.
+- **Two death paths skip the rule** — section 165. `detonate` and `clubEffects` remove units
+  with a direct `state.units.splice` rather than `destroyUnit`, so a spirit
+  killed by a sapper's blast or an ogre's club quake never scatters and is
+  logged *"does not get up"* — which is precisely what this faction's rule says
+  is not guaranteed. 1726 units left the board against 1535 that reached
+  `destroyUnit`; the 191 difference is these paths and the disbands.
+
+## 164. The hard counter has never once fired — QUEUED
+
+**An exorcist killed 0 of 1535 Unbound units in twelve games.** Counted inside
+`scatters()` in section 163, so it is not a log-reader artefact like the figure
+it replaced.
+
+`UNBOUND_PLAN.md` builds the faction on one rule and makes **one promise about
+it**: *"there is always a hard counter (exorcism), so 'hard to kill' never
+quietly becomes 'impossible to kill.'"* Section 150 shipped the counter first,
+explicitly for that reason. In a played game it does not exist.
+
+It is not that the units are missing. Exorcists stand in most games — a Paladin
+in 1.0 games out of 12 at the high-water mark, a Mystic in 0.4, a Warden in
+0.1. They simply never **meet a spirit and beat it**. Three candidate reasons,
+none measured:
+
+- **Nobody builds many.** A Paladin is an expensive soldier whose special
+  property is invisible to `chooseProduction`, which is the fifth instance of
+  the pattern `src/ai/wants.ts` was created to retire. The want list has no
+  entry for an exorcist.
+- **They are never in the right place.** One Paladin in an empire cannot be at
+  the fight that matters, and nothing routes it towards the Unbound.
+- **The AI does not know what it is for.** `attackOdds` sees a soldier. Nothing
+  in the target search prefers an Unbound unit when the attacker happens to be
+  the one thing that can end it.
+
+Worth knowing before any of that is built: at **89% return**, the mechanic the
+counter is meant to counter is working as designed. This is not a faction that
+is quietly unbeatable — they are beaten by having their cities taken like
+anybody else. What is missing is the *answer the bible promised*, which is a
+design promise rather than a balance problem.
+
+**First move is a probe, not a fix.** Count, per game: exorcists built, turns
+an exorcist is within reach of a spirit, fights an exorcist takes against one,
+and what it would have taken for `exorcises()` to be asked at all. Section 163
+left the counters in place to make that cheap.
+
+---
+
+## 165. Two death paths skip the faction's own rule — QUEUED
+
+`destroyUnit` is *"the one door out of the game"* and its comment says so:
+
+> The hook is here rather than at the two call sites in `movement.ts` because
+> this is the one door out of the game: a rule installed at the call sites
+> would have been true of a fight and false of everything else, and the three
+> sections after it would each have found a new way to kill something.
+
+**Two things found a new way anyway.** `detonate` (a sapper going up) and
+`clubEffects` (an ogre's club quake) remove their victims with a direct
+`state.units.splice` and never call it. So an Unbound unit killed by either:
+
+- **does not scatter**, whatever sites are standing;
+- is not offered to a Spirit Party by `inviteIn`;
+- earns its killer no experience and no bounty;
+- and is logged **"does not get up"** — which is precisely the sentence this
+  faction's rule exists to make untrue.
+
+Measured in section 163: **1726 of their units left the board against 1535 that
+reached `destroyUnit`.** The 191 difference is these two paths plus the
+disbands in `city.ts`, so it is a few per cent of deaths rather than a
+headline — but it is silent, and it is the same shape as the zero-health winner
+that section 155 found: a death that did not go through the one function every
+death is supposed to go through.
+
+**Not simply "call `destroyUnit`".** Both splice *during* a loop over victims,
+and `destroyUnit` logs, scatters, invites and can spawn a unit — reentering it
+mid-blast is how a one-line fix becomes a different bug. The shape that
+probably works is to collect the dead and run them through `destroyUnit` after
+the blast is resolved, which is what `movement.ts` already does around
+`detonate`'s return value.
+
+**Also worth checking while in there:** both compute their damage from
+`unitType(victim.type).hp` rather than `maxHp(victim)`, so they ignore a raised
+copy's halved health and an upgrade's added health. Section 155 added `maxHp`
+for exactly this and these two were missed.

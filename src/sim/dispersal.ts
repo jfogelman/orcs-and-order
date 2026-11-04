@@ -93,15 +93,55 @@ export const DISPERSAL = {
    * Sites a side wants standing, counted as buildings rather than as sites
    * currently *usable*.
    *
-   * The difference matters and is not pedantry: a Retrieval Circle only works
-   * while nothing stands in its city, and this AI keeps a garrison in every
-   * city -- so a want measured in usable sites would see zero, build a second
-   * Circle, see zero, and spend the whole game laying circles.
+   * The difference matters and is not pedantry: a want measured in sites
+   * currently *usable* would see zero on the turns somebody is standing in the
+   * Circle town, build a second Circle, see zero again, and spend the whole
+   * game laying circles.
    *
    * Two: one to have one, and a second so that losing a town is not losing
    * the mechanic. **Unmeasured.**
    */
   aiWants: 2,
+  /**
+   * Anchor Totems wanted, once one can be built at all. Section 163.
+   *
+   * **This number exists because counting sites was counting the wrong
+   * thing.** `aiWants` treats the two buildings as interchangeable and they
+   * are not: a Circle works only while its town is empty, a Totem works
+   * always, and an empire with two Circles has satisfied the want while
+   * having a doorway that can be shut by one of its own soldiers walking in.
+   *
+   * Measured at 0 against 1, **twelve games on each of both seed sets**:
+   *
+   * | | tuned 0 | tuned 1 | held-out 0 | held-out 1 |
+   * |---|---|---|---|---|
+   * | a Totem ever stood | 5/12, t129 | 11/12, t113 | 4/12, t162 | 10/12, t122 |
+   * | doorway open | 36% | 52% | 31% | 49% |
+   * | lost with nowhere to go | 36.9 | **24.3** | 43.4 | **25.6** |
+   * | came back, of those that scattered | 84.8% | **88.9%** | 83.6% | **87.8%** |
+   *
+   * A third to two fifths fewer spirits lost for want of a doorway, and the
+   * return rate moves **+4.1 and +4.2 points** -- the same amount on
+   * independent seeds, which is the second column this project asks for
+   * before believing a swing.
+   *
+   * The mechanism is measured rather than argued, and reproduced: at the
+   * moment of a loss, **320 Circle towns blocked by one of their own and none
+   * by an enemy** on the tuned set, **399 and none** on the held-out. This
+   * AI's units converge on its towns when there is a war on, and a war is
+   * when spirits die -- so the Circle is open when it is not needed and shut
+   * when it is, and the Totem is the building that does not care.
+   *
+   * What is **not** claimed: the economy columns move in both arms (cities,
+   * units and survivors all up) but the ending columns disagree between the
+   * sets, so none of that is read as an effect. A Totem costs 120 shields and
+   * 2 upkeep and that bill has not been measured.
+   *
+   * One, not two. The Totem is the expensive one and the point of it is that
+   * a single one cannot be shut; a second is insurance against losing a town,
+   * which `aiWants` already buys in the cheaper building.
+   */
+  aiWantsTotem: 1,
 };
 
 /** Whether this faction's units disperse at all. */
