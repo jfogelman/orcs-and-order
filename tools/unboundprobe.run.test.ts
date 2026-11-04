@@ -5,7 +5,9 @@ import { DISPERSAL, GUEST_LIST, REFORM_SITES, reformSites } from '../src/sim/dis
 import { couldExorcise } from '../src/sim/exorcism';
 import { endingFor, endingWorks } from '../src/sim/endings';
 import type { GameState } from '../src/model/types';
-import { NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
+
+declare const process: { env: Record<string, string | undefined> };
+import { HELD_OUT_BASES, NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
 // **Call this before measuring anything.** `playGame` reads the levers as they
 // stand, and the levers as they stand are not the game the sweeps measure. A
 // probe that skips it is answering a question about a different game -- see
@@ -56,6 +58,81 @@ interface Tally {
   everArchon: number;
   /** Guests the Spirit Party ever took in. */
   guests: number;
+  // ---------------------------------------------------------- the doorway
+  //
+  // Section 155's probe found the site built in 12/12 games and **nothing
+  // ever scattering with one open**, which is two different failures wearing
+  // one number. These separate them: a Totem has no condition at all, so if
+  // they are building Totems the doorway is open and something else is wrong;
+  // a Circle works only while its city is empty, and this AI garrisons every
+  // city.
+  /** Games where an Anchor Totem ever stood, and the turn the first did. */
+  everTotem: number;
+  firstTotemTurn: number;
+  /** Games where a Retrieval Circle ever stood, and the turn the first did. */
+  everCircle: number;
+  firstCircleTurn: number;
+  /** Games where they ever learned the advance that grants the Totem. */
+  everTotemTech: number;
+  /** Turns sampled, turns with any site *built*, turns with one *usable*. */
+  turns: number;
+  turnsBuilt: number;
+  turnsOpen: number;
+  /**
+   * **When** a spirit was lost, against when the doorway existed.
+   *
+   * The doorway turns out to be open on a third of all turns, so "nothing ever
+   * scatters with one open" is not explained by the door being shut -- 0 of
+   * ten deaths at 36% open is a 1.2% coincidence, which is small enough to
+   * doubt and not small enough to call proof. The alternative is that spirits
+   * die **early**, before the first Circle goes up around turn 38. This is the
+   * number that tells those two apart.
+   */
+  lostBeforeAnySite: number;
+  lostAfter: number;
+  lostTurnSum: number;
+  /**
+   * **The open rate, split by which building is holding the door.**
+   *
+   * A Totem has no condition, so from the turn one stands the door is open for
+   * ever. That makes the overall 36% an average of two different games, and if
+   * the Totem games carry it then a Circle-only empire's door is open far less
+   * than the average suggests -- which would explain 0 of 10 without needing
+   * any correlation at all.
+   */
+  circleOnlyTurns: number;
+  circleOnlyOpen: number;
+  withTotemTurns: number;
+  /** At the moment of a loss, who was standing on their Circle towns. */
+  blockedByOwn: number;
+  blockedByEnemy: number;
+  lostWithNoCircleStanding: number;
+  /**
+   * **Every unit of theirs that left the board, by any means.**
+   *
+   * The question behind the question. `lost` counts only the spirits that went
+   * through `scatter`'s no-site branch, so 0.8 a game could mean either *the
+   * doorway is shut* or *they hardly ever lose anybody*. Counted by watching
+   * units vanish, the way the ruin probe counts what a warden kills, because
+   * a death is an event and this only ever sees states.
+   */
+  deaths: number;
+  /** Of those, the ones an Effigy -- which never scatters -- accounts for. */
+  effigyDeaths: number;
+  /**
+   * **Deaths of theirs that never reached `destroyUnit` at all.** Section 165.
+   *
+   * `detonate` and `clubEffects` splice their victims straight out of
+   * `state.units`, so a spirit caught by a sapper going up or an ogre's club
+   * never scatters, is never offered to a Spirit Party, and is logged *"is
+   * caught in the blast"* or *"does not get up"* -- the second being the one
+   * sentence this faction's rule exists to make untrue.
+   *
+   * Counted off those two messages, filtered to their seat, because the
+   * messages are written with the victim's owner on them.
+   */
+  blasted: number;
+  clubbed: number;
 }
 
 const blank = (): Tally => ({
@@ -72,6 +149,27 @@ const blank = (): Tally => ({
   firstSiteTurn: 0,
   everArchon: 0,
   guests: 0,
+  everTotem: 0,
+  firstTotemTurn: 0,
+  everCircle: 0,
+  firstCircleTurn: 0,
+  everTotemTech: 0,
+  turns: 0,
+  turnsBuilt: 0,
+  turnsOpen: 0,
+  lostBeforeAnySite: 0,
+  lostAfter: 0,
+  lostTurnSum: 0,
+  circleOnlyTurns: 0,
+  circleOnlyOpen: 0,
+  withTotemTurns: 0,
+  blockedByOwn: 0,
+  blockedByEnemy: 0,
+  lostWithNoCircleStanding: 0,
+  deaths: 0,
+  effigyDeaths: 0,
+  blasted: 0,
+  clubbed: 0,
 });
 
 /** Exorcists standing, by side, which is the fairness promise as a number. */
@@ -82,13 +180,45 @@ describe('what the Unbound actually do', () => {
     control();
     NEW_GAME.playerFaction = 'unbound';
     const tally = blank();
-    const seeds = seedSet('unbound', TUNED_BASES, 4).seeds;
+    // Section 163: the held-out set on demand, because a figure from one set
+    // is a figure nobody should act on -- what this project believes is a
+    // swing **both** sets agree about. Run as:
+    //   PROBE_SEEDS=held-out npx vitest run --config vitest.sweep.config.ts \
+    //     tools/unboundprobe.run.test.ts
+    const held = process.env.PROBE_SEEDS === 'held-out';
+    const which = held ? 'held-out' : 'unbound';
+    const seeds = seedSet(which, held ? HELD_OUT_BASES : TUNED_BASES, 4).seeds;
     const lines: string[] = [];
 
     try {
       for (const seed of seeds) {
         let hadSite = false;
         let firstSite = 0;
+        let firstTotem = 0;
+        let firstCircle = 0;
+        let totemTech = false;
+        // Sampled once a game-turn rather than once a half-turn: `watch` runs
+        // per side still to move, and a ratio of half-turns would be the same
+        // ratio counted six times.
+        let sampledTurn = -1;
+        let turns = 0;
+        let turnsBuilt = 0;
+        let turnsOpen = 0;
+        let lostBefore = 0;
+        let lostAfter = 0;
+        let lostTurnSum = 0;
+        let anySiteYet = false;
+        let circleOnlyTurns = 0;
+        let circleOnlyOpen = 0;
+        let withTotemTurns = 0;
+        let blockedByOwn = 0;
+        let blockedByEnemy = 0;
+        let lostNoCircle = 0;
+        let deaths = 0;
+        let effigyDeaths = 0;
+        let blasted = 0;
+        let clubbed = 0;
+        let before = new Map<number, string>();
         let archon = false;
         let scattered = 0;
         let gathered = 0;
@@ -99,23 +229,94 @@ describe('what the Unbound actually do', () => {
         // and a Paladin that never meets one is a separate question.
         const seen = new Map<string, number>();
 
-        // **Read forward through the log rather than off its tail.** The
-        // first version scanned the last six entries on every half-turn and
-        // filtered on the current turn, which counts the same line once per
-        // side still to move: it reported 179 spirits lost a game out of an
-        // army of 21. `log()` keeps the last 400 entries and this watcher runs
-        // every half-turn, so nothing is missed by simply remembering how far
-        // it has read -- except across a trim, which a 400-entry window and a
-        // handful of lines a turn never reaches.
-        let read = 0;
+        // **Read forward through the log, anchored on the last line seen.**
+        //
+        // The first version scanned the last six entries every half-turn and
+        // filtered on the current turn, which counted the same line once per
+        // side still to move: 179 spirits lost a game out of an army of 21.
+        //
+        // The second remembered an **index** -- `read = state.log.length` --
+        // and its comment said a trim "a 400-entry window and a handful of
+        // lines a turn never reaches". **That was wrong, and wrong silently.**
+        // `log()` splices the front off at 400, so in a six-player war the
+        // length pins at 400, `read` pins at 400, and `slice(read)` returns
+        // nothing for the rest of the game. Every log-derived figure stopped
+        // counting partway through and reported a number near zero -- which
+        // is where "scattered 0.0 a game" came from, and that figure reached
+        // the design queue, a memory and a pull request before a counter
+        // placed *inside* the rule disagreed with it by three orders of
+        // magnitude.
+        //
+        // Anchored on the last entry **by reference** instead. A trim drops
+        // the oldest, never the newest, so the anchor is still in the window
+        // on the next half-turn and everything after it is new.
+        let anchor: GameState['log'][number] | null = null;
         const watch = (state: GameState) => {
-          for (const entry of state.log.slice(read)) {
+          const at = anchor ? state.log.indexOf(anchor) : -1;
+          const fresh = at >= 0 ? state.log.slice(at + 1) : state.log;
+          for (const entry of fresh) {
+            // Section 165: the two doors that are not `destroyUnit`.
+            if (entry.player === 0) {
+              if (/is caught in the blast/.test(entry.text)) blasted++;
+              if (/does not get up\./.test(entry.text)) clubbed++;
+            }
             if (/scatters rather than falling/.test(entry.text)) scattered++;
             if (/gathers again in/.test(entry.text)) gathered++;
-            if (/nowhere for it to gather|does not gather/.test(entry.text)) lost++;
+            if (/nowhere for it to gather|does not gather/.test(entry.text)) {
+              lost++;
+              lostTurnSum += state.turn;
+              if (anySiteYet) lostAfter++;
+              else lostBefore++;
+              // Who shut it. Asked of every Circle town they hold at the
+              // moment the message was written, which is the same half-turn.
+              const circleTowns = state.cities.filter(
+                (c) => c.owner === 0 && c.buildings.includes(REFORM_SITES[1]),
+              );
+              if (circleTowns.length === 0) lostNoCircle++;
+              for (const c of circleTowns) {
+                const on = state.units.filter((u) => u.x === c.x && u.y === c.y);
+                if (on.some((u) => u.owner !== 0)) blockedByEnemy++;
+                else if (on.length > 0) blockedByOwn++;
+              }
+            }
             if (/is counted as having attended/.test(entry.text)) guests++;
           }
-          read = state.log.length;
+          anchor = state.log[state.log.length - 1] ?? anchor;
+
+          // Anything of theirs that was on the board last look and is not now.
+          const now = new Set(state.units.map((u) => u.id));
+          for (const [id, type] of before) {
+            if (now.has(id)) continue;
+            deaths++;
+            if (unitType(type).base === 'effigy') effigyDeaths++;
+          }
+          before = new Map(
+            state.units.filter((u) => u.owner === 0).map((u) => [u.id, u.type as string]),
+          );
+
+          if (state.turn !== sampledTurn) {
+            sampledTurn = state.turn;
+            turns++;
+            const mine = state.cities.filter((c) => c.owner === 0);
+            const totems = mine.filter((c) => c.buildings.includes(REFORM_SITES[0])).length;
+            const circles = mine.filter((c) => c.buildings.includes(REFORM_SITES[1])).length;
+            if (totems > 0 && firstTotem === 0) firstTotem = state.turn;
+            if (circles > 0 && firstCircle === 0) firstCircle = state.turn;
+            if (totems + circles > 0) {
+              turnsBuilt++;
+              anySiteYet = true;
+              if (totems > 0) withTotemTurns++;
+              else {
+                circleOnlyTurns++;
+                if (reformSites(state, 0).length > 0) circleOnlyOpen++;
+              }
+            }
+            // The whole question, as one comparison: a site that is *built*
+            // against a site a spirit could actually gather in today.
+            if (reformSites(state, 0).length > 0) turnsOpen++;
+            if (!totemTech && state.players[0]?.techs.includes('anchor-totem')) totemTech = true;
+          }
+
           if (!hadSite && reformSites(state, 0).length > 0) {
             hadSite = true;
             firstSite = state.turn;
@@ -168,6 +369,31 @@ describe('what the Unbound actually do', () => {
           tally.firstSiteTurn += firstSite;
         }
         if (archon) tally.everArchon++;
+        if (firstTotem > 0) {
+          tally.everTotem++;
+          tally.firstTotemTurn += firstTotem;
+        }
+        if (firstCircle > 0) {
+          tally.everCircle++;
+          tally.firstCircleTurn += firstCircle;
+        }
+        if (totemTech) tally.everTotemTech++;
+        tally.turns += turns;
+        tally.turnsBuilt += turnsBuilt;
+        tally.turnsOpen += turnsOpen;
+        tally.lostBeforeAnySite += lostBefore;
+        tally.lostAfter += lostAfter;
+        tally.lostTurnSum += lostTurnSum;
+        tally.circleOnlyTurns += circleOnlyTurns;
+        tally.circleOnlyOpen += circleOnlyOpen;
+        tally.withTotemTurns += withTotemTurns;
+        tally.blockedByOwn += blockedByOwn;
+        tally.blockedByEnemy += blockedByEnemy;
+        tally.lostWithNoCircleStanding += lostNoCircle;
+        tally.deaths += deaths;
+        tally.effigyDeaths += effigyDeaths;
+        tally.blasted += blasted;
+        tally.clubbed += clubbed;
         for (const [side, n] of seen) {
           exorcistsOut.set(side, (exorcistsOut.get(side) ?? 0) + n);
         }
@@ -185,7 +411,7 @@ describe('what the Unbound actually do', () => {
     const n = seeds.length;
     const avg = (x: number) => (x / n).toFixed(1);
     const report = [
-      `# The Unbound, ${n} games`,
+      `# The Unbound, ${n} games (${which} seeds)`,
       '',
       `Levers as measured: failBase ${DISPERSAL.failBase}, sigil ${DISPERSAL.sigil}, ` +
         `ankh ${DISPERSAL.ankh}, floor ${DISPERSAL.failFloor}, party reach ${GUEST_LIST.reach}.`,
@@ -205,6 +431,52 @@ describe('what the Unbound actually do', () => {
       `ever fielded an Archon: ${tally.everArchon}/${n}`,
       `guests taken in by a Spirit Party: ${tally.guests}`,
       '',
+      '## the doorway: built, against actually open',
+      `a Totem ever stood: ${tally.everTotem}/${n}` +
+        (tally.everTotem
+          ? `, first on turn ${(tally.firstTotemTurn / tally.everTotem).toFixed(0)}`
+          : ''),
+      `a Circle ever stood: ${tally.everCircle}/${n}` +
+        (tally.everCircle
+          ? `, first on turn ${(tally.firstCircleTurn / tally.everCircle).toFixed(0)}`
+          : ''),
+      `ever learned the Totem's advance: ${tally.everTotemTech}/${n}`,
+      `turns with a site built: ${tally.turnsBuilt}/${tally.turns}` +
+        ` (${((100 * tally.turnsBuilt) / Math.max(1, tally.turns)).toFixed(0)}%)`,
+      `turns with one a spirit could use: ${tally.turnsOpen}/${tally.turns}` +
+        ` (${((100 * tally.turnsOpen) / Math.max(1, tally.turns)).toFixed(0)}%)`,
+      `so the doorway is shut on ${(
+        100 - (100 * tally.turnsOpen) / Math.max(1, tally.turnsBuilt)
+      ).toFixed(0)}% of the turns it exists`,
+      '',
+      '## which building was holding the door',
+      `turns with only Circles: ${tally.circleOnlyTurns}, of which open ` +
+        `${tally.circleOnlyOpen} (${(
+          (100 * tally.circleOnlyOpen) / Math.max(1, tally.circleOnlyTurns)
+        ).toFixed(0)}%)`,
+      `turns with a Totem standing: ${tally.withTotemTurns} (open by definition)`,
+      '',
+      '## how often they lose anybody at all',
+      `units of theirs that left the board: ${avg(tally.deaths)} a game ` +
+        `(${tally.deaths} over ${n})`,
+      `of those, Effigies, which never scatter: ${tally.effigyDeaths}`,
+      `of those, killed by a path that skips \`destroyUnit\` entirely: ` +
+        `${tally.blasted} blasted, ${tally.clubbed} clubbed ` +
+        `(${(((tally.blasted + tally.clubbed) * 100) / Math.max(1, tally.deaths)).toFixed(1)}%)`,
+      `against ${avg(tally.lost)} a game that reached the no-site branch`,
+      '',
+      '## and when the spirits actually died',
+      `at a loss, Circle towns blocked by one of their own: ${tally.blockedByOwn}`,
+      `at a loss, Circle towns blocked by somebody else's: ${tally.blockedByEnemy}`,
+      `losses with no Circle standing at all: ${tally.lostWithNoCircleStanding}`,
+      `lost before any site had ever been built: ${tally.lostBeforeAnySite}`,
+      `lost after one existed: ${tally.lostAfter}`,
+      `average turn of a loss: ${
+        tally.lost ? (tally.lostTurnSum / tally.lost).toFixed(0) : 'n/a'
+      }, against the first Circle around turn ${
+        tally.everCircle ? (tally.firstCircleTurn / tally.everCircle).toFixed(0) : 'n/a'
+      }`,
+      '',
       '## the answer to them, by side',
       ...[...exorcistsOut].map(
         ([side, count]) => `${side}: ${(count / n).toFixed(1)} standing at once, at the most`,
@@ -215,7 +487,11 @@ describe('what the Unbound actually do', () => {
     ].join('\n');
 
     if (!existsSync('tools/out')) mkdirSync('tools/out', { recursive: true });
-    writeFileSync('tools/out/unbound-probe.md', `${report}\n`, 'utf8');
+    writeFileSync(
+      held ? 'tools/out/unbound-probe-held-out.md' : 'tools/out/unbound-probe.md',
+      `${report}\n`,
+      'utf8',
+    );
     console.log(report);
   }, 1_800_000);
 });

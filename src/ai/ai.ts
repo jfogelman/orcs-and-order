@@ -75,6 +75,7 @@ import {
 import { rankBonus } from '../sim/combat';
 import { COWED, hasStatus } from '../sim/status';
 import { RUINS, expectedGuard, isWarden, standingRuins } from '../sim/ruins';
+import { faceAnUnbound, missingExorcismTech } from '../sim/exorcism';
 import { endingOpen, hasEndingPiece, isEndingPiece } from '../sim/endings';
 import { playerCities, playerUnits, unitAt, withRng } from '../sim/gamestate';
 import { buyUpgrade, upgradeBlocked, upgradeFee } from '../sim/upgrading';
@@ -2777,6 +2778,29 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
       return;
     }
   }
+  // Section 164: there is something on this map that does not stay dead, and
+  // we cannot yet field the one unit that makes it.
+  //
+  // **Situational, exactly like the boat above, and for the same reason.**
+  // The advance that unlocks an exorcist sits 23rd of 30 in the Kingdom's
+  // list, 28th of 32 in the Hive's, and is **in no list at all** for the
+  // Horde or for the Mystic's second, arming advance -- while a side learns
+  // about twenty advances in a game. Measured over twelve: the Hive fielded a
+  // Warden in **0** games and the Horde a Bone-Speaker in **0**.
+  //
+  // Reordering four priority lists would have bought that at the cost of
+  // changing what those factions research in **every** game, including the
+  // ones with no Unbound in them. This fires only when there is something to
+  // exorcise, and goes back to the list the moment there is not.
+  if (faceAnUnbound(state, player)) {
+    const needed = missingExorcismTech(player);
+    const match = needed ? options.find((t) => t.id === needed) : undefined;
+    if (match) {
+      setResearch(state, player, match.id);
+      return;
+    }
+  }
+
   for (const wanted of personality.techPriority) {
     const match = options.find((t) => t.id === wanted);
     if (match) {

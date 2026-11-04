@@ -736,11 +736,20 @@ function clubEffects(state: GameState, attacker: Unit, target: Unit): void {
         centre.y,
       ]);
     }
+    // Section 165: out through the one door, not around it.
+    //
+    // This used to splice each one straight out of `state.units` and log it,
+    // which skipped everything `destroyUnit` does on the way: an Unbound unit
+    // caught by a club **did not scatter**, was never offered to a Spirit
+    // Party, and was told *"does not get up"* -- the one sentence that
+    // faction's whole rule exists to make untrue.
+    //
+    // The `cause` argument is what makes this a replacement rather than an
+    // addition: `destroyUnit` logs `${name} ${cause}.`, so the line a player
+    // reads is the same line, and a spirit that comes apart instead gets the
+    // scatter line rather than both.
     for (const victim of killed) {
-      const i = state.units.indexOf(victim);
-      if (i >= 0) state.units.splice(i, 1);
-      log(state, `${unitType(victim.type).name} does not get up.`, 'bad', victim.owner,
-        undefined, [victim.x, victim.y]);
+      destroyUnit(state, victim, 'does not get up', attacker);
     }
   };
 
@@ -1161,11 +1170,16 @@ export function detonate(state: GameState, sapper: Unit): Unit[] {
     sapper.x,
     sapper.y,
   ]);
+  // Section 165, and see the note in `clubEffects`: the same hole, the same
+  // fix. The sapper is named as the killer, which is the argument `scatter`
+  // asks about -- a sapper is not an exorcist, so a spirit caught in a blast
+  // scatters, which is what the rule says should happen to it.
+  //
+  // `killed` is built before any of this runs and is iterated rather than
+  // `state.units`, so `destroyUnit` removing from the latter -- or spawning
+  // into it, which it can -- cannot disturb the walk.
   for (const victim of killed) {
-    const i = state.units.indexOf(victim);
-    if (i >= 0) state.units.splice(i, 1);
-    log(state, `${unitType(victim.type).name} is caught in the blast.`, 'bad', victim.owner,
-      undefined, [victim.x, victim.y]);
+    destroyUnit(state, victim, 'is caught in the blast', sapper);
   }
   return killed;
 }

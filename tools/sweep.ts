@@ -450,9 +450,26 @@ export function playGame(
   // rather than only seats 0 and 1 -- a latecomer takes whatever seat is free
   // and would have been counted as nobody.
   const sacks: PerSide = {};
-  let readLog = 0;
+  /**
+   * The last line already counted, held **by reference** rather than by index.
+   *
+   * An index does not survive a trim and the guard that was meant to catch one
+   * could not fire. `log()` splices the front off at 400 and leaves the length
+   * at exactly 400, so `before < readLog` -- the old test -- is false from the
+   * moment the log fills, `countCombat` iterates zero times, and **`combats`
+   * and `sacks` stop counting for the rest of the game.** A busy six-player
+   * map fills 400 entries well before turn a hundred, so both columns were
+   * reporting roughly the opening of each game and calling it the whole.
+   *
+   * A trim drops the oldest and never the newest, so an anchor held by
+   * reference is still in the window on the next half-turn and everything
+   * after it is new. Same shape as `hiveprobe.run.test.ts`, which got this
+   * right and whose version this is.
+   */
+  let anchor: GameState['log'][number] | null = null;
   const countCombat = () => {
-    for (let i = readLog; i < state.log.length; i++) {
+    const at = anchor ? state.log.lastIndexOf(anchor) : -1;
+    for (let i = at + 1; i < state.log.length; i++) {
       const entry = state.log[i];
       if (entry.kind === 'combat') combats++;
       if (entry.subject === RAIDED && entry.player !== null) {
@@ -460,7 +477,7 @@ export function playGame(
         if (who && !who.barbarian) sacks[who.faction] = (sacks[who.faction] ?? 0) + 1;
       }
     }
-    readLog = state.log.length;
+    anchor = state.log[state.log.length - 1] ?? anchor;
   };
   const sweepOwners = () => {
     for (const c of state.cities) {
@@ -472,10 +489,6 @@ export function playGame(
   sweepOwners();
   const budget = halfTurns ?? halfTurnsFor(state);
   for (let i = 0; i < budget && state.winner === null; i++) {
-    const before = state.log.length;
-    // The window slid if the log was trimmed while the turn ran; start again
-    // from whatever is still there rather than from an index that has moved.
-    if (before < readLog) readLog = 0;
     runAiTurn(state, state.activePlayer);
     endPlayerTurn(state);
     countCombat();

@@ -27,7 +27,19 @@ import type { City, GameState, Player } from '../src/model/types';
  */
 
 /** A town with everything learned, so the yard offers the whole catalogue. */
-function yard(faction: 'human' | 'unbound' | 'hivekin' = 'human'): {
+/**
+ * A city of `faction`'s, with everything researched and nothing standing.
+ *
+ * `alsoUnbound` seats a fifth faction beside them, which section 164's
+ * `exorcist` want needs: it is guarded on there being something to exorcise,
+ * so in a game without the Unbound it is correctly switched off and a
+ * reachability test run in one would be testing the guard rather than the
+ * want.
+ */
+function yard(
+  faction: 'human' | 'unbound' | 'hivekin' = 'human',
+  alsoUnbound = false,
+): {
   state: GameState;
   city: City;
   owner: Player;
@@ -38,7 +50,13 @@ function yard(faction: 'human' | 'unbound' | 'hivekin' = 'human'): {
     height: 20,
     barbarians: false,
     playerFaction: 'orc',
-    opponents: [faction],
+    opponents: alsoUnbound && faction !== 'unbound' ? [faction, 'unbound'] : [faction],
+    // The level with no stagger, because **a latecomer is not in
+    // `state.players` at all until it arrives** -- at any other level this
+    // game has two seats and the fifth faction is not one of them, so the
+    // `exorcist` want would read as switched off for the right reason and
+    // the wrong test.
+    ...(alsoUnbound ? { difficulty: 'hardest' as const } : {}),
   });
   state.terrain.fill('grass');
   state.units.length = 0;
@@ -76,11 +94,17 @@ describe('the standing wants', () => {
    * city builds first, which is a balance change wearing a refactor's
    * clothes, so it is pinned here rather than left to a reading of a comment.
    */
-  it('asks them in the order the four sections added them', () => {
+  it('asks them in the order the sections added them', () => {
+    // `reform-doorway` is last but one on purpose: it asks for the Anchor
+    // Totem and **falls through to `reform-site`** where a yard cannot build
+    // one, which is how "the Totem if you can, the Circle if you cannot" is
+    // expressed. The three above it keep the priority section 154 gave them.
     expect(STANDING_WANTS.map((w) => w.id)).toEqual([
       'burrower',
       'spy',
       'unseen-agent',
+      'exorcist',
+      'reform-doorway',
       'reform-site',
     ]);
   });
@@ -94,13 +118,17 @@ describe('the standing wants', () => {
     // would fail for the wrong reason.
     const whose: Record<string, 'human' | 'unbound' | 'hivekin'> = {
       burrower: 'hivekin',
+      // The one want that belongs to everybody *except* the Unbound: it is
+      // the answer to them, so it is asked of a side that has to find one.
+      exorcist: 'human',
+      'reform-doorway': 'unbound',
       'reform-site': 'unbound',
       spy: 'human',
       'unseen-agent': 'human',
     };
     for (const want of STANDING_WANTS) {
       const faction = whose[want.id] ?? 'human';
-      const { state, city, owner } = yard(faction);
+      const { state, city, owner } = yard(faction, want.id === 'exorcist');
       if (!want.when(state, owner)) {
         unreachable.push(`${want.id}: switched off in the shipped game`);
         continue;

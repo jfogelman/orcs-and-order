@@ -7,6 +7,13 @@ import { BURROW, burrows } from '../sim/burrow';
 import { SPY } from '../sim/spying';
 import { UNSEEN, goesUnseen } from '../sim/unseen';
 import { DISPERSAL, REFORM_SITES, dispersingSide, reformBuildings } from '../sim/dispersal';
+import {
+  EXORCISM,
+  couldExorcise,
+  exorcistOf,
+  exorcistsOf,
+  faceAnUnbound,
+} from '../sim/exorcism';
 
 /**
  * Things a side should keep a couple of, that nothing else will ever ask for.
@@ -131,14 +138,74 @@ export const STANDING_WANTS: StandingWant[] = [
     // it is -- all four of these are. It was never ahead of the diggers and
     // the spies, and moving it here would be a balance change wearing a
     // refactor's clothes.
+    /**
+     * The one unit that can end them, on the one map where that matters.
+     * Section 164.
+     *
+     * `UNBOUND_PLAN.md` makes exactly one promise about the faction --
+     * *"there is always a hard counter (exorcism), so 'hard to kill' never
+     * quietly becomes 'impossible to kill'"* -- and section 164 measured that
+     * promise having **no instance in a played game**: an exorcist killed
+     * **0 of 1535** of their units in twelve, was on the board for 7% of
+     * turns, and was **never once adjacent to a spirit.**
+     *
+     * Two links were broken and this is the second. The first is research,
+     * fixed in `chooseResearch`, which situationally takes the advance when
+     * there is an Unbound on the map. This is the build: the Hive learned
+     * `caste-warden` in one game of twelve and built a Warden in **none**,
+     * which is this file's whole reason for existing said a fifth time.
+     *
+     * Guarded on an Unbound actually being in the game, because the answer
+     * costs an advance and a soldier and against nobody it is a tax.
+     */
+    id: 'exorcist',
+    when: (state, player) => faceAnUnbound(state, player) && !!exorcistOf(player.faction),
+    have: (state, player) => exorcistsOf(state, player.id).length,
+    target: () => EXORCISM.aiWants,
+    pick: (offered) => {
+      const who = offered.units.find((u) => couldExorcise(u.id));
+      return unit(who);
+    },
+  },
+  {
+    /**
+     * A doorway that is open when it is needed. Section 163.
+     *
+     * Asked **before** `reform-site` below and falling through to it, which is
+     * the whole shape of the fix: build the Totem where one can be built at
+     * all, and the Circle where one cannot. `pick` returns null when this yard
+     * does not offer a Totem, and `wantedHere` moves on.
+     *
+     * Last-but-one rather than first, so the three wants above it keep the
+     * priority section 154 gave them. Only the two reform wants are ordered
+     * against each other here.
+     *
+     * Why a second want rather than a bigger `aiWants`: the two buildings are
+     * not interchangeable and a single count cannot say so. See
+     * `DISPERSAL.aiWantsTotem` for the twelve games that measured it --
+     * briefly, the door was open a third of the time in general and **never**
+     * at the moment a spirit fell, because their own soldiers were standing
+     * in it.
+     */
+    id: 'reform-doorway',
+    when: (_state, player) => DISPERSAL.ai && DISPERSAL.enabled && dispersingSide(player),
+    have: (state, player) =>
+      reformBuildings(state, player.id).filter((c) =>
+        c.buildings.includes(REFORM_SITES[0]),
+      ).length,
+    target: () => DISPERSAL.aiWantsTotem,
+    pick: (offered) => building(offered.buildings.find((b) => b.id === REFORM_SITES[0])),
+  },
+  {
     id: 'reform-site',
     when: (_state, player) => DISPERSAL.ai && DISPERSAL.enabled && dispersingSide(player),
     have: (state, player) => reformBuildings(state, player.id).length,
     target: () => DISPERSAL.aiWants,
     pick: (offered) => {
-      // The Totem first where both are offered. A Circle only works while
-      // nothing stands in its city and this AI garrisons every city, so a
-      // Circle is the one it can afford early rather than the one it wants.
+      // The Totem first where both are offered, which `reform-doorway` above
+      // now asks for outright; this stays as the tie-break for the *second*
+      // site. A Circle only works while nothing stands in its town, so it is
+      // the one this side can afford early rather than the one it wants.
       const sites = offered.buildings.filter((b) =>
         (REFORM_SITES as readonly string[]).includes(b.id),
       );
