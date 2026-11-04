@@ -119,6 +119,20 @@ interface Tally {
   deaths: number;
   /** Of those, the ones an Effigy -- which never scatters -- accounts for. */
   effigyDeaths: number;
+  /**
+   * **Deaths of theirs that never reached `destroyUnit` at all.** Section 165.
+   *
+   * `detonate` and `clubEffects` splice their victims straight out of
+   * `state.units`, so a spirit caught by a sapper going up or an ogre's club
+   * never scatters, is never offered to a Spirit Party, and is logged *"is
+   * caught in the blast"* or *"does not get up"* -- the second being the one
+   * sentence this faction's rule exists to make untrue.
+   *
+   * Counted off those two messages, filtered to their seat, because the
+   * messages are written with the victim's owner on them.
+   */
+  blasted: number;
+  clubbed: number;
 }
 
 const blank = (): Tally => ({
@@ -154,6 +168,8 @@ const blank = (): Tally => ({
   lostWithNoCircleStanding: 0,
   deaths: 0,
   effigyDeaths: 0,
+  blasted: 0,
+  clubbed: 0,
 });
 
 /** Exorcists standing, by side, which is the fairness promise as a number. */
@@ -200,6 +216,8 @@ describe('what the Unbound actually do', () => {
         let lostNoCircle = 0;
         let deaths = 0;
         let effigyDeaths = 0;
+        let blasted = 0;
+        let clubbed = 0;
         let before = new Map<number, string>();
         let archon = false;
         let scattered = 0;
@@ -237,6 +255,11 @@ describe('what the Unbound actually do', () => {
           const at = anchor ? state.log.indexOf(anchor) : -1;
           const fresh = at >= 0 ? state.log.slice(at + 1) : state.log;
           for (const entry of fresh) {
+            // Section 165: the two doors that are not `destroyUnit`.
+            if (entry.player === 0) {
+              if (/is caught in the blast/.test(entry.text)) blasted++;
+              if (/does not get up\./.test(entry.text)) clubbed++;
+            }
             if (/scatters rather than falling/.test(entry.text)) scattered++;
             if (/gathers again in/.test(entry.text)) gathered++;
             if (/nowhere for it to gather|does not gather/.test(entry.text)) {
@@ -369,6 +392,8 @@ describe('what the Unbound actually do', () => {
         tally.lostWithNoCircleStanding += lostNoCircle;
         tally.deaths += deaths;
         tally.effigyDeaths += effigyDeaths;
+        tally.blasted += blasted;
+        tally.clubbed += clubbed;
         for (const [side, n] of seen) {
           exorcistsOut.set(side, (exorcistsOut.get(side) ?? 0) + n);
         }
@@ -435,6 +460,9 @@ describe('what the Unbound actually do', () => {
       `units of theirs that left the board: ${avg(tally.deaths)} a game ` +
         `(${tally.deaths} over ${n})`,
       `of those, Effigies, which never scatter: ${tally.effigyDeaths}`,
+      `of those, killed by a path that skips \`destroyUnit\` entirely: ` +
+        `${tally.blasted} blasted, ${tally.clubbed} clubbed ` +
+        `(${(((tally.blasted + tally.clubbed) * 100) / Math.max(1, tally.deaths)).toFixed(1)}%)`,
       `against ${avg(tally.lost)} a game that reached the no-site branch`,
       '',
       '## and when the spirits actually died',
