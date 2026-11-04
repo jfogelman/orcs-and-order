@@ -13667,7 +13667,7 @@ the two sections meet. Neither number has been measured against the other.
 
 ---
 
-## 165. Two death paths skip the faction's own rule — QUEUED
+## 165. Two death paths skip the faction's own rule — SHIPPED
 
 `destroyUnit` is *"the one door out of the game"* and its comment says so:
 
@@ -13686,24 +13686,50 @@ the two sections meet. Neither number has been measured against the other.
 - and is logged **"does not get up"** — which is precisely the sentence this
   faction's rule exists to make untrue.
 
-Measured in section 163: **1726 of their units left the board against 1535 that
-reached `destroyUnit`.** The 191 difference is these two paths plus the
-disbands in `city.ts`, so it is a few per cent of deaths rather than a
-headline — but it is silent, and it is the same shape as the zero-health winner
-that section 155 found: a death that did not go through the one function every
-death is supposed to go through.
+### Measured first, and it is rarer than the gap suggested
 
-**Not simply "call `destroyUnit`".** Both splice *during* a loop over victims,
-and `destroyUnit` logs, scatters, invites and can spawn a unit — reentering it
-mid-blast is how a one-line fix becomes a different bug. The shape that
-probably works is to collect the dead and run them through `destroyUnit` after
-the blast is resolved, which is what `movement.ts` already does around
-`detonate`'s return value.
+The queued version of this entry read the section 163 figures as *"1726 left
+the board against 1535 that reached `destroyUnit`, the 191 difference is these
+two paths plus the disbands"*. **That was a wrong reading of the gap**, and
+counting the two log lines directly says so:
 
-**Also worth checking while in there:** both compute their damage from
-`unitType(victim.type).hp` rather than `maxHp(victim)`, so they ignore a raised
-copy's halved health and an upgrade's added health. Section 155 added `maxHp`
-for exactly this and these two were missed.
+> killed by a path that skips `destroyUnit` entirely: **4 blasted, 0 clubbed
+> (0.2%)** of 1730
+
+The other ~190 are not missed deaths at all. They are units leaving the board
+for reasons that are **not** deaths — a settler becoming a city in
+`city.ts`, a Princess becoming an heir, cargo going down with a ship — and
+every one of those is correctly outside `destroyUnit`. So there is no third
+silent door, which is the more reassuring half of the finding.
+
+That settles what kind of work this is: **a correctness fix with no balance
+consequence**, and no sweep beside it. It is still worth doing, because it is
+the same shape as the zero-health winner section 155 found — a death that did
+not go through the one function every death is supposed to go through — and
+that one sat unnoticed from section 11 until something finally made it fire.
+
+### The fix
+
+Both loops now call `destroyUnit(state, victim, cause, killer)` instead of
+splicing. The `cause` argument is what makes it a replacement rather than an
+addition: `destroyUnit` logs `${name} ${cause}.`, so a player reads the same
+line as before — and a spirit that comes apart instead reads the scatter line
+rather than both.
+
+The worry recorded when this was queued — *"both splice during a loop, and
+reentering `destroyUnit` mid-blast is how a one-line fix becomes a different
+bug"* — turned out not to bite, and the reason is worth keeping: **`killed` is
+built before any of it runs, and it is `killed` that is walked, not
+`state.units`.** So `destroyUnit` removing from the latter, or spawning into
+it, cannot disturb the iteration. Naming the sapper or the ogre as the
+`killer` also matters: that is the argument `scatter` asks about, and neither
+is an exorcist, so a spirit caught in a blast scatters, which is what the rule
+says should happen.
+
+**The `maxHp` note has moved.** Both do compute damage from
+`unitType(victim.type).hp`, but `maxHp` does not exist on `main` — it arrives
+with section 155, which is still in PR #172. On this branch there is nothing
+to fix; on that one there is, and it belongs there.
 
 ---
 

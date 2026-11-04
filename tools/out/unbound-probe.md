@@ -28,6 +28,7 @@ turns with a Totem standing: 1346 (open by definition)
 ## how often they lose anybody at all
 units of theirs that left the board: 144.2 a game (1730 over 12)
 of those, Effigies, which never scatter: 302
+of those, killed by a path that skips `destroyUnit` entirely: 4 blasted, 0 clubbed (0.2%)
 against 36.8 a game that reached the no-site branch
 
 ## and when the spirits actually died
