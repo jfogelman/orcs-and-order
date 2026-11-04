@@ -13414,10 +13414,35 @@ Fixed the same way, and the fix was already in the codebase:
 survives a trim because a trim drops the oldest and never the newest. That
 lesson was learned once and not carried across.
 
-**Not audited:** which recorded findings leant on `combats` or `sacks`. A
-comparison between two arms may survive if both under-counted alike; anything
-quoting an absolute fight count, or where the arms differed in *when* their
-wars happened, wants re-reading.
+**Measured afterwards, and it is worse than "under-counted".** Both readers
+were run over the **same twelve games** -- the fixed one and the old one side
+by side, so the gap cannot be divergence:
+
+> fights by the fixed reader: **4308**
+> fights by the old index reader: **249**
+> the old one saw **6%** of them; worst single game **3%**
+
+And the share is **not a constant**. It ranges from 3% to 15%, and it moves
+the wrong way:
+
+| fights actually | the old reader saw | share |
+|---|---|---|
+| 153 | 23 | **15%** |
+| 328 | 10 | **3%** |
+| 588 | 33 | 6% |
+
+More fighting fills the 400-entry window sooner, so the index pins sooner and
+a **busier game reports a smaller share of its own fights**. The bias is
+anti-correlated with the quantity being measured.
+
+So the hopeful reading -- *two arms under-counted alike, so the comparison
+survives* -- **is wrong**. An arm with more war could report **fewer**
+combats than an arm with less. Any finding that compared `combats` between
+arms could have been ordered backwards, not merely compressed.
+
+**Still not audited:** which recorded findings leant on `combats` or `sacks`.
+That is now a job worth doing rather than a caveat worth noting, and it is
+section 166.
 
 ### And then the actual question, which turned out to be real
 
@@ -13670,3 +13695,33 @@ the blast is resolved, which is what `movement.ts` already does around
 `unitType(victim.type).hp` rather than `maxHp(victim)`, so they ignore a raised
 copy's halved health and an upgrade's added health. Section 155 added `maxHp`
 for exactly this and these two were missed.
+
+---
+
+## 166. Re-read every finding that quoted a fight count — QUEUED
+
+Section 163 fixed the sweep's log reader and the follow-up measured what it had
+been doing: **the old reader saw 6% of fights**, and the share it saw ranged
+from 3% to 15% *in a way that moves against the quantity* — a busier game fills
+the 400-entry window sooner and reports a smaller fraction of its own war.
+
+That rules out the comfortable conclusion. Two arms did **not** under-count
+alike, and an arm with more fighting could report **fewer** combats than an arm
+with less, so a comparison could have come out backwards rather than merely
+small.
+
+**The job:** go through `DESIGN_QUEUE.md` for findings that quoted `combats`
+or `sacks` — the sweep's `fights` column and the raiding column — and mark each
+one as either unaffected (it never used them), still sound (it rests on wins,
+cities, units or advances), or **needs re-running**.
+
+Two that are already known to touch it, as starting points rather than the
+list: section 155's *"`better-part-of-valour` fired zero times in 2160
+fights"* — the zero is from a counter and stands, but the 2160 is a sweep
+figure — and section 114's archipelago work, which was read as *"expansion
+works, war does not"* and is a conclusion **about war** drawn partly from
+fight counts.
+
+Nothing is known to be wrong yet. What is known is that the instrument was
+wrong in a direction nobody allowed for, and the queue currently reads as
+though its numbers were sound.
