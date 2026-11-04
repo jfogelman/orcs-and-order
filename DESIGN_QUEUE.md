@@ -13681,6 +13681,10 @@ before this.
 Jeremy's, 2026-10-27, and explicitly **after every other item**. No work until
 the queue above it is clear.
 
+> **That condition is now met.** As of 2026-11-04 nothing above this is
+> outstanding: section 155 shipped, 162 to 168 are done, and section 154 is an
+> analysis rather than a task. This is planned below and ready to start.
+
 ### Two of the same side in one game
 
 Two Hordes on one map, told apart by colour and flag rather than by rules.
