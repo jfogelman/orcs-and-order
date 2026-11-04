@@ -56,6 +56,13 @@ describe('the Hive at the table', () => {
       // whether a truce is binding anything.
       let hiveLost = 0;
       let hiveLostAtPeace = 0;
+      // Section 167: the denominator. `hiveLostAtPeace` alone cannot say
+      // whether a treaty binds anything -- losses are low while bound partly
+      // because **very little of a game is spent bound**. These count the
+      // half-turns the Hive was on the board in each state, so the two can be
+      // compared as rates rather than as totals.
+      let hiveHalfTurnsBound = 0;
+      let hiveHalfTurnsFree = 0;
 
       for (const seed of set.seeds) {
         control();
@@ -101,7 +108,12 @@ describe('the Hive at the table', () => {
             const bound = talksWith(s, hive.id).some(
               (id) => s.diplomacy?.pairs?.[pairKey(hive.id, id)]?.peace,
             );
-            if (bound) hiveLostAtPeace += gone;
+            if (bound) {
+              hiveLostAtPeace += gone;
+              hiveHalfTurnsBound++;
+            } else {
+              hiveHalfTurnsFree++;
+            }
             before = now;
           }
           if (!hive) return;
@@ -150,6 +162,15 @@ describe('the Hive at the table', () => {
           `${(allCombats / Math.max(1, games)).toFixed(1)} fights a game, swung by [${swings}] | ` +
           `Hive units lost ${(hiveLost / Math.max(1, games)).toFixed(1)} a game, ` +
           `${(hiveLostAtPeace / Math.max(1, games)).toFixed(1)} of them while bound by a treaty`,
+      );
+      // Section 167: as rates, which is the only way the two are comparable.
+      const bar = (lost: number, turns: number) =>
+        turns === 0 ? 'never in that state' : `${(lost / turns).toFixed(3)} a half-turn`;
+      console.log(
+        `${name}: losses while BOUND ${bar(hiveLostAtPeace, hiveHalfTurnsBound)} ` +
+          `(${hiveHalfTurnsBound} half-turns) | while FREE ` +
+          `${bar(hiveLost - hiveLostAtPeace, hiveHalfTurnsFree)} ` +
+          `(${hiveHalfTurnsFree} half-turns)`,
       );
     }
   }, 900_000);

@@ -11168,6 +11168,14 @@ nothing to march *with*, which may be the whole of it.
 
 ## The Hive never swings (section 135 slice 3b)
 
+> **Corrected by section 167. The title of this subsection is false.** The
+> Hive swings **16.6 times a game** on the tuned seeds and **37.9** on the
+> held-out. The zero below came from a reader that stopped counting on turn
+> 68 of games the Hive enters around turn 100 -- it counted a faction from
+> turns before it existed. The identity evidence in the next paragraph (80 of
+> 108 seeds byte-identical) stands; everything drawn from the fight count does
+> not. Read section 167 instead of this, and see section 166 for why.
+
 Slice 3b gave the Hivekin a table and was measured flat: **80 of 108 seeds
 byte-identical**, the Hive's win count unchanged on every single seed (6/13
 against 6/13), and `fights` moving by exactly **+0.000** -- 2217 against 2217,
@@ -14740,25 +14748,104 @@ that got it right is the one the other three were eventually fixed to match.
 
 ---
 
-## 167. Does the Hive ever swing? — QUEUED
+## 167. Does the Hive ever swing? Yes, constantly — DONE
 
-Section 135 slice 3b concluded the Hivekin's diplomacy table binds nothing,
-and one of its two legs was a fight count showing **the Hive swinging zero
-times across twelve games**. Section 166 found that count was taken from turns
-1 to 68, and **the Hive arrives around turn 100**. The leg is void.
+Section 166 found that section 135 slice 3b's *"the Hive is p3, and it does not
+appear at all — zero swings across twelve games"* was taken from turns 1 to 68
+of games in which the Hive arrives around turn 100. This re-ran it with the
+reader fixed.
 
-The other leg stands and is state-derived: the probe walked the chain and
-found the Hive does sign treaties -- one of six games on the tuned seeds,
-three of six held-out, around turn 151-169, for the full twenty-turn term. So
-the question is no longer *"can it talk"* but *"does the talking stop
-anything"*, which needs the thing section 135 thought it had.
+### It swings, and the old figure was out by a factor of twenty-six
 
-**The job:** count swings per player with the fixed reader, over both seed
-sets, and specifically **after turn 68** so the Hive's own war is inside the
-window. Then ask the original question again: does a signed treaty move the
-Hive's fight count, and does the table bind anything?
+| a game | old reader | fixed |
+|---|---|---|
+| total fights, tuned | 14.8 | **391.6** |
+| total fights, held-out | 19.8 | **441.7** |
+| **the Hive's own swings, tuned** | **"does not appear at all"** | **16.6** |
+| **the Hive's own swings, held-out** | **"does not appear at all"** | **37.9** |
 
-`npm run hivetalk` is the probe that walked the chain, and it **had the trim
-bug** -- it is where the void swing count came from. Section 166 fixed its
-reader, so this is a run rather than a repair: the numbers it printed before
-that fix are the ones not to trust.
+So *"a treaty stops fighting, so a fight count that does not move by one is a
+treaty binding nothing"* is **not void but false**. There is a great deal of
+fighting, and the Hive is doing a sixth of it.
+
+### And the treaty still cannot be shown to bind anything — for a new reason
+
+The obvious next question is whether the Hive loses less while bound. As a
+rate, which is the only way the two are comparable:
+
+| | bound | free |
+|---|---|---|
+| tuned | 0.070 a half-turn (**115** half-turns) | 0.064 (8305) |
+| held-out | 0.068 (**103**) | 0.082 (8338) |
+
+The two sets **disagree in sign** — bound is worse on the tuned seeds and
+better on the held-out — so there is no effect here to read, and about eight
+losses on each side of it.
+
+**But the denominator is the finding.** The Hive spends **1.3% of its
+existence bound by a treaty**: 115 half-turns of 8420, and 103 of 8441.
+
+### Which moves the problem, and makes it a better one
+
+Section 135 concluded *the table binds nothing*. The evidence for that was
+void, and the replacement evidence says something different and more useful:
+**the table is not failing to bind, it is failing to be used.**
+
+| | tuned | held-out |
+|---|---|---|
+| the Hive existed | 9/9 | 9/9 |
+| could talk | 9/9 | 9/9 |
+| had fought lately | 9/9 | 9/9 |
+| wanted peace past the bar | 9/9 | 8/9 |
+| made an offer | 9/9 | 8/9 |
+| **signed** | **2/9** | **3/9** |
+| first signature | turn 86 | turn 115 |
+
+Every rung of the ladder holds until the last one. They can talk, they have a
+reason to, they want it enough, they ask — and it is agreed in a quarter to a
+third of games, late, for twenty turns. A rule that applies to 1.3% of a
+faction's life cannot be measured and cannot matter, whichever way it would
+have gone.
+
+### What this does not say
+
+It does **not** say the table should bind harder, or that peace should be
+easier to reach. Those are design questions and the numbers above do not
+answer either. What the numbers say is only that **the current shape is
+unmeasurable**: any change to what a treaty *does* will be invisible until a
+treaty is in force for more than a hundredth of a game.
+
+So the lever worth looking at first is **how often and how early one is
+signed**, not what it is worth once signed. `DIPLOMACY_AI.asks` at 0.35 is the
+bar they clear 9 times in 9; whatever stops the other side agreeing is on the
+far side of that and has not been probed.
+
+### Still open
+
+- **Why does an offer fail?** Nine offers, two signatures, on the tuned set.
+  The probe walks the asking side's chain and stops where the answering side
+  begins. That is the next probe, and it is section 168.
+- The `sacks` column still has the section 166 provenance and is unaudited.
+
+---
+
+## 168. Why does an offer fail? — QUEUED
+
+Section 167 walked the Hive's side of the peace ladder and found every rung
+holding until the last: in nine games of nine they exist, can talk, have fought
+lately, want peace past `DIPLOMACY_AI.asks`, and **make an offer** -- and in
+two of nine it is signed.
+
+`tools/hivetalkprobe.run.test.ts` is built around the **asking** side and stops
+where the answering side begins. So the seven failures are unexplained, and
+they are the whole of why a treaty covers 1.3% of the Hive's existence.
+
+**The job:** instrument the reply. Who is being asked, what do they think of
+the asker at that moment, which test turns the offer down, and is it the same
+test every time. Then the design question -- whether that bar is in the right
+place -- has something under it.
+
+Worth knowing before starting: nobody has established that a treaty *should*
+be commoner. It may be right that the Hive is refused by almost everybody
+almost always. What is wrong today is only that the refusal is unexamined, so
+neither the rule nor its absence can be argued for.
