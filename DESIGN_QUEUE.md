@@ -13494,42 +13494,142 @@ Run the second set with `PROBE_SEEDS=held-out`, which the probe now takes.
   is not guaranteed. 1726 units left the board against 1535 that reached
   `destroyUnit`; the 191 difference is these paths and the disbands.
 
-## 164. The hard counter has never once fired — QUEUED
-
-**An exorcist killed 0 of 1535 Unbound units in twelve games.** Counted inside
-`scatters()` in section 163, so it is not a log-reader artefact like the figure
-it replaced.
+## 164. The hard counter has never once fired — SHIPPED
 
 `UNBOUND_PLAN.md` builds the faction on one rule and makes **one promise about
 it**: *"there is always a hard counter (exorcism), so 'hard to kill' never
 quietly becomes 'impossible to kill.'"* Section 150 shipped the counter first,
-explicitly for that reason. In a played game it does not exist.
+explicitly for that reason. Section 163 counted it used **0 times in 1535** of
+their deaths — a counter inside `scatters()`, not a log-reader figure, since
+that section is about one of those.
 
-It is not that the units are missing. Exorcists stand in most games — a Paladin
-in 1.0 games out of 12 at the high-water mark, a Mystic in 0.4, a Warden in
-0.1. They simply never **meet a spirit and beat it**. Three candidate reasons,
-none measured:
+`tools/exorcistprobe.run.test.ts` asks the four questions between *the unit
+exists* and *a spirit was sent back*, every one of them off game state. **All
+four links were broken**, which is why no single guess would have fixed it.
 
-- **Nobody builds many.** A Paladin is an expensive soldier whose special
-  property is invisible to `chooseProduction`, which is the fifth instance of
-  the pattern `src/ai/wants.ts` was created to retire. The want list has no
-  entry for an exorcist.
-- **They are never in the right place.** One Paladin in an empire cannot be at
-  the fight that matters, and nothing routes it towards the Unbound.
-- **The AI does not know what it is for.** `attackOdds` sees a soldier. Nothing
-  in the target search prefers an Unbound unit when the attacker happens to be
-  the one thing that can end it.
+### What the probe found
 
-Worth knowing before any of that is built: at **89% return**, the mechanic the
-counter is meant to counter is working as designed. This is not a faction that
-is quietly unbeatable — they are beaten by having their cities taken like
-anybody else. What is missing is the *answer the bible promised*, which is a
-design promise rather than a balance problem.
+| who | side | advance learned | ever built | first |
+|---|---|---|---|---|
+| Paladin | Kingdom | 7/12 | 3/12 | turn 231 |
+| Warden | Hive | **1/12** | **0/12** | — |
+| Bone-Speaker | Horde | **2/12** | **0/12** | — |
+| Mystic | Folk | 6/12 (**armed 2/12**) | 3/12 | turn 172 |
 
-**First move is a probe, not a fix.** Count, per game: exorcists built, turns
-an exorcist is within reach of a spirit, fights an exorcist takes against one,
-and what it would have taken for `exorcises()` to be asked at all. Section 163
-left the counters in place to make that cheap.
+> armed exorcist on the board: **222 of 2978 turns (7%)**
+> within 3 of a spirit: **1 turn**
+> **adjacent to a spirit: 0 turns, ever**
+> spirit deaths with one beside: **0 of 2005**
+
+The Hive and the Horde are in every game and **never once build theirs**. The
+Mystic learns its unit advance half the time and the advance that *arms* it
+twice in twelve — four games fielded a Mystic that could not do the one thing a
+Mystic is for. The Paladin, when it comes, comes on turn 231 of about 248.
+
+**They do not lose the fight. They are never in the room.**
+
+### Why: the lists, and the chooser
+
+| side | unlocking advance | where it sits |
+|---|---|---|
+| Kingdom | `run-you-through` | 23rd of 30 |
+| Hive | `caste-warden` | 28th of 32 |
+| Horde | `bone-speaker` | **in no list at all** |
+| Folk | `signature-mystic` | 8th of 26 |
+| anyone | `mystic-exorcism` | **in no list at all** |
+
+A side learns about twenty advances in a game, so 23rd and 28th are past the
+end of it. And `chooseProduction` ranks a Paladin on attack, health and price
+and cannot see the one property it is bought for — the fifth instance of the
+thing `src/ai/wants.ts` exists to retire.
+
+### The fix, in two pieces because there were two breaks
+
+**Research — a situational override in `chooseResearch`.** There was already a
+precedent in that function: when somebody is stranded and nobody can build a
+boat, the boat jumps the list. This is the same shape. When there is an Unbound
+on the map and this side cannot yet field an **armed** exorcist, that advance
+jumps the list.
+
+Chosen over reordering four priority lists, and the reason matters: two of the
+advances are **in no list at all**, so reordering could not have reached them,
+and moving the other two up would change what the Kingdom and the Hive research
+in **every** game, including the ones with no Unbound in them. This fires only
+when there is something to exorcise.
+
+**Build — a standing `exorcist` want.** Guarded on the same condition, because
+against nobody the answer is a tax.
+
+Both read off data rather than adding a list. `exorcistOf` matches `EXORCISTS`
+against the creature table — the bible's *"exactly one exorcism-capable unit"*
+per faction makes the first match the only match — and `missingExorcismTech`
+reads `TECHS` for whichever advance unlocks or arms it. **A sixth faction gets
+all of this the day it is given an exorcist.**
+
+### Measured, twelve games
+
+| | before | after |
+|---|---|---|
+| Warden built | **0/12** | **6/12** |
+| Bone-Speaker built | **0/12** | **5/12** |
+| Mystic armed | 2/12 | **6/12** |
+| Paladin built | 3/12, turn 231 | 6/12, turn 177 |
+| armed exorcist on the board | 7% of turns | **42%** |
+| within 3 of a spirit | 1 turn | **416 (14%)** |
+| adjacent to a spirit | **0 turns** | **134 (4%)** |
+| spirit deaths with one beside | **0 of 2005** | **86 of 2015** |
+
+**And it did not break the faction it counters.** Accounting their non-Effigy
+deaths across the twelve:
+
+| | counter broken | counter working |
+|---|---|---|
+| units of theirs that left the board | 1726 | 1730 |
+| scattered | 1048 | 1046 |
+| died with no site | 292 | 329 |
+| **killed outright by an exorcist** | **~0** | **~53** |
+| came back, of those that scattered | 88.9% | **89.2%** |
+
+Roughly **four and a half spirits a game now die for good** where none did, and
+the mechanic is otherwise untouched: the same number come apart and the same
+share gather again. Their cities and units are up a little, which is read as
+divergence rather than effect — the arms are different games.
+
+**The held-out set agrees**, and a shade more strongly:
+
+| after the fix | tuned | held-out |
+|---|---|---|
+| Warden built | 6/12 | **7/12** |
+| Bone-Speaker built | 5/12 | **7/12** |
+| within 3 of a spirit | 14% of turns | 16% |
+| adjacent to a spirit | 4% (134) | **6% (175)** |
+| spirit deaths with one beside | 86/2015 | **110/1824** |
+
+Worth noticing in that table: on the held-out seeds *learned* and *built* are
+the **same number** for the Warden, the Bone-Speaker and the Mystic. The want
+buys one the turn it can, which is what a want that the chooser could never
+see looks like once it is declared.
+
+**One seed set for the balance columns**, which were measured on the tuned
+set only. The *existence* figures needed no second set anyway: the Horde
+building nought Bone-Speakers in twelve games is a consequence of
+`bone-speaker` being in no priority list, which is a fact about the list and
+not about the seeds.
+
+### Worth knowing before section 155 merges
+
+On this branch `exorcises()` is a **certainty**. PR #172 turns it into a
+**0.75 roll** with two Hive Warden upgrades buying it back up. So the day that
+merges, this counter fires about a quarter less often than measured here, and
+the two sections meet. Neither number has been measured against the other.
+
+### Still open
+
+- **Nothing routes an exorcist towards a spirit.** It is built now and it is
+  in the war now, but `nearestEnemyTarget` sees a soldier: 4% of turns adjacent
+  is contact, not a hunt. Whether that wants fixing is a design question — a
+  counter that seeks its quarry is a different promise from one that exists.
+- **`EXORCISM.aiWants` is 1 and unmeasured** against 2.
 
 ---
 

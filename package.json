@@ -22,7 +22,8 @@
     "spyprobe": "vitest run --config vitest.sweep.config.ts tools/spyprobe.run.test.ts",
     "contactprobe": "vitest run --config vitest.sweep.config.ts tools/contactprobe.run.test.ts",
     "hivetalk": "vitest run --config vitest.sweep.config.ts tools/hivetalkprobe.run.test.ts",
-    "poses": "vitest run --config vitest.sweep.config.ts tools/poses.run.test.ts"
+    "poses": "vitest run --config vitest.sweep.config.ts tools/poses.run.test.ts",
+    "exorcistprobe": "vitest run --config vitest.sweep.config.ts tools/exorcistprobe.run.test.ts"
   },
   "devDependencies": {
     "jsdom": "^30.1.2",
