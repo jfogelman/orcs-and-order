@@ -13676,7 +13676,7 @@ cannot afford Recruit"* and *"there is nobody to ask"* are three different
 claims that all look like a low win rate, and only one of them was testable
 before this.
 
-## 158. More than one of a faction, and where the next ones come from — QUEUED
+## 158. More than one of a faction, and where the next ones come from — PLANNED
 
 Jeremy's, 2026-10-27, and explicitly **after every other item**. No work until
 the queue above it is clear.
@@ -13706,6 +13706,131 @@ So the real shape of this item is **a side identity that is not a faction
 id** -- a seat with a faction, a colour, a name list and a flag -- and most of
 the work is finding every place that currently says `FactionId` and means
 "this player".
+
+### Jeremy's rulings, 2026-11-04 — and they settle most of the scope
+
+**Two duplicates, both named.** The second Horde is **The Unfriendly
+Neighborhood Horde**; the second Kingdom is **The Glowing Kingdom of Gram**.
+The other three do not duplicate — *"too specific"* — so the ceiling is
+**seven sides**, not *n* of anything.
+
+**The twins share a roster and a personality**, and diverge in two ways:
+
+- **Their own upgrade paths**, which costs nothing: section 155's branch lock
+  lives in `researchableTechs` and is already empire-wide rather than
+  faction-wide, so two Hordes pick different roads for free.
+- **Their own attitude to their own kind.** The Kingdoms are *"more likely to
+  ally with another human faction against others, but will struggle over
+  nearby resources they might want and will be sneaky about it"*. The Hordes
+  have *"a similar feeling, but much more likely to turn on each other"*.
+
+**And the game gets bigger**: larger maps for a seven-sided game, and a turn
+limit that scales with how many sides are in it.
+
+### Seats and factions, which is the whole question
+
+This entry was written assuming the hard part is **a side identity that is not
+a faction id**, and that *"most of the work is finding every place that
+currently says `FactionId` and means 'this player'"*. Measured, that is not
+where the work is.
+
+**A seat is a player in this game.** `Player.id`, an index into
+`state.players`. It owns the cities, the units, the gold, the advances and the
+diplomacy. Everything that *happens* belongs to a seat.
+
+**A faction is a lookup key for definitions.** `FactionId` indexes `FACTIONS`,
+`PERSONALITIES`, the palace chassis and the perk table — all **static design
+data**. Nothing a faction keys is per-game state.
+
+**The game is already seat-based.** Diplomacy pairs are
+`pairKey(a: number, b: number)`. `Player` already carries its own `name`
+("The Bleeding Skull Horde") and its own leader name. The one-player-per-
+faction arrangement is a **convention, not a structural assumption**.
+
+### The two shapes, with what each actually costs
+
+**A. Twin factions** — `orc-b` and `human-b` as new `FactionId`s, sharing
+roster and personality by pointing at the originals.
+
+- Every `Record<FactionId, …>` gains two entries. **The compiler demands it**
+  — 15 places in `src/` — so this part is tedious and safe.
+- The **15 rules written `faction === 'orc'` or `'human'`** must match both
+  twins, and here **the compiler cannot help**. A missed one is a rule that
+  silently skips the second Horde. (The other 29 such rules are hivekin's and
+  unbound's, which do not duplicate, so they are untouched.)
+- **The art.** `art_src/factions/<faction>/` is a per-faction tree and palace
+  art resolves through `palaceArt(faction, …)`. A new id wants its own folder
+  or an aliasing layer. **This is the cost that decides it.**
+
+**B. Twin seats** — two players share `faction: 'orc'`.
+
+- `Player.color` becomes a field; it comes from `FACTIONS[f].color` today. The
+  name is already per-seat.
+- City names need a per-seat cursor into the shared list, or a second list.
+  `nextCityName` already falls back to "Outpost 7" when one runs out.
+- `PerSide` keys by seat instead of faction — **36 uses, all in
+  `tools/sweep.ts`, no game code**. Two Hordes summed into one column is a
+  report bug, not an engine one.
+- The **13 `.find(p => p.faction === 'x')`** singular lookups — *"the Hive
+  player"* — become explicit. **One is in `src/sim/hivekin.ts`; the other
+  twelve are probes.**
+- **Roster, personality, palace, perks and all the art are shared for free**,
+  because they are still looked up by `'orc'`.
+
+### Recommended: B, twin seats
+
+The first draft of this plan argued for A on the grounds that it avoided
+reworking identity. **That was wrong, and measuring it is what showed so**:
+the identity rework is mostly already done, and A duplicates the art tree,
+which is the one thing in this project that reliably costs real effort.
+
+Jeremy's design points the same way. Under B, *"same kind"* is just
+`a.faction === b.faction` — **no new concept at all**, where A would have to
+invent one and then keep 15 hand-written rules in step with it.
+
+### What the kin-affinity costs, in the sum section 168 just mapped
+
+A term in `wantPeace` keyed on whether the other side shares your faction,
+beside `DIPLOMACY_AI.lean`:
+
+- **Kingdoms**: positive and persistent — they prefer each other to outsiders.
+- **Hordes**: positive early and souring with proximity or time — *"much more
+  likely to turn on each other"*.
+
+That is a field and a hook, and section 168 has already measured the sum it
+drops into, so it can be argued about before it is built rather than after.
+
+**The harder half is "sneaky about nearby resources".** Nothing in the game
+models wanting a *specific tile* from a *specific rival* — borders are
+computed from city positions and nobody has an opinion about them. That is its
+own item and should not be smuggled into this one.
+
+### Map size and turn count: the numbers are already close
+
+| | tiles | per side |
+|---|---|---|
+| 5 on normal (64×48), today's default | 3,072 | 614 |
+| **7 on large (88×60)** | **5,280** | **754** |
+| 7 on normal | 3,072 | 439 |
+
+**Large already houses seven at a better density than five-on-normal gives
+today**, so a "huge" option is comfort rather than a blocker.
+
+The turn limit is already a text input defaulting to 300, so a longer game is
+available now. **Scaling the default with the number of sides** is the real
+proposal, and section 154's second item independently argues for it: three
+quarters of games already end on the turn limit, and seven sides will make
+that worse rather than better.
+
+### Still to decide before building
+
+- **Do the twins differ at the table beyond kin-affinity?**
+  `DIPLOMACY_AI.lean` is per-faction, so under B both Hordes share one lean.
+  If the Unfriendly Neighborhood Horde should be *generally* touchier and not
+  only touchier toward its twin, lean has to move to the seat as well.
+- **Who gets the original art?** Two Hordes share one sprite set and are told
+  apart by colour. That is the point of B, but it should be a decision rather
+  than a discovery on the first screenshot.
 
 ### Faction ideas, asked of me
 
