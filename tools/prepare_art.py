@@ -763,7 +763,32 @@ def trim_and_square(img: Image.Image, size: int) -> Image.Image:
 # be called.
 # "2x2" describes how the frames are laid out, which is worked out from the
 # picture, not from the name.
-REROLL_WORDS = ("magenta", "bg", "v2", "v2.1", "v3", "redo", "reroll", "new", "2x2")
+REROLL_WORDS = (
+    "magenta",
+    "bg",
+    # A re-roll onto a green key rather than a magenta one. The established
+    # form is parenthesised -- "The Heir (green bg).jpg" -- and the bare
+    # suffix "naiad green.jpg" is what a drop actually arrives as, so both
+    # have to collapse onto the base name.
+    #
+    # Without this the bare form reads as a *different creature*: a run
+    # produced `naiad-green.png` beside an untouched `naiad.png`, nineteen
+    # files of it, and reported no problem at all -- the old art winning
+    # silently, which is the failure this list exists to stop.
+    #
+    # **The one hazard.** A creature genuinely called green would lose the
+    # word: "green dragon.jpg" would become "dragon.jpg". Nothing in the game
+    # is, and the list is explicitly for words no creature can be called, but
+    # that is the line to re-read if a name ever goes missing.
+    "green",
+    "v2",
+    "v2.1",
+    "v3",
+    "redo",
+    "reroll",
+    "new",
+    "2x2",
+)
 
 
 def normalise_stem(stem: str) -> tuple[str, str]:
