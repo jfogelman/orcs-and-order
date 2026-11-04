@@ -65,14 +65,26 @@ describe('the Hive at the table', () => {
         let sawWant = false;
         let sawOffer = false;
         let sawPeace = false;
-        let readLog = 0;
+        let anchor: GameState['log'][number] | null = null;
         let before = new Set<number>();
         playGame(seed, undefined, (s: GameState) => {
           const hive = s.players.find((p) => p.faction === 'hivekin' && p.alive);
-          // Counted as it happens and from an index, because `log()` keeps only
-          // the last 400 entries -- the warning `playGame` carries about
-          // reading fights off the tail.
-          for (let i = readLog; i < s.log.length; i++) {
+          // **Anchored on the last line seen, by reference.** Section 166.
+          //
+          // This read forward from an **index**, with a comment saying it did
+          // so because `log()` keeps only the last 400 entries -- which is the
+          // right worry and the wrong fix. The length pins at 400, the index
+          // pins at 400, and the walk stops for the rest of the game.
+          //
+          // That is how this probe reported the Hive swinging **zero times in
+          // twelve games**, which section 135 slice 3b read as a treaty
+          // binding nothing. The log fills on **turn 68** and the Hive arrives
+          // around **turn 100**: the count ended before the faction began.
+          //
+          // A trim drops the oldest and never the newest, so an anchor held by
+          // reference survives it. Same shape as `hiveprobe.run.test.ts`.
+          const at = anchor ? s.log.lastIndexOf(anchor) : -1;
+          for (let i = at + 1; i < s.log.length; i++) {
             const e = s.log[i];
             if (e.kind !== 'combat') continue;
             allCombats++;
@@ -80,7 +92,7 @@ describe('the Hive at the table', () => {
               swungBy.set(e.player, (swungBy.get(e.player) ?? 0) + 1);
             }
           }
-          readLog = s.log.length;
+          anchor = s.log[s.log.length - 1] ?? anchor;
           if (hive) {
             const now = new Set(s.units.filter((u) => u.owner === hive.id).map((u) => u.id));
             let gone = 0;

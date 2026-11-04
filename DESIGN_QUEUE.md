@@ -14629,30 +14629,136 @@ same two functions, neither knowing about the other.
 
 ---
 
-## 166. Re-read every finding that quoted a fight count — QUEUED
+## 166. Re-read every finding that quoted a fight count — DONE
 
-Section 163 fixed the sweep's log reader and the follow-up measured what it had
-been doing: **the old reader saw 6% of fights**, and the share it saw ranged
-from 3% to 15% *in a way that moves against the quantity* — a busier game fills
-the 400-entry window sooner and reports a smaller fraction of its own war.
+Section 163 fixed the sweep's log reader; the follow-up measured that the old
+one saw **6% of fights**, biased against busy games. This is the audit that
+left behind: which recorded findings leant on it, and which of them move.
 
-That rules out the comfortable conclusion. Two arms did **not** under-count
-alike, and an arm with more fighting could report **fewer** combats than an arm
-with less, so a comparison could have come out backwards rather than merely
-small.
+### First, what the column actually was
 
-**The job:** go through `DESIGN_QUEUE.md` for findings that quoted `combats`
-or `sacks` — the sweep's `fights` column and the raiding column — and mark each
-one as either unaffected (it never used them), still sound (it rests on wins,
-cities, units or advances), or **needs re-running**.
+Not "fights, undercounted". The old reader stopped the moment `log()` began
+trimming at 400 entries, so the question is *when does that happen*. Measured
+over the same twelve games:
 
-Two that are already known to touch it, as starting points rather than the
-list: section 155's *"`better-part-of-valour` fired zero times in 2160
-fights"* — the zero is from a counter and stands, but the 2160 is a sweep
-figure — and section 114's archipelago work, which was read as *"expansion
-works, war does not"* and is a conclusion **about war** drawn partly from
-fight counts.
+> the log first held 400 entries on turn **68** on average — 65 to 76, in
+> **12 of 12 games** — while those games ran 167 to 301 turns.
 
-Nothing is known to be wrong yet. What is known is that the instrument was
-wrong in a direction nobody allowed for, and the queue currently reads as
-though its numbers were sound.
+So every `fights` figure in this document is **fights in roughly turns 1–68**,
+and the window is *shorter* in a busier game because its log fills sooner. It
+is not a scaled version of the whole-game count; it is a different quantity
+with a ragged edge. `tools/out/window-check.md` has the per-seed detail.
+
+That gives the rule the rest of this audit runs on:
+
+| the claim | what it is now |
+|---|---|
+| an absolute figure, "N fights a game" | **wrong by ~16x**, and it means the opening quarter |
+| a reported **rise** in fights between arms | **conservative** — the real rise is at least that |
+| a reported **fall** | **unreliable** — a busier arm reports fewer |
+| a figure about something that happens **after turn 68** | **incapable of being anything but zero** |
+
+### One finding is an artefact, and it is not a small one
+
+**Section 135 slice 3b: "the Hive never swings."** The table read
+
+> `tuned 14.8 fights a game, swung by [p0 2.7, p1 8.5, p2 3.7]` — "p0 is the
+> Horde, p1 the Kingdom, p2 the wilds. **The Hive is p3, and it does not
+> appear at all.** Zero swings across twelve games."
+
+**The Hive arrives around turn 100. The window shut on turn 68.** That zero was
+never capable of being anything else: it is a count of a faction taken entirely
+from turns before the faction exists.
+
+The conclusion drawn from it — that the Hivekin's diplomacy table binds nothing
+— may still be true. The probe beside it walked the chain and found the Hive
+signs treaties in one of six tuned games and three of six held-out, which is
+state-derived and stands. But **the evidence that it never fights is void**,
+and "a treaty stops fighting, so a fight count that does not move by one is a
+treaty binding nothing" rested on it. Queued as section 167.
+
+### One finding is strengthened
+
+**Section 155: "`better-part-of-valour` fired zero times in 2160 fights."** The
+zero came from a counter and stands. The denominator did not: 2160 was a sweep
+figure, so the real number of fights those games contained is **something like
+thirty-five thousand**. The rule was deader than recorded, not less dead.
+
+### Two kinds of claim that survive untouched
+
+**Identity checks.** Section 135's *"`fights` moving by exactly +0.000 — 2217
+against 2217, differing in not one seed"* is valid **regardless of the bug**:
+identical games produce identical counts under either reader, and the real
+evidence there was 80 of 108 seeds byte-identical anyway.
+
+**Every conclusion that rests on something else.** This is most of them. The
+roads arc, the keeper-in-every-city disaster, the calm-5 correction, the
+Hivekin starting budget — each puts `fights` in a table of six or seven
+columns beside wins, cities, population, advances and captures, and the
+conclusion is carried by those. Spot-checking the four with p-values on
+`fights`:
+
+| finding | what it concluded from | the `fights` row |
+|---|---|---|
+| roads help the AI | cities +1.19, population +9.3 | −4.8, unreliable (a fall) |
+| a keeper in every city is a disaster | **36 games flipped** to the Kingdom | +20.5, conservative (a rise) |
+| section 113's correction | 24 games flipped, p = 0.041 | −2.7, unreliable |
+| calm 5 | Horde 65% → 47% | −4.12, unreliable |
+
+**No conclusion in this document is overturned by the reader bug except the
+Hive's.** That is the result, and it is a better one than the measurement
+deserved — the queue has been in the habit of reading the whole table rather
+than the one column, and that habit is what saved it.
+
+### What to do with the numbers that are wrong
+
+Not delete them. Every `fights` figure in this document now means *"fights in
+the opening sixty-eight turns, measured with a ragged edge"*, which is still a
+fact about the game. They are left in place with this section to read them
+against, rather than rewritten into a false tidiness — and the sweeps that
+produce new ones now count properly.
+
+### And a third instance of the reader, found by asking where the number came from
+
+The swing count came from `tools/hivetalkprobe.run.test.ts`, which read
+forward from an index with a comment saying it did so *"because `log()` keeps
+only the last 400 entries"* — the right worry and the wrong fix, for the third
+time in this codebase. **Fixed here**, anchored by reference like the others.
+
+That makes four readers, three of which were wrong: `sweep.ts`,
+`unboundprobe`, `hivetalkprobe` broken; `hiveprobe` correct all along. The one
+that got it right is the one the other three were eventually fixed to match.
+
+### Still open
+
+- **Section 167**: re-run section 135 slice 3b's swing count — the probe is
+  fixed, so it is a run rather than a repair — and find out whether the Hive
+  fights.
+- The `sacks` column has the same provenance and has not been spot-checked.
+  It appears in section 113's difficulty table and section 115's raider work,
+  both of which read it beside wins and cities rather than alone.
+
+---
+
+## 167. Does the Hive ever swing? — QUEUED
+
+Section 135 slice 3b concluded the Hivekin's diplomacy table binds nothing,
+and one of its two legs was a fight count showing **the Hive swinging zero
+times across twelve games**. Section 166 found that count was taken from turns
+1 to 68, and **the Hive arrives around turn 100**. The leg is void.
+
+The other leg stands and is state-derived: the probe walked the chain and
+found the Hive does sign treaties -- one of six games on the tuned seeds,
+three of six held-out, around turn 151-169, for the full twenty-turn term. So
+the question is no longer *"can it talk"* but *"does the talking stop
+anything"*, which needs the thing section 135 thought it had.
+
+**The job:** count swings per player with the fixed reader, over both seed
+sets, and specifically **after turn 68** so the Hive's own war is inside the
+window. Then ask the original question again: does a signed treaty move the
+Hive's fight count, and does the table bind anything?
+
+`npm run hivetalk` is the probe that walked the chain, and it **had the trim
+bug** -- it is where the void swing count came from. Section 166 fixed its
+reader, so this is a run rather than a repair: the numbers it printed before
+that fix are the ones not to trust.
