@@ -39,7 +39,7 @@ import { distance, idx } from './engine/grid';
 import { FACTIONS, talks as canTalk } from './model/factions';
 import { TERRAIN, specialAt } from './model/terrain';
 import { TECHS_BY_ID } from './model/techs';
-import { unitType } from './model/units';
+import { unitType, maxHp } from './model/units';
 import type { City, GameState, Player, Unit, VictoryKind } from './model/types';
 import { owedPerks, perkChoices, perkName, PERK_BY_ID } from './model/perks';
 import { Camera } from './render/camera';
@@ -62,6 +62,7 @@ import {
 } from './sim/movement';
 import { researchableTechs, techCost } from './sim/research';
 import { buyUpgrade, upgradeBlocked, upgradeFee, upgradeOffered } from './sim/upgrading';
+import { seatsOn } from './sim/upgradeEffects';
 import {
   beginPlayerTurn,
   continuePlaying,
@@ -684,7 +685,11 @@ class App {
 
     // Going aboard one of our own ships: a step onto it from the shore.
     const ship = unitAt(this.state, x, y);
-    if (ship && ship.owner === unit.owner && unitType(ship.type).carries > 0) {
+    // Section 155: `seatsOn` rather than the type's own `carries`, so a
+    // Dragon Rider is something a footman can step onto. Everything past this
+    // point already worked on `canBoard` and `roomAboard`, both of which
+    // learned about the dragon in `ships.ts`.
+    if (ship && ship.owner === unit.owner && seatsOn(ship) > 0) {
       if (!canBoard(unit, ship)) {
         this.flash(roomAboard(ship) === 0 ? 'That ship is full.' : `${unitType(unit.type).name} cannot go aboard.`);
         return;
@@ -1278,7 +1283,7 @@ class App {
       this.refreshSidebar();
       return;
     }
-    if (unit.hp >= type.hp) {
+    if (unit.hp >= maxHp(unit)) {
       this.flash('Nothing to mend.');
       return;
     }
@@ -3141,7 +3146,7 @@ class App {
               ? `<span class="k-bad">${Math.max(COWED.floor, t.attack - COWED.attack)}</span> / ${t.defense}`
               : `${t.attack} / ${t.defense}`
           }</span></div>
-          <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${t.hp}</span></div>
+          <div class="stat-row"><span class="label">Health</span><span class="value">${unit.hp} / ${maxHp(unit)}</span></div>
           <div class="stat-row"><span class="label">Movement</span><span class="value">${formatMoves(unit.moves)} / ${t.move}</span></div>
           ${
             t.crowded
@@ -3387,7 +3392,7 @@ class App {
             // Only when there is something to mend, and not to a ship: a unit
             // at full health being offered "until healed" is a button that
             // does nothing, which is worse than no button.
-            !t.sails && unit.hp < t.hp
+            !t.sails && unit.hp < maxHp(unit)
               ? `<button class="small" data-act="mend">${
                   unit.mending ? 'Stop mending (H)' : 'Until healed (H)'
                 }</button>`

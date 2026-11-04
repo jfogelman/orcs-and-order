@@ -2188,6 +2188,40 @@ def process_upgrade_art(force: bool) -> tuple[int, list[str], list[str]]:
             continue
         jobs.append((path, out_units / f"{name}.png", UNIT_SIZE))
 
+    # Section 155's raised skeletons, one sheet per creature a Grave Knight
+    # could raise. Scanned the same way and for the same reason as the sprites
+    # above, with one rule covering two jobs: `<name> skeleton.jpg` becomes
+    # `units/<name>-skeleton.png`.
+    #
+    # So `orc skeleton.jpg` is the variant sprite an orc's corpse wears, found
+    # by exactly the path an upgrade's art is found by, and `ancient
+    # skeleton.jpg` becomes `ancient-skeleton.png`, which is also the id of
+    # the creature the Unbound leave behind. The two cases fall out of one
+    # rule rather than needing a branch, which is why this waited for the rule.
+    #
+    # **And a name may carry two creatures.** `soldier_spitter skeleton.jpg`
+    # writes both `soldier-skeleton.png` and `spitter-skeleton.png`: Jeremy's
+    # call on 2026-11-01, that two castes close enough to share a drawing
+    # should share one rather than cost a second generation. The underscore is
+    # the join, and it is the only place in this pipeline that means anything.
+    bones = sprites / "skeletal versions"
+    if bones.is_dir():
+        for path in sorted(bones.iterdir(), key=lambda p: p.name.lower()):
+            if path.suffix.lower() not in IMAGE_SUFFIXES:
+                continue
+            stem = path.stem.lower()
+            if not stem.endswith(" skeleton"):
+                # The same deliberate quiet as the weakened sheets: a folder
+                # that is not literally named for what it holds does not
+                # complain about files that are somebody else's.
+                continue
+            who = stem[: -len(" skeleton")].strip()
+            for one in who.split("_"):
+                name = re.sub(r"[^a-z0-9]+", "-", one).strip("-")
+                if not name:
+                    continue
+                jobs.append((path, out_units / f"{name}-skeleton.png", UNIT_SIZE))
+
     icons = sprites / "tech updates"
     if icons.is_dir():
         out_tech = OUT / "tech"

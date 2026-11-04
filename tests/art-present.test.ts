@@ -3,6 +3,7 @@ import { TERRAIN, TERRAIN_IDS } from '../src/model/terrain';
 import { TECHS } from '../src/model/techs';
 import { CREATURES, UNIT_TYPES } from '../src/model/units';
 import { UPGRADE_DEFS } from '../src/model/upgrades';
+import { ANCIENT, raisableCreatures } from '../src/model/raising';
 import { BUILDINGS } from '../src/model/buildings';
 import { FACTION_IDS } from '../src/model/factions';
 
@@ -178,7 +179,7 @@ describe('everything the model offers has a picture', () => {
  * that was a line in a markdown file. This is the number, in the suite, where
  * it is read every run rather than when somebody opens the file.
  */
-const UPGRADE_SHEETS = { attack: 36, hurt: 36 };
+const UPGRADE_SHEETS = { attack: 90, hurt: 90 };
 
 describe('every upgrade has been through the art pipeline', () => {
   const have = names(UNIT_ART);
@@ -192,8 +193,11 @@ describe('every upgrade has been through the art pipeline', () => {
     // Named rather than counted when they are short, so the failure says which.
     const attack = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_attack`)).map((u) => u.id);
     const hurt = UPGRADE_DEFS.filter((u) => !have.has(`${u.id}_hurt`)).map((u) => u.id);
-    expect(36 - attack.length, `no attack strip: ${attack.join(', ')}`).toBe(UPGRADE_SHEETS.attack);
-    expect(36 - hurt.length, `no weakened sheet: ${hurt.join(', ')}`).toBe(UPGRADE_SHEETS.hurt);
+    const all = UPGRADE_DEFS.length;
+    expect(all - attack.length, `no attack strip: ${attack.join(', ')}`).toBe(UPGRADE_SHEETS.attack);
+    // Ninety of ninety. `warband-sergeant` was the one sheet missing from
+    // the second bible's drop; Jeremy drew it 2026-11-02.
+    expect(all - hurt.length, `no weakened sheet: ${hurt.join(', ')}`).toBe(UPGRADE_SHEETS.hurt);
   });
 
   /**
@@ -208,6 +212,46 @@ describe('every upgrade has been through the art pipeline', () => {
       (u) => u.id,
     );
     expect(wrong).toEqual([]);
+  });
+});
+
+/**
+ * Section 155's raised skeletons, one sheet per creature a Grave Knight could
+ * raise.
+ *
+ * **A control with a count, not a bar**, for the same reason the attack strips
+ * are: a creature with no skeleton sheet falls back to its own living sprite,
+ * so a raised orc looks like an orc. Nothing breaks and nothing fails -- the
+ * player simply cannot tell what is standing there.
+ *
+ * The ancient skeleton is a bar rather than a control, because it is a
+ * creature in its own right and the test above already insists every creature
+ * has a sprite; it is named here so the two rules are visible together.
+ */
+const RAISED_SHEETS = 23;
+
+describe('the raised skeletons have sheets to wear', () => {
+  const have = names(UNIT_ART);
+
+  it('has one for the ancient skeleton, which is a creature of its own', () => {
+    expect(have.has(ANCIENT), `${ANCIENT}.png`).toBe(true);
+  });
+
+  it('has as many copies drawn as it says it has', () => {
+    const drawn = raisableCreatures().filter((c) => have.has(`${c.id}-skeleton`));
+    const missing = raisableCreatures()
+      .filter((c) => !have.has(`${c.id}-skeleton`))
+      .map((c) => c.id);
+    // A number somebody has to come and change, which is the point. The ones
+    // still missing wear their living sprite until somebody draws them.
+    expect(drawn.length, `no skeleton sheet: ${missing.join(', ')}`).toBe(RAISED_SHEETS);
+  });
+
+  it('draws nobody the rules will not raise', () => {
+    // A sheet for a boat or a spy would be work nothing can ever ask for.
+    for (const id of ['warboat', 'skulker', 'sapper', 'queen']) {
+      expect(have.has(`${id}-skeleton`), id).toBe(false);
+    }
   });
 });
 

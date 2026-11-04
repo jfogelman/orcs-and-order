@@ -590,17 +590,94 @@ not theirs any more*.
 > no letterboxing, no ground shadow, no background scenery. Keep the silhouette
 > clear of all four corners of the frame
 
+### The Unbound are not skeletonised at all
+
+**Jeremy's ruling, 2026-10-29.** Half that roster is already dead, so a raised
+copy of a Revenant is less a change of state than a change of employer. So a
+Grave Knight does something else to them: it **banishes them permanently** —
+no dispersal, no reform, that one is simply finished — and what comes up
+instead is a skeleton that **was already in the ground**, from long before any
+of this.
+
+That is one sprite rather than nine, it needs no reference image, and it is
+the better joke: the Grave Knight cannot make a skeleton out of a ghost, so it
+digs one up.
+
+The file is `ancient skeleton.jpg`, in the same folder as the rest, and
+**drawn as of 2026-10-29**.
+
+It is not converted yet, deliberately: `prepare_art.py` does not know
+`skeletal versions/`, and wiring it means choosing what a raised skeleton is
+called in `public/units/`. A copy of what died is a variant of that creature
+(`orc-skeleton.png`, by the convention the upgrades already use); this one is
+a copy of nothing and needs a name of its own. That choice belongs with the
+rule, not ahead of it -- a filename convention invented now is exactly how a
+drawn sheet ends up silently unread.
+
+> A skeleton that was in the ground long before any of this: not a fresh
+> corpse raised, but something disinterred, far older than the war going on
+> above it. Bone blackened and stained deep brown-grey by centuries in the
+> earth, dry and porous, with pale fresh-broken edges where pieces have
+> snapped away. Unusual, and not quite right: the proportions wrong for
+> anything still living, the skull too long and too heavy with a low ridge
+> over the brow, one shoulder set higher than the other, an extra pair of
+> short ribs low on the frame, and more teeth than there ought to be. Visibly
+> broken — one arm ending at the forearm, several ribs missing, a crack
+> running up through the skull, a knee that does not sit straight — with dark
+> soil still packed into the joints and the eye sockets. It stands anyway,
+> hunched and patient, hollow sockets lit with a faint violet glow. It carries
+> no weapon; it has never needed one. No green or mossy tint anywhere, on the
+> bone or on the soil. 32x32 pixel art game sprite, front-facing three-quarter
+> view, chunky readable silhouette, thick dark outline, limited palette, flat
+> shading with one light source from the upper left, mid-1990s fantasy
+> real-time-strategy style, plain solid green background (#00FF00), no text,
+> no logos, no border, no letterboxing, no ground shadow, no background
+> scenery. Keep the silhouette clear of all four corners of the frame
+
+**The "no green" clause is load-bearing**, for the same reason it is in the
+Hivekin wording above: the green key is `G − max(R,B) > 28`, and blackened
+bone with a mossy cast is exactly the colour it eats. Blackened bone that is
+merely dark brown-grey is safe, and the violet is what forces green rather
+than magenta in the first place.
+
+### Who can be raised at all — Jeremy's rulings, 2026-10-29
+
+Six exclusions, and they are **rules in `src/model/raising.ts`** rather than a
+list kept here, because the roster is eighty creatures and growing.
+`tests/raising.test.ts` holds them.
+
+| rule | why |
+|---|---|
+| no Unbound | banished outright instead; the ancient skeleton comes up |
+| no boats | a skeleton of a boat is a boat |
+| no spies | nothing to raise that anybody would recognise |
+| no sappers | it went off when it died, and there is nothing left |
+| no machinery | catapults, ballistae and the Debt Collector were never alive |
+| no Grub, Princess or Queen | the Hive does not leave those lying about |
+
+**The Bloat-caste is the one exception to the machinery rule**, because it is
+alive — a bloated insect that walks up and bursts. All six siege creatures in
+the game share `silhouette: 'engine'`, which is a drawing hint and says
+nothing about biology, so there is no flag that separates it and it is named.
+
+That leaves **45 creatures**: 13 Horde, 13 Kingdom, 9 Hivekin, 10 Wandering
+Folk. One sheet per *creature*, not per group size — the counting ladder means
+one orc sprite already serves Two Orcs and Ten Orcs.
+
 ### Still open
 
-**The Unbound want the same question asked of them.** Half that roster is
-already dead, so "reanimated skeleton" means close to nothing for a Revenant
-and nothing at all for a spirit — raising one is less a change of state than a
-change of employer. That is a design answer before it is a prompt, and it is
-Jeremy's.
+**Four filenames I cannot resolve against the roster**, and faction naming is
+Jeremy's rather than mine to invent: `dwarf mystic skeleton.jpg` and
+`gnome skeleton.jpg` match no creature id, and `soldier_spitter` and
+`worker_fodder` look like one sheet covering two castes, which the pipeline
+has no convention for.
 
-**How many are needed is a design question too.** The Queen is immobile and the
-Grub is not a fighter, so neither is likely to die the way this rule needs.
-Eighteen sheets exist for what the Grave Knight can meet today.
+**Still to draw, by the roster above.** Horde: `skirmisher`, `brute`,
+`chieftain`, `scout`, `deathknight`, `orc-shaman`. Kingdom: `drowned`,
+`wraith`, `captain`, `sentinel`, `guardian`, `keeper`, `paladin` — the first
+six being the Sunken Legion. Wandering Folk: `wanderer`, `wf-skirmisher`,
+`warband`, `slinger`, `outcast`, `champion`, `bonebound`, `drake`. The Hivekin
+are complete, bar the naming question above.
 
 ## Advance icons — 44 done, 7 to draw
 

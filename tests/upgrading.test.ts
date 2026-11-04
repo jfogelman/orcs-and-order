@@ -258,23 +258,25 @@ describe('the AI actually does it', () => {
 });
 
 describe('what the book says about it', () => {
-  it('tells a creature’s card what it can become, when the box is ticked', () => {
+  /**
+   * **This used to assert a bullet on the creature's card**, which section
+   * 155 added and then removed again: the card now carries a fold --
+   * `upgradeSection` -- whose summary says the same thing and which then says
+   * what each of the three *does*. Two sentences of one fact on one card was
+   * one too many, so the bullet went.
+   *
+   * What is left to assert here is that it really did go, and the fold is
+   * covered where folds are covered: `tests/ui/pedia-upgrades.test.ts`.
+   */
+  it('no longer says it twice on one card', () => {
     UPGRADES.enabled = true;
-    const notes = abilityNotes(unitType('orc'));
-    expect(notes.join(' ')).toContain('Orc Veteran');
-    expect(notes.join(' '), 'and that the two roads are exclusive').toMatch(/never both/);
-    expect(notes.join(' ')).toContain('Orc Berserker');
+    expect(abilityNotes(unitType('orc')).join(' ')).not.toMatch(/can be improved to/);
   });
 
-  it('says nothing at all when it is not', () => {
-    UPGRADES.enabled = false;
-    expect(abilityNotes(unitType('orc')).join(' ')).not.toContain('Orc Veteran');
-  });
-
-  it('says nothing for a creature with no upgrades written yet', () => {
+  it('still says everything else a creature does', () => {
+    // The fold replaced one bullet, not the list. A peon founding cities is
+    // the oldest note on any card in the game and has nothing to do with it.
     UPGRADES.enabled = true;
-    // The three newer factions are slice 6 and their bible is separate; a
-    // caste must not get half a sentence about a road that does not exist.
-    expect(abilityNotes(unitType('fodder')).join(' ')).not.toMatch(/improved to/);
+    expect(abilityNotes(unitType('peon')).join(' ')).toContain('founds cities');
   });
 });

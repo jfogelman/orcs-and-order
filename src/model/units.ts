@@ -1,4 +1,5 @@
 import type { DamageKind, FactionId, UnitTypeId } from './types';
+import { RAISED, UPGRADES, UPGRADES_BY_ID } from './upgrades';
 
 /**
  * Units are singleton, Civ2 style: one tile, one unit, one health bar.
@@ -517,6 +518,51 @@ export const CREATURES: CreatureDef[] = [
     blurb:
       'Comes up the stairs three turns after the noise starts, which is how ' +
       'long it takes to be certain you are still there.',
+  },
+  {
+    /**
+     * Section 155: what comes up when a Grave Knight kills one of the Unbound.
+     *
+     * It cannot make a skeleton out of a ghost, so it digs one up instead --
+     * something that was already in the ground long before any of this, and
+     * is not a copy of anything. That is why it needs its own entry: every
+     * other raised skeleton is a halved copy of whatever died, and this one
+     * has nothing to be half of.
+     *
+     * **`wild` and costed at nothing, which is how this game already models a
+     * creature a rule produces.** The Sunken Legion and the raiders are the
+     * same shape: they carry a faction for their art, no advance unlocks
+     * them, and nothing can buy one.
+     *
+     * That matters for more than tidiness. A first draft gave this a nominal
+     * cost of twenty and left `wild` off, and **three rosters that select by
+     * faction quietly took it**: the ruins' old garrison began handing out
+     * Ancient Skeletons, a spy could wear one as a disguise, and the game
+     * played out differently from turn one with the upgrade lever off. Three
+     * fixtures said so. Priced at nothing it falls out of all three by the
+     * same rule that already excludes every other rule-produced creature,
+     * rather than by three exclusions somebody has to remember.
+     */
+    id: 'ancient-skeleton',
+    wild: true,
+    name: 'Ancient Skeleton',
+    plural: 'Ancient Skeletons',
+    faction: 'orc',
+    role: 'melee',
+    attack: 4,
+    defense: 3,
+    hp: 12,
+    move: 1,
+    cost: 0,
+    sight: 1,
+    counts: [1],
+    artScale: 0.85,
+    silhouette: 'robed',
+    body: '#6b6256',
+    trim: '#8a6fb0',
+    blurb:
+      'Older than the war it has been dug into. Blackened, broken, and ' +
+      'patient about both.',
   },
   {
     id: 'goblin',
@@ -2517,11 +2563,39 @@ export function unitType(id: UnitTypeId): UnitTypeDef {
  *
  * Rounds up, so a unit is never reduced below one while it is still alive.
  */
-export function aliveCount(unit: { type: UnitTypeId; hp: number }): number {
+export function aliveCount(unit: { type: UnitTypeId; hp: number; upgrade?: string }): number {
   const type = unitType(unit.type);
   if (unit.hp <= 0) return 0;
   if (type.count <= 1) return 1;
-  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / type.hp))));
+  return Math.max(1, Math.min(type.count, Math.ceil(type.count * (unit.hp / maxHp(unit)))));
+}
+
+/**
+ * The most health this unit can have. Section 155.
+ *
+ * **`unitType(u.type).hp` was written out in about fifteen places** and every
+ * one of them meant this -- a heal ceiling, a split threshold, a drain limit,
+ * the scale damage is measured against, the share of a group still standing.
+ * `troll-brute` is *"+2 HP"* and could not be wired at all while that number
+ * had fifteen homes, which is the shape of bug this project keeps finding:
+ * a fact about the game repeated until one copy disagrees.
+ *
+ * Here in the model rather than beside the other upgrade rules, because
+ * `headcount` and `aliveCount` need it and nothing in `model/` may reach into
+ * `sim/`. `upgrades.ts` imports only types, so this costs no cycle.
+ */
+export function maxHp(unit: { type: UnitTypeId; upgrade?: string; raised?: number }): number {
+  const base = unitType(unit.type).hp;
+  // Section 155: a raised skeleton is half of what it was a copy of. Before
+  // the upgrade below, because a raised copy of an upgraded creature is a
+  // skeleton rather than an upgrade -- the thing that came out of the ground
+  // is not still carrying the branch its owner researched.
+  if (unit.raised !== undefined) return Math.max(1, Math.round(base * RAISED.scale));
+  if (!UPGRADES.enabled || !unit.upgrade) return base;
+  const bonus = UPGRADES_BY_ID[unit.upgrade]?.effect?.hp ?? 0;
+  // Scaled by the headcount, like every other flat addition in this game:
+  // two more hit points each for Three Trolls is six.
+  return base + bonus * unitType(unit.type).count;
 }
 
 /**
@@ -2557,7 +2631,7 @@ export function holdsGround(type: UnitTypeDef): boolean {
 }
 
 /** The share of its full strength a unit still fights at, from its losses. */
-export function headcount(unit: { type: UnitTypeId; hp: number }): number {
+export function headcount(unit: { type: UnitTypeId; hp: number; upgrade?: string }): number {
   if (!ATTRITION.enabled) return 1;
   const type = unitType(unit.type);
   if (type.count <= 1) return 1;

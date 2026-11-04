@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { distance } from '../src/engine/grid';
-import { EXORCISTS, exorcises } from '../src/sim/exorcism';
+import { EXORCISTS, isExorcist } from '../src/sim/exorcism';
 import { PHYSICAL, dispersingSide } from '../src/sim/dispersal';
 import { unitType } from '../src/model/units';
 import type { GameState } from '../src/model/types';
@@ -52,12 +52,14 @@ declare const process: { env: Record<string, string | undefined> };
  */
 
 /**
- * `exorcises` here is the **capability** question -- is this unit, owned by
- * this player, an exorcist right now -- because on this branch it is still a
- * boolean. Section 155 turns it into a roll and splits the capability out as
- * `isExorcist`; when that merges, this file wants the split one, since a probe
- * must never move the game's random stream. See `exorcistsOf`, which is the
- * same trap.
+ * `isExorcist` is the **capability** question -- is this unit, owned by this
+ * player, an exorcist right now -- and it is deliberately not `exorcises`.
+ *
+ * When this probe was written, section 155 was unmerged and `exorcises` was
+ * still a boolean, so it was used here with a note saying to switch the day
+ * that merged. **This is that switch.** `exorcises` now *rolls*, and a probe
+ * that rolls moves the game's random stream it is supposed to be observing --
+ * the same trap `exorcistsOf` fell into and was split out of.
  */
 
 /** The advance each exorcist waits behind, and the Mystic's second one. */
@@ -165,7 +167,7 @@ describe('the hard counter', () => {
           }
           prev = new Map(state.units.map((u) => [u.id, { owner: u.owner, x: u.x, y: u.y }]));
           exorcistsAt = state.units
-            .filter((u) => exorcises(state, u))
+            .filter((u) => isExorcist(state, u))
             .map((u) => [u.x, u.y, u.owner] as [number, number, number]);
 
           if (state.turn === sampled) return;
@@ -181,7 +183,7 @@ describe('the hard counter', () => {
             if (!(base in EXORCISTS)) continue;
             seen[base].add(u.id);
             if (first[base] === undefined) first[base] = state.turn;
-            if (exorcises(state, u)) {
+            if (isExorcist(state, u)) {
               standing[base] = (standing[base] ?? 0) + 1;
               rows[base].armedTurns++;
             }
@@ -195,7 +197,7 @@ describe('the hard counter', () => {
           const spirits = state.units.filter(
             (u) => spiritSeats.has(u.owner) && !PHYSICAL.has(unitType(u.type).base),
           );
-          const armed = state.units.filter((u) => exorcises(state, u));
+          const armed = state.units.filter((u) => isExorcist(state, u));
           if (armed.length > 0) aliveTurns++;
           let any3 = false;
           let any1 = false;

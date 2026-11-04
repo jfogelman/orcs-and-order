@@ -55,6 +55,17 @@ export interface Scattered {
   turn: number;
   /** Where it fell, for the message and for the camera. */
   at: readonly [number, number];
+  /**
+   * The upgrade it had chosen, so it comes back as what it was.
+   *
+   * **This was a bug, found while wiring section 155.** The comment on `rank`
+   * two lines up says *"a spirit that reforms has not forgotten"*, and it did
+   * forget: an upgraded Revenant scattered and stood up plain, having quietly
+   * refunded two gold of a permanent choice. It also makes the two Revenant
+   * upgrades askable at all -- both of them are about reforming, and the thing
+   * that reforms had no idea which upgrade it held.
+   */
+  upgrade?: string;
 }
 
 export interface Player {
@@ -299,6 +310,29 @@ export interface Unit {
    * standing gets it by paying in a city of its own.
    */
   upgrade?: string;
+  /**
+   * Fights this unit has been in and come out of. Section 155 slice 5.
+   *
+   * Counted rather than read off `xp`, which is awarded for razing a city,
+   * taking one, and reading a spy's dispatches, and would make a scholar of
+   * anybody. Only two upgrades read it -- `orc-veteran` and `footman-veteran`,
+   * both "after surviving 2 combats" -- and both want the thing the words say.
+   *
+   * Optional, so every save and fixture from before this counts as nought.
+   */
+  fights?: number;
+  /**
+   * The unit this one is standing in front of. Section 155, `orc-guardian`.
+   *
+   * Set by the `cover` ability and cleared at the top of the coverer's next
+   * turn, so it lasts exactly the one turn it cost. Holds a unit **id** rather
+   * than a reference, like `homeCity`, so a save is still plain JSON.
+   *
+   * Read through `coveringFor`, which re-checks adjacency: both of them may
+   * have moved since the order was given, and a bodyguard three tiles away is
+   * not covering anybody.
+   */
+  covering?: number;
   order: UnitOrder;
   /** Standing destination; the unit resumes walking there each turn. */
   goto: { x: number; y: number } | null;
@@ -331,6 +365,60 @@ export interface Unit {
    * now has. See DESIGN_QUEUE section 38.
    */
   rearmIn?: number;
+  /**
+   * Axes thrown since it last picked one up. Section 155.
+   *
+   * `disarmed` is a boolean and an ordinary thrower has one axe, so the two
+   * said the same thing and only one of them was needed. `axethrower-twin`
+   * carries a second, which is a count -- and a count is what `disarmed` can
+   * no longer be inferred from. Cleared by `rearm`, absent on every save
+   * before this, which reads as nothing thrown.
+   */
+  axesThrown?: number;
+  /**
+   * Whether this sapper has spent its one crossing. Section 155.
+   *
+   * `sapper-tunnel` goes under impassable ground once -- water, which is the
+   * only thing impassable to it -- and never again. Set the moment it steps
+   * on, so the pass is gone whether or not it ever steps off.
+   */
+  tunnelled?: boolean;
+  /**
+   * Whether this one has already come apart once and gathered again.
+   *
+   * Set by `reformScattered` and nowhere else, which is also why it needed
+   * adding: `revenant-insistent` is *"+2 attack when reformed"*, and until
+   * slice 6 a spirit that gathered again was indistinguishable from one that
+   * had been bought this morning. Only the Unbound ever have it.
+   */
+  reformed?: boolean;
+  /**
+   * Fights this unit has been in since its side's turn began. Section 155.
+   *
+   * Only `yaksha-reckoner` reads it -- *"counter-attacks every attacker in a
+   * turn"* -- and "in a turn" is a fact about the turn, so it is counted here
+   * and cleared where every other per-turn thing is. Distinct from `fights`,
+   * which is a career total two other upgrades read.
+   */
+  foughtThisTurn?: number;
+  /**
+   * The Grave Knight that pulled this one out of the ground. Section 155.
+   *
+   * Truthy means **this unit is a raised skeleton**: half the numbers of
+   * whatever it is a copy of, no upkeep, no score, and it cannot take a city.
+   * Holds the raiser's unit id rather than a flag, because `deathknight-
+   * soulbound` bleeds a point a turn for each of its skeletons still standing
+   * and has to be able to count them.
+   *
+   * The raiser may be dead; a skeleton outlives the hand that raised it.
+   */
+  raised?: number;
+  /**
+   * The turn this raised unit crumbles. Absent on a Soul-Bound Knight's, which
+   * is the whole of that upgrade: they no longer expire, and the price is paid
+   * in the Knight's own health instead.
+   */
+  fadesOn?: number;
   /**
    * Whether this unit has already used its one reprieve.
    *
@@ -513,7 +601,7 @@ export type AutoBuild = 'ask' | 'repeat' | 'coin' | 'beakers';
  * Deliberately separate from `disarmed`, which is a bare boolean with no
  * duration and ends by killing something rather than by waiting.
  */
-export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed';
+export type StatusKind = 'burning' | 'frozen' | 'confused' | 'spent' | 'cowed' | 'blessed';
 
 export interface Status {
   kind: StatusKind;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXORCISM, EXORCISTS, couldExorcise, exorcises, exorcistsOf } from '../src/sim/exorcism';
+import { EXORCISM, EXORCISTS, couldExorcise, isExorcist, exorcistsOf } from '../src/sim/exorcism';
 import { createGame, spawnUnit } from '../src/sim/gamestate';
 import { CREATURES, unitType } from '../src/model/units';
 import { TECHS } from '../src/model/techs';
@@ -74,7 +74,7 @@ describe('who can actually do it', () => {
     ] as const) {
       const state = sideWith(faction, []);
       const u = spawnUnit(state, 0, id, 10, 10);
-      expect(exorcises(state, u), `${id} should need no advance`).toBe(true);
+      expect(isExorcist(state, u), `${id} should need no advance`).toBe(true);
     }
   });
 
@@ -86,16 +86,16 @@ describe('who can actually do it', () => {
   it('makes the Mystic learn it', () => {
     const state = sideWith('wandering', ['signature-mystic']);
     const u = spawnUnit(state, 0, 'mystic', 10, 10);
-    expect(exorcises(state, u), 'untaught, it only scatters them').toBe(false);
+    expect(isExorcist(state, u), 'untaught, it only scatters them').toBe(false);
     state.players[0].techs.push('mystic-exorcism');
-    expect(exorcises(state, u)).toBe(true);
+    expect(isExorcist(state, u)).toBe(true);
   });
 
   it('leaves everybody else out of it', () => {
     const state = sideWith('orc', []);
     for (const id of ['goblin', 'deathknight', 'dragon', 'peon']) {
       const u = spawnUnit(state, 0, id, 12, 12);
-      expect(exorcises(state, u), `${id} is not an exorcist`).toBe(false);
+      expect(isExorcist(state, u), `${id} is not an exorcist`).toBe(false);
     }
   });
 
@@ -124,7 +124,7 @@ describe('who can actually do it', () => {
     const u = spawnUnit(state, 0, 'paladin', 10, 10);
     EXORCISM.enabled = false;
     try {
-      expect(exorcises(state, u)).toBe(false);
+      expect(isExorcist(state, u)).toBe(false);
     } finally {
       EXORCISM.enabled = true;
     }

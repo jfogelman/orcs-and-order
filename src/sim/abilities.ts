@@ -1,10 +1,12 @@
 import { DIRS8, distance, idx } from '../engine/grid';
+import { CHAMPION, hasUpgrade, keepsItsTurn, upgradeReach } from './upgradeEffects';
+import { UPGRADES } from '../model/upgrades';
 import { hostile, noteClash } from './diplomacy';
 import { TERRAIN } from '../model/terrain';
 import { applyStatus } from './status';
 import { heldFollies } from './follyEffects';
 import { hasPerk } from '../model/perks';
-import { ammoLeft, needsAmmo, unitType } from '../model/units';
+import { ammoLeft, needsAmmo, unitType, maxHp } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import {
   attackStrength,
@@ -29,7 +31,7 @@ import { log, recomputeVisibility, spawnUnit, withRng } from './gamestate';
  * yet, which gives the position away just as surely as drawing the unit would.
  */
 
-export type AbilityId = 'ranged' | 'heal' | 'reload' | 'split' | 'drain';
+export type AbilityId = 'ranged' | 'heal' | 'reload' | 'split' | 'drain' | 'cover';
 
 export interface AbilitySpec {
   id: AbilityId;
@@ -49,6 +51,12 @@ export const ABILITIES: Record<AbilityId, AbilitySpec> = {
   reload: { id: 'reload', label: 'Reload', key: 'l', friendly: true, verb: 'hand over a missile' },
   split: { id: 'split', label: 'Split', key: 'k', friendly: true, verb: 'make a friend' },
   drain: { id: 'drain', label: 'Drain', key: 'd', friendly: true, verb: 'take what it needs' },
+  // **Not `c`**, which centres the view and is a key a player uses constantly.
+  // One unit type in eighty should not take a universal key away, so Cover
+  // gets an arbitrary free one and is discovered from its button rather than
+  // guessed. The single-letter space is nearly full; the next ability will
+  // want a better answer than this.
+  cover: { id: 'cover', label: 'Cover', key: 'y', friendly: true, verb: 'stand in front of anybody' },
 };
 
 /**
@@ -84,7 +92,11 @@ export const RANGED_ROUNDS = 3;
  * range it would never stand at.
  */
 export function unitReach(unit: Unit): number {
-  return unitType(unit.type).range + (unit.reach ?? 0);
+  // Section 155: `archer-longbow` and `mage-archmage` both read "range
+  // increases to 3", and both creatures have a base of 2. Added through the
+  // same sum as the Rumbling Archive's `reach`, so an Archmage built beside
+  // one is not quietly capped at whichever of the two is larger.
+  return unitType(unit.type).range + (unit.reach ?? 0) + upgradeReach(unit);
 }
 
 /** How much harder a thrown weapon hits than the same creature swinging it. */
@@ -110,6 +122,10 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
     out.push('split');
   }
   if (type.base === 'deathknight' && hasPerk(unit, 'dark-bargain')) out.push('drain');
+  // Section 155: an Orc Guardian can stand in front of somebody. The other
+  // half of Jeremy's ruling on that upgrade -- it moves one tile every two
+  // turns, and this is what it is doing in between.
+  if (hasUpgrade(unit, 'orc-guardian')) out.push('cover');
   return out;
 }
 
@@ -120,7 +136,14 @@ export function abilitiesOf(unit: Unit): AbilityId[] {
  */
 export function abilityReady(unit: Unit, ability: AbilityId): string | null {
   if (!abilitiesOf(unit).includes(ability)) return 'This unit cannot do that.';
-  if (unit.moves <= 0) return 'No movement left this turn.';
+  // **Covering is the one thing a Guardian can do on a turn it cannot move**,
+  // which is half the point of it: on the turns between its steps it is not
+  // out of the game, it is standing in front of somebody. Every other ability
+  // still costs movement.
+  if (unit.moves <= 0 && ability !== 'cover') return 'No movement left this turn.';
+  if (ability === 'cover' && unit.covering !== undefined) {
+    return 'It is already standing in front of somebody.';
+  }
   // You get one axe. Having thrown it, there is nothing to throw.
   if (ability === 'ranged' && unit.disarmed && unitType(unit.type).throwsWeapon) {
     return 'It has thrown its axe and has not got it back yet.';
@@ -130,11 +153,11 @@ export function abilityReady(unit: Unit, ability: AbilityId): string | null {
     return 'Out of missiles. Reload it, or take it back to a city.';
   }
   if (ability === 'split') {
-    if (unit.hp < unitType(unit.type).hp * SPLIT.needsFraction) {
+    if (unit.hp < maxHp(unit) * SPLIT.needsFraction) {
       return 'Not enough of it left to share.';
     }
   }
-  if (ability === 'drain' && unit.hp >= unitType(unit.type).hp) {
+  if (ability === 'drain' && unit.hp >= maxHp(unit)) {
     return 'It wants for nothing at present.';
   }
   return null;
@@ -172,6 +195,15 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
       return d >= type.range && d <= unitReach(unit);
     }
 
+    // Section 155: anybody of ours standing next to it, whatever state they
+    // are in -- including one inside a city, which is the case Jeremy named.
+    // Unlike healing, there is no "needs it" test: covering a unit at full
+    // health before the blow lands is the whole idea.
+    if (ability === 'cover') {
+      if (other.owner !== unit.owner) return false;
+      return d <= 1;
+    }
+
     if (ability === 'drain') {
       // Anybody of ours standing next to it. They are not consulted.
       if (other.owner !== unit.owner) return false;
@@ -194,7 +226,7 @@ export function abilityTargets(state: GameState, unit: Unit, ability: AbilityId)
     // Healing is for a neighbour who actually needs it.
     if (other.owner !== unit.owner) return false;
     if (d > 1) return false;
-    return other.hp < unitType(other.type).hp;
+    return other.hp < maxHp(other);
   });
 }
 
@@ -225,7 +257,7 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const type = unitType(unit.type);
   const atk = attackStrength(state, unit, target);
   const def = defenseStrength(state, target, unit);
-  const dmg = damagePerRound(type.hp, unitType(target.type).hp);
+  const dmg = damagePerRound(maxHp(unit), maxHp(target));
   // A thrown weapon lands harder than a swung one -- that is what you are
   // buying with the axe you are about to be without.
   const power = type.throwsWeapon ? atk.total * THROW_BONUS : atk.total;
@@ -241,7 +273,10 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   // one of them, so a thrown blow carries its thrower's kind.
   const amount = applyDamage(target, landed * dmg, damageKindOf(unit));
   applySpellEffects(state, unit, target);
-  unit.moves = 0;
+  // Section 155, `mage-battle`: still talks the whole time, somehow also still
+  // swings. Everything else about the strike is unchanged -- it is only the
+  // turn it stops costing.
+  if (!keepsItsTurn(unit, 'ranged')) unit.moves = 0;
   if (unitType(unit.type).ammo > 0) unit.ammo = Math.max(0, ammoLeft(unit) - 1);
   // Shooting at somebody and living is worth less than closing with them.
   awardXp(state, unit, target.hp <= 0 ? XP.kill : XP.survive);
@@ -282,9 +317,19 @@ function fireAtRange(state: GameState, unit: Unit, target: Unit): AbilityOutcome
 
 /** Patch a neighbour up. The first thing in the game that is not violence. */
 function healFriend(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
-  const max = unitType(target.type).hp;
+  const max = maxHp(target);
   const ceiling = Math.round(max * unitType(unit.type).healsTo);
-  unit.moves = 0;
+  // Section 155, `paladin-warden`: the same sentence as `mage-battle`, for the
+  // other ability that costs a whole turn.
+  if (!keepsItsTurn(unit, 'heal')) unit.moves = 0;
+  // Section 155, `paladin-champion`: *"heal also grants +1 defense for one
+  // turn to the healed unit"*. Applied before the "already full" branch
+  // below, because a Champion standing over somebody unhurt is still worth
+  // standing next to -- and that is the half of this upgrade that makes it
+  // more than a bigger heal.
+  if (UPGRADES.enabled && hasUpgrade(unit, 'paladin-champion')) {
+    applyStatus(target, 'blessed', CHAMPION.turns);
+  }
 
   if (target.hp >= ceiling) {
     log(
@@ -419,7 +464,7 @@ function makeSwampyFriend(state: GameState, unit: Unit): AbilityOutcome {
  */
 function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
   if (target.id === unit.id) return { ok: false, reason: 'It cannot bargain with itself.' };
-  const donorMax = unitType(target.type).hp;
+  const donorMax = maxHp(target);
   const owed = Math.max(1, Math.round(target.hp * DRAIN.takesFraction));
   // Section 111: with the Bargain Stone the terms are written down, and the donor
   // gives up less for the same return.
@@ -430,7 +475,7 @@ function darkBargain(state: GameState, unit: Unit, target: Unit): AbilityOutcome
   const taken = Math.max(1, Math.round(target.hp * takes));
   const fatal = target.hp <= donorMax * DRAIN.survivesAbove;
 
-  const room = unitType(unit.type).hp - unit.hp;
+  const room = maxHp(unit) - unit.hp;
   const healed = Math.min(room, owed * DRAIN.returnsMultiple);
   unit.hp += healed;
   unit.moves = 0;
@@ -468,5 +513,33 @@ export function useAbility(
   if (ability === 'reload') return handOverMissile(state, unit, target);
   if (ability === 'split') return makeSwampyFriend(state, unit);
   if (ability === 'drain') return darkBargain(state, unit, target);
+  if (ability === 'cover') return standInFrontOf(state, unit, target);
   return healFriend(state, unit, target);
+}
+
+/**
+ * Take the turn, and stand in front of somebody. Section 155.
+ *
+ * Costs the rest of the turn -- a Guardian that covers has done its covering
+ * and is not also going somewhere. It lasts until the top of the Guardian's
+ * next turn, where `refreshUnits` clears it, so the order is given again each
+ * turn it is wanted rather than standing until countermanded.
+ *
+ * What it *does* is in `movement.ts`: whatever comes for the covered unit
+ * meets the Guardian in their place, with the Guardian's own defence, its own
+ * health and its own death. See `coveringFor`.
+ */
+function standInFrontOf(state: GameState, unit: Unit, target: Unit): AbilityOutcome {
+  unit.covering = target.id;
+  unit.moves = 0;
+  log(
+    state,
+    `${unitType(unit.type).name} steps in front of ${unitType(target.type).name}.`,
+    'good',
+    unit.owner,
+    'promote',
+    [unit.x, unit.y],
+    unit.id,
+  );
+  return { ok: true };
 }

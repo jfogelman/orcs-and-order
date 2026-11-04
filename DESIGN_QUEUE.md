@@ -12395,7 +12395,19 @@ piece of refactoring in this file I would argue for on its own merits.
 > one): the thirty-six advances and thirty-six upgrade definitions as data,
 > transcribed by script and guarded by a both-directions pairing test.
 >
-> **Slice 4** (this one) is the mechanism: a unit carries an upgrade, the
+> **Slice 8** finishes the effects: **90 of 90**. Two of the last nine priced
+> themselves in scales the game did not have -- exorcism was a boolean, reform
+> was always the next turn -- so both became levers with the shipped game at
+> one end, and a third card turned out to mean the opposite of what it said.
+> See *Slice 8* below, and in particular the bug it found: **a reformed spirit
+> had been losing its upgrade.**
+>
+> **Slice 5a** is the first of the effects: 13 of 36 do something,
+> and the other 23 are listed in `tests/upgradeEffects.test.ts` with a reason
+> each. See *Slice 5a, in detail* below, and in particular **the Archer**,
+> which turns out not to be a ranged unit in this game at all.
+>
+> **Slice 4** is the mechanism: a unit carries an upgrade, the
 > branch locks, and one already standing can be paid for. See *Slice 4, in
 > detail* below. **Jeremy drew the sixteen outstanding sheets the same day**,
 > so the art is 144/144 and counted by `art-present.test.ts` every run.
@@ -12596,6 +12608,820 @@ field army the turn an advance landed would be worse for the option.
 `tests/upgrading.test.ts` asserts it actually fires, which is the lesson from
 the Burrower-caste, the spy, the unseen agent and the reform sites: a mechanic
 the AI never uses makes a sweep measure nothing.
+
+### Slice 5a, in detail — the first thirteen effects
+
+**The seam.** Five of the thirty-six blurbs are a flat modifier to a figure the
+game already computes; the other thirty-one are rules. So `UpgradeDef.effect`
+holds the flat ones as data and the rest are named checks -- `hasUpgrade(unit,
+'orc-berserker')` -- in the subsystem that owns them, exactly as `hasPerk` is.
+Trying to express all thirty-six as data would mean inventing a little
+language, and the moment a table needs a predicate it has stopped being a table.
+
+**The test this slice is really for.** An upgrade whose blurb promises
+something and whose code does nothing is a card that lies, and **nothing else
+in the suite would fail because of it**: the unit builds, the sprite loads, the
+advance researches, the fee is paid, and the thing simply does not happen.
+So `upgradeEffects.test.ts` insists each of the thirty-six is data, **or**
+named in a file under `src/`, **or** declared unwired with a reason -- the
+sources read through `import.meta.glob` with `?raw`, so "is it wired" is
+answered by looking rather than by a second list somebody maintains. The two
+halves check each other: if the grep always said yes, the stale-entry test
+would name all twenty-three; if it always said no, the orphan test would name
+the nine wired by rule.
+
+**Wired (13).** Flat: `orc-guardian`, `knight-errant`, `mage-archmage`,
+`archer-marksman`. By rule: `orc-berserker`, `orc-veteran`, `footman-veteran`,
+`knight-vanguard`, `ogre-warlord`, `ogre-grinder`, `deathknight-dread`,
+`paladin-templar`, `footman-shieldwall`.
+
+**Two small things the game did not have.** `neighbours(state, unit, side)`,
+because three auras all wanted adjacency and it had been computed inline
+wherever it was needed -- two auras disagreeing about what "adjacent" means is
+the quietest possible bug. And `Unit.fights`, because "after surviving 2
+combats" means combats, where `xp` is awarded for razing a city, taking one,
+and reading a spy's post.
+
+**A guard worth remembering.** The flat bonus is added to the base beside
+`drilled`, under a floor so a Dread Knight cannot switch a creature off. An
+*unconditional* `Math.max(COWED.floor, ...)` there would have quietly raised
+the attack of anything with a base below one -- in a game with the box
+unticked, where none of this is supposed to happen. Guarded on the bonus being
+non-zero.
+
+### The Archer is not what the upgrade bible thought it was
+
+The bible describes a Civ-style bowman. **This game's Archer has `range: 1`.**
+What makes it "ranged" here is `firstStrikes: 1` -- section 11's free opening
+blow. The only units with a real range are the Mage, the catapult, the
+ballista, the Bloat-caste, the Cairn and the Collector.
+
+So of its three lines:
+
+- `archer-marksman` -- *"+2 attack, but loses the 'not struck back'
+  protection"* -- **ports exactly**, and better than it reads: the protection
+  it gives up *is* the first strike. Wired, both halves together, because the
+  +2 on its own is a free bonus.
+- `archer-longbow` -- *"range increases to 3"* -- **is a design call, not a
+  wiring one.** +1 contradicts the card; a floor at 3 would give the Archer a
+  longer reach than the Mage, which is a balance change dressed as a port.
+  Left for Jeremy.
+- `archer-volley` -- *"any unit in range regardless of intervening units"* --
+  means nothing at range 1.
+
+`mage-archmage` says the same words as `archer-longbow` and **does** get the
++1, because the Mage's base really is 2 and 2+1 really is 3.
+
+### Who the Grave Knight can raise (Jeremy, 2026-10-29)
+
+Settled before the rule exists, because it is the question that decides which
+art is worth drawing. **The obvious reading -- anything it kills -- is wrong
+in six ways**, and they are rules in `src/model/raising.ts` rather than a list
+of ids, because the roster is eighty creatures and growing.
+
+**The Unbound are banished instead.** A Grave Knight that kills one ends it
+for good -- no dispersal, no reform -- and raises something that was already
+in the ground from long before any of this. One sprite rather than nine, no
+reference image, and the better joke: it cannot make a skeleton out of a
+ghost, so it digs one up. Prompt in `ART_PROMPTS.md`.
+
+And five exclusions: **no boats**, **no spies**, **no sappers** (it went off
+when it died), **no machinery**, and **not the Hive's Grub, Princess or
+Queen**.
+
+**The Bloat-caste is the exception to the machinery rule, and the reason the
+rule could not be structural.** All six siege creatures share `silhouette:
+'engine'`, which is a drawing hint that says nothing about biology -- the
+Bloat-caste is a bloated insect that walks up and bursts. So it is a named
+exception with a test that makes anybody adding a seventh siege creature
+decide which kind it is rather than inherit an answer.
+
+That leaves **45 creatures**: 13 Horde, 13 Kingdom, 9 Hivekin, 10 Wandering
+Folk. One sheet per creature, not per group size.
+
+**Four filenames in `skeletal versions/` do not resolve against the roster**
+and are Jeremy's to name: `dwarf mystic`, `gnome`, and the pair
+`soldier_spitter` / `worker_fodder`, which look like one sheet covering two
+castes and which the pipeline has no convention for.
+
+### The second batch: six more, and the number that had fifteen homes
+
+**`knight-lance`**, the only upgrade in the thirty-six whose effect depends on
+*what it is fighting* -- hence a second parameter on `firstStrikesOf` that
+every other caller omits. "Cavalry-type" is `isMounted`, which the Long Vigil
+already defined.
+
+**`mage-battle` and `paladin-warden`** landed together, as the unwired note
+said they should: one sentence between them, asked at each of the two places
+in `abilities.ts` that spend the turn.
+
+**`footman-sergeant`**, where *"the first point of damage each combat"* turned
+out to be the interesting half. `applyDamage` has no idea which fight it is
+in, so the reprieve is worked out once at the top of `resolveCombat` and spent
+by the first blow that lands -- a closure rather than a flag on the unit,
+because it belongs to that combat and nothing outside it should see it.
+
+**`sapper-deep`**, one line, now that the blast has a radius at all.
+
+**And `troll-brute`, which was the cheapest-looking and was not cheap.** `+2
+HP` needed `maxHp(unit)`, because `unitType(u.type).hp` was written out in
+**about fifteen places** and every one meant the same thing: a heal ceiling, a
+split threshold, a drain limit, the scale damage is measured against, the
+share of a group still standing, the point at which a sprite starts looking
+hurt. A Brute at full health has to read as full health to every one of them
+or it is permanently one heal short of itself.
+
+The helper lives in `model/units.ts` rather than with the other upgrade rules,
+because `headcount` and `aliveCount` need it and nothing in `model/` may reach
+into `sim/`. `upgrades.ts` imports only types, so it costs no cycle.
+
+**`ogre-brawler`** catches one bystander on the backswing -- the nearest to
+the attacker, off the damage actually dealt rather than off the ogre's
+strength, so a swing that barely landed barely splashes. One, not all of them:
+an ogre that hit everything standing near its target would be a sapper.
+
+### `mage-warden`, which took three readings and taught us something
+
+**The bible's version is a no-op, and that was measured rather than argued.**
+*"First strike against this unit deals reduced damage"*: `damagePerRound` is
+`max(1, round(maxHp / 15))`, so a free blow is **one hit point for
+seventy-eight of the game's eighty-one creatures**, and half of one is one. A
+mage, which is the creature that gets this upgrade, saves nothing at all. It
+was wired, tested and green before anybody asked what it was worth, which is
+exactly the card-that-lies the completeness test exists to catch.
+
+**Jeremy's answer, 2026-10-30:** half the damage from *any* attack, and no
+free first strike against it at all. The first-strike half is one line in
+`firstStrikesOf` and works perfectly.
+
+**And the damage half ran into the same wall, one level down.** Of the 6561
+creature matchups in this game, **6084 deal exactly one point a round**, and
+`Math.round(1 * 0.5)` is 1. A percentage cannot halve an indivisible blow, so
+a 50% resistance is rounded away in ninety-three per cent of fights.
+
+So the ward is paid two ways, and the seam is deliberate:
+
+- **`resistance`**, which `applyDamage` consults, halves anything big enough
+  to halve -- a blast, a dragon's breath, a militia. Burning is not an attack
+  and takes its health directly, so it is untouched, which is right.
+- **In `resolveCombat`**, every second blow that the percentage *failed* to
+  reduce is shrugged off whole. Half the blows is half the damage when a blow
+  is indivisible. Guarded on the percentage having failed, so nothing is
+  halved twice.
+
+**The general lesson is worth more than the upgrade.** This game's damage
+granularity is one point for almost every exchange, so *any* percentage
+reduction is a coin that lands on "nothing" unless it exceeds 50%. Three
+upgrades in this bible are written as percentages; the next one wants this
+checked before it is believed.
+
+### The third batch: the axethrower, a blessing, and a dragon that aims
+
+**The axethrower's three were one mechanism**, as the unwired list had said.
+`axethrower-twin` forced `Unit.axesThrown` to exist: `disarmed` is a boolean,
+and for a creature with one axe a boolean and a count are the same thing,
+which is why nothing noticed until there were two. `axethrower-retriever`
+rolls *before* the countdown rather than instead of it, so an unlucky
+Retriever still gets its axe back the slow way and is never worse off than an
+ordinary thrower.
+
+**`axethrower-heavy` needed a new reading**, the third of those. *"Thrown
+strikes ignore 1 point of target defense"*, and in this engine a thrown strike
+does not consult defence at all -- the free opening blow deals
+`damagePerRound`, which is a function of health. The nearest true sentence is
+about the fight the throw opens, so a Heavy Thrower's target holds the line
+one point worse, read in `defenseStrength`, which already takes the attacker
+for the sake of siege engines.
+
+**`paladin-champion`** brought the game its first condition applied by an
+upgrade rather than a spell: `blessed`, worth a point of defence for a turn.
+Applied even to somebody already at full health, because a Champion standing
+over the unhurt is still worth standing next to, and that is the half of it
+that makes it more than a bigger heal.
+
+**`dragon-wyrm`** stops the breath at its own front rank. It still carries on
+-- that is the whole mechanic -- it simply stops cooking orcs.
+
+### And a fourth thing the engine would not do
+
+**`troll-bonebreaker` was built, wired and deleted again.** *"Attacks reduce
+target's defense by 1 for 2 turns"* needs the target to still be standing, and
+a probe over **2160 melee fights found not one that left both sides alive**.
+`resolveCombat` runs until somebody dies; the one exception is a withdrawal
+perk that did not fire a single time in that sample. The `broken` status went
+in and came straight back out with it.
+
+Two readings would work, and the choice is Jeremy's: apply it at the *start*
+of the fight, which makes it `axethrower-heavy` under another name, or make it
+an aura on adjacent enemies like `deathknight-dread`.
+
+**That is now four upgrades whose wording describes a different game** -- the
+Archer's range, the orc's movement point, the Warden's percentage and this.
+All four were found by measuring rather than reading, and three of them only
+after they had been written and were passing their tests.
+
+### The fourth batch, and a fifth thing the engine would not do
+
+**`sapper-cadre`** -- one of a pair does not take the other with it, which is
+the whole point of being allowed to stand together. Everything else is still
+caught, and a blast still does not chain.
+
+**`troll-regen`**, where the rate was the whole question. A blow in this game
+is one point and lands about half the time, so a troll takes roughly half a
+point a round -- **anything faster than one point every two rounds is a troll
+that cannot be killed**. One in four is a quarter of a point a round. The
+number is invented, and that arithmetic is why it is not larger.
+
+Its test measures **rounds, not health**: a troll loses to a footman either
+way, and two corpses have the same health. What the knitting buys is time --
+thirty rounds against twenty-four.
+
+**`dragon-elder` cannot be wired, and this one is structural.** *"Flying over
+enemy cities costs double movement"*, and in this game **no unit may enter an
+enemy city tile by pathing at all**: `costFnFor` returns null for every one of
+them, flier included, because enemy ground is taken by attacking and never by
+walking over. The drawback describes a manoeuvre the game has no rule for, and
+wiring the breath half alone would hand the Horde a free buff -- the
+`archer-marksman` hazard, where a pair must land together or the upgrade is a
+bonus with no price.
+
+**And a miss of mine, found on the way.** The `maxHp` refactor left six sites
+still reading `type.hp` -- including the regeneration ceiling, so a Troll
+Brute would have healed two short of its own maximum for ever. Also the health
+bar, the sidebar's `12 / 15`, the AI's retreat threshold and the recruiting
+discount. All six read `maxHp` now.
+
+### Jeremy's three rulings, 2026-10-30
+
+All three lines had been written as something this engine cannot do, and all
+three were found by measuring rather than reading.
+
+**`archer-volley`** -- *"any unit in range regardless of intervening units"*,
+at range 1. What an Archer has instead of range is the free opening blow, so a
+Volley Archer gets **two of them**.
+
+**`troll-bonebreaker`** -- the lasting debuff that could never land, since no
+melee fight leaves a survivor. Applied **during the fight** instead, where the
+bone actually breaks. It shares `piercesDefence` with `axethrower-heavy`,
+which is the cost of this reading and was the stated trade-off.
+
+**`dragon-elder`** -- keep the stronger breath, pay for it somewhere the game
+can express. An Elder Dragon is a **slower** dragon, which is also what
+"circling to line up the shot" should look like. Four movement points, so one
+off is a real price rather than the standstill `orc-guardian` would have been.
+
+### The last two
+
+**`dragon-rider` came in through the door that was already there.** Every
+piece of the cargo machinery -- `cargo`, `board`, `unload`, `landingTiles`,
+`refreshCargo` -- worked on anything with a hold and only ever asked `sails`,
+because until now a ship was the only thing that had one. So the dragon is
+let in through the same door rather than given a second one: `carrier()` is
+`sails || ridesAlong`, and `roomAboard` counts `seatsOn` instead of the
+type's own `carries`. Two log lines had to learn the difference, because a
+passenger set down by a dragon does not *wade* ashore and does not *go down
+with the ship*.
+
+A dragon will not carry another flier, which is the upgrade's own words --
+"one ground unit" -- and also stops two dragons giving each other lifts.
+
+**`sapper-tunnel` is one crossing of water**, which is the only ground
+impassable to a sapper in this game: mountains cost three and cross fine. A
+sapper going under a lake, once.
+
+**And it is deliberately invisible to the pathfinder.** A one-use pass and a
+route planner do not mix -- `costFnFor` would happily lay out a five-tile sea
+crossing on a budget of one, and the march would strand halfway. So only
+`tryStep` knows about it: a goto is never routed through water, the step has
+to be taken by hand, and the pass is spent the moment it is taken rather than
+when it is finished with.
+
+### The Orcpedia: a fold on every creature's card
+
+Jeremy asked for this once the effects were in, and he was right that the
+bullet was not enough. It named the three and stopped. A player choosing a
+branch wants to know what each one *does* and which advance buys it, and the
+only place that existed was the tech tree, one card at a time, with no way to
+see the pair side by side.
+
+So each creature's card carries a `<details>` fold: the linear upgrade, then
+*"and then **one** of these, for the whole empire, for good"*, then the two
+branches -- each with its advance, its blurb and its joke. Read off
+`upgradesFor`, so a card can never describe an upgrade the game does not
+offer. Shut by default, because three rows on twelve creatures is thirty-six
+rows of small print in front of somebody who came to compare two attacks.
+
+**The bullet came out.** The fold's own summary says what the bullet said;
+two sentences of one fact on one card is one too many.
+
+**Each row carries its own sprite**, which costs nothing to find: the sprite
+*is* the id, which is the whole reason these are variants rather than
+thirty-six new creatures. Dropped on error rather than replaced with a
+procedural placeholder, because `placeholderFor` wants a real `UnitTypeId`
+and an upgrade is deliberately not one.
+
+**And a colour bug that no test could have caught.** The upgrade's name was
+given `color: var(--ink)` on the reasoning that `--ink` is the text colour.
+It is not: it is `#12100c`, the dark ink for *light* surfaces, and on a card
+over a dark panel all three names rendered invisible -- while the DOM
+insisted each was sixty-odd pixels wide, present and `visibility: visible`.
+Only looking at the thing found it. It inherits its colour now, as
+`.pedia-name` above it does.
+
+**And it caught an old fragility on the way in.** The group-size ladder was
+spliced into the finished card with a `.replace` that matched its last two
+closing divs -- which worked exactly as long as the card ended in two closing
+divs. The fold added some of its own, and the ladder landed **inside** it: a
+player would have found "group sizes" by expanding a list of upgrades. It is
+passed into `unitCard` now rather than spliced onto the end of it.
+
+### Slice 6: the three newer factions, as data and art
+
+Jeremy held the merge for this, and he was right to: thirty-six upgrades for
+two sides and none for the other three is not a game anybody should tick a box
+on. **54 upgrades and 54 advances**, which takes the five sides to 21 / 15 /
+18 / 21 / 15 across thirty families.
+
+Six, seven and five families rather than twelve each, because the second
+bible's own *"Skipped on purpose"* section leaves out the workers, the spies,
+the naval transports, the siege attackers and the one-of-a-kinds -- and the
+Burrower and the Mystic, which already had upgrades from sections 125 and 150.
+
+**Transcribed by script, as slice 2 was**, and every structural guard that
+slice wrote passed untouched: both-directions pairing, unique ids, real base
+creatures, advances that root in the tree, linear before branches. Only two
+hard-coded counts needed changing, which is the test suite doing exactly what
+it was built for.
+
+### Two families had to be renamed
+
+The bible calls them `skirmisher-*` and `brute-*`. **Both of those names are
+wild orc raiders in this game** -- the Wandering Folk's are `wf-skirmisher`
+and `wf-brute` precisely because the raiders got there first. The renderer
+takes a creature off the front of an upgrade id, so `skirmisher-paid` would
+have put a mercenary in a raider's sprite.
+
+They are `wf-skirmisher-*` and `wf-brute-*`, and the advances are renamed with
+them so the bible's *"the tech id equals the unit id it grants"* still holds.
+
+### The art needed no pipeline change
+
+Filed alongside the Horde's and the Kingdom's in `art_src/unit upgrades/`
+rather than under each faction. The upgrades are a cross-faction system and
+that tree is already scanned by name -- `process_upgrade_art` for the sprites
+and the advance icons, `EXTRA_SOURCE_DIRS` for the attack strips and the
+weakened sheets -- so filing them there is the whole of the wiring. Ninety
+upgrades' art in one place also beats thirty-six in one and fifty-four in
+three.
+
+**54 sprites, 54 attack strips, 54 advance icons, 53 of 54 weakened sheets.**
+
+Three files would have been skipped silently for their names, and each was
+taken on purpose rather than left to make the count quietly short:
+`fodder-swarm swarm.jpg` (suffixed for the wrong thing), `slinger-quiver
+attack (extra hands).jpg` (a parenthesised roll with no plain sibling), and
+`yaksha-posted -- remove drop.jpg` -- **which is a note to Jeremy rather than
+a filename**, and the icon may still have the drop he meant to remove.
+
+`warband-sergeant weakened` is the one sheet in the drop that was never drawn.
+
+### And a convention that broke the completeness test
+
+Every one of the fifty-four read as **already wired**, because the second
+bible's convention is that the advance id *equals* the upgrade id --
+`fodder-hardened` is both -- so `techs.ts` mentions all fifty-four and the
+grep counted a declaration as a use.
+
+The Horde's and the Kingdom's had hidden this: their advances are named for
+the joke rather than the unit, so `orc-veteran` and `doing-this-before` are
+different strings and a declaration could never look like a use. `techs.ts`
+joins `upgrades.ts` in the declarations list.
+
+### Slice 8: the last nine, and two systems that had to grow a dial
+
+**All ninety upgrades now do everything their card says.** The last of them
+needed a ruling rather than a rule; it is at the bottom of this entry.
+
+The nine that were outstanding split cleanly into three that were ordinary
+wiring and **six that priced themselves in units the game did not have**. Four
+of those six are the Hive Warden's and the Revenant's, and between them they
+named two scales that did not exist:
+
+- *"Exorcism strength +1"* and *"+3"*, on a system where `exorcises()` was a
+  **boolean**. There was no strength to add to. A unit either sent a spirit
+  back or it did not.
+- *"Reforms in 1 turn instead of 2"*, on a system where reform was
+  `s.turn < state.turn` -- always the next turn. There was no 2 to improve on.
+
+Jeremy's ruling of 2026-11-02 was to **build the scales rather than drop the
+cards**, and both come with the same safeguard: each is a lever whose *old end
+is the shipped game*. `EXORCISM.chance = 1` is section 150 exactly, and
+`REFORM.turns = 1` is section 152 exactly. That matters more than usual here,
+because these are the only two changes in ninety upgrades that alter what a
+unit with **no upgrade at all** does, and both touch the Unbound's core rule.
+Neither new number is measured: an exorcist now lands it three times in four,
+and a Warden buys that back.
+
+### Making a dial out of a boolean found three things, none of them the dial
+
+**A reformed spirit had been losing its upgrade.** `Scattered` carried `type`
+and `rank`, and the comment on `rank` says *"a spirit that reforms has not
+forgotten"* -- it did forget. Two gold of a permanent, empire-wide choice was
+being quietly refunded by dying. Found only because both Revenant upgrades are
+*about* reforming, so the thing that reforms needed to know which upgrade it
+held. Fixed, and the Orcpedia now says so out loud.
+
+**A read-only query would have rolled the dice.** `exorcistsOf` is what the
+advisor panel counts exorcists with, and it filtered on `exorcises` -- which
+now consumes randomness. A panel repaint would have moved the game's random
+stream. Split into `isExorcist`, the capability question, which is also the
+question an advisor was actually asking. The pair to watch for next time any
+predicate in this engine learns to roll.
+
+**Six shipped tests asserted the old certainty**, and one in four runs would
+have failed. They are about the *ladder* -- that an exorcist's kill is the rung
+where a spirit simply dies -- not about the odds, so they now pin the lever at
+one and say why in a helper. A test that drifts into testing a probability it
+did not mean to test is worse than no test.
+
+### Four cards were describing a different game, and now do not
+
+`warden-tempered` promised "exorcism strength +1" in a unit nobody can read;
+`warden-purging` promised that spirits "cannot reform on the tile", which read
+literally was **already true** -- nothing reforms on an occupied tile, and an
+enemy standing in your city has taken it. `warden-anchored`'s *"the tile it
+holds cannot be entered"* was the same sentence again: one unit to a tile, so
+nobody enters anybody's. That is the **third and fourth** clause in this bible
+to describe something the game already does, after the Yaksha's two.
+
+Both are read as **ground held rather than a tile occupied**, which is the
+reading Jeremy already gave the Immovable Yaksha, and the Purging one as
+**adjacency**, which is the reading he already gave "stack". So a Purging
+Warden camped outside a town shuts the doorway -- the closest thing in this
+game to besieging a mechanic -- and an Anchored Warden closes the ground
+around it **to spirits only**, leaving everybody else to walk past.
+
+And `revenant-insistent` promised *"+2 attack when reformed"* while carrying
+**no effect data at all**. "When reformed" was unaskable until this slice
+taught reform to carry the upgrade home; now the spirit also carries a
+`reformed` flag, so an Insistent Revenant bought this morning gets nothing and
+one that has already been put down once comes back cross about it. It is the
+only upgrade in ninety that is worth more the worse the war has gone, which is
+the right card for that faction to have.
+
+`revenant-settled`'s *"reforms at +1 HP"* got the opposite treatment: a spirit
+reforms at **full** HP, so a bonus paid on reform is paid into a unit that is
+already full. It is +1 HP flatly, and the card says that, because a card
+promising a condition the game has not got is worse than a smaller card.
+
+### Three fixtures moved, and the cause was not in this section at all
+
+The three six-player games diverged wholesale -- eighteen cities became twenty,
+production differs everywhere -- which means the random stream forked early
+rather than anything changing locally. Four candidates, all of them mine, so
+the paths were **instrumented rather than reasoned about**, which is the
+section 147 lesson and took one 24-second run:
+
+> `regrow=0 regrowDiffers=0 zeroWinner=2 zeroWinnerDestroyed=1 cling=0 burst=0`
+
+`bonebound-regrowing`, `revenant-clinging` and `fodder-burst` never fire in
+these games at all. The mover is the fourth, and it is **not an upgrade**:
+
+**Twice in these three games an attacker won its fight and finished at nought
+hit points or below. Once, it was left standing on the board.** The other had
+already been removed by a blast, which is the one case `movement.ts` had a
+branch for.
+
+That is a bug the game has had since **section 11**, when losing stopped
+meaning dying. `resolveCombat` decides `attackerWon` from the defender's
+health, and nothing then asked after the winner's: an attacker that traded its
+last point for the kill was reported as the victor, kept its tile, and sat
+there on nought for the rest of the game -- unkillable, since every death path
+in this engine runs through `destroyUnit` and nothing was calling it, and
+invisible, since the renderer draws whatever is in `state.units`.
+
+`fodder-burst` is what found it. Wiring *"it was always going to come apart"*
+meant asking what happens to a winner that a corpse finishes off, which is a
+question nobody had asked of the ordinary case either. The fix is in the
+ordinary case and asks about the **health rather than the cause**, so the next
+thing that kills a winner after its own fight needs no third clause.
+
+So the fixture movement is a **correction, not a regression**: one unit that
+should have been dead for a hundred and forty sections is dead, and three
+long games play out differently from the turn it dies. Worth saying plainly
+because a fixture diff this large normally means something went wrong, and
+here the diff is the evidence it went right.
+
+### And then the probe said both dials have nothing to turn
+
+With only the two new levers in the tree -- before the zero-health winner above
+was fixed -- the fixtures came back **byte-identical**, which looked like a
+clean result and is not one. An exorcist's kill now draws a random number, so a
+single one in two hundred turns of six-player play would have shifted the
+stream. Unmoved fixtures therefore say **the rule never fired**.
+
+So `tools/unboundprobe.run.test.ts`, twelve games, as it ships:
+
+> `scattered 0.0 a game, gathered again 0.0, lost 0.8`
+> `ever had somewhere to gather: 12/12, first on turn 43`
+
+Read against the figure recorded in section 152 above -- `0/12` sites and the
+same `0.0` scattered -- **half of that has been fixed and the half that
+matters has not.** The standing want works: every game now raises a doorway,
+and raises it by turn 43. And in twelve games **not one spirit scattered with
+a doorway open**, while 0.8 a game came apart with nowhere to go.
+
+**What that is and is not evidence of**, because this is a rare-event count and
+section 147 is a memory about exactly this. The per-seed rows show the losses
+in four games of the twelve -- 3, 4, 2 and 1 -- so the whole sample is about
+**ten spirit deaths**, not hundreds. Nought of ten is consistent with the
+doorway being open at the moment of death as often as a quarter of the time;
+it does not establish *never*. What it does establish is the thing this slice
+needed to know and is not a probability at all: **both new levers had zero
+opportunities to act in twelve games.** A dial needs one event to turn it, and
+there were none.
+
+The cause is in `reformSites` and has been all along: *"a Retrieval Circle only
+works while nothing stands in its city, and this AI keeps a garrison in every
+city."* The comment on `DISPERSAL.aiWants` says exactly that and was written
+about a *different* failure -- the want would have measured zero usable sites
+and laid circles forever. It is the same sentence from the other end: the site
+is usable at some point in every game, and never at the moment a spirit dies.
+
+**Which means neither of this slice's two levers can be measured yet, and
+neither is a balance risk today.** An exorcism roll needs an exorcist beating
+a spirit that would otherwise have scattered; a reform delay needs something in
+the scattered list. Both are at zero. Sweeping `EXORCISM.chance` or
+`REFORM.turns` now would be measuring noise against noise, which section 152
+already said of `failBase` for the same reason.
+
+The fix is not in this section, and it is one of two things, neither measured:
+
+- **Keep the Circle town clear.** Teach the AI that a city with a Circle and
+  no Totem is a doorway rather than a barracks. Cheapest, and it makes the
+  building's awkwardness a decision the AI actually takes, which was the point
+  of there being two buildings.
+- **Get the Totem earlier.** The Totem has no empty-city condition, so an
+  Unbound empire that reaches one has the mechanic unconditionally. A research
+  priority rather than an AI rule.
+
+Worth noting what this does *not* say: the faction is not broken, and nothing
+here is a regression. They have been playing as "an ordinary army that is
+slightly better at scouting" since section 152, which is the arm that bible
+deliberately made measurable. This slice did not change that and could not
+have; it only made it visible by giving the rule a dial and watching the dial
+not move.
+
+### The ninetieth, and the card meant the opposite of what it said
+
+`revenant-clinging` was *"+3 defence; cannot be dispersed by non-Warden attacks
+while defending a city"* -- and for this faction **dispersal is how a unit
+survives**, so a Revenant that cannot be dispersed is a Revenant that dies
+instead. As written it was a penalty with a defence bonus stapled to it.
+
+**Jeremy's ruling, 2026-11-02: flip it.** Holding one of its own cities, a
+Clinging Revenant cannot be *destroyed* -- everything scatters it instead,
+exorcist or not.
+
+Flipping it also turns out to be the only reading with anything in it, which is
+worth recording because the literal one looked wireable. An ordinary attack
+*already* only scatters a spirit, so "cannot be dispersed by non-Warden
+attacks" was describing the behaviour the faction already had; the clause can
+only be about the three things that genuinely end one, and those are the
+exorcists, the Grave Knight's banishment, and having nowhere to gather.
+
+So the Warden exception is doing real work rather than flavour: it is the one
+unit in ninety upgrades that can still end it indoors, and a **Purging
+Warden** beside the town shuts the doorway it would gather through. The two
+halves of this slice turn out to be each other's answer, which was not
+designed and is the nicest thing about it.
+
+Two limits keep it off the faction's own forbidden word, *"impossible to
+kill"*: it works **only in a city of its own**, so the answer is to not fight
+it indoors, and it still needs **somewhere to gather**, so an Unbound player
+with no site has bought three points of defence and an interesting death.
+
+### Slice 7: the new factions' effects, and a third category
+
+**66 of 90 upgrades now do everything their card says**, up from 36. The flat
+half of every one is data -- 50 defs carry an `effect` -- and the rules reuse
+the seams slice 5 opened, which is most of why 54 more effects was a smaller
+job than the first 36 were.
+
+**The completeness test grew a third list, and that is an admission.** It can
+tell whether an upgrade is *mentioned* anywhere; it cannot tell whether what
+it does is *all* its card promises. A Carapace Soldier really is three points
+harder to kill and does not yet mind rough ground. So `PART_WIRED` names the
+nineteen whose number is in and whose rule is not, each with the missing
+clause, beside the five with no effect at all. Both are counted, so neither
+can grow quietly.
+
+### Jeremy's four rulings, 2026-11-02
+
+**"Stack" means adjacent**, because this game is one unit to a tile and says
+so out loud. One ruling covered four upgrades.
+
+**Extra attacks became extra opening blows** -- and that list grew to *five*.
+The Spitter and the Slinger have `range: 1` exactly as the Archer does, so
+three more "+1 range" clauses described nothing. Jeremy had already ruled that
+shape twice for the Archer, both times the same way, so it was applied by
+precedent rather than asked a third time. `OPENS_TWICE` is the record of which
+five took the reading and why.
+
+**The Reckoner** counts who has come for it this turn and charges everyone
+after the first, since every defender already fights back every time.
+
+**The Rearguard is now the only thing in the game that carries the
+withdrawal.** `better-part-of-valour` has existed since section 11 and fired
+**zero times in 2160 fights** because nothing had it. A mercenary paid to go
+last is the right owner, and this makes a dead rule live rather than adding a
+second beside it.
+
+### The zone of control, which is the one with reach
+
+`yaksha-immovable` is the only upgrade in ninety whose effect touches units
+other than its own, so two deliberate limits:
+
+- **Asked in `tryStep`, not the pathfinder.** A planner that knew about it
+  would thread around one and look clairvoyant; one that did not would strand
+  a march against it. The same trade `sapper-tunnel` makes.
+- **It never closes a city tile.** A rule that can strand a unit in its own
+  town is a bug wearing a mechanic's coat.
+
+Fixtures unmoved, which is the check that matters for a movement rule.
+
+### Thirty-six of thirty-six
+
+The unwired list is empty, which is the state it should normally be in.
+
+**That cost the completeness test half its guard**, and it is worth knowing
+why. While something was on the list the two halves checked each other: a
+grep that always said yes made the stale-entry test name everything, and one
+that always said no made the orphan test do it. With the list empty the
+stale-entry test is vacuous and the orphan test is alone -- so a grep that
+had quietly broken would pass it having checked nothing. There is a canary
+now: an id that is certainly nowhere must be reported as nowhere.
+
+And the two Death Knight lines, which are **built**: see below.
+
+### The Grave Knight, built
+
+Jeremy's two answers, 2026-10-30:
+
+1. **A raised copy has half the original's numbers** -- attack, defence and
+   health all halved. "Copy" then means something: raising a dragon is worth
+   more than raising a peon, and it needs no second table of stats. The known
+   risk is that half a dragon is still a serious unit; if that plays badly the
+   fix is a cap, which was the option not taken.
+2. **The ancient skeleton is a new creature, never buildable.** One new id in
+   `UNIT_TYPES`, Horde faction, unlocked by no advance, so no city can ever
+   build one and it still gets a proper Orcpedia card. Cost: one more entry in
+   every hand-maintained list, which is this project's least favourite kind of
+   cost and was judged worth it here.
+
+My defaults for the rest, all provisional and all for a sweep to decide:
+
+| | |
+|---|---|
+| lifespan of a raised copy | 3 turns |
+| chance on a kill | 1 in 3 |
+| Soul-Bound drain | 1 HP a turn per live skeleton |
+
+And four rulings that are not numbers:
+
+- **Only kills the Grave Knight makes itself, in combat, raise anything.** Not
+  a blast, not a dragon's breath, not a militia. Otherwise a sapper going up
+  next to one would populate a graveyard.
+- A raised skeleton has **no upkeep, counts for no score, and cannot take a
+  city**. It is a few turns of help, not an empire.
+- **No cap on Soul-Bound skeletons.** The drain is the cap, and that is the
+  joke the flavour text makes -- *the pyramid scheme finally has overhead*.
+- The Unbound are **banished** rather than copied, which means `scatters()`
+  has to answer `false` when the killer is a Grave Knight -- the same seam
+  `exorcises` already uses, which is why that rule is cheap.
+
+### What building it turned up
+
+**Two of the four rulings were already true and needed no code.** Score counts
+population, advances and buildings and has never counted units at all; and
+`spawnUnit` leaves `homeCity` null, so a raised skeleton is a free unit that
+no city supports. Worth checking rather than assuming -- the alternative was
+two rules enforcing something nothing was doing.
+
+**The third needed a refusal rather than a silence.** A raised skeleton
+walking onto a town is *blocked*, with a reason, rather than quietly failing:
+a Soul-Bound Knight whose skeletons never expire would otherwise have a free
+standing army that conquers, which is a long way past "a weak skeletal copy".
+
+**And the halving lives in three places, not one.** `maxHp` in the model,
+because `headcount` needs it; attack and defence in `combat.ts`, read straight
+off `unit.raised` rather than through `sim/raising` -- that module imports the
+mover, which imports combat, and `RAISED` is model data with no such problem.
+
+**The one thing only a test would have caught**: the fixture needs the hardest
+difficulty, because every other level staggers the latecomers and at turn one
+there is no Unbound seat on the board to banish.
+
+### And the one thing only the fixtures caught
+
+The Ancient Skeleton shipped with `cost: 20` and no `wild`, on the reasoning
+that a nominal cost keeps disband refunds and the AI's sense of worth sane.
+**Three rosters in this game select by faction and a few stats, not by "could
+a city ever build this"**: the ruins' old garrison, a spy's plausible
+disguise, and the Unbound's roster. So ruins began handing out Ancient
+Skeletons from turn one -- **with the upgrade lever off** -- and the whole
+game played out differently.
+
+Every test passed. Three fixtures moved, same seed and a diverged `rngState`,
+which is the only place it showed.
+
+The fix is to model it the way this game already models a creature a rule
+produces: **`wild: true` and `cost: 0`**, exactly like the raiders and the
+Sunken Legion. It is the zero cost that does the work -- `oldGarrison` filters
+on `cost >= starterUnit.cost`, so a nominal price walks straight in while
+`wild` alone does not stop it. Priced at nothing it falls out of all three by
+the same rule that already excludes every other rule-produced creature, rather
+than by three exclusions somebody has to remember.
+
+### The sprite naming, decided with the rule rather than ahead of it
+
+One mapping for `art_src/unit upgrades/skeletal versions/`, with no special
+cases: **`<name> skeleton.jpg` becomes `<name>-skeleton.png`**.
+
+So `orc skeleton.jpg` is the variant sprite an upgraded orc's corpse wears,
+reached by `artVariant` exactly as the upgrades are; and `ancient
+skeleton.jpg` becomes `ancient-skeleton.png`, which is also the new creature's
+id. The two cases fall out of one rule rather than needing a branch, which is
+why it was worth waiting for the rule to decide it.
+
+**And a name may carry two creatures.** `soldier_spitter skeleton.jpg` writes
+both `soldier-skeleton.png` and `spitter-skeleton.png` -- Jeremy's call on
+2026-11-01, that two castes close enough to share a drawing should share one
+rather than cost a second generation. The underscore is the join, and it is
+the only place in this pipeline that means anything.
+
+Files whose names match no creature -- `dwarf mystic`, `gnome` -- convert to
+sprites nothing asks for, which is harmless: `art-present.test.ts` checks what
+the model wants, not what the folder holds.
+
+**23 of the 45 raisable creatures have a sheet.** The rest wear their living
+sprite, which is the usual harmless-but-wrong, so the count is a control in
+the suite rather than a line here.
+
+**Still nothing swept.** Every number slice 5a invented is in one object per
+rule at the foot of `upgradeEffects.ts`. A sweep now would compare a game with
+upgrades against a game where two thirds of them are inert.
+
+### Both questions answered (Jeremy, 2026-10-29)
+
+**The Longbow looses twice.** The bible's longer reach could not be range --
+this game's Archer has `range: 1` and its bow *is* the free opening shot -- so
+it is read as **twice**: it looses, is answered, and looses again, all before
+the fight proper. Hung off the free shot rather than standing alone, so it
+nets against another first-striker the way section 11 says every first strike
+does; two archers still cancel.
+
+**The Guardian moves one tile every two turns**, rather than taking a flat -1
+it could not afford. Every Guardian steps on the same turns, which is
+predictable to play against and, for a creature whose joke is that it has
+finally learned to wait, rather the point.
+
+**And in exchange it can Cover.** A turn spent standing in front of an
+adjacent unit -- including one inside a city -- so that whatever comes for
+them meets the Guardian instead: its defence, its health, its death. The one
+thing it can do on a turn it cannot move, which is half of what makes the
+slower pace bearable.
+
+The substitution is in `movement.ts`, before the fight rather than inside
+`resolveCombat`, because everything downstream reads the defender for the
+logs, the experience, the bounty and `destroyUnit`. **It works because the
+attacker does not advance onto the tile it attacked** in this game, so a
+defender standing somewhere else costs the geometry nothing. Melee only: a
+ranged strike goes through `abilities.ts` and does not consult it, which is a
+gap rather than a decision.
+
+Cover took the key **Y**, not C, because C centres the view and one unit type
+in eighty should not take a universal key away. The single-letter ability
+space is nearly full and the next one will want a better answer.
+
+### And a weakness in how the fixtures protect us
+
+`tests/fixtures.test.ts` **writes** the `.w2c` files rather than comparing
+them, so a change that moves the game makes the suite rewrite its own oracle
+and pass. The Queen bug above was caught by `git diff --stat fixtures/` and
+not by any test. The signal is the diff; somebody has to look at it.
+
+**And "the fixture moved" has two very different meanings**, which cost an
+hour here. The Queen bug changed `seed` from 71 to 75: the late fixtures
+search a fixed list of seeds for one where both empires are still standing at
+turn 299, so a different seed means the *game* moved. Slice 5a's remaining
+diff is `fights` appearing on 20 units of 118, with the same seed, the same
+`rngState` and every other field identical: that is the save format carrying
+one more fact, not the game changing.
+
+So diff field by field before concluding anything. Bisecting by "does the file
+match HEAD" is a trap, because removing the write also removes the field --
+which looks exactly like fixing a behaviour change and is not.
 
 ### What slice 4 did not do
 
@@ -13345,6 +14171,68 @@ was at 27%.
   running have found a number anchored to a world that then moved. A sixth
   faction will do it again to this one.
 
+## 162. Click a picture in the Orcpedia and look at it — SHIPPED
+
+Jeremy's ask, 2026-11-03, and it comes straight out of section 155: *"clicking
+on an image in orcpedia does a small popout modal window, just so we can see
+them more easily (esp the shrunken upgrade images), closes on a second click or
+closing the orcpedia."*
+
+He is right about which pictures. The upgrade fold draws what a creature can
+become **three times over on its own card at 26 pixels square** — deliberately,
+since the fold is there to tell three variants apart at a glance and a gallery
+would have buried the card. The cost of that decision is that the art nobody
+can see is the art this project spends the most effort on.
+
+Any picture in the book now pops out at 384 pixels with its name under it.
+A second click, a click on the darkened background, or <kbd>Esc</kbd> puts it
+away; a second <kbd>Esc</kbd> closes the book, which is what the first one did
+before there were pictures to close.
+
+### The only real decision: whose child it is
+
+**Not a second modal.** `openModal` allows exactly one at a time and closes
+whatever is up to make room for the new one, so showing a picture *from* the
+book would have closed the book to show it.
+
+So the overlay is a **child of the pedia's own backdrop**, and that one choice
+answers three things at once:
+
+- *"Closes when the Orcpedia closes"* is free. A child goes when its parent
+  goes. There is no listener to unhook and nothing to remember, which matters
+  because `onMount` has **no teardown hook** to do it in.
+- Escape is handled **on the overlay**, which is focused when it opens, rather
+  than on `window`. A global listener added in `onMount` would outlive the
+  pedia that added it, and the second one would outlive the first.
+- A click on it never reaches the backdrop's own dismiss handler, which fires
+  only when the backdrop is itself the target.
+
+### The caption is read off the page, not written into the markup
+
+Every picture in the book already sits beside its own name — a row's
+`.pedia-tech-name`, an upgrade's `.pedia-upgrade-name`, a special's
+`.pedia-special-name`, a card's `.pedia-name` — so **two selector rules cover
+all seven places that draw an image**. The alternative was a `data-` attribute
+on seven `<img>` tags, which is seven more things to keep in step and the exact
+shape of mistake `tools/manifest.ts` exists to stop making.
+
+### A guard with nothing to guard yet, said out loud
+
+Images inside a link or a button are skipped, so following a cross-reference
+cannot quietly become looking at it. **Nothing in the book draws one today**,
+so that branch never runs. It is written because the building chips in the city
+panel are exactly that shape — an icon inside an `<a>` — and the day one is
+quoted in here is the day a link stops working.
+
+A test of it in isolation **passed against the code with no popout at all**, so
+it was deleted rather than kept: a test that cannot fail is worse than no test,
+because the next person counts it. The remaining nine all fail against the
+commit before them, which was checked rather than assumed.
+
+Documented in the Orcpedia's own Controls pane, beside the mouse and the keys.
+
+---
+
 ## 163. The doorway, and a probe that had been lying for two sections — SHIPPED
 
 Jeremy asked to address "the AI garrisoning issue" — section 155's parting
@@ -13726,10 +14614,18 @@ it, cannot disturb the iteration. Naming the sapper or the ogre as the
 is an exorcist, so a spirit caught in a blast scatters, which is what the rule
 says should happen.
 
-**The `maxHp` note has moved.** Both do compute damage from
-`unitType(victim.type).hp`, but `maxHp` does not exist on `main` — it arrives
-with section 155, which is still in PR #172. On this branch there is nothing
-to fix; on that one there is, and it belongs there.
+**The `maxHp` note, and how it resolved itself.** Both computed damage from
+`unitType(victim.type).hp`, which ignores a raised copy's halved health and an
+upgrade's added health. `maxHp` does not exist on `main` — it arrives with
+section 155 — so this was written down as *"nothing to fix here, something to
+fix there"*.
+
+**There was nothing to fix there either.** Section 155's own `maxHp` refactor
+had already caught both, and merging the two proved it: `detonate` and
+`clubEffects` came out computing `maxHp(victim) * power` from that side and
+calling `destroyUnit` from this one, on neighbouring lines, without a
+conflict. The two sections turned out to be fixing different halves of the
+same two functions, neither knowing about the other.
 
 ---
 

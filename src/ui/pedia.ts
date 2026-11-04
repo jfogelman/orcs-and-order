@@ -211,23 +211,11 @@ export function abilityNotes(def: UnitTypeDef): string[] {
       )}%)`);
     }
   }
-  // Section 155: what this creature can become, in a game that has upgrades.
-  //
-  // Read off `UPGRADE_DEFS` rather than written out, which is the rule this
-  // project keeps relearning: thirty-six names in a second list would be
-  // thirty-six chances for the card to describe an upgrade the game does not
-  // offer. Gated on the lever, so a game with the box unticked does not
-  // advertise a road it has no intention of opening.
-  if (UPGRADES.enabled) {
-    const road = upgradesFor(def.base);
-    const branches = road.filter((u) => u.line !== 'linear');
-    if (road.length > 0 && branches.length === 2) {
-      notes.push(
-        `can be improved to ${road[0].name}, and from there to either ${branches[0].name} or ` +
-          `${branches[1].name} — never both, and that choice is the whole empire's, for good`,
-      );
-    }
-  }
+  // Section 155 put a bullet here naming the three an upgrade road offers,
+  // and section 155 took it out again: `upgradeSection` is the fold on this
+  // same card, its summary says the same thing, and it then says what each
+  // one *does* -- which the bullet never could. Two sentences of one fact on
+  // one card is one too many.
   // Section 136: and the one that digs is not always the one that founds.
   if (def.works) notes.push('builds roads and improves the ground');
   // Section 137: **a spy's card said nothing a spy does.** Eight rungs of
@@ -503,7 +491,68 @@ function buildingEffects(b: BuildingDef): string[] {
   return out;
 }
 
-function unitCard(def: UnitTypeDef): string {
+/**
+ * What this creature can become, folded away until somebody asks. Section 155.
+ *
+ * **The card note was not enough.** It says a creature *can* be improved and
+ * names the three, which is the right amount for a line in a list -- but a
+ * player choosing a branch wants to know what each one does and which advance
+ * buys it, and until now the only place that existed was the tech tree, one
+ * card at a time, with no way to see the pair side by side.
+ *
+ * Folded rather than open because it is three rows on twelve creatures: open,
+ * it would be thirty-six rows of small print in front of somebody who came to
+ * the page to compare two units' attack. `<details>` costs no script and
+ * remembers nothing, which is the right amount of machinery for this.
+ *
+ * Read off `upgradesFor`, like everything else here, so a card can never
+ * describe an upgrade the game does not offer.
+ */
+function upgradeSection(def: UnitTypeDef): string {
+  if (!UPGRADES.enabled) return '';
+  const road = upgradesFor(def.base);
+  const branches = road.filter((u) => u.line !== 'linear');
+  if (road.length === 0 || branches.length !== 2) return '';
+  const linear = road.find((u) => u.line === 'linear');
+  if (!linear) return '';
+
+  // The sprite is the id, which is the whole reason these are variants rather
+  // than thirty-six new creatures: `orc-veteran.png` is already on disk and
+  // needs no lookup table. Dropped on error rather than replaced with a
+  // procedural placeholder, because `placeholderFor` wants a real
+  // `UnitTypeId` and an upgrade is deliberately not one.
+  const row = (u: (typeof road)[number], kind: string) => `
+    <div class="pedia-upgrade">
+      <div class="pedia-upgrade-head">
+        <img class="pedia-upgrade-art" src="${artPath(u.id)}" alt="" />
+        <span class="pedia-upgrade-name">${escapeHtml(u.name)}</span>
+        <span class="pedia-upgrade-kind">${escapeHtml(kind)}</span>
+      </div>
+      <div class="pedia-upgrade-needs">Needs ${escapeHtml(TECHS_BY_ID[u.needs]?.name ?? u.needs)}</div>
+      <div class="pedia-upgrade-does">${escapeHtml(u.blurb)}</div>
+      <div class="pedia-flavor">${escapeHtml(u.flavour)}</div>
+    </div>`;
+
+  return `
+    <details class="pedia-upgrades">
+      <summary>What it can become &mdash; ${escapeHtml(linear.name)}, then one of two</summary>
+      ${row(linear, 'first')}
+      <div class="pedia-upgrade-fork">and then <strong>one</strong> of these, for the whole empire, for good:</div>
+      ${branches.map((u) => row(u, 'a road')).join('')}
+    </details>`;
+}
+
+/**
+ * One creature's entry.
+ *
+ * `extra` is the group-size ladder, passed in rather than spliced into the
+ * finished HTML afterwards. It used to be a `.replace` on the returned
+ * string, which worked only while this function ended in exactly two closing
+ * divs -- section 155's upgrade fold added some of its own, and the ladder
+ * landed **inside** the fold, where a player would find it by expanding a
+ * list of upgrades.
+ */
+function unitCard(def: UnitTypeDef, extra = ''): string {
   const tech = unlockedBy(def.id);
   const notes = abilityNotes(def);
 
@@ -526,6 +575,8 @@ function unitCard(def: UnitTypeDef): string {
             : ''
         }
         <div class="pedia-flavor">${escapeHtml(def.blurb)}</div>
+        ${extra}
+        ${upgradeSection(def)}
       </div>
     </div>`;
 }
@@ -591,7 +642,7 @@ function creatureSection(faction: FactionId): string {
               )
               .join('')}<span class="pedia-ladder-note">group sizes</span></div>`
           : '';
-      return unitCard(base).replace('</div>\n    </div>', `${ladder}</div>\n    </div>`);
+      return unitCard(base, ladder);
     })
     .join('');
 }
@@ -860,9 +911,14 @@ export const UNBOUND_RULES = topicPane('unbound', '', [
   <em>destroyed</em>, and that is the whole of the difference you will see at
   the time.</p>
   <p class="flavor">It does not keep for later. A scattered spirit tries to
-  gather <strong>once</strong>, at the start of its own next turn, and if it
-  cannot it is gone for good. A long war does not end with a second army
-  arriving all at once.</p>`,
+  gather <strong>once</strong>, and if it cannot it is gone for good. A long
+  war does not end with a second army arriving all at once.</p>
+  <p class="flavor">It tries <strong>two turns</strong> after it came apart, so
+  a spirit beaten on Tuesday is not back in the line on Wednesday. An
+  <strong>Insistent Revenant</strong> is the one thing that does not wait that
+  long. Coming back brings <em>everything</em> with it &mdash; the promotions
+  it had earned and the upgrade it was bought, so a chosen variant is not
+  quietly refunded by dying.</p>`,
   },
   {
     title: 'Coming back',
@@ -890,12 +946,27 @@ export const UNBOUND_RULES = topicPane('unbound', '', [
     title: 'Sending them back for good',
     body: `
   <p class="flavor"><strong>Every side has exactly one answer, and it is the
-  only answer.</strong> Beat an Unbound unit with one of these and it is simply
-  dead; beat it with anything else and it is somewhere else.</p>
+  only answer.</strong> Beat an Unbound unit with one of these and it will
+  probably be simply dead; beat it with anything else and it is somewhere
+  else.</p>
   <div class="pedia-rows">${EXORCIST_ROWS}</div>
+  <p class="flavor"><strong>Probably</strong>, because it is not quite certain.
+  An exorcist sends most of them back for good and sometimes fumbles it, which
+  is worth knowing before you spend your one answer on their one Archon. Two
+  Hive Warden upgrades buy the certainty back: a <strong>Tempered
+  Warden</strong> misses less often and a <strong>Purging Warden</strong> very
+  nearly never does. The Purging one also stands outside a town and stops
+  anything gathering in it at all, which is the closest thing in the game to
+  besieging a doorway.</p>
   <p class="flavor">Nothing else does it &mdash; not a dragon, not a wall, not
   a stack of ten. A war against them fought without the one unit that can end
-  them is a war of attrition against something that is not being attrited.</p>`,
+  them is a war of attrition against something that is not being attrited.</p>
+  <p class="flavor">And one of theirs answers even that. A <strong>Clinging
+  Revenant</strong> holding one of its own cities cannot be ended by
+  <em>any</em> of the above except the Hive's Warden &mdash; everything else,
+  exorcist or not, merely scatters it. It still needs somewhere to gather, and
+  out in the open it dies like the rest of them, so the answer to one is to
+  not fight it indoors.</p>`,
   },
   {
     title: 'The three that are exceptions',
@@ -1914,6 +1985,14 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           screen, each side starts on an island of its own and ships are the only way to
           meet.
         </p>` },
+      { title: 'Looking at the pictures', body: `<p class="flavor">
+          <strong>Click any picture in this book and it pops out larger.</strong> Click
+          it again, click anywhere on the darkened background, or press
+          <kbd>Esc</kbd> to put it away &mdash; a second <kbd>Esc</kbd> closes the book
+          itself. It is here mostly for the <em>upgrades</em>: what a creature can
+          become is drawn three times over on its own card, small enough to tell apart
+          and too small to look at, and this is how you look at them.
+        </p>` },
       { title: 'Every key', body: `<div class="pedia-controls">${controlsMarkup()}</div>` },
     ],
   );
@@ -2107,9 +2186,11 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
     onMount: (root) => {
       // Swap in the procedural drawing wherever there is no artwork yet, so a
       // gap in the art shows a sprite rather than a broken-image icon.
-      root.querySelectorAll<HTMLImageElement>('.pedia-row-icon').forEach((img) => {
-        img.addEventListener('error', () => img.remove());
-      });
+      root
+        .querySelectorAll<HTMLImageElement>('.pedia-row-icon, .pedia-upgrade-art')
+        .forEach((img) => {
+          img.addEventListener('error', () => img.remove());
+        });
       // A terrain used to carry one special, so its art was keyed by terrain.
       // Now that several are possible the files are keyed per special -- and the
       // old single file is tried once as a fallback, so nothing that already had
@@ -2129,6 +2210,97 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
         img.addEventListener('error', () => {
           const id = img.dataset.unit;
           if (id) img.src = placeholderFor(id);
+        });
+      });
+
+      // ------------------------------------------------- the popout, section 162
+      //
+      // A child of the pedia's own backdrop rather than a second modal, for two
+      // reasons. `openModal` allows exactly one at a time and closes whatever is
+      // up to make room, so a picture from the book would have closed the book.
+      // And a child dies with its parent, which is the whole of *"closes when
+      // the Orcpedia closes"* -- no listener to unhook, nothing to remember.
+      const zoom = document.createElement('div');
+      zoom.className = 'pedia-zoom';
+      zoom.tabIndex = -1;
+      zoom.hidden = true;
+      zoom.innerHTML = `
+        <figure class="pedia-zoom-frame">
+          <img class="pedia-zoom-art" alt="" />
+          <figcaption class="pedia-zoom-caption"></figcaption>
+        </figure>`;
+      root.appendChild(zoom);
+      const zoomArt = zoom.querySelector<HTMLImageElement>('.pedia-zoom-art');
+      const zoomCaption = zoom.querySelector<HTMLElement>('.pedia-zoom-caption');
+
+      const hideZoom = () => {
+        zoom.hidden = true;
+        delete zoom.dataset.showing;
+        // Removed rather than blanked: `src = ''` resolves to the page itself,
+        // so the browser fetches the document and the art errors out.
+        zoomArt?.removeAttribute('src');
+      };
+
+      /**
+       * The name to put under the picture, read off the DOM.
+       *
+       * Every image in here already sits beside its own name -- a row's
+       * `.pedia-tech-name`, an upgrade's `.pedia-upgrade-name`, a special's
+       * `.pedia-special-name`, a card's `.pedia-name` -- so two rules cover all
+       * seven places that draw one. Writing the name into each `<img>` as a data
+       * attribute would have been seven more things to keep in step, which is
+       * the mistake `tools/manifest.ts` exists to stop making.
+       */
+      const captionFor = (img: HTMLImageElement): string =>
+        img.parentElement
+          ?.querySelector('.pedia-tech-name, .pedia-upgrade-name, .pedia-special-name')
+          ?.textContent?.trim() ??
+        img.closest('.pedia-card')?.querySelector('.pedia-name')?.textContent?.trim() ??
+        '';
+
+      const toggleZoom = (img: HTMLImageElement) => {
+        if (!zoomArt || !zoomCaption) return;
+        const src = img.currentSrc || img.src;
+        // The same picture again closes it. Mostly belt and braces, since the
+        // overlay covers the thing that was clicked and takes the second click
+        // itself -- but it is the behaviour asked for, and it holds if the
+        // overlay is ever made smaller than the screen.
+        if (!zoom.hidden && zoom.dataset.showing === src) {
+          hideZoom();
+          return;
+        }
+        zoomArt.src = src;
+        zoom.dataset.showing = src;
+        const caption = captionFor(img);
+        zoomCaption.textContent = caption;
+        zoomCaption.hidden = caption === '';
+        zoom.hidden = false;
+        // Focused so that Escape arrives here rather than at the book. On the
+        // overlay rather than on `window` because `onMount` has no teardown
+        // hook, and a global listener would outlive the pedia that added it.
+        zoom.focus();
+      };
+
+      zoom.addEventListener('click', hideZoom);
+      zoom.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // The picture only. A second Escape reaches the book and closes it,
+        // which is what the first one did before there were pictures to close.
+        e.stopPropagation();
+        hideZoom();
+      });
+
+      root.querySelectorAll<HTMLImageElement>('.pedia-pane img').forEach((img) => {
+        // Not a picture that is already somebody's button. A building chip and
+        // a cross-reference are links with an icon inside them, and swallowing
+        // the click would turn following one into looking at it.
+        if (img.closest('[data-see], [data-jump], a, button, summary')) return;
+        img.classList.add('pedia-zoomable');
+        img.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Or the backdrop behind takes it as a click to dismiss the pedia.
+          e.stopPropagation();
+          toggleZoom(img);
         });
       });
 

@@ -1,11 +1,14 @@
 import { disturbedBy, isSunk, seenBy, surface } from './burrow';
+import { coveringFor } from './upgradeEffects';
+import { isRaised, raiseFrom } from './raising';
+import { groundCostFor, swims, tunnelsOnce, zoneOfControl } from './upgradeEffects';
 import { UNSEEN_TRACE, hiddenFrom, spot } from './unseen';
 import { DIRS8, distance, idx } from '../engine/grid';
 import { findPath, reachableWithin } from '../engine/pathfind';
 import type { CostFn } from '../engine/pathfind';
 import { TERRAIN } from '../model/terrain';
 import { hasPerk } from '../model/perks';
-import { unitType } from '../model/units';
+import { unitType, maxHp } from '../model/units';
 import type { City, GameState, Player, TerrainId, Unit } from '../model/types';
 import type { UnitTypeDef } from '../model/units';
 import { RUIN, isRuined, markDamaged, resettleTurns, workingBuildings } from './city';
@@ -126,7 +129,9 @@ export function costFnFor(state: GameState, unit: Unit): CostFn {
     if (foreignCities.has(i)) return null;
     const occupantOwner = occupants.get(i);
     if (occupantOwner !== undefined && occupantOwner !== unit.owner) return null;
-    const base = type.flies || type.sails ? 1 : stepCost(state, owner, fromX, fromY, x, y);
+    const base = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, fromX, fromY, x, y));
     // Section 123: a doorway with something asleep behind it is ground you walk
     // *around*, not over.
     //
@@ -299,7 +304,9 @@ export function estimateTurns(
   for (let i = 1; i < route.length; i++) {
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, px, py, x, y));
     if (left <= 0) {
       turns++;
       left = perTurn;
@@ -330,7 +337,9 @@ export function stepsThisTurn(
     if (left <= 0) break;
     const [x, y] = route[i];
     const [px, py] = route[i - 1];
-    const cost = type.flies || type.sails ? 1 : stepCost(state, owner, px, py, x, y);
+    const cost = type.flies || type.sails
+      ? 1
+      : groundCostFor(unit, stepCost(state, owner, px, py, x, y));
     // Any movement left always buys one more step, however rough the ground.
     left -= Math.min(cost, left);
   }
@@ -659,12 +668,37 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         'sally',
       );
     }
-    const result = resolveCombat(state, unit, occupant);
+    // Section 155: somebody may be standing in front of this one.
+    //
+    // An Orc Guardian that spent its turn covering meets whatever comes for
+    // the unit it covered -- with its own defence, its own health and its own
+    // death. Substituted here, before the fight, rather than inside
+    // `resolveCombat`: everything below reads the defender for the logs, the
+    // experience, the bounty and `destroyUnit`, and all of it should be about
+    // whoever actually took the blow.
+    //
+    // It works because **the attacker does not advance onto the tile it
+    // attacked** in this game -- `unit.moves = 0` and it stays where it is --
+    // so a defender standing on another tile costs the geometry nothing.
+    const shield = coveringFor(state, occupant);
+    const defender = shield ?? occupant;
+    if (shield) {
+      log(
+        state,
+        `${unitType(shield.type).name} is in the way.`,
+        'combat',
+        shield.owner,
+        undefined,
+        [shield.x, shield.y],
+        shield.id,
+      );
+    }
+    const result = resolveCombat(state, unit, defender);
     unit.moves = 0;
     unit.order = 'none';
     unit.goto = null;
 
-    const defenderType = unitType(occupant.type);
+    const defenderType = unitType(defender.type);
     if (result.attackerWon) {
       log(
         state,
@@ -674,30 +708,49 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         'combat',
         unit.owner,
         undefined,
-        [occupant.x, occupant.y],
+        [defender.x, defender.y],
         unit.id,
       );
       // A dragon's breath does not stop at the thing it hit. Measured before
       // the defender is removed, since the damage it took is the input.
-      breatheThrough(state, unit, occupant, unitType(occupant.type).hp - Math.max(0, occupant.hp));
+      breatheThrough(state, unit, defender, maxHp(defender) - Math.max(0, defender.hp));
       // A defender that goes up on death does so before it leaves the board,
       // so the attacker standing next to it is very much included.
-      const blastVictims = defenderType.explodes > 0 ? detonate(state, occupant) : [];
+      const blastVictims = defenderType.explodes > 0 ? detonate(state, defender) : [];
       // Section 152: the attacker is named, because for the Unbound whether it
       // could exorcise is the difference between a death and an absence.
-      destroyUnit(state, occupant, 'is wiped out', unit);
+      destroyUnit(state, defender, 'is wiped out', unit);
+      // Section 155: and a Grave Knight may not be finished with it.
+      //
+      // **Here and nowhere else**, which is the whole of the "only kills it
+      // makes itself, in combat" ruling: a unit can die six other ways --
+      // a blast, a breath, a militia, a status, a disband, a sinking ship --
+      // and every one of them goes through `destroyUnit` too. Excluded by not
+      // calling this rather than by a list of exceptions inside it.
+      raiseFrom(state, unit, defender);
       // Killing teaches most. Nothing is awarded for the blast above, which
       // the sapper's victims did not choose to be part of.
       awardXp(state, unit, XP.kill);
       // Section 115: a raider worth killing was carrying something.
-      claimBounty(state, unit, occupant);
+      claimBounty(state, unit, defender);
       // Section 122: and a Drowned Captain is not finished when he falls over.
-      lastWords(state, unit, occupant);
+      lastWords(state, unit, defender);
       rearm(state, unit, 'picks its axe back up off the corpse');
       // The attacker may not have survived its own victory.
-      if (blastVictims.some((v) => v.id === unit.id)) {
+      //
+      // Two ways now, and the second one needed this widening. A blast it was
+      // standing beside takes it off the board inside `detonate`; a
+      // `fodder-burst` Hivekin coming apart on it happens in `resolveCombat`
+      // and only takes its health, so without this the winner was left
+      // standing on nought hit points, holding a tile, forever. Asked on the
+      // health rather than on the cause, so the next thing that kills a
+      // winner after its own fight needs no third clause here.
+      if (unit.hp <= 0 && state.units.includes(unit)) {
+        destroyUnit(state, unit, 'does not survive its own victory', defender);
+      }
+      if (unit.hp <= 0 || blastVictims.some((v) => v.id === unit.id)) {
         recomputeVisibility(state, unit.owner);
-        recomputeVisibility(state, occupant.owner);
+        recomputeVisibility(state, defender.owner);
         return { kind: 'combat', result, defenderDied: true, attackerDied: true };
       }
     } else {
@@ -706,7 +759,7 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
       // the withdrawal was never really available -- section 11 asked for a
       // rule for having nowhere to go, and this is it: a cornered knight dies
       // like anybody else.
-      const withdrawn = result.withdrew === true && stepBack(state, unit, occupant.x, occupant.y);
+      const withdrawn = result.withdrew === true && stepBack(state, unit, defender.x, defender.y);
       if (result.withdrew && !withdrawn) unit.hp = 0;
 
       if (withdrawn) {
@@ -724,9 +777,9 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         state,
         `${defenderType.name} holds against ${type.name}.`,
         'combat',
-        occupant.owner,
+        defender.owner,
         undefined,
-        [occupant.x, occupant.y],
+        [defender.x, defender.y],
         // The swinger, not the one who held: it is the attacker that moves.
         unit.id,
       );
@@ -737,15 +790,15 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
           state,
           unit,
           result.withdrew ? 'is cornered, and does not get away' : 'is destroyed attacking',
-          occupant,
+          defender,
         );
-        awardXp(state, occupant, XP.kill);
+        awardXp(state, defender, XP.kill);
         // A raider that threw itself at a garrison and lost pays the same purse,
         // and a captain that died on somebody's spear still has his crew.
-        claimBounty(state, occupant, unit);
-        lastWords(state, occupant, unit);
+        claimBounty(state, defender, unit);
+        lastWords(state, defender, unit);
       } else {
-        awardXp(state, occupant, XP.survive);
+        awardXp(state, defender, XP.survive);
       }
     }
     if (result.promoted) {
@@ -754,12 +807,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
         state,
         `${winner} is promoted to veteran.`,
         'good',
-        result.attackerWon ? unit.owner : occupant.owner,
+        result.attackerWon ? unit.owner : defender.owner,
         'promote',
       );
     }
     recomputeVisibility(state, unit.owner);
-    recomputeVisibility(state, occupant.owner);
+    recomputeVisibility(state, defender.owner);
     return {
       kind: 'combat',
       result,
@@ -780,7 +833,29 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
   if (type.sails && !TERRAIN[terrain].water) {
     return { kind: 'blocked', reason: `${type.name} keeps to the water.`, retryable: false };
   }
-  if (!canStandOn(type, terrain)) {
+  // Section 155, `sapper-tunnel`: one crossing of ground nothing else of its
+  // kind can cross -- water, which is the only thing impassable to a sapper.
+  //
+  // **Only here, and deliberately not in the pathfinder.** A one-use pass and
+  // a route planner do not mix: `costFnFor` would happily lay out a five-tile
+  // sea crossing on a budget of one. So a march is never routed through
+  // water, the step has to be taken by hand, and the pass is spent the moment
+  // it is taken rather than when it is finished with.
+  if (!canStandOn(type, terrain) && swims(unit)) {
+    // Section 155 slice 6, `naiad-tidal`: a water spirit belongs in water.
+    // Jeremy's ruling of 2026-11-02 -- it holds water tiles the way a ship
+    // does, and fights from them.
+  } else if (!canStandOn(type, terrain) && tunnelsOnce(unit)) {
+    unit.tunnelled = true;
+    log(
+      state,
+      `${type.name} goes under, and comes up somewhere it has no business being.`,
+      'good',
+      unit.owner,
+      'promote',
+      [x, y],
+    );
+  } else if (!canStandOn(type, terrain)) {
     return {
       kind: 'blocked',
       // A wader is refused too, but only by the deep, and is told which.
@@ -791,8 +866,32 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     };
   }
 
+  // Section 155 slice 6, `yaksha-immovable`: the ground around it is spoken
+  // for. Refused rather than silently impassable, so a player is told why a
+  // tile they can plainly see will not take them.
+  if (zoneOfControl(state, unit, x, y)) {
+    return {
+      kind: 'blocked',
+      reason: 'Something is standing far too still nearby, and this ground is spoken for.',
+      retryable: false,
+    };
+  }
+
   // --- move / capture --------------------------------------------------
   const capturing = city !== undefined && city.owner !== unit.owner;
+  // Section 155: and a raised skeleton does not take towns.
+  //
+  // It is a few turns of help, not an empire -- and a Soul-Bound Knight whose
+  // skeletons never expire would otherwise have a free standing army that
+  // conquers, which is a long way past "a weak skeletal copy". Refused rather
+  // than quietly ignored, so the player is told why it will not walk in.
+  if (capturing && isRaised(unit)) {
+    return {
+      kind: 'blocked',
+      reason: 'Whatever that is, it is not holding a town for you.',
+      retryable: false,
+    };
+  }
   // Nor does a town change hands while the peace holds.
   if (capturing && city && !hostile(state, unit.owner, city.owner)) {
     return {
@@ -946,7 +1045,12 @@ export function tryStep(state: GameState, unit: Unit, x: number, y: number): Mov
     }
   }
 
-  const cost = type.flies || type.sails ? 1 : stepCost(state, owner, unit.x, unit.y, x, y);
+  // Section 155 slice 6: three upgrades move on their own terms. A cost
+  // rather than a block, so the pathfinder is told -- a dearer route is still
+  // a route, where a closed tile can strand a march.
+  const cost = type.flies || type.sails
+    ? 1
+    : groundCostFor(unit, stepCost(state, owner, unit.x, unit.y, x, y));
   unit.x = x;
   unit.y = y;
   unit.moves = snapMoves(unit.moves - cost);

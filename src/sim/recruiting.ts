@@ -1,5 +1,5 @@
 import { idx } from '../engine/grid';
-import { headcount, unitType } from '../model/units';
+import { headcount, unitType, maxHp } from '../model/units';
 import type { GameState, Unit } from '../model/types';
 import { log, withRng } from './gamestate';
 import { adjustStanding } from './diplomacy';
@@ -330,8 +330,7 @@ export function recruitPrice(state: GameState, playerId: number, target: Unit): 
   // Priced off **what you get**, not off what you took. A recruited Knight is
   // an Outcast, and an Outcast is what you are paying for.
   const base = unitType(becomes).cost * headcount(target) * RECRUIT.perShield;
-  const type = unitType(target.type);
-  const hurt = type.hp > 0 ? Math.max(0, Math.min(1, 1 - target.hp / type.hp)) : 0;
+  const hurt = maxHp(target) > 0 ? Math.max(0, Math.min(1, 1 - target.hp / maxHp(target))) : 0;
   let price = base * (1 - hurt * RECRUIT.hurtDiscount);
   const at = askingCaravan(state, playerId, target);
   if (at !== null) {
@@ -354,8 +353,7 @@ export function recruitPrice(state: GameState, playerId: number, target: Unit): 
  * likely to simply refuse."*
  */
 export function recruitFailOdds(state: GameState, playerId: number, target: Unit): number {
-  const type = unitType(target.type);
-  const hurt = type.hp > 0 ? Math.max(0, Math.min(1, 1 - target.hp / type.hp)) : 0;
+  const hurt = maxHp(target) > 0 ? Math.max(0, Math.min(1, 1 - target.hp / maxHp(target))) : 0;
   let fail = RECRUIT.failBase * (1 - hurt * RECRUIT.hurtDiscount);
   const at = askingCaravan(state, playerId, target);
   if (at !== null) {
