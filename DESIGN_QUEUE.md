@@ -14832,23 +14832,113 @@ far side of that and has not been probed.
 
 ---
 
-## 168. Why does an offer fail? — QUEUED
+## 168. Why does an offer fail? Because the asker is weak — DONE
 
-Section 167 walked the Hive's side of the peace ladder and found every rung
-holding until the last: in nine games of nine they exist, can talk, have fought
-lately, want peace past `DIPLOMACY_AI.asks`, and **make an offer** -- and in
-two of nine it is signed.
+Section 167 found the Hive asking for peace in nine games of nine and getting
+it in two, and left the refusal unexamined because `hivetalkprobe` is built
+around the asking side. This instruments the reply.
 
-`tools/hivetalkprobe.run.test.ts` is built around the **asking** side and stops
-where the answering side begins. So the seven failures are unexplained, and
-they are the whole of why a treaty covers 1.3% of the Hive's existence.
+`aiAccepts` can refuse exactly two ways, so the question is small:
 
-**The job:** instrument the reply. Who is being asked, what do they think of
-the asker at that moment, which test turns the offer down, and is it the same
-test every time. Then the design question -- whether that bar is in the right
-place -- has something under it.
+```ts
+if (!willTalkTo(state, me.id, them.id)) return false;   // the standing gate
+const want = wantPeace(state, me, them) + terms.gold / DIPLOMACY_AI.goldScale;
+return want >= 0;                                        // the sum
+```
 
-Worth knowing before starting: nobody has established that a treaty *should*
-be commoner. It may be right that the Hive is refused by almost everybody
-almost always. What is wrong today is only that the refusal is unexamined, so
-neither the rule nor its absence can be argued for.
+### It is always the sum, and the gate is dead
+
+**213 refusals across both seed sets. The standing gate fired in none of
+them.**
+
+`willTalkTo` refuses below `DIPLOMACY_AI.refuses`, which is **-30** — inside
+the **Angered** band, which runs from -50 to -29. In eighteen games of
+six-sided war, standing never once got there. The floor section 135 asked for
+is in the code and has never been reached.
+
+That is not the same as saying it should move. It says only that the rule
+currently decides nothing, so the Angered band is flavour rather than
+mechanism, and nobody has established which it should be.
+
+### And the refusals are not near misses
+
+How far short the sum fell, over every refusal:
+
+| | tuned | held-out |
+|---|---|---|
+| n | 104 | 109 |
+| worst | -1.98 | -2.10 |
+| p25 | -1.31 | -1.13 |
+| **median** | **-0.72** | **-0.43** |
+| p75 | -0.28 | -0.18 |
+| closest | -0.01 | -0.01 |
+
+A quarter land within 0.28 of agreement and some within a hundredth, so the
+bar is not absurd. But the median is a long way out. **Moving a threshold
+would buy the top quartile and nothing else.**
+
+### Who is refused, and it is specifically the Hive
+
+| asker → answerer | accepted | refused |
+|---|---|---|
+| **hivekin → human** | 1 / 2 | **27 / 15** |
+| **hivekin → orc** | 0 / 0 | **20 / 15** |
+| **hivekin → unbound** | 2 / 0 | 5 / **15** |
+| orc → human | **19 / 19** | 3 / 7 |
+| wandering → human | 5 / 1 | 5 / 3 |
+| unbound → human | 3 / 9 | 4 / 13 |
+
+(tuned / held-out.) The Hive asks about 55 times a set and is agreed with
+three times. **The same human AI accepts the Horde in 19 of 22 and the Hive in
+1 of 28.** It is not that peace is hard; it is that peace with the Hive is.
+
+### The mechanism, and it is structural rather than a bad number
+
+`wantPeace` opens with the strength ratio:
+
+```ts
+let want = Math.max(-1.5, Math.min(1.5, theirs / mine - 1));
+```
+
+*"Weaker than them is a reason; stronger is a reason the other way."* Which is
+right, and symmetric, and between two empires that grew up together it works —
+the Horde and the Kingdom are comparably matched, the ratio sits near 1, and
+the small terms (lean, a long war, losses) tip it over. Hence 19 of 22.
+
+**The Hive is not comparably matched, and cannot be.** It arrives around turn
+100 into a world that has been growing since turn 1, so it is weak, so
+`hiveWants` makes it ask — and *everyone it asks is strong precisely because
+the Hive is the latecomer*. The thing that makes it want peace is the thing
+that makes the answer no.
+
+**So peace is offered exactly when it will be refused**, and a treaty covering
+1.3% of the Hive's existence (section 167) is the arithmetic working, not
+failing.
+
+### The design question this now has something under it
+
+Nobody has established that a latecomer *should* be able to make peace, and
+this section does not establish it either. What it establishes is that **under
+the current sum it structurally cannot**, which was previously unknown and
+which the asking-side probe could never have found.
+
+Three shapes, if it is worth changing, cheapest first:
+
+- **Let gold do more.** `aiTerms` only offers gold when the strength ratio
+  passes 1.3 or 0.8, so most offers carry **nothing**. A weak asker that
+  opened its purse would convert the top quartile, which is the quarter within
+  0.28. The smallest change with a measurable effect.
+- **Make a latecomer's weakness an argument rather than a liability.** The
+  strength ratio reads a weak asker as somebody to finish off. A term for *how
+  recently they arrived*, or for a side nobody has fought long, would cut the
+  other way.
+- **Decide the Angered band means something**, or retire it. It is in the code
+  and has never fired.
+
+Nothing above is recommended. They are the three places the sum could move.
+
+### Still open
+
+- **What standing actually reaches.** The gate at -30 never fired, but this
+  measured refusals rather than standing, so the distribution is unknown. One
+  counter in `standing` answers it.
