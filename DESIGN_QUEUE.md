@@ -15221,6 +15221,21 @@ return want >= 0;                                        // the sum
 
 ### It is always the sum, and the gate is dead
 
+> **Corrected by section 170, and this heading is wrong.** The gate is not
+> dead. Standing reaches -30 or below in **113 of 136 pair-games and 18 games
+> of 18**, bottoms out on the **-50 floor** in the median pair-game, and sixty
+> per cent of all pair-turns are spent below the gate.
+>
+> The reason this section saw zero is that its sample was **conditioned on the
+> gate having already passed**. `withOne` tests `willTalkTo` at line 365 and
+> the asker never asks; `aiAccepts` tests the identical symmetric value at line
+> 288. Every offer that reaches the gate below has already passed it. "213
+> refusals, zero gate firings" is a tautology, not a measurement.
+>
+> Everything in this section about **the sum** stands, for the offers that get
+> made. What it describes is a filtered population: the pairs still on speaking
+> terms. Section 170 has the figures and the mechanism.
+
 **213 refusals across both seed sets. The standing gate fired in none of
 them.**
 
@@ -15312,10 +15327,10 @@ Nothing above is recommended. They are the three places the sum could move.
 
 ### Still open
 
-- **What standing actually reaches.** The gate at -30 never fired, but this
-  measured refusals rather than standing, so the distribution is unknown. One
-  counter in `standing` answers it. **The probe is written** --
-  `tools/standingprobe.run.test.ts`, section 169 -- and has not been run.
+- ~~**What standing actually reaches.**~~ **Answered by section 170**, and it
+  reverses this section's conclusion: standing reaches the gate in 18 games of
+  18 and the median pair-game ends on the -50 floor. The gate fires constantly,
+  upstream of what was counted here.
 
 ## 169. It was never the price. It is the road, and nobody chose its length
 
@@ -15472,7 +15487,8 @@ flag that silently does nothing.
   every half-turn through `playGame`'s watch hook. An observer, not a counter
   in the rule, because `standing` is a pure read through `peek` and so moves no
   RNG; and met-only, because an unmet pair reads 0 and would bury the
-  distribution under fake zeroes. **Written, not yet run.**
+  distribution under fake zeroes. **Run on both sets in section 170**, which
+  reverses section 168's conclusion about the gate.
 - `wandererprobe` honours `PROBE_SEEDS`.
 
 ### Still open
@@ -15489,3 +15505,132 @@ flag that silently does nothing.
   not choose.
 - **The Unbound's self-blocking clause**, above.
 - **`GUEST_LIST`'s intended rate**, above.
+
+## 170. The gate was never dead. Section 168 was looking down the wrong barrel
+
+Section 168 found that `aiAccepts`'s standing gate fired in **none of 213
+refusals**, and concluded that *"the rule currently decides nothing, so the
+Angered band is flavour rather than mechanism"*. It was careful to say it had
+measured refusals rather than standing and that the distribution was unknown.
+
+The distribution is now known and **it says the opposite**. Both seed sets,
+eighteen games each, `tools/out/standing.md` and `standing-held-out.md`:
+
+| | tuned | held-out |
+|---|---|---|
+| pairs that met | 136 of 180 | 137 of 180 |
+| **pair-games reaching -30 or below** | **113 of 136** | **116 of 137** |
+| **games containing one** | **18 of 18** | **18 of 18** |
+| pair-games that ever went negative | 133 of 136 | 135 of 137 |
+| median worst a pair reached | **-50** | **-50** |
+| mean worst | -42.6 | -43.5 |
+
+The median pair-game does not merely reach the Angered band. It bottoms out on
+**the floor of the scale**, -50, and it does so in five sides out of five.
+
+### Where pairs spend their lives
+
+| band | tuned | held-out |
+|---|---|---|
+| Joyful | 2.1% | 1.7% |
+| Peace | 4.1% | 5.3% |
+| Uneasy | 20.3% | 18.0% |
+| Concerned | 7.7% | 6.1% |
+| Tense | 7.4% | 7.3% |
+| **Angered** | **58.4%** | **61.6%** |
+
+Six-sided war spends roughly **sixty per cent of all pair-turns below the
+gate**. Section 135's floor is not decorative and never was.
+
+### So why did section 168 see zero?
+
+**Because the sample was conditioned on the gate having already passed**, and
+no number of extra games would ever have shown it. `withOne` in
+`ai/diplomacy.ts`:
+
+```ts
+const willTalk = willTalkTo(state, me.id, them.id);
+...
+if (!willTalk) return;              // line 365 -- the asker never asks
+...
+propose(state, aiTerms(state, me, them));
+```
+
+and `aiAccepts`:
+
+```ts
+if (!willTalkTo(state, me.id, them.id)) return false;   // line 288
+```
+
+`pairKey` sorts its arguments, so one record holds one `standing` for the pair
+and **`willTalkTo(a, b)` and `willTalkTo(b, a)` are the same number**. The
+asker tests it at line 365 and declines to speak; the answerer tests the
+identical value at line 288. Every offer that reaches line 288 has already
+passed the test line 288 is about to apply.
+
+**The gate in `aiAccepts` cannot fire on an AI's offer.** Section 168's "213
+refusals, zero gate firings" is not a measurement of standing. It is a
+tautology, and it reported a structural certainty as an empirical finding.
+
+The line is not dead code: a **human** player's offer reaches `propose` and
+then `aiAccepts` without `withOne` ever having gated it, so for a human asker
+line 288 is the only gate there is. It is dead for exactly the population
+section 168 sampled -- AI against AI -- which is all a sweep contains.
+
+### What this does to section 168's three options
+
+Section 168 offered three places the sum could move and recommended none. One
+of them is now answered and one has lost its premise:
+
+- **"Decide the Angered band means something, or retire it."** Answered. It
+  means a great deal: it suppresses offers across sixty per cent of pair-turns,
+  silently, at a line nobody was watching. Retiring it would be a large
+  behavioural change rather than tidying up a dead rule.
+- **"Let gold do more."** Unaffected and still the cheapest lever.
+- **The refusal distribution** -- median -0.72 and -0.43 short -- is still
+  correct for the offers that *get made*. It is now known to describe a
+  **filtered** population: the pairs civil enough to be on speaking terms at
+  all. The quarter within 0.28 of agreement is a quarter of that remnant, not
+  of all hostile pairs.
+
+### And the Hive's refusals are a selection effect too
+
+Section 168's sharpest number was that the same human AI accepts the Horde in
+19 of 22 and the Hive in 1 of 28, and explained it by the strength ratio: the
+Hive arrives late, so it is weak, so everyone it asks is strong. That
+explanation survives, but it is now **half** of one.
+
+The Hive is held at a mean worst of **-46.9 and -46.6**, the angriest of the
+five sides on both sets. So the Hive's offers are not merely refused on the
+sum -- most of the offers it would have made were never made at all, and the
+28 that reached an answer are the civil tail of its relationships.
+
+### The lesson, which is the one this file keeps relearning
+
+A zero means one of two things and they are not close: *the rule never
+happened*, or *the rule was upstream of what you counted*. Sections 163 and
+164 found the first. This is the second, and it is harder, because the counter
+was correct, the sample was real, and the conclusion was still backwards.
+
+The check that would have caught it is cheap and worth naming: **before
+concluding a branch never fires, find the other call sites of its condition.**
+There were two.
+
+### Shipped
+
+- `tools/standingprobe.run.test.ts` run on both sets, and its figures above.
+- Section 168's open item closed, and its conclusion about the Angered band
+  corrected in place.
+
+### Still open
+
+- **Whether the floor should be the floor.** Sixty per cent of pair-turns
+  below -30 means most of this game's relationships are past talking, which
+  may be correct for a game about two hordes and three latecomers, or may mean
+  `DIPLOMACY_AI.refuses` is set where nothing can escape it. Unmeasured, and
+  it is an arm: -30 against -40 against off.
+- **Nothing ever climbs out.** `forgets: 1` only ever walks standing back
+  toward zero, and the median pair still ends on -50. Whether a pair can
+  recover from the floor at all has not been measured, only assumed.
+- **The human asker's path through line 288** is the one place the gate is
+  live, and no probe plays a human.
