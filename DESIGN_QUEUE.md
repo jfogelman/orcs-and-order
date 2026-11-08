@@ -12330,6 +12330,193 @@ I would **not** retry rush-buying for the AI. Section 4e's note retires that
 whole class, and the reason is still true: rush-buying scales with how many
 cities you have to spend it in, so it pays the side that is already winning.
 
+### Re-measured 2026-11-08, and the premise above has gone stale
+
+This item says *"every AI in the game still accumulates a number that does
+nothing"*. **That is no longer true as written**, and the figures it rests on
+— section 4d's 475.6 a game, and `AI_TUNING.rushBuying`'s 836 and 930 against
+533 and 553 — predate section 146's Recruit, section 136's turning and
+section 155's upgrade fee.
+
+Measured on both seed sets, nine games each, with a counter on every line in
+the game that takes gold out of a treasury:
+
+| side | banked at the end | spent a game | of which, turning a spy |
+|---|---|---|---|
+| **human** | 728 / 723 | **952 / 946** | **949 / 940** |
+| orc | **101 / 119** | 308 / 547 | 263 / 498 |
+| hivekin | 612 / 509 | 67 / 228 | 61 / 222 |
+| wandering | 312 / 343 | 109 / 407 | 9 / 253 |
+| unbound | 546 / 78 | 80 / 36 | 65 / 0 |
+
+(tuned / held-out. `tools/out/gold.md` and `gold-held-out.md`.)
+
+**Gold is not dead. It has one sink, and it is espionage.** Turning a spy is
+the largest outgoing for every side that spends anything at all, on both sets.
+The Kingdom's figures barely move between sets — banked 728 and 723, spent 952
+and 946 — so this is structural rather than a seed's accident.
+
+Three things follow, and none of them is what this item expected.
+
+**1. The sink nobody designed is the only one that works.** Section 136 priced
+turning as a spy dial: `paid = Math.max(0, Math.min(gold, buyer.gold))`. That
+makes it **wealth-proportional** — the richer the buyer, the more each turned
+spy costs it — which is exactly the shape a gold sink wants, and it was
+arrived at for unrelated reasons.
+
+**2. The sink that *was* designed moves almost nothing.** Recruit, section
+146's deliberate answer, moves 82 and 143 a game, for one faction. Peace terms
+move between 3 and 49, which corroborates section 168 from the other side:
+`aiTerms` only attaches gold when the strength ratio passes 1.3 or 0.8, so most
+offers carry none.
+
+**3. Upgrades contribute nothing to a measured game**, because
+`UPGRADES.enabled` is `false` by default and `control()` does not turn it on.
+Section 155's fee is a real sink in a game a player ticks the box for, and
+invisible to every sweep ever run.
+
+### Tried and dropped: spend the trade on study instead
+
+The obvious cheap answer, and it is **measured and wrong**, which is worth more
+written down than discovered twice.
+
+`manageRates` takes a hardcoded third of every side's trade as coin --
+`coin = max(1, round(rest / 3))` -- for ever, whatever the treasury is doing.
+So the argument was: the cost of dead gold is not the gold, it is **the
+beakers not taken**, and a side hoarding 600 it will never spend should study
+instead.
+
+Built as a rule that reads **flow rather than stock**, which the measurement
+above makes necessary: the Kingdom banks 725 and spends 950, so its deep
+treasury is working capital, and `turnOdds` reads *what was paid* -- capping
+the hoard would have quietly broken the one faction that uses gold well. So it
+counted turns the balance had not fallen, and cut coin to the floor after
+twenty idle turns above 200 gold.
+
+**It fires often and buys nothing.** A clean A/B on one branch, same seeds,
+only the lever moved:
+
+| | rule off | rule on |
+|---|---|---|
+| advances | 21.2 | 21.4 |
+| cities | 5.8 | 5.9 |
+| ending advance reached | 7/12 | 6/12 |
+
+And it is not that the rule sat idle. Counted per side, the coin was cut on
+**576 of the Hive's 2478 turns -- 23 per cent** -- 389 of the Horde's, 236 of
+the Unbound's.
+
+So the conversion simply does not matter: **a fifth more of a fifth of the
+turns' trade, pointed at study, does not buy an advance.** Trade is not what
+limits research here, and the "dead gold costs beakers" theory is false rather
+than untested.
+
+Two things to keep from it:
+
+- The rule also fired **244 times for the Kingdom**, the one side with a
+  working gold economy, because a side between bribes looks idle. Any future
+  version of this needs to tell "not spending" from "not spending *yet*", and
+  twenty turns does not.
+- `turnOdds` reading the amount paid means **a treasury is not inert for a
+  side with spies** -- it is odds. That is the reason the obvious version of
+  this idea (cap the hoard) is wrong, and it will be the reason the next
+  obvious version is wrong too.
+
+The code is reverted. Nothing shipped.
+
+### So the question is narrower than this item asks
+
+Not *"gold does nothing"*. It is:
+
+> Gold has exactly one sink that matters, it was built for espionage rather
+> than for the economy, and it drains a side in proportion to how often that
+> side happens to catch a spy worth turning.
+
+For the Kingdom, gold is a working economy. For the Hive and the Unbound,
+banking 509 to 612 while spending under 100 on the tuned set, it is still
+dead. **The target is three factions, not five.**
+
+### And the rush-buying condition has arguably been met
+
+`AI_TUNING.rushBuying`'s note sets its own re-opening condition: *"the gold gap
+closing, not the city gap"*, on the Kingdom banking 55 to 70 per cent more than
+the Horde. Today the **Horde ends on 101 and 119** against the Kingdom's 728
+and 723 — the gap has not closed, it has **widened the other way**, with the
+Horde now the poor one.
+
+That is not an argument for switching rush-buying on. It is a warning that the
+note's condition is written against a two-empire world that no longer exists,
+and that re-reading it as written would give the wrong answer. Section 166's
+lesson, in a different column.
+
+### Measured: who would actually buy a mercenary, and the answer kills it
+
+The case for a market is a side that is **cash-rich and army-poor** -- it has
+gold, it cannot turn gold into soldiers, and that is the gap a market fills.
+Measured at the last turn of each game, by faction, on both seed sets:
+
+| side | gold banked | army strength | **gold per point** |
+|---|---|---|---|
+| hivekin | 612 / 509 | 93 / 58 | **6.61 / 8.80** |
+| unbound | 546 / 78 | 108 / 26 | 5.04 / 2.96 |
+| wandering | 312 / 343 | 65 / 198 | 4.81 / 1.73 |
+| human | 728 / 723 | 273 / 345 | 2.67 / 2.10 |
+| orc | 101 / 119 | 204 / 157 | **0.50 / 0.76** |
+
+(tuned / held-out; strength on `strength()`'s own reckoning. `tools/out/merc.md`.)
+
+**Only the Hive is reliably the customer.** The Unbound and the Wandering Folk
+looked like customers on the tuned set and do not replicate -- they are the
+latecomers, and their fortunes swing. The Horde is reliably the opposite
+corner: poorest, and second strongest.
+
+### And the one reliable customer is the side that already wins
+
+Section 161: *"The Hive is the winningest side in the game, and **every single
+win is its own ending** -- not one by conquest, dominance or points, in any
+arm."*
+
+So the Hive's small army is **not a weakness, it is the route**. It does not
+contest the military dimension and wins anyway. A market that converts its
+idle gold into soldiers would arm the winningest faction in the one dimension
+it has chosen not to fight in.
+
+Section 161 also records the Hive as *"two games wearing one average"*: 47 of
+108 establish, and the other 61 average 1.15 cities and 2.9 units and **have
+never won a game**. The poor half could not afford a mercenary anyway, so the
+market would sell only to the half that is already winning.
+
+**So every effect points the wrong way:**
+
+- it arms the winningest side, in its chosen weakness;
+- it reaches none of the Hive's 61 failed games, which have no gold;
+- it misses the Horde entirely, which has 101 gold and needs nothing;
+- and the Kingdom banks the **most gold in absolute terms** -- 728 against the
+  Hive's 612 -- while already fielding the strongest army, so a second use for
+  gold is as likely to be bought by the leader as by anyone.
+
+**Recommendation: do not build it.** Not because the idea is bad, but because
+the measurement says it has one customer and that customer should not be a
+customer. This item's own bar is *"worth doing when it answers something that
+has been measured"*; measured, this answers nothing that wants answering.
+
+### Where this leaves the three options above
+
+- **Tribute** gains an argument this item did not make for it. The objection
+  that retired rush-buying is that a gold sink which buys *power* pays the side
+  that already has the most gold. Tribute buys **peace**, which is worth most
+  to whoever is losing, so its value per coin runs *opposite* to wealth. It is
+  the one option of the three that cannot compound a lead.
+- **Mercenaries** buy power and therefore inherit the rush-buying objection in
+  full. Cheapest to build, most likely to repeat a measured mistake.
+- **Bribing a city** also buys power, but only once and visibly, and an empire
+  with 475 gold and no army is exactly the case it is for. The objection
+  applies but weakly.
+
+**Nothing is built and nothing is recommended yet.** The measurement changes
+which question is being asked, and the question should be settled before a
+feature is chosen for it.
+
 ### 2. Three quarters of games end on the turn limit
 
 Longstanding (section 3's *"nearly every game reaches the turn limit"*, never
@@ -12343,6 +12530,58 @@ Archon sits ~560 beakers deep and is fielded in 1 game of 12). **Both are
 measurable and neither is a feature.** I would measure before building
 anything new, because an ending nobody reaches is content nobody sees, and
 this game now has five of them.
+
+### Measured 2026-11-08: the premise is false, and the fork answers "road"
+
+**Games do not end on the clock.** Eighteen games, both seed sets,
+`npm run endingsprobe`:
+
+| how it ended | of 18 |
+|---|---|
+| somebody's **ending** | **12** |
+| dominance or points | 4 |
+| **nobody, the clock ran out** | **2** |
+
+Section 3's *"nearly every game reaches the turn limit"* and this item's
+*"three quarters"* were both true and are both dead. The endings arrived and
+closed it, and nobody went back to look. **Two games in eighteen.**
+
+### And the fork this item posed has an answer
+
+It asked whether an unreached ending is a **price** problem (600 to 1000
+shields of works) or a **road** problem (the advance sits too deep). Separable,
+and separated:
+
+| side | learned the advance | built every work | of those who learned |
+|---|---|---|---|
+| **hivekin** | **18/18** | 7/18 | 39% |
+| human | 10/18 | 4/18 | 40% |
+| orc | 5/18 | 1/18 | 20% |
+| wandering | 4/18 | 1/18 | 25% |
+| unbound | 3/18 | 1/18 | 33% |
+
+**The road is the larger filter, and it is not close.** Four of five factions
+reach their opening advance in **under half** their games; the Unbound managed
+it three times in eighteen and none at all on the held-out set. The price is
+real but second: of the sides that do get there, a quarter to two fifths
+finish the works.
+
+**The Hive is the control that makes it legible.** Same works, same costs,
+same three buildings — and it learns its advance **18 times out of 18**,
+because that advance sits on its own early line. It converts that into seven
+completed sets and most of the game's wins. Nothing about the Hive's *price*
+is different. Only its road is.
+
+So if this is worth moving, the lever is **where an ending advance sits in the
+tree**, not what the works cost — and that is much the cheaper change, since
+it is a prereq and a beaker cost rather than a re-pricing of fifteen
+buildings across five factions.
+
+**One caution before anybody pulls it.** Section 161 already found the Hive is
+the winningest side *because* every win is its own ending. Shortening four
+other roads to match the Hive's is, on this evidence, handing four factions
+the thing that makes the Hive win — so it wants a sweep on win rates, not just
+on endings reached.
 
 ### 3. A unit that survives should become something
 

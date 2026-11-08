@@ -23,6 +23,7 @@
     "contactprobe": "vitest run --config vitest.sweep.config.ts tools/contactprobe.run.test.ts",
     "hivetalk": "vitest run --config vitest.sweep.config.ts tools/hivetalkprobe.run.test.ts",
     "poses": "vitest run --config vitest.sweep.config.ts tools/poses.run.test.ts",
+    "endingsprobe": "vitest run --config vitest.sweep.config.ts tools/endingsprobe.run.test.ts",
     "exorcistprobe": "vitest run --config vitest.sweep.config.ts tools/exorcistprobe.run.test.ts"
   },
   "devDependencies": {
