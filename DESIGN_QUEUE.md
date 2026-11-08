@@ -12531,6 +12531,58 @@ measurable and neither is a feature.** I would measure before building
 anything new, because an ending nobody reaches is content nobody sees, and
 this game now has five of them.
 
+### Measured 2026-11-08: the premise is false, and the fork answers "road"
+
+**Games do not end on the clock.** Eighteen games, both seed sets,
+`npm run endingsprobe`:
+
+| how it ended | of 18 |
+|---|---|
+| somebody's **ending** | **12** |
+| dominance or points | 4 |
+| **nobody, the clock ran out** | **2** |
+
+Section 3's *"nearly every game reaches the turn limit"* and this item's
+*"three quarters"* were both true and are both dead. The endings arrived and
+closed it, and nobody went back to look. **Two games in eighteen.**
+
+### And the fork this item posed has an answer
+
+It asked whether an unreached ending is a **price** problem (600 to 1000
+shields of works) or a **road** problem (the advance sits too deep). Separable,
+and separated:
+
+| side | learned the advance | built every work | of those who learned |
+|---|---|---|---|
+| **hivekin** | **18/18** | 7/18 | 39% |
+| human | 10/18 | 4/18 | 40% |
+| orc | 5/18 | 1/18 | 20% |
+| wandering | 4/18 | 1/18 | 25% |
+| unbound | 3/18 | 1/18 | 33% |
+
+**The road is the larger filter, and it is not close.** Four of five factions
+reach their opening advance in **under half** their games; the Unbound managed
+it three times in eighteen and none at all on the held-out set. The price is
+real but second: of the sides that do get there, a quarter to two fifths
+finish the works.
+
+**The Hive is the control that makes it legible.** Same works, same costs,
+same three buildings — and it learns its advance **18 times out of 18**,
+because that advance sits on its own early line. It converts that into seven
+completed sets and most of the game's wins. Nothing about the Hive's *price*
+is different. Only its road is.
+
+So if this is worth moving, the lever is **where an ending advance sits in the
+tree**, not what the works cost — and that is much the cheaper change, since
+it is a prereq and a beaker cost rather than a re-pricing of fifteen
+buildings across five factions.
+
+**One caution before anybody pulls it.** Section 161 already found the Hive is
+the winningest side *because* every win is its own ending. Shortening four
+other roads to match the Hive's is, on this evidence, handing four factions
+the thing that makes the Hive win — so it wants a sweep on win rates, not just
+on endings reached.
+
 ### 3. A unit that survives should become something
 
 Jeremy's own next item, and I agree with it — see section 155 below. The
