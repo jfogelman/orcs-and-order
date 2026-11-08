@@ -13786,15 +13786,20 @@ most of how they win at all.
 
 ### Still open
 
-- **Why the Unbound cannot convert.** They end with more units and more people
-  than the no-dispersal arm and the same handful of wins. The probe to write
-  counts what their army *does*: attacks made, cities taken, fights declined.
-- **The Hive at 42%.** Unasked for, loud, and nothing here touched it.
-- **The Wandering Folk at zero.** Section 153 has it; this is the confirmation
-  at scale.
-- `GUEST_LIST.reach` is still unmeasured. Sixteen Spirit Parties is enough
-  that an arm would now differ from the control, which it would not have been
-  before this sweep.
+- ~~**Why the Unbound cannot convert.**~~ **Answered by section 169**, and not
+  by the army: they end with 5.8 cities and 40 to 57 units on both seed sets,
+  and 0.5 to 0.7 works of three. They reach the *ending advance* in 3 of 18,
+  because their road to it is 1035 beakers against the Hive's 165.
+- ~~**The Hive at 42%.**~~ **Superseded.** Section 160's arrival shuffle took a
+  third off it and section 161's reprice took it to **21%** against an even
+  20%. The 42% was a pre-160 number and this line outlived it by five sections.
+- ~~**The Wandering Folk at zero.**~~ **Half answered.** Section 160 roughly
+  doubled their establishment -- 5 of 18 to 9 and 12 on the two sets, section
+  169 -- and their win share did not move off 3%. The remaining half is the
+  road, which is section 169's open item.
+- `GUEST_LIST.reach` is still unmeasured, and section 169 found the rule does
+  fire: **0 of 12 tuned, 2 of 12 held-out**, where this and section 163 both
+  recorded a flat zero.
 
 ## 157. The Wandering Folk are not short of gold. They are killed on arrival
 
@@ -15309,4 +15314,178 @@ Nothing above is recommended. They are the three places the sum could move.
 
 - **What standing actually reaches.** The gate at -30 never fired, but this
   measured refusals rather than standing, so the distribution is unknown. One
-  counter in `standing` answers it.
+  counter in `standing` answers it. **The probe is written** --
+  `tools/standingprobe.run.test.ts`, section 169 -- and has not been run.
+
+## 169. It was never the price. It is the road, and nobody chose its length
+
+Section 161 repriced the Hive's ending because the Hive won too much, and it
+worked -- 27% to 21% against an even 20%. This asked the question one column
+over, which nothing had asked: **do the other four sides ever reach an ending
+at all?**
+
+They mostly do not, and the reason is not what anything in this file had
+assumed.
+
+### The table that answers it
+
+Depth and road are read off `TECHS` and are exact rather than sampled. The
+counts are `tools/out/endings.md` and `endings-held-out.md`, nine games each.
+Win shares are section 161's shipped arm, 108 games each set.
+
+| faction | ending advance | depth | road, cumulative beakers | learned it | wins |
+|---|---|---|---|---|---|
+| **hivekin** | `all-is-the-hive` | **4** | **165** | **18/18** | 21% |
+| orc | `somebody-knocked` | 6 | 430 | 5/18 | 15% |
+| wandering | `nowhere-left-but-up` | 6 | 700 | 4/18 | **3%** |
+| human | `do-not-touch` | 6 | 965 | 10/18 | 30% |
+| **unbound** | `arrangement-permanent` | **7** | **1035** | **3/18** | **6%** |
+
+**The Hive's road is 165 beakers. The Unbound's is 1035 -- 6.3 times as far.**
+The Hive learns its ending advance in every game ever measured; the Unbound
+learn theirs in three of eighteen. Learning it is monotone in road length
+across all five sides, and nothing in the game connects the two numbers, so
+nothing could have noticed.
+
+### Which is why section 161's reprice moved so little
+
+Price is the second-order term. Three sides pay **exactly 1000** for their
+three works -- orc, wandering and unbound -- and win 15%, 3% and 6%. The
+Kingdom pays the **most** at 1200 and wins the **most** at 30%. Across the
+five sides the works price has no relationship to the win share at all.
+
+| faction | three works | total |
+|---|---|---|
+| hivekin | 240 + 240 + 320 | **800** (lerped to 800-1333) |
+| orc | 300 + 300 + 400 | 1000 |
+| wandering | 300 + 300 + 400 | 1000 |
+| unbound | 300 + 300 + 400 | 1000 |
+| human | 360 + 360 + 480 | 1200 |
+
+Section 161 was not wrong -- the Hive did win too much and the works were
+cheap -- but it corrected the smaller of the two asymmetries it was sitting on
+and could not see the larger one from where it stood, because it measured one
+faction's price across three arms rather than five factions' roads across one.
+
+### This is the same mistake for the fourth time, and now it has a count
+
+Section 125 gave the Hive the shortest road in the game **deliberately**: at
+the time they could not win at all, and the game had **three** sides. Sections
+142 and 152 added two more. Section 161 wrote the lesson down -- *"nobody
+re-asks a balance target when a faction is added"* -- and then the thing it
+had just said went unchecked in the next column over.
+
+The four instances, so the fifth is cheaper to spot: section 160's arrival
+order, section 136's turn-ninety anchor, section 125's three-sided win target,
+and now section 125's road length.
+
+### The Wandering Folk: section 160 fixed the half nobody was measuring
+
+Section 157 measured them at **5 of 18 establishing**, with thirteen games
+ending on `founders 2, techs 1, gold 50 -> 50` -- never built a unit, never
+finished an advance, never earned a coin. That was **before** section 160's
+arrival shuffle. Re-run on both seed sets:
+
+| | section 157 | tuned | held-out |
+|---|---|---|---|
+| alive at the end | 5/18 | **9/18** | **12/18** |
+| stalled on `founders 2, techs 1` | **13/18** | 6/18 | 3/18 |
+| founders ever built | 2 to 23 | 8.4 | 10.0 |
+| cities, best -> end | 1 -> 0 (stalled) | 4.8 -> 3.3 | 6.3 -> 4.7 |
+| advances | 1 (stalled) | 14.2 | 18.7 |
+
+Establishment roughly doubled and **the win share did not move off 3%**. They
+are no longer killed on arrival; they are stopped 700 beakers short of the only
+ending they have. The two findings are not in conflict -- they are the two
+halves of one game, and section 157 could only see the first.
+
+### The Unbound: the army is not the problem, and section 156 can be closed
+
+Section 156's open item asked *"why the Unbound cannot convert"* and named the
+probe: count what their army does. Their army is fine.
+
+| | tuned | held-out |
+|---|---|---|
+| alive at the end | 10/12 | 10/12 |
+| cities | 5.8 | 5.6 |
+| units | **57.3** | **40.5** |
+| advances | 21.2 | 18.9 |
+| **ending advance reached** | **7/12** | **4/12** |
+| **works standing** | **0.7 of 3** | **0.5 of 3** |
+| doorway shut, of turns it exists | 24% | 31% |
+| ever fielded an Archon | 3/12 | 1/12 |
+
+Five or six cities and forty to fifty-seven units, and half a work. Whatever
+the Unbound's problem is, it was never that nobody turned up.
+
+### And their own army shuts their own door, 670 times in 24 games
+
+The largest single number either probe produced, and both sets agree:
+
+| at a loss, a Circle town was blocked by... | tuned | held-out |
+|---|---|---|
+| **one of their own units** | **301** | **369** |
+| somebody else's | 0 | 6 |
+
+`reformSites` excludes a Circle city if **any** unit stands on it, which was
+written to stop an enemy stack camping the door. Measured, the enemy does it
+**six times in twenty-four games** and the Unbound do it to themselves **six
+hundred and seventy**. A faction whose rule fields forty-plus units is its own
+counter, and the clause meant to protect the door is what closes it.
+
+Not fixed here, because "ignore your own units" and "ignore your own units
+unless the city is besieged" are different rules and nobody has chosen.
+
+### Three smaller things the probes settled in passing
+
+- **`GUEST_LIST` is not a permanent zero.** Guests taken in: **0 of 12 tuned,
+  2 of 12 held-out**. Sections 156 and 163 both recorded a flat zero and this
+  one nearly did too; it fires, rarely. What the rate *should* be is still
+  unestablished.
+- **Section 165's fix holds in played games.** `0 blasted, 0 clubbed (0.0%)`
+  on both sets, where the two death paths used to skip `destroyUnit` entirely.
+  That had only ever been shown in its own test.
+- **`MOODS` says seven and holds six.** `sim/diplomacy.ts` opens the ladder
+  with *"The seven names, worst first"* over a six-entry array. Harmless --
+  every reader is a loop -- but it is the ninth or tenth hand-maintained list
+  in this file and nothing asserts the count.
+
+### A probe that accepted a flag and ignored it
+
+`wandererprobe` took `PROBE_SEEDS=held-out`, ignored it, replayed the same
+eighteen games and overwrote its report with figures **identical to the
+decimal**. Which is indistinguishable, from the outside, from a finding that
+reproduced perfectly on a second seed set -- the most convincing possible
+output and entirely worthless. It was caught only because the identity was too
+good.
+
+Fixed: it honours the flag and writes `wanderer-probe-held-out.md`. The salt
+stays `wanderers` so section 157's 5-of-18 remains comparable. This is the
+fourth probe this arc whose reader was wrong -- sections 166, 167 and the two
+in 163 -- and the second failure mode: not a reader that under-counts, but a
+flag that silently does nothing.
+
+### Shipped
+
+- `tools/standingprobe.run.test.ts` and `npm run standingprobe`, which is
+  section 168's one open item: it samples `standing` for every **met** pair
+  every half-turn through `playGame`'s watch hook. An observer, not a counter
+  in the rule, because `standing` is a pure read through `peek` and so moves no
+  RNG; and met-only, because an unmet pair reads 0 and would bury the
+  distribution under fake zeroes. **Written, not yet run.**
+- `wandererprobe` honours `PROBE_SEEDS`.
+
+### Still open
+
+- **The road lengths themselves.** 165 to 1035 beakers is a 6.3x spread that
+  nobody chose, and the obvious arm -- bring the three latecomers' roads toward
+  the Hive's -- is a lever that does not exist yet. It wants a knob and a
+  sweep, and it is the first balance change since section 161 with a measured
+  reason to exist.
+- **Whether a short road is even the right fix.** The Hive reaching its ending
+  in 18/18 may be the thing that is wrong, rather than the standard everyone
+  else should meet. Lengthening one road and shortening three are opposite
+  changes with the same table behind them, and this section deliberately does
+  not choose.
+- **The Unbound's self-blocking clause**, above.
+- **`GUEST_LIST`'s intended rate**, above.

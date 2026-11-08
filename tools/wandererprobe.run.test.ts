@@ -7,7 +7,9 @@ import { arrivalTurnFor, latecomers } from '../src/sim/arrivals';
 import { playerCities, playerUnits, spawnUnit } from '../src/sim/gamestate';
 import { unitType } from '../src/model/units';
 import type { GameState } from '../src/model/types';
-import { NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
+import { HELD_OUT_BASES, NEW_GAME, playGame, seedSet, TUNED_BASES } from './sweep';
+
+declare const process: { env: Record<string, string | undefined> };
 import { control } from './control';
 
 /**
@@ -99,7 +101,14 @@ describe('probe', () => {
   it('asks why the Wandering Folk win nothing', () => {
     control();
     reset();
-    const seeds = seedSet('wanderers', TUNED_BASES, 6).seeds;
+    // `PROBE_SEEDS=held-out` for the other set, as the sweep and the other
+    // probes take it. Without this the flag was accepted and ignored: a
+    // "held-out" run replayed the same eighteen games and overwrote the report
+    // with figures identical to the decimal, which is indistinguishable from a
+    // finding that reproduced. The salt stays `wanderers` either way so that
+    // section 157's 5-of-18 and anything measured since remain comparable.
+    const held = process.env.PROBE_SEEDS === 'held-out';
+    const seeds = seedSet('wanderers', held ? HELD_OUT_BASES : TUNED_BASES, 6).seeds;
     const rows: Row[] = [];
 
     for (const seed of seeds) {
@@ -188,7 +197,11 @@ describe('probe', () => {
     ].join('\n');
 
     if (!existsSync('tools/out')) mkdirSync('tools/out', { recursive: true });
-    writeFileSync('tools/out/wanderer-probe.md', `${report}\n`, 'utf8');
+    writeFileSync(
+      held ? 'tools/out/wanderer-probe-held-out.md' : 'tools/out/wanderer-probe.md',
+      `${report}\n`,
+      'utf8',
+    );
     console.log(report);
     void NEW_GAME;
   }, 1_800_000);
