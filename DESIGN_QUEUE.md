@@ -12375,6 +12375,55 @@ offers carry none.
 Section 155's fee is a real sink in a game a player ticks the box for, and
 invisible to every sweep ever run.
 
+### Tried and dropped: spend the trade on study instead
+
+The obvious cheap answer, and it is **measured and wrong**, which is worth more
+written down than discovered twice.
+
+`manageRates` takes a hardcoded third of every side's trade as coin --
+`coin = max(1, round(rest / 3))` -- for ever, whatever the treasury is doing.
+So the argument was: the cost of dead gold is not the gold, it is **the
+beakers not taken**, and a side hoarding 600 it will never spend should study
+instead.
+
+Built as a rule that reads **flow rather than stock**, which the measurement
+above makes necessary: the Kingdom banks 725 and spends 950, so its deep
+treasury is working capital, and `turnOdds` reads *what was paid* -- capping
+the hoard would have quietly broken the one faction that uses gold well. So it
+counted turns the balance had not fallen, and cut coin to the floor after
+twenty idle turns above 200 gold.
+
+**It fires often and buys nothing.** A clean A/B on one branch, same seeds,
+only the lever moved:
+
+| | rule off | rule on |
+|---|---|---|
+| advances | 21.2 | 21.4 |
+| cities | 5.8 | 5.9 |
+| ending advance reached | 7/12 | 6/12 |
+
+And it is not that the rule sat idle. Counted per side, the coin was cut on
+**576 of the Hive's 2478 turns -- 23 per cent** -- 389 of the Horde's, 236 of
+the Unbound's.
+
+So the conversion simply does not matter: **a fifth more of a fifth of the
+turns' trade, pointed at study, does not buy an advance.** Trade is not what
+limits research here, and the "dead gold costs beakers" theory is false rather
+than untested.
+
+Two things to keep from it:
+
+- The rule also fired **244 times for the Kingdom**, the one side with a
+  working gold economy, because a side between bribes looks idle. Any future
+  version of this needs to tell "not spending" from "not spending *yet*", and
+  twenty turns does not.
+- `turnOdds` reading the amount paid means **a treasury is not inert for a
+  side with spies** -- it is odds. That is the reason the obvious version of
+  this idea (cap the hoard) is wrong, and it will be the reason the next
+  obvious version is wrong too.
+
+The code is reverted. Nothing shipped.
+
 ### So the question is narrower than this item asks
 
 Not *"gold does nothing"*. It is:
