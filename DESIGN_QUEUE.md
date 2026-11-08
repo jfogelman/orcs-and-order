@@ -12330,6 +12330,93 @@ I would **not** retry rush-buying for the AI. Section 4e's note retires that
 whole class, and the reason is still true: rush-buying scales with how many
 cities you have to spend it in, so it pays the side that is already winning.
 
+### Re-measured 2026-11-08, and the premise above has gone stale
+
+This item says *"every AI in the game still accumulates a number that does
+nothing"*. **That is no longer true as written**, and the figures it rests on
+— section 4d's 475.6 a game, and `AI_TUNING.rushBuying`'s 836 and 930 against
+533 and 553 — predate section 146's Recruit, section 136's turning and
+section 155's upgrade fee.
+
+Measured on both seed sets, nine games each, with a counter on every line in
+the game that takes gold out of a treasury:
+
+| side | banked at the end | spent a game | of which, turning a spy |
+|---|---|---|---|
+| **human** | 728 / 723 | **952 / 946** | **949 / 940** |
+| orc | **101 / 119** | 308 / 547 | 263 / 498 |
+| hivekin | 612 / 509 | 67 / 228 | 61 / 222 |
+| wandering | 312 / 343 | 109 / 407 | 9 / 253 |
+| unbound | 546 / 78 | 80 / 36 | 65 / 0 |
+
+(tuned / held-out. `tools/out/gold.md` and `gold-held-out.md`.)
+
+**Gold is not dead. It has one sink, and it is espionage.** Turning a spy is
+the largest outgoing for every side that spends anything at all, on both sets.
+The Kingdom's figures barely move between sets — banked 728 and 723, spent 952
+and 946 — so this is structural rather than a seed's accident.
+
+Three things follow, and none of them is what this item expected.
+
+**1. The sink nobody designed is the only one that works.** Section 136 priced
+turning as a spy dial: `paid = Math.max(0, Math.min(gold, buyer.gold))`. That
+makes it **wealth-proportional** — the richer the buyer, the more each turned
+spy costs it — which is exactly the shape a gold sink wants, and it was
+arrived at for unrelated reasons.
+
+**2. The sink that *was* designed moves almost nothing.** Recruit, section
+146's deliberate answer, moves 82 and 143 a game, for one faction. Peace terms
+move between 3 and 49, which corroborates section 168 from the other side:
+`aiTerms` only attaches gold when the strength ratio passes 1.3 or 0.8, so most
+offers carry none.
+
+**3. Upgrades contribute nothing to a measured game**, because
+`UPGRADES.enabled` is `false` by default and `control()` does not turn it on.
+Section 155's fee is a real sink in a game a player ticks the box for, and
+invisible to every sweep ever run.
+
+### So the question is narrower than this item asks
+
+Not *"gold does nothing"*. It is:
+
+> Gold has exactly one sink that matters, it was built for espionage rather
+> than for the economy, and it drains a side in proportion to how often that
+> side happens to catch a spy worth turning.
+
+For the Kingdom, gold is a working economy. For the Hive and the Unbound,
+banking 509 to 612 while spending under 100 on the tuned set, it is still
+dead. **The target is three factions, not five.**
+
+### And the rush-buying condition has arguably been met
+
+`AI_TUNING.rushBuying`'s note sets its own re-opening condition: *"the gold gap
+closing, not the city gap"*, on the Kingdom banking 55 to 70 per cent more than
+the Horde. Today the **Horde ends on 101 and 119** against the Kingdom's 728
+and 723 — the gap has not closed, it has **widened the other way**, with the
+Horde now the poor one.
+
+That is not an argument for switching rush-buying on. It is a warning that the
+note's condition is written against a two-empire world that no longer exists,
+and that re-reading it as written would give the wrong answer. Section 166's
+lesson, in a different column.
+
+### Where this leaves the three options above
+
+- **Tribute** gains an argument this item did not make for it. The objection
+  that retired rush-buying is that a gold sink which buys *power* pays the side
+  that already has the most gold. Tribute buys **peace**, which is worth most
+  to whoever is losing, so its value per coin runs *opposite* to wealth. It is
+  the one option of the three that cannot compound a lead.
+- **Mercenaries** buy power and therefore inherit the rush-buying objection in
+  full. Cheapest to build, most likely to repeat a measured mistake.
+- **Bribing a city** also buys power, but only once and visibly, and an empire
+  with 475 gold and no army is exactly the case it is for. The objection
+  applies but weakly.
+
+**Nothing is built and nothing is recommended yet.** The measurement changes
+which question is being asked, and the question should be settled before a
+feature is chosen for it.
+
 ### 2. Three quarters of games end on the turn limit
 
 Longstanding (section 3's *"nearly every game reaches the turn limit"*, never
