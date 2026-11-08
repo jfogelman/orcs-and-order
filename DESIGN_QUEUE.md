@@ -12449,6 +12449,57 @@ note's condition is written against a two-empire world that no longer exists,
 and that re-reading it as written would give the wrong answer. Section 166's
 lesson, in a different column.
 
+### Measured: who would actually buy a mercenary, and the answer kills it
+
+The case for a market is a side that is **cash-rich and army-poor** -- it has
+gold, it cannot turn gold into soldiers, and that is the gap a market fills.
+Measured at the last turn of each game, by faction, on both seed sets:
+
+| side | gold banked | army strength | **gold per point** |
+|---|---|---|---|
+| hivekin | 612 / 509 | 93 / 58 | **6.61 / 8.80** |
+| unbound | 546 / 78 | 108 / 26 | 5.04 / 2.96 |
+| wandering | 312 / 343 | 65 / 198 | 4.81 / 1.73 |
+| human | 728 / 723 | 273 / 345 | 2.67 / 2.10 |
+| orc | 101 / 119 | 204 / 157 | **0.50 / 0.76** |
+
+(tuned / held-out; strength on `strength()`'s own reckoning. `tools/out/merc.md`.)
+
+**Only the Hive is reliably the customer.** The Unbound and the Wandering Folk
+looked like customers on the tuned set and do not replicate -- they are the
+latecomers, and their fortunes swing. The Horde is reliably the opposite
+corner: poorest, and second strongest.
+
+### And the one reliable customer is the side that already wins
+
+Section 161: *"The Hive is the winningest side in the game, and **every single
+win is its own ending** -- not one by conquest, dominance or points, in any
+arm."*
+
+So the Hive's small army is **not a weakness, it is the route**. It does not
+contest the military dimension and wins anyway. A market that converts its
+idle gold into soldiers would arm the winningest faction in the one dimension
+it has chosen not to fight in.
+
+Section 161 also records the Hive as *"two games wearing one average"*: 47 of
+108 establish, and the other 61 average 1.15 cities and 2.9 units and **have
+never won a game**. The poor half could not afford a mercenary anyway, so the
+market would sell only to the half that is already winning.
+
+**So every effect points the wrong way:**
+
+- it arms the winningest side, in its chosen weakness;
+- it reaches none of the Hive's 61 failed games, which have no gold;
+- it misses the Horde entirely, which has 101 gold and needs nothing;
+- and the Kingdom banks the **most gold in absolute terms** -- 728 against the
+  Hive's 612 -- while already fielding the strongest army, so a second use for
+  gold is as likely to be bought by the leader as by anyone.
+
+**Recommendation: do not build it.** Not because the idea is bad, but because
+the measurement says it has one customer and that customer should not be a
+customer. This item's own bar is *"worth doing when it answers something that
+has been measured"*; measured, this answers nothing that wants answering.
+
 ### Where this leaves the three options above
 
 - **Tribute** gains an argument this item did not make for it. The objection
