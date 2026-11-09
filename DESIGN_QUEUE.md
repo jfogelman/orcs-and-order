@@ -15776,12 +15776,13 @@ the Hive, since the mechanism it refutes is the same one.
 
 ### Still open
 
-- **Why the Wandering Folk win 3%.** Not establishment (section 160 doubled it,
-  nothing moved), not the road (this), not gold (section 157), not Recruit
-  (section 157). They hold 2.6 to 3.6 cities and 13 to 19 units and finish
-  11.8 to 15.4 advances, which is half the Kingdom's research. **Throughput is
-  the one thing never measured for them**, and section 125 named it for the
-  Hive: *"9.9 beakers a turn against 19.1 and 32.4"*.
+- ~~**Why the Wandering Folk win 3%.**~~ **Throughput measured in section 173,
+  and it is not that either.** They earn 21.7 and 16.1 beakers a turn -- more
+  than the Horde on the tuned set -- with the second-best trade split in the
+  game, and win 1 of 36. The Hive has the worst rate in the game and wins 8.
+  The recommendation in this section was wrong. What section 173 did find is
+  that the three newest factions never build a science building: the advance
+  was learned in 71 games and the building raised in 2.
 - **Whether the Hive should be at 20% at all**, now that it is. Nobody has
   re-asked whether an even share is the target for a side that arrives late and
   plays no expansion game, as opposed to the right answer being deliberately
@@ -15790,3 +15791,138 @@ the Hive, since the mechanism it refutes is the same one.
   125 and is 16.4 to 19.5 now, and no section recorded that it had tripled. It
   moved because section 153 changed arrivals, which is the fifth instance of a
   number anchored to a world that then moved.
+
+## 173. Throughput measured: it is not the economy, and three factions never build a library
+
+Section 172 ruled out the road and recommended throughput as the next thing to
+measure, on the strength of section 125's *"9.9 beakers a turn against 19.1 and
+32.4"*. `tools/throughputprobe.run.test.ts`, 18 games on each set.
+
+**The recommendation was wrong and the probe says so on both sets.** The
+Wandering Folk are not short of research.
+
+### The decomposition
+
+`manageRates` is faction-neutral -- two parts study to one coin out of whatever
+`TRADE_STEPS` is left after `calm` -- so there are only four ways to be short
+of advances, and this separates them rather than choosing between them.
+
+| | beakers a turn | turns with a city | beakers all told | advances | wins/18 |
+|---|---|---|---|---|---|
+| human | 23.9 / 29.6 | 250 / 255 | 5966 / 7546 | 28.8 / 31.9 | 3 / 5 |
+| orc | 15.9 / 14.7 | 260 / 233 | 4129 / 3410 | 29.1 / 26.7 | 3 / 2 |
+| **hivekin** | **9.5 / 11.0** | 209 / 191 | 1986 / 2110 | 19.3 / 19.3 | **4 / 4** |
+| unbound | 16.3 / 12.3 | 156 / 133 | 2550 / 1629 | 16.0 / 13.3 | 3 / 1 |
+| **wandering** | **21.7 / 16.1** | **120 / 157** | 2613 / 2515 | 14.7 / 18.2 | **0 / 1** |
+
+**The Wandering Folk out-earn the Horde per turn on the tuned set and win
+nothing. The Hive has the worst rate in the game and wins the most.** Whatever
+holds the latecomers down, it is not beakers per turn.
+
+### And `calm` is not it either, which was the pre-registered guess
+
+Written down before the run so it could not be fitted afterwards: section 85
+found the Horde's cities *"not small, on fire"*, and `calm` is uncapped until
+`TRADE_STEPS - 2`, so a side at its content limit everywhere could be left two
+steps to split. The Wandering Folk have the **second-best rates in the game**.
+
+| | coin | study | **calm** | rioting | at the limit |
+|---|---|---|---|---|---|
+| human | 3.7 / 3.8 | 7.3 / 7.5 | **0.9 / 0.8** | 4.5% / 3.4% | 7.0% / 5.4% |
+| **wandering** | 3.7 / 3.7 | **7.3 / 7.3** | **1.0 / 1.0** | 3.5% / 4.0% | 11.8% / 12.0% |
+| hivekin | 3.6 / 3.6 | 7.2 / 7.2 | 1.3 / 1.2 | 13.5% / 10.8% | 11.9% / 9.6% |
+| orc | 3.5 / 3.6 | 6.9 / 7.0 | 1.7 / 1.4 | 9.9% / 8.3% | 14.4% / 14.2% |
+| unbound | 3.4 / 3.6 | 6.7 / 7.0 | 1.9 / 1.4 | 12.0% / 9.1% | 15.4% / 13.1% |
+
+The Horde riots nearly three times as much as the Wandering Folk and wins five
+times more often. `calm` costs the worst-affected side 1.9 steps of twelve.
+
+### The one thing that is real, mechanical and on both sets
+
+**The three newest factions never build a science building.**
+
+| side | learned the advance | ever built one |
+|---|---|---|
+| human | 18/18, 18/18 | **13/18, 18/18** |
+| orc | 18/18, 18/18 | **13/18, 9/18** |
+| hivekin | 11/18, 11/18 | **1/18, 1/18** |
+| unbound | 13/18, 12/18 | **0/18, 0/18** |
+| wandering | 11/18, 13/18 | **0/18, 1/18** |
+
+Across both sets the three latecomers learned the advance in **71 games and
+built the building in 2**. The two empires: **53 of 72**. The measured science
+bonus is **0.0% for hivekin and unbound on both sets** and 0.0/0.1% for the
+Wandering Folk, against 3.3/6.9% and 6.7/3.9%.
+
+**Nothing about the buildings explains it.** Every faction has two, at the same
+130 and 60 shields for the same 0.5 bonus, and the cheap one comes off
+`hammers-of-glory` -- **one shared advance, depth 3, road 155, the same for all
+five**. Price, road and availability are identical by construction.
+
+**Nor is it a hand-maintained list**, which was the obvious suspect after eight
+or nine of them in this file. The step is faction-blind:
+
+```ts
+const wanted =
+  options.buildings.find((b) => b.scienceBonus || b.goldBonus) ?? ...
+if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
+```
+
+So the rule can see their buildings and chooses something else. It sits at
+**step 4**, behind the garrison, the riot lid, the ending works, the follies,
+expansion and the road crews -- and the three latecomers each have standing
+wants the empires do not: Retrieval Circles and an Anchor Totem, Caravans,
+Burrowers. The plausible reading is that something earlier always wins, forever.
+
+**That is a hypothesis and this section does not promote it.** Section 172's
+lesson is three days old: a mechanism that fits the numbers is not a measured
+mechanism.
+
+### A secondary finding nobody asked for: the Kingdom wastes a third of its research
+
+| | banked at the end | turns with nothing researchable |
+|---|---|---|
+| **human** | **1641 / 2572** | **15% / 19%** |
+| orc | 212 / 106 | 1% / 0% |
+| hivekin | 47 / 123 | 0% / 1% |
+
+The Kingdom finishes its tree and keeps earning into a void for a fifth of the
+game, banking two to three thousand beakers it can never spend. It wins 31.5%
+of games while throwing away roughly a third of its research, which says its
+share is **understated** rather than lucky, and that the first side to be given
+something to do with surplus beakers will not be the one that needs it.
+
+The other three factions' banked figures move between sets (430/134, 690/172)
+and are not read as anything.
+
+### Two bugs in the probe, both caught before the real run
+
+- **`turns with a city` was 4x too big.** `playGame`'s watch hook fires about
+  four times a game turn, so an observation count is not a turn count. The
+  *rate* was unaffected -- each observation reads a per-turn income, so the mean
+  is per-turn, which is why the Hive landed on the 9.5 that matches section
+  125's 9.9 -- but every cumulative figure was inflated. It counts distinct
+  `state.turn` values now.
+- **A rate and an absolute count are not comparable.** The Unbound looked
+  efficient at 23.9 beakers a turn until `turns with a city` showed they live
+  102 turns to the Kingdom's 248. Both columns ship together for that reason.
+
+### Still open
+
+- **Why step 4 never fires for three factions.** One counter answers it: a tag
+  on what `chooseProduction` returned, tallied by faction. That separates "the
+  wants starve it" from "`city.size >= 3` and a 40% roll are never both true"
+  from something else. **Cheap, and nothing should be changed before it.**
+- **Whether a science building is worth having.** 0.5 on a 60-shield building
+  is untested; the two empires that build it are also the two that live
+  longest, which is section 172's confound in miniature. An arm that forces it
+  would answer both this and the item above.
+- **Why the two latecomers die.** `turns with a city` is 120-157 against
+  233-260, and that is **not** offered here as a cause: a side that is killed
+  stops counting turns and a side that wins ends the game, so turns-alive is
+  partly the outcome it would be explaining. Separating them wants the rate
+  measured only over games the side survives, which this probe does not split.
+- **Section 125's figure has drifted and nobody noticed.** It measured the Hive
+  at 9.9 beakers a turn against 19.1 and 32.4. Today: 9.5-11.0 against
+  14.7-15.9 and 23.9-29.6. The Hive is unchanged and **both empires have come
+  down by a quarter**, which no section recorded.
