@@ -15362,6 +15362,23 @@ learn theirs in three of eighteen. Learning it is monotone in road length
 across all five sides, and nothing in the game connects the two numbers, so
 nothing could have noticed.
 
+> **Corrected by section 172. The table above is a description and the causal
+> reading of it was wrong.** Moving the Hive's road from 165 to 300 to 430 --
+> one faction, nothing else touched, 324 games -- left its win share at 20.4%,
+> 23.1% and 16.7%, non-monotone, with the two seed sets disagreeing on
+> direction, and the Hive still reaching and winning by its ending in every
+> arm.
+>
+> Road length across five factions covaries with income, tree depth, arrival
+> turn and whether the ending is that side's only route to a win at all, so the
+> correlation compared five different games. In the same run the **Horde swings
+> 8.3 points from a lever that cannot touch it**, against the Hive's 3.7 from
+> the lever that can.
+>
+> A table with five rows and a monotone column is not an experiment. The rest
+> of this section -- the probes, the establishment figures, the self-blocking
+> counts -- is unaffected.
+
 ### Which is why section 161's reprice moved so little
 
 Price is the second-order term. Three sides pay **exactly 1000** for their
@@ -15493,16 +15510,13 @@ flag that silently does nothing.
 
 ### Still open
 
-- **The road lengths themselves.** 165 to 1035 beakers is a 6.3x spread that
-  nobody chose, and the obvious arm -- bring the three latecomers' roads toward
-  the Hive's -- is a lever that does not exist yet. It wants a knob and a
-  sweep, and it is the first balance change since section 161 with a measured
-  reason to exist.
-- **Whether a short road is even the right fix.** The Hive reaching its ending
-  in 18/18 may be the thing that is wrong, rather than the standard everyone
-  else should meet. Lengthening one road and shortening three are opposite
-  changes with the same table behind them, and this section deliberately does
-  not choose.
+- ~~**The road lengths themselves.**~~ **Answered by section 172, and the
+  answer is no.** The knob was built (`ENDING_ROAD`) and swept over 324 games;
+  tripling the Hive's road moves nothing, and the mechanism this item assumed
+  does not exist. The spread is still unchosen and now known not to matter.
+- ~~**Whether a short road is even the right fix.**~~ **Moot.** Neither
+  direction is a fix, because the lever is inert in the direction that was
+  measurable.
 - **The Unbound's self-blocking clause**, above.
 - **`GUEST_LIST`'s intended rate**, above.
 
@@ -15634,3 +15648,145 @@ There were two.
   recover from the floor at all has not been measured, only assumed.
 - **The human asker's path through line 288** is the one place the gate is
   live, and no probe plays a human.
+
+## 172. The road is not the reason. Section 169 measured a confound
+
+324 games, three arms, two seed sets. The sweep's own estimate was *"about 81
+minutes (49-105)"*; it took **100.5 minutes at 18.6s a game**.
+
+Section 169 found that how often a side learns its ending advance is monotone
+in the cumulative cost of the road to it, across all five factions, and read
+that as the explanation for the win shares. Jeremy ruled on it: *"Hivekin
+lengthen to match the others more closely."*
+
+**Measured by moving that one number and nothing else, the road does not do
+anything at all.**
+
+### The answer
+
+`ENDING_ROAD.hivekin`, which multiplies the cost of `all-is-the-hive` and
+reaches nothing else in the game. Wins per 108 games:
+
+| arm | road | hivekin | advances | still wins by its own ending |
+|---|---|---|---|---|
+| `as shipped` | 165 | **22 (20.4%)** | 16.5 / 19.5 | 8 / 14 |
+| `twice the road` | 300 | **25 (23.1%)** | 17.1 / 19.0 | 8 / 16 |
+| `horde parity` | 430 | **18 (16.7%)** | 16.4 / 17.3 | 6 / 10 |
+
+Not monotone, and the two sets do not agree on a direction: tuned runs 8, 9, 7
+and held-out runs 14, 16, 11. Tripling what the advance costs -- 100 beakers to
+365 -- moves the Hive's win share by less than four points, in no consistent
+direction, and **they still reach the ending and still win with it in every
+arm**.
+
+### And it is not section 125's cliff either
+
+The arms were built expecting a cliff, because section 125 measured roads of
+860, 710 and 610 at **0 wins of 12** with `advances` pinned at **11.8** in
+every arm. That was the prediction to check: if `advances` pinned near 12
+again, the lever could not deliver the ruling at any setting.
+
+`advances` did not pin. It sits at **16.4 to 19.5 in all three arms**, barely
+moving. Section 125's cliff is gone -- section 153's stagger replaced the
+turn-105 arrival and the Hive now has a far longer life and more income than
+the 9.9 beakers a turn that made it -- and what replaced the cliff is not a
+slope. **The Hive simply absorbs the cost.** 265 extra beakers is one advance
+of seventeen, in a game it now has three hundred turns to play.
+
+### The four untouched factions are the noise gauge, and they are the finding
+
+`ENDING_ROAD.hivekin` cannot affect anybody else. So every move in the other
+four columns is chance, by construction, and this sweep measures its own noise
+floor for free:
+
+| | `as shipped` | `twice the road` | `horde parity` | swing |
+|---|---|---|---|---|
+| orc | 14 (13.0%) | 15 (13.9%) | **23 (21.3%)** | **8.3 pts** |
+| human | 34 (31.5%) | **40 (37.0%)** | 37 (34.3%) | 5.5 pts |
+| unbound | 10 (9.3%) | 10 (9.3%) | 9 (8.3%) | 1.0 pt |
+| wandering | 3 (2.8%) | 3 (2.8%) | 4 (3.7%) | 0.9 pt |
+| **hivekin** (the lever) | 22 (20.4%) | 25 (23.1%) | 18 (16.7%) | **3.7 pts** |
+| unfinished | 25 | 15 | 17 | |
+
+**The Horde swings 8.3 points from nothing whatsoever, and the faction the
+lever actually moves swings 3.7.** An arm-to-arm swing of eight points is
+inside chance in this design, which is a sharper version of
+`sweep-noise-at-108-games` than that memory had: it is not an estimate of the
+noise band, it is a direct observation of it, in the same run.
+
+Anything read off the Hive's column here would have been read off noise. The
+honest reading is that the lever is **inert**.
+
+### Why section 169's table was wrong, and it is a textbook confound
+
+Section 169 compared **five different factions** and found road length tracked
+how often each learned its ending. Road length across those five covaries with
+every other thing that differs between them -- income per turn, how deep their
+tree is, what turn they arrive, how many cities they hold, and crucially
+**whether the ending is their only route to a win at all**. The Kingdom has the
+second-longest road and the most wins because it also wins by dominance and
+points; the Hive's every win is its own ending.
+
+So the correlation was real and the causal claim on top of it was not. Moving
+the road **within one faction**, holding all of that fixed, is the controlled
+version of the same question, and it answers no.
+
+This is `attribution-needs-the-same-bar` in a shape that memory does not cover:
+not a rare-event count read too confidently, but a five-point cross-sectional
+correlation that looked like a mechanism. **A table with five rows and a
+monotone column is not an experiment.** The giveaway available at the time and
+not taken: section 125 had already run the intervention and found the road
+moved the Hive from 2/12 to 0/12 -- a lever worth two wins in twelve, not the
+thing holding the other four factions down.
+
+### What this means for the Hive, which is that it was already finished
+
+The control arm puts the Hive on **20.4% against an even share of 20%** for
+five sides. Section 161 landed it there by repricing the works, and section 169
+reopened a question that was closed, on the strength of a correlation.
+
+Jeremy's ruling was made on section 169's table and the ruling is not wrong --
+it is unexecutable, because the lever it would act through does not move the
+outcome. Nothing is shipped. `ENDING_ROAD` stays at 1 for all five.
+
+### So the live problem is unchanged and it is the latecomers
+
+| | share | even share |
+|---|---|---|
+| human | 31.5% | 20% |
+| hivekin | 20.4% | 20% |
+| orc | 13.0% | 20% |
+| **unbound** | **9.3%** | 20% |
+| **wandering** | **2.8%** | 20% |
+
+The Wandering Folk win three games in a hundred and eight, which is where
+section 156 found them, where section 160 left them after doubling their
+establishment, and where this leaves them after three arms that had nothing to
+do with them. **Their road was never the reason, so shortening it was never
+going to be the fix** -- which this sweep establishes as firmly for them as for
+the Hive, since the mechanism it refutes is the same one.
+
+### Shipped
+
+- `ENDING_ROAD` stays, at 1 for every faction. It is a measured dead end rather
+  than an untried idea now, which is worth more than deleting it: the next
+  section tempted by road length has a 324-game answer.
+- Section 169's road table corrected in place: kept as a description, with the
+  causal reading struck.
+
+### Still open
+
+- **Why the Wandering Folk win 3%.** Not establishment (section 160 doubled it,
+  nothing moved), not the road (this), not gold (section 157), not Recruit
+  (section 157). They hold 2.6 to 3.6 cities and 13 to 19 units and finish
+  11.8 to 15.4 advances, which is half the Kingdom's research. **Throughput is
+  the one thing never measured for them**, and section 125 named it for the
+  Hive: *"9.9 beakers a turn against 19.1 and 32.4"*.
+- **Whether the Hive should be at 20% at all**, now that it is. Nobody has
+  re-asked whether an even share is the target for a side that arrives late and
+  plays no expansion game, as opposed to the right answer being deliberately
+  below even.
+- **`advances` as a column nobody reads.** It was 11.8 for the Hive in section
+  125 and is 16.4 to 19.5 now, and no section recorded that it had tripled. It
+  moved because section 153 changed arrivals, which is the fifth instance of a
+  number anchored to a world that then moved.
