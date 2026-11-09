@@ -711,8 +711,9 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     cost: 70,
     upkeep: 1,
     blurb:
-      'Somewhere to come back to, so long as nobody is standing in it. ' +
-      'This has proved harder to arrange than expected.',
+      'Somewhere to come back to, so long as nobody hostile is standing in ' +
+      'it. Your own soldiers are no trouble; they have been briefed, and have ' +
+      'agreed to look away at the appropriate moment.',
   },
   anchorTotem: {
     id: 'anchorTotem',

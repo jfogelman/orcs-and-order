@@ -31,12 +31,14 @@ import type { City, GameState, Unit } from '../src/model/types';
 const chanceWas = EXORCISM.chance;
 const turnsWas = REFORM.turns;
 const failWas = [DISPERSAL.failBase, DISPERSAL.failFloor] as const;
+const blockWas = DISPERSAL.ownUnitsBlock;
 afterEach(() => {
   UPGRADES.enabled = false;
   EXORCISM.chance = chanceWas;
   EXORCISM.enabled = true;
   REFORM.turns = turnsWas;
   [DISPERSAL.failBase, DISPERSAL.failFloor] = failWas;
+  DISPERSAL.ownUnitsBlock = blockWas;
 });
 
 function game(): GameState {
@@ -85,6 +87,21 @@ function totem(state: GameState, owner: number, x: number, y: number): City {
     y,
     size: 3,
     buildings: ['anchorTotem'],
+  } as unknown as City;
+  state.cities.push(c);
+  return c;
+}
+
+/** The cheap doorway: the one that used to be shut by its own garrison. */
+function circle(state: GameState, owner: number, x: number, y: number): City {
+  const c = {
+    id: state.cities.length + 1,
+    owner,
+    name: 'Ring',
+    x,
+    y,
+    size: 3,
+    buildings: ['retrievalCircle'],
   } as unknown as City;
   state.cities.push(c);
   return c;
@@ -204,6 +221,32 @@ describe('the two Wardens that hold ground', () => {
     put(state, ub, 'warden', 11, 10, 'warden-purging');
     expect(reformSites(state, ub), 'their own Warden shuts nothing').toHaveLength(1);
     expect(home.owner).toBe(ub);
+  });
+
+  it('lets their own army stand in a Circle town without shutting it', () => {
+    const state = game();
+    const ub = seat(state, 'unbound');
+    const hive = seat(state, 'hivekin');
+    const ring = circle(state, ub, 10, 10);
+    expect(reformSites(state, ub), 'an empty Circle town is a doorway').toHaveLength(1);
+
+    // Jeremy's ruling of 2026-11-08, section 169. Their own garrison shut this
+    // door 670 times across 24 games and an enemy six, so the clause now asks
+    // whose army it is.
+    const theirs = put(state, ub, 'revenant', 10, 10);
+    expect(reformSites(state, ub), 'their own soldier no longer shuts it').toHaveLength(1);
+
+    // And the old rule is still reachable as a control arm, which is the thing
+    // a sweep needs -- section 59.
+    DISPERSAL.ownUnitsBlock = true;
+    expect(reformSites(state, ub), 'and at the old setting it does').toHaveLength(0);
+    DISPERSAL.ownUnitsBlock = false;
+
+    // Somebody else's still does. Nearly hypothetical -- an enemy standing in
+    // your city has taken it -- but it is the half of the clause worth keeping.
+    theirs.owner = hive;
+    expect(reformSites(state, ub), "somebody else's shuts it").toHaveLength(0);
+    expect(ring.owner).toBe(ub);
   });
 
   it('has an Anchored Warden close the ground to the dead and nobody else', () => {

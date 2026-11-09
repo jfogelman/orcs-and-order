@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { HIVE_ENDING } from '../src/sim/hivekin';
+import { ENDING_ROAD } from '../src/sim/research';
 
 /**
  * The question this sweep is currently asking.
@@ -100,15 +100,68 @@ const buildArms = (): Arm[] => {
    * `double-ish` both give roughly nothing, the answer is "somewhere under
    * 800" and the next sweep is a narrower ladder, not a wider one.
    */
-  const hive = (label: string, works: number): Arm => ({
+  /**
+   * ## Section 171, and the arms above are spent
+   *
+   * The ladder above ran on 2026-10-28 and shipped `works` at 800. Section 169
+   * then measured the column it never looked at: the **road** to each ending
+   * advance, cumulative over prerequisites, runs 165 / 430 / 700 / 965 / 1035
+   * for hive / orc / wandering / human / unbound, and how often a side learns
+   * its ending advance is monotone in that number. The Hive learns its own in
+   * **18 games of 18**; the Unbound learn theirs in **three**.
+   *
+   * Jeremy, 2026-11-08, given both directions: *"Hivekin lengthen to match the
+   * others more closely."*
+   *
+   * ## Why these three numbers and not the obvious ones
+   *
+   * **Section 125 already swept this lever and found a cliff.** Roads of 860,
+   * 710 and 610 beakers all returned **0 wins of 12**, and the column that
+   * explains it is `advances`: **11.8 in every arm**. At 9.9 beakers a turn
+   * against the Horde's 19.1 and the Kingdom's 32.4, a 610-beaker road is the
+   * Hive's whole research life. Its words: *"860 to 710 to 610 are the same
+   * answer wearing different numbers."* Only 165 produced a win at all.
+   *
+   * So the faithful minimal reading of the ruling -- parity with the nearest
+   * other road, the Horde's 430 -- sits **above two settings already measured
+   * at zero**, and a ladder reaching for 700 or 1035 would be three arms of
+   * nothing. That is the sweep section 125 already paid for.
+   *
+   * **What is genuinely unknown is whether the cliff is still there.** Section
+   * 125 probed a Hive arriving around turn 105 with 3.5 cities; section 153's
+   * stagger lands it in turns 20-60, so it now has a much longer life and more
+   * income than the 9.9/turn that made the cliff. The cliff is a fact about
+   * throughput, and throughput moved.
+   *
+   * | arm | multiplier | road | what it tests |
+   * |---|---|---|---|
+   * | `as shipped` | 1 | **165** | the control, and section 161's 21% |
+   * | `twice the road` | 2.35 | **300** | still well under the old cliff |
+   * | `horde parity` | 3.65 | **430** | the ruling, at its gentlest |
+   *
+   * ## What would count
+   *
+   * `advances` is the column to read first, not wins. If it pins near 12 in
+   * the two longer arms the way it did in section 125, the cliff has not moved
+   * and the ruling cannot be delivered by this lever at any setting -- which is
+   * a finding, and the one that sends this back to Jeremy with throughput or
+   * depth as the alternative rather than price.
+   *
+   * If `advances` rises with the longer roads, the cliff has moved, the ladder
+   * is a slope again, and the question becomes where on it 20% sits.
+   *
+   * The road is `65 + 100 x multiplier`: `all-is-the-hive` costs 100 of its
+   * own and its prerequisites sum to 65.
+   */
+  const road = (label: string, mult: number): Arm => ({
     label,
     apply: () => {
       control();
-      HIVE_ENDING.works = works;
+      ENDING_ROAD.hivekin = mult;
     },
   });
 
-  return [hive('as shipped', 1), hive('half again', 4 / 3), hive('double-ish', 5 / 3)];
+  return [road('as shipped', 1), road('twice the road', 2.35), road('horde parity', 3.65)];
 };
 
 const ARMS: Arm[] = buildArms();
