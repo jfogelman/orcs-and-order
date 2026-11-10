@@ -10,7 +10,7 @@ import {
   contentLimit,
   productionCostIn,
 } from '../src/sim/city';
-import { researchableTechs, TRADE_STEPS } from '../src/sim/research';
+import { BUILD_ORDER, researchableTechs, TRADE_STEPS } from '../src/sim/research';
 import { buildOptions } from '../src/sim/city';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
@@ -251,8 +251,17 @@ describe('throughput', () => {
     control();
     // Section 174. After `control()`, which pins it off and empties it.
     PRODUCTION_TRACE.on = true;
+    // Section 176. Cheapest-first shipped, so the default run is the shipped
+    // game and `PROBE_FIRST_MATCH=1` replays the fault for comparison. The
+    // report name says which, because two runs of this probe over the same
+    // seeds differ only in these counters and are otherwise indistinguishable.
+    if (process.env.PROBE_FIRST_MATCH === '1') BUILD_ORDER.cheapest = false;
     const held = process.env.PROBE_SEEDS === 'held-out';
+    const arm = BUILD_ORDER.cheapest ? '' : '-firstmatch';
+    // `which` is the seed salt as well as the label, so the arm must not touch
+    // it: both arms have to play the same games to be comparable at all.
     const which = held ? 'held-out' : 'tuned';
+    const title = `${which}${BUILD_ORDER.cheapest ? '' : ', first match (section 175)'}`;
     const perBase = Number(process.env.PROBE_PER_BASE ?? 6);
     const seeds = seedSet(which, held ? HELD_OUT_BASES : TUNED_BASES, perBase).seeds;
 
@@ -395,7 +404,7 @@ describe('throughput', () => {
     const perCity = (f: string, n: number) => (by[f].cityTurns ? n / by[f].cityTurns : 0);
 
     const report = [
-      `# throughput, ${which} (${games} games, ${perBase} a base)`,
+      `# throughput, ${title} (${games} games, ${perBase} a base)`,
       '',
       `Sampled per half-turn, over player-turns in which the side held at least`,
       `one city. Rates are out of ${TRADE_STEPS} steps.`,
@@ -555,7 +564,7 @@ describe('throughput', () => {
     ].join('\n');
 
     writeFileSync(
-      held ? 'tools/out/throughput-held-out.md' : 'tools/out/throughput.md',
+      `tools/out/throughput${held ? '-held-out' : ''}${arm}.md`,
       `${report}\n`,
       'utf8',
     );

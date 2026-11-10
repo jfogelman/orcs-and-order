@@ -15,31 +15,31 @@ beakers from earning beakers that cannot become advances.
 
 | side | beakers a turn | turns with a city | beakers all told | advances | banked | nothing to learn | wins | cities | trade a turn |
 |---|---|---|---|---|---|---|---|---|---|
-| hivekin | **9.5** | 209 | **1986** | **19.3** | 47 | 0% | 4/18 | 3.36 | 12.2 |
-| human | **23.9** | 250 | **5966** | **28.8** | 1641 | 15% | 3/18 | 6.20 | 28.4 |
-| orc | **15.9** | 260 | **4129** | **29.1** | 212 | 1% | 3/18 | 5.38 | 19.9 |
-| unbound | **16.3** | 156 | **2550** | **16.0** | 430 | 5% | 3/18 | 5.26 | 22.4 |
-| wandering | **21.7** | 120 | **2613** | **14.7** | 690 | 9% | 0/18 | 5.38 | 27.5 |
+| hivekin | **10.2** | 211 | **2165** | **20.0** | 74 | 0% | 5/18 | 3.48 | 13.2 |
+| human | **23.5** | 249 | **5858** | **28.6** | 1560 | 15% | 2/18 | 6.15 | 28.2 |
+| orc | **16.3** | 262 | **4263** | **28.9** | 351 | 2% | 4/18 | 5.36 | 20.2 |
+| unbound | **16.0** | 160 | **2549** | **16.4** | 398 | 5% | 4/18 | 5.10 | 21.7 |
+| wandering | **22.3** | 120 | **2683** | **14.8** | 698 | 9% | 0/18 | 5.21 | 26.6 |
 
 ## where the trade split goes
 
 | side | coin | study | **calm** | city-turns rioting | at the limit |
 |---|---|---|---|---|---|
-| hivekin | 3.6 | 7.2 | **1.3** | 13.5% | 11.9% |
-| human | 3.7 | 7.3 | **0.9** | 4.5% | 7.0% |
-| orc | 3.5 | 6.9 | **1.7** | 9.9% | 14.4% |
-| unbound | 3.4 | 6.7 | **1.9** | 12.0% | 15.4% |
-| wandering | 3.7 | 7.3 | **1.0** | 3.5% | 11.8% |
+| hivekin | 3.6 | 7.2 | **1.3** | 12.7% | 11.8% |
+| human | 3.7 | 7.3 | **1.0** | 4.9% | 7.3% |
+| orc | 3.4 | 6.9 | **1.7** | 10.1% | 14.5% |
+| unbound | 3.4 | 6.7 | **1.9** | 12.9% | 14.7% |
+| wandering | 3.7 | 7.3 | **0.9** | 3.7% | 11.7% |
 
 ## and per city, which separates small towns from many towns
 
 | side | pop a city | trade a city | science bonus |
 |---|---|---|---|
-| hivekin | 4.62 | 3.63 | 0.0% |
-| human | 5.32 | 4.58 | 3.3% |
-| orc | 6.40 | 3.70 | 6.7% |
-| unbound | 5.43 | 4.25 | 0.0% |
-| wandering | 5.63 | 5.11 | 0.0% |
+| hivekin | 4.71 | 3.78 | 0.1% |
+| human | 5.35 | 4.58 | 3.5% |
+| orc | 6.42 | 3.78 | 6.3% |
+| unbound | 5.41 | 4.25 | 0.1% |
+| wandering | 5.82 | 5.11 | 5.6% |
 
 ## the science buildings: learned against built
 
@@ -50,11 +50,11 @@ that never learns it is research priority.
 
 | side | ever built one | city-turns building one | peak shields in THAT city | what it costs there | peak anywhere |
 |---|---|---|---|---|---|
-| hivekin | **1/18** | 0.1% | **57** | **60** | 89 |
-| human | **14/18** | 4.3% | **150** | **60** | 199 |
-| orc | **14/18** | 2.7% | **88** | **60** | 246 |
-| unbound | **0/18** | 3.9% | **81** | **130** | 222 |
-| wandering | **0/18** | 15.1% | **112** | **130** | 180 |
+| hivekin | **2/18** | 0.1% | **57** | **60** | 89 |
+| human | **12/18** | 3.2% | **138** | **60** | 430 |
+| orc | **14/18** | 2.8% | **183** | **60** | 183 |
+| unbound | **1/18** | 0.9% | **72** | **60** | 119 |
+| wandering | **7/18** | 6.3% | **94** | **60** | 215 |
 
 ## the cheap one against the dear one (section 175)
 
@@ -67,11 +67,11 @@ city’s yard, and raising it -- and `offered` is read from
 
 | side | cheap: knew / offered / built | dear: knew / offered / built | cheap learned first |
 |---|---|---|---|
-| hivekin | **11** / **11** / **1** | 5 / 5 / 0 | **5/5** | (of 18)
-| human | **18** / **18** / **14** | 16 / 13 / 1 | **16/16** | (of 18)
-| orc | **18** / **18** / **14** | 2 / 2 / 0 | **2/2** | (of 18)
-| unbound | **9** / **9** / **0** | 13 / 13 / 0 | **0/9** | (of 18)
-| wandering | **9** / **9** / **0** | 11 / 11 / 0 | **0/9** | (of 18)
+| hivekin | **12** / **12** / **2** | 4 / 4 / 0 | **4/4** | (of 18)
+| human | **18** / **18** / **12** | 15 / 10 / 1 | **15/15** | (of 18)
+| orc | **18** / **18** / **14** | 3 / 3 / 0 | **3/3** | (of 18)
+| unbound | **10** / **10** / **1** | 13 / 13 / 0 | **0/10** | (of 18)
+| wandering | **9** / **9** / **7** | 11 / 11 / 0 | **0/9** | (of 18)
 
 ## which step of chooseProduction answered (section 174)
 
@@ -81,18 +81,18 @@ can: anything above it answering first is a decision step 4 never sees.
 
 | side | 0 nothing buildable | 1 garrison | 2 expand | 3 content building | 3 placate | 3a ending work | 3a' folly | 3b siege | 3c supply | 3d road crew | 4 economy/defence | 5 biggest stick |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| hivekin | 1.9% | 27.3% | 18.5% | 2.1% | 2.7% | 15.0% | 1.8% | 0.0% | 3.5% | 5.4% | **2.8%** | 19.0% |
-| human | 2.3% | 21.6% | 2.5% | 6.2% | 1.3% | 3.0% | 5.3% | 0.0% | 5.9% | 0.5% | **14.4%** | 36.9% |
-| orc | 2.6% | 20.2% | 3.0% | 7.3% | 4.5% | 1.2% | 4.4% | 0.0% | 5.0% | 0.7% | **15.7%** | 35.4% |
-| unbound | 2.8% | 21.1% | 5.0% | 8.5% | 5.9% | 6.5% | 7.6% | 0.0% | 4.8% | 19.4% | **5.1%** | 13.3% |
-| wandering | 2.0% | 22.9% | 5.7% | 6.1% | 2.0% | 2.3% | 5.1% | 0.0% | 3.2% | 0.2% | **16.3%** | 34.1% |
+| hivekin | 1.8% | 27.8% | 16.9% | 2.7% | 2.6% | 14.8% | 2.0% | 0.2% | 3.8% | 5.0% | **3.1%** | 19.2% |
+| human | 2.0% | 23.1% | 2.8% | 6.4% | 1.4% | 2.5% | 5.1% | 0.0% | 6.1% | 0.5% | **14.0%** | 36.1% |
+| orc | 2.6% | 19.6% | 2.9% | 7.3% | 4.7% | 1.2% | 4.5% | 0.0% | 4.7% | 0.6% | **16.3%** | 35.6% |
+| unbound | 2.9% | 22.5% | 5.4% | 8.3% | 5.6% | 6.8% | 8.0% | 0.0% | 4.4% | 17.1% | **5.0%** | 14.1% |
+| wandering | 1.1% | 20.6% | 6.0% | 6.6% | 2.5% | 2.9% | 5.1% | 0.1% | 3.9% | 0.2% | **16.4%** | 34.7% |
 
 ### and what step 4 bought, commonest first (science buildings bold)
 
 | side | picks |
 |---|---|
-| hivekin | theRenderingPit 95%, **theScentRecord** 4%, theNarrowing 1% |
-| human | market 65%, **scriptorium** 23%, **library** 9%, walls 1%, barracks 1%, exchange 0% |
-| orc | treasury 70%, **thinkingRock** 17%, catapult 8%, barracks 4%, **biggerRock** 1%, bigVault 1% |
-| unbound | **sigilStacks** 100% |
-| wandering | **knottedRecord** 100% |
+| hivekin | theRenderingPit 93%, **theScentRecord** 5%, theNarrowing 3% |
+| human | market 67%, **scriptorium** 22%, exchange 6%, **library** 3%, barracks 1%, walls 1% |
+| orc | treasury 68%, **thinkingRock** 18%, catapult 7%, barracks 3%, bigVault 3%, **biggerRock** 0% |
+| unbound | titheBasin 75%, **sigilStacks** 16%, **wallOfNames** 6%, titheVault 3% |
+| wandering | strongboxWagon 53%, **knottedRecord** 26%, **routeBook** 16%, tollPost 6% |

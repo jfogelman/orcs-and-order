@@ -105,7 +105,7 @@ export const control = () => {
   // Section 176: both halves of the build-choice fault at the game as
   // measured. Pinned here rather than left to the arms, because the control
   // arm has to be the shipped game and these are two independent switches.
-  BUILD_ORDER.cheapest = false;
+  BUILD_ORDER.cheapest = true;
   AI_TUNING.keepBuilding = false;
   PRODUCTION_TRACE.on = false;
   for (const k of Object.keys(PRODUCTION_TRACE.counts)) delete PRODUCTION_TRACE.counts[k];

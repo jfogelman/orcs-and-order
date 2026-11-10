@@ -146,8 +146,22 @@ export function unlockedUnits(player: Player): UnitTypeDef[] {
  * A lever rather than a patch because it changes what every AI in the game
  * builds, and because it compounds with `AI_TUNING.keepBuilding` -- see the
  * note there.
+ *
+ * **Section 176 shipped it on.** 432 games, four arms, both seed sets: it is
+ * not a balance change -- every faction moved 0 to 2 wins in 108 games -- and
+ * it took unfinished games from 25 to 20 on both sets. What it buys is one
+ * faction's economy existing at all: the Wandering Folk went from building
+ * the cheap science building in **0 games of 36** to **14**, and from 0.0
+ * trade routes a game to 1.2 and 0.7, having previously never held the two
+ * gold buildings a route needs. Left off, step 4 picked `knottedRecord` and
+ * `sigilStacks` **100%** of the time -- the dear building, every game.
+ *
+ * It does not fix the Unbound, and the counter says why: their step 4 answers
+ * 5.0% of production decisions against the empires' 14-16%, starved by a road
+ * crew step that takes 17.1% of their decisions against everyone else's 0.2
+ * to 0.6%. Ordering was never their fault. See section 177.
  */
-export const BUILD_ORDER = { cheapest: false };
+export const BUILD_ORDER = { cheapest: true };
 
 export function unlockedBuildings(player: Player): BuildingDef[] {
   const ids = new Set<string>();

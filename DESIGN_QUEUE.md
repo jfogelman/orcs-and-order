@@ -16250,3 +16250,215 @@ the two belong in the same sweep because they compound.
   sites, five of them live.** Content buildings, ending works, supply houses,
   economy and defence all take the first match. What that costs is unmeasured
   for all four of the others.
+
+## 176. The arm: the sort ships, the production guard does not
+
+Sections 174 and 175 both ended the same way -- an obvious fix, deliberately
+not applied, because the two compound and measuring either alone would
+attribute the other's effect to it. Jeremy: *"yes build the arm"*, then
+*"go, start the run"*.
+
+**432 games, four arms, both seed sets, 110.0 minutes.** The estimate printed
+at the top of the run said 108.
+
+### The predictions, recorded in the arms before the run
+
+So they could not be fitted afterwards:
+
+- `cheapest first` should move the Unbound and the Wandering Folk off **0 and
+  1 libraries in 36**, and section 175 is wrong if it does not.
+- `keep building` had **no prediction and was the one to distrust** -- section
+  4e's rush-buying and section 53's forward bases were repairs this obvious
+  and measured as harmful or inert.
+- Watch **unfinished games** beside the win shares, because section 160
+  retired a measured gain for costing a third of all games to the turn limit.
+
+### The result, both sets pooled (108 games an arm)
+
+| arm | unfin | turns | fights | orc | human | hive | wander | unbound |
+|---|---|---|---|---|---|---|---|---|
+| as shipped | 25 | 256 | 455 | 14 | 34 | 22 | **3** | **10** |
+| cheapest first | **20** | 255 | 452 | 16 | 35 | 23 | **3** | **11** |
+| keep building | 22 | 257 | **344** | 18 | 33 | 28 | **1** | **6** |
+| both | 23 | 257 | **348** | 16 | 34 | 27 | 3 | **5** |
+
+Two findings, pointing opposite ways.
+
+### Cheapest first: the mechanism is real, and it is not a balance change
+
+Both of those at once, which is the useful shape for a bug fix.
+
+**Real.** The probe's own counters, re-read with the lever on -- same seeds,
+same salt, the arm name kept out of the seed string on purpose:
+
+| side | cheap built, first match | cheap built, cheapest first |
+|---|---|---|
+| wandering | **0/9, 0/11** | **7/9, 7/11** |
+| unbound | 0/9, 0/8 | 1/10, 0/7 |
+| human | 14/18, 18/18 | 12/18, 17/18 |
+| orc | 14/18, 15/18 | 14/18, 15/18 |
+| hivekin | 1/18, 1/18 | 2/18, 0/18 |
+
+The Wandering Folk went from building the cheap science building in **0 games
+of 36 to 14**, on both sets. And at the decision site itself, step 4's picks
+went from **`knottedRecord` 100%** and **`sigilStacks` 100%** -- the dear
+building, every game, both latecomers -- to a spread led by a cheap gold
+building.
+
+The sweep's `routes` column agrees independently, which is what makes this
+more than one probe's say-so: a trade route needs **two** cities each holding
+a gold building (`trade.ts:96`), and the Wandering Folk went from **0.0 routes
+a game to 1.2 and 0.7**, with `routeG` moving with it, 0.0 to 1.4 and 0.9.
+They had never, in any measured game, held two gold buildings at once.
+
+**Not a balance change.** Every faction moved **0 to 2 wins in 108 games**.
+Unfinished games went 25 to 20 -- down on both sets, 16 to 13 and 9 to 7 --
+and the five wins that appeared are exactly the five games that stopped
+running out of turns. Five on 108 is at the noise floor by this file's own
+rule, so the decisiveness gain is suggestive rather than established. The
+mechanism behind it is not: it was predicted in advance, it agrees on both
+sets, and a second column moved with it.
+
+It also quietly fixes the interface, which I did not predict and only noticed
+while checking who else calls this. `cityPanel` renders `options.buildings` in
+whatever order it gets them, so the player's **Structures** list was in
+research order -- sitting directly beneath a **Units** list that was in cost
+order, because `unlockedUnits` has always sorted. The two now match.
+
+So it buys one faction an economy that previously did not exist, fixes a
+player-facing list that disagreed with the one above it, costs nobody
+anything, and shifts no crowns. **Shipped**, `BUILD_ORDER.cheapest = true`,
+with `control()` moved in the same commit -- those two have to move together
+or every later probe measures a game that is not the one that ships.
+
+### It does not fix the Unbound, and the counter says why
+
+One library in 36 under the lever. Ordering was never their fault:
+
+| side | step 4 answers | **road crew** | cheap built /18 |
+|---|---|---|---|
+| orc | 16.3% | 0.6% | 14 |
+| wandering | **16.4%** | 0.2% | 7 |
+| human | 14.0% | 0.5% | 12 |
+| **unbound** | **5.0%** | **17.1%** | **1** |
+| hivekin | 3.1% | 5.0% | 2 |
+
+Step-4 share predicts libraries built almost perfectly -- the three factions
+where it answers 14% or more build 12 to 14 of 18, the two where it answers
+5% or less build 1 or 2. The Unbound's step 4 is starved, and the thing eating
+their decisions is the **road crew at step 3d, 17.1% against everyone else's
+0.2 to 0.6%**, which answers before step 4 can be reached.
+
+That was logged as an open item in section 175 and left unexamined. It needed
+no new instrumentation at all: the counter that found it had been in the same
+report since section 174, in a column nobody had read across.
+
+### Keep building: harmful to exactly the factions it was built for
+
+Not shipped. The guard keeps a city on a building it already has shields in
+rather than re-choosing every turn, and the case for it was section 174's
+measured ~120-shield production ceiling.
+
+It works, in the sense that it does what it says: **fights 455 to 344, -24%**,
+and unit counts fall by a third or more for four of five factions -- humans
+44.3 to 24.4 mean, Unbound 28.0 to 15.1. A city holding its building is a city
+not making soldiers. The arms also ran 40% faster in wall clock, which is an
+independent witness to far fewer units in play.
+
+And the two factions the repair was aimed at **both lose**: Wandering 3 wins
+to 1, Unbound 10 to 6, down on both sets for both, with their armies halved.
+They were the empires with the least slack, so the flexibility was worth more
+to them than the finished building. The Hive **gains, 22 to 28** -- it is the
+starved one, so finishing what it starts helps it most, and it had already
+been brought to an even share in section 161. Over-correcting it again is the
+one outcome section 161 says to avoid.
+
+So: an obvious repair, measured, harmful to its intended beneficiaries and
+destabilising for the one faction that was already balanced. The third of
+three in that pattern, after 4e and 53. The lever stays in the file at
+`false`, which is what the other two did.
+
+### And the 2x2 was worth paying for
+
+`both` is not `cheapest` plus `keep`. It tracks `keep building` on fights and
+units, restores the Wandering Folk to 3 wins, and takes the Unbound to **5** --
+their worst cell anywhere in the run. Had the guard been measured alone it
+would have been credited with the sort's effect on the Wandering Folk; had the
+sort been measured alone against a shipped guard it would have been blamed for
+the Unbound. Section 174 was right that they could not be separated after the
+fact.
+
+### A correction to what I escalated
+
+The one-seed smoke before this run showed `keep building` at **182 turns
+against 249, and 204 fights against 408**, and I raised it to Jeremy as
+possibly a change to what kind of game this is -- fewer wars, faster endings
+-- if it held at 432 games.
+
+**Half of it held.** The fights effect is real at -24%, smaller than the
+smoke's -50%. Turns are **257 against 257, flat on both sets**: the
+faster-endings half was one seed's noise, and the design question I raised
+rested on it.
+
+### What the fixtures moved, and one red test that was not this change
+
+Two fixtures drifted, both on-mechanism. `deadline-in-thirty` has one city
+switch production from `library` to `exchange` -- a cheaper building taken
+first -- and its 400-entry log is **identical**. `about-to-end-on-points` has
+one city switch from `skyArgumentSpire` to `yellingWall`, `worksBanked`
+follows it, and from there 342 of 400 log entries differ, because a different
+build choice at turn 257 moves every later draw off the shared RNG. A cheaper
+building and a cascade from it is exactly the signature this change should
+leave. `late-game.w2c`, the 299-turn replay, did not move at all.
+
+**And `production.test.ts > fields several kinds of fighter` went red, which
+was not this change.** It had run **123546ms** against `vitest.config.ts`'s
+`testTimeout: 120_000`: a timeout, not an assertion, and the exit code was
+**0** while the `Test Files` line said `1 failed`. Standalone the whole file
+passes in 46s.
+
+Measured rather than assumed, because the test watches unit variety and this
+change could plausibly have narrowed it by spending more turns on buildings --
+same twelve seeds, lever off and on:
+
+| | mean | min | kinds per game |
+|---|---|---|---|
+| first match | 5.92 | 2 | 4, 7, 2, 11, 3, 4, 6, 3, 9, 10, 10, 2 |
+| cheapest first | **6.00** | 2 | 4, 7, 2, 11, 3, 4, 6, 3, 9, **11**, 10, 2 |
+
+**One seed moved by one kind.** Against a bar of 2.5 there is no case that the
+sort costs unit variety. I also floated that the change might have made games
+slower, on the held-out arm running 15.8 to 17.5 minutes -- the tuned arm went
+18.2 to 17.9, so the sets disagree and there is nothing there.
+
+A side-finding: the test documents its own calibration as **"2.92 on the code
+before slice 4, 2.67 after"**, and it now scores **5.92**. Unit variety has
+roughly doubled since section 135 and nothing re-read the bar, so a tripwire
+described in its own comment as having "no headroom at all" now has 2.4 of it.
+Not re-based here, because that is a decision about what the test is for.
+
+### Still open
+
+- **The road crews.** 17.1% of the Unbound's production decisions against
+  0.2-0.6% for the empires, now named as the thing starving their step 4.
+  Whether that is a bug in the road-crew want or a correct reading of a
+  faction that needs roads is unmeasured. Next section.
+- **Why the latecomers learn the dear advance first**, untouched by this run:
+  `cheap learned first` is still 0/10 and 0/7 for the Unbound under the lever,
+  because the lever reorders buildings and not research. `sigil-bound` is road
+  135 against `hammers-of-glory`'s 155, so for them their own road is
+  genuinely the cheaper one; `signature-mystic` is road 165, dearer, and the
+  Wandering Folk still take it first, so for them it is the plan in
+  `PERSONALITIES`.
+- **The four other first-match sites** -- content building, ending work,
+  supply house, barracks-or-wall -- are all now sorted by cost, and what that
+  changed for each of them is unmeasured. The pooled win shares say it is not
+  much in aggregate.
+- **Whether a science building is worth 0.5 for 60 shields at all.** Still
+  untested, and now slightly harder to test, because the factions that build
+  one are the ones that live longest -- section 172's confound.
+- **A test sitting on its own timeout.** `fields several kinds of fighter`
+  needs 46s alone and took 123.5s under a loaded suite, against a 120s cap.
+  Nothing in this section made it slower; section 135 widened it from six
+  seeds to twelve and the runtime grew with it. Left alone here because it is
+  shared config and the flake is not this change's, but CI will hit it.
