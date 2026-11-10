@@ -926,10 +926,11 @@ export const UNBOUND_RULES = topicPane('unbound', '', [
   <p class="flavor">Two buildings, and the difference between them is why
   there are two. A city with an ${seeEntry('anchorTotem')} can gather a spirit
   with <strong>no other condition</strong>. A city with a
-  ${seeEntry('retrievalCircle')} can gather one only while <strong>nobody at
-  all is standing in it</strong> &mdash; so the Circle is early, cheap and
-  awkward, since a town being used as a barracks cannot also be a doorway, and
-  the Totem is what stops you having to keep somewhere empty.</p>
+  ${seeEntry('retrievalCircle')} can gather one only while <strong>no enemy is
+  standing in it</strong> &mdash; your own army is welcome, so a town can be a
+  barracks and a doorway at once. The Totem is still the one nothing can shut:
+  a ${seeEntry('warden')} with the <strong>Purging</strong> upgrade camped
+  alongside closes a Circle from outside, and the Totem does not care.</p>
   <p class="flavor"><strong>With neither standing anywhere, a spirit is lost
   for good.</strong> That is the permanence in this faction, and it is gated
   behind what they have built rather than behind what killed them. An Unbound

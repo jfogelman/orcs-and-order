@@ -144,6 +144,36 @@ export const DISPERSAL = {
    * which `aiWants` already buys in the cheaper building.
    */
   aiWantsTotem: 1,
+  /**
+   * Whether the Unbound's **own** units shut their own Retrieval Circle.
+   *
+   * Jeremy's ruling of 2026-11-08, on section 169: *"Yes, they can although of
+   * course it's a risk."* A Circle town full of their own soldiers takes its
+   * spirits back now. An enemy standing on the tile still blocks it -- which
+   * is nearly hypothetical, since an enemy standing in your city has taken it
+   * -- and a Purging Warden camped alongside still shuts the door, so section
+   * 155's siege answer is untouched.
+   *
+   * **This clause has now been measured twice and it was always the Unbound
+   * blocking themselves.** At the moment of a loss, section 163 counted 320
+   * Circle towns blocked by one of their own and **none** by an enemy on the
+   * tuned set, 399 and none on the held-out; section 169 counted 301 and 369
+   * against **0 and 6**. Six enemy blocks in twenty-four games, against six
+   * hundred and seventy of their own. The clause was written to stop a stack
+   * camping the doorway and in practice it only ever stopped the owner.
+   *
+   * Section 163 answered the same mechanism from the other side, by making the
+   * AI want an Anchor Totem, which cannot be shut. That stands, but the two
+   * now overlap: a Circle that ignores its owner's army is most of what a
+   * Totem was bought for. Whether `aiWantsTotem` is still worth 120 shields
+   * and 2 upkeep is a lever this makes newly worth asking, and it has not been
+   * asked.
+   *
+   * The risk Jeremy named, written down so it is checked rather than
+   * remembered: the Unbound no longer pay anything to keep a town clear, so
+   * the mechanic loses the one piece of positioning it asked of them.
+   */
+  ownUnitsBlock: false,
 };
 
 /** Whether this faction's units disperse at all. */
@@ -220,7 +250,27 @@ export function scatters(state: GameState, unit: Unit, killer?: Unit): boolean {
  */
 export const REFORM_SITES = ['anchorTotem', 'retrievalCircle'] as const;
 
-export function reformSites(state: GameState, playerId: number): City[] {
+/**
+ * Somewhere this side's spirits can gather, best first.
+ *
+ * `spent` is Circle towns already used this turn, and it exists because of
+ * something that used to happen by accident. One Circle has always taken
+ * **one** spirit a turn, and the way it stopped taking a second was that the
+ * first one *stood up in it*: a reformed spirit is a unit on the tile, and the
+ * old clause blocked on any unit at all. Section 171 stopped the owner's own
+ * units blocking a Circle, which quietly removed the cap as well -- three
+ * spirits came back where one had before, and `dispersal.test.ts` caught it.
+ *
+ * So the limit is stated here rather than left to emerge from occupancy. It is
+ * also the honest reading of the two buildings: the Totem *"can gather a spirit
+ * with no other condition"* and has never been spent, the Circle is the cheap
+ * awkward one. That difference is the whole reason there are two.
+ */
+export function reformSites(
+  state: GameState,
+  playerId: number,
+  spent?: ReadonlySet<number>,
+): City[] {
   const totems: City[] = [];
   const circles: City[] = [];
   for (const c of state.cities) {
@@ -238,7 +288,19 @@ export function reformSites(state: GameState, playerId: number): City[] {
       continue;
     }
     if (!c.buildings.includes(REFORM_SITES[1])) continue;
-    if (state.units.some((u) => u.x === c.x && u.y === c.y)) continue;
+    // One spirit a turn, as it always was -- see the note above for why this
+    // used to be occupancy doing it by accident.
+    if (spent?.has(c.id)) continue;
+    // Somebody else's army shuts a Circle; their own no longer does. See
+    // `DISPERSAL.ownUnitsBlock` for the counts that decided it -- across two
+    // sections and 24 games, the owner shut this door 670 times and an enemy
+    // six.
+    if (
+      state.units.some(
+        (u) => u.x === c.x && u.y === c.y && (DISPERSAL.ownUnitsBlock || u.owner !== playerId),
+      )
+    )
+      continue;
     circles.push(c);
   }
   // Totems first, so an empire with both does not spend the empty town it is
@@ -396,11 +458,16 @@ export function reformScattered(state: GameState, playerId: number): void {
   player.scattered = player.scattered.filter((s) => !ready(s));
 
   const fail = reformFailOdds(state, playerId);
+  // Circle towns used this turn. Section 171: the cap used to be the reformed
+  // spirit standing in the doorway, and once the owner's own units stopped
+  // shutting a Circle it had to be said out loud. Totems are not in here --
+  // they have never been spent, which is what the extra 50 shields buys.
+  const spent = new Set<number>();
   for (const spirit of trying) {
     const name = unitType(spirit.type).name;
-    // Asked per spirit rather than once, because a Retrieval Circle stops
-    // being a site the moment the first spirit stands up in it.
-    const site = reformSites(state, playerId)[0];
+    // Asked per spirit rather than once, because a Retrieval Circle takes one
+    // spirit a turn.
+    const site = reformSites(state, playerId, spent)[0];
     if (!site) {
       log(
         state,
@@ -424,6 +491,11 @@ export function reformScattered(state: GameState, playerId: number): void {
       continue;
     }
     const back = spawnUnit(state, playerId, spirit.type, site.x, site.y);
+    // Spent only on a success, which is also how occupancy used to do it: a
+    // failed gathering put nobody in the doorway, so the next spirit could
+    // still try the same town. Harmless to record a Totem here, since only the
+    // Circle branch above reads this.
+    spent.add(site.id);
     back.rank = spirit.rank;
     back.upgrade = spirit.upgrade;
     // It has been through this before, which `revenant-insistent` is paid for.

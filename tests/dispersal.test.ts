@@ -111,6 +111,22 @@ function other(state: GameState, owner: number, type: string, x: number, y: numb
   return spawnUnit(state, owner, type, ax, ay);
 }
 
+/**
+ * Run something at the pre-section-171 rule, where the Unbound's own army shut
+ * their own Circle, and put the lever back even if the assertion throws. This
+ * file has no `afterEach`, so a flag flipped inline would leak into every test
+ * after it.
+ */
+function withOwnUnitsBlocking<T>(fn: () => T): T {
+  const was = DISPERSAL.ownUnitsBlock;
+  DISPERSAL.ownUnitsBlock = true;
+  try {
+    return fn();
+  } finally {
+    DISPERSAL.ownUnitsBlock = was;
+  }
+}
+
 /** Run the roll with a fixed outcome, and put the levers back. */
 function withOdds<T>(fail: number, fn: () => T): T {
   const base = DISPERSAL.failBase;
@@ -256,15 +272,26 @@ describe('somewhere to gather', () => {
     expect(reformSites(state, 0).map((c) => c.id)).toEqual([seat.id]);
   });
 
-  it('takes a Retrieval Circle only while nobody is standing in it', () => {
+  /**
+   * Section 171 and Jeremy's ruling of 2026-11-08. This used to read *"only
+   * while nobody at all is standing in it"*, and the measurement that changed
+   * it is in `DISPERSAL.ownUnitsBlock`: at the moment of a loss, the Unbound's
+   * own army had shut this door 670 times across 24 games and an enemy six.
+   */
+  it('takes a Retrieval Circle unless somebody hostile is standing in it', () => {
     const state = theirs();
     const seat = town(state, [REFORM_SITES[1]]);
     expect(reformSites(state, 0)).toHaveLength(1);
-    const squatter = spawnUnit(state, 0, 'effigy', seat.x, seat.y);
-    expect(reformSites(state, 0)).toHaveLength(0);
-    // Anybody's, not only theirs: the rule is about the tile being empty.
-    [squatter.x, squatter.y] = dryGroundNear(state, seat.x + 3, seat.y + 3);
+    const ourOwn = spawnUnit(state, 0, 'effigy', seat.x, seat.y);
+    expect(reformSites(state, 0), 'their own garrison is welcome now').toHaveLength(1);
+    // And the old rule is still a flag away, which is what a control arm is.
+    withOwnUnitsBlocking(() => {
+      expect(reformSites(state, 0), 'at the old setting it shut the door').toHaveLength(0);
+    });
+    [ourOwn.x, ourOwn.y] = dryGroundNear(state, seat.x + 3, seat.y + 3);
     expect(reformSites(state, 0)).toHaveLength(1);
+    // Somebody else's still shuts it. Nearly hypothetical, since an enemy
+    // standing in your city has taken it, but it is the half worth keeping.
     spawnUnit(state, 1, 'footman', seat.x, seat.y);
     expect(reformSites(state, 0)).toHaveLength(0);
   });

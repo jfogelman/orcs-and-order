@@ -1083,6 +1083,36 @@ function pickWeighted(
   });
 }
 
+/**
+ * Which step of `chooseProduction` actually answered, tallied by faction.
+ * Section 174, and off unless a probe turns it on.
+ *
+ * **Section 173 needed this and could not have it.** It measured that the three
+ * newest factions learn the advance that unlocks a science building in 71 games
+ * and raise one in 2, where the two empires manage 53 of 72 -- with identical
+ * prices, an identical bonus and the same shared advance opening it for all
+ * five. The step that would build it is faction-blind and can see their
+ * buildings, so something earlier in this function is answering first, every
+ * time, for three factions and not for two. Which step was a guess, and
+ * section 172 had just finished paying for a guess that fitted the numbers.
+ *
+ * Counts rather than a trace of the last call, because the question is a
+ * distribution: *what does this faction build instead?*
+ */
+export const PRODUCTION_TRACE: { on: boolean; counts: Record<string, number> } = {
+  on: false,
+  counts: {},
+};
+
+/** Record which step answered, and hand the choice straight back. */
+function step(player: Player, tag: string, choice: ProductionItem): ProductionItem {
+  if (PRODUCTION_TRACE.on) {
+    const key = `${player.faction}|${tag}`;
+    PRODUCTION_TRACE.counts[key] = (PRODUCTION_TRACE.counts[key] ?? 0) + 1;
+  }
+  return choice;
+}
+
 export function chooseProduction(
   state: GameState,
   city: City,
@@ -1093,7 +1123,7 @@ export function chooseProduction(
   // Ships are asked for separately, and never as an army: a warship's attack
   // would otherwise rate it the best soldier in the yard.
   const options = { ...inYard, units: inYard.units.filter((u) => !u.sails) };
-  if (options.units.length === 0) return { kind: 'coin' };
+  if (options.units.length === 0) return step(owner, '0 nothing buildable', { kind: 'coin' });
 
   // A garrison is whoever is standing on or beside the city. Counting only the
   // city tile would never reach two, because only one unit fits on a tile.
@@ -1115,7 +1145,7 @@ export function chooseProduction(
     const defender = [...options.units]
       .filter((u) => u.attack > 0)
       .sort(byWorth(true))[0];
-    if (defender) return { kind: 'unit', id: defender.id };
+    if (defender) return step(owner, '1 garrison', { kind: 'unit', id: defender.id });
   }
 
   // 2. Expand while there is room to expand into -- and past the usual target
@@ -1128,7 +1158,7 @@ export function chooseProduction(
     roomAbroad(state, city.owner, (x, y) => siteScore(state, x, y));
   if (cities + settlers < personality.targetCities || roomOverseas) {
     const settler = options.units.find((u) => u.settler);
-    if (settler) return { kind: 'unit', id: settler.id };
+    if (settler) return step(owner, '2 expand', { kind: 'unit', id: settler.id });
   }
 
   // 2a. A boat, when somebody is waiting on the shore for one or the empire is
@@ -1165,12 +1195,12 @@ export function chooseProduction(
         !(!POSTING.enabled && b.garrisonNeeded) &&
         garrisonNeededBy(b) <= soldiersFor(state, city, b),
     );
-    if (calming) return { kind: 'building', id: calming.id };
+    if (calming) return step(owner, '3 content building', { kind: 'building', id: calming.id });
     // Only when it is actually rioting, and only when there is nothing left to
     // build that would help. Placating costs the city its whole production,
     // which is no loss at all while it is producing nothing anyway -- but a
     // city merely approaching its limit is still working, and should carry on.
-    if (city.disorder) return { kind: 'calm' };
+    if (city.disorder) return step(owner, '3 placate', { kind: 'calm' });
   }
 
   // 3a. A work towards an ending, where one can be built. Behind the garrison,
@@ -1188,7 +1218,7 @@ export function chooseProduction(
   const ending = options.buildings.find(
     (b) => isEndingPiece(b) && (!!b.victory || amongBusiest(state, city, 2)),
   );
-  if (ending) return { kind: 'building', id: ending.id };
+  if (ending) return step(owner, '3a ending work', { kind: 'building', id: ending.id });
 
   // 3a'. A folly (section 111), in one of the empire's two busiest cities, and only
   // one under way at a time. After the endings, which win the game; ahead of the
@@ -1206,7 +1236,7 @@ export function chooseProduction(
   const folly = follyUnderWay
     ? undefined
     : ((AI_TUNING.sharedFollyFirst ? offered.find((b) => b.folly === 'world') : undefined) ?? offered[0]);
-  if (folly) return { kind: 'building', id: folly.id };
+  if (folly) return step(owner, "3a' folly", { kind: 'building', id: folly.id });
 
   // 3b. If the enemy is turtling behind walls, build something that ignores
   // them. Without this the AI keeps making melee units that cannot get in.
@@ -1218,7 +1248,7 @@ export function chooseProduction(
     const haveSiege = playerUnits(state, city.owner).some(
       (u) => unitType(u.type).siegeBonus > 1,
     );
-    if (siege && !haveSiege) return { kind: 'unit', id: siege.id };
+    if (siege && !haveSiege) return step(owner, '3b siege', { kind: 'unit', id: siege.id });
   }
 
   // 3c. A forward city with hungry troops around it wants a depot.
@@ -1244,7 +1274,7 @@ export function chooseProduction(
     );
     const supplyHouse =
       linked && hungry ? options.buildings.find((b) => b.suppliesArmy) : undefined;
-    if (supplyHouse) return { kind: 'building', id: supplyHouse.id };
+    if (supplyHouse) return step(owner, '3c supply', { kind: 'building', id: supplyHouse.id });
   }
 
   // 3d. Roads, once there is nothing left to found.
@@ -1277,7 +1307,7 @@ export function chooseProduction(
         (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)) ||
         improveWorkToDo(state, city.owner))
     ) {
-      return { kind: 'unit', id: worker.id };
+      return step(owner, '3d road crew', { kind: 'unit', id: worker.id });
     }
   }
 
@@ -1289,7 +1319,11 @@ export function chooseProduction(
       (b) => b.id === 'barracks' || b.defenseMult !== undefined || b.sallyBonus !== undefined,
     );
   if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
-    return { kind: 'building', id: wanted.id };
+    // The id, not just the step. Section 174: the Wandering Folk answer here
+    // more often than anybody -- 16.3% and 17.1% of all decisions -- and build
+    // a science building in 1 game of 36, so *what* this picks is the question
+    // and the step alone cannot answer it.
+    return step(owner, `4 economy/defence:${wanted.id}`, { kind: 'building', id: wanted.id });
   }
 
   // 4. Otherwise: the biggest stick currently affordable in reasonable time.
@@ -1307,9 +1341,9 @@ export function chooseProduction(
     affordable.length > 0
       ? pickWeighted(state, affordable, false)
       : [...attackers].sort((a, b) => a.cost - b.cost)[0];
-  if (pick) return { kind: 'unit', id: pick.id };
-  void owner;
-  return { kind: 'coin' };
+  if (pick) return step(owner, '5 biggest stick', { kind: 'unit', id: pick.id });
+  // `void owner` stood here to silence the unused warning. `step` uses it now.
+  return step(owner, '5 nothing affordable', { kind: 'coin' });
 }
 
 // ------------------------------------------------------------------ turn

@@ -13786,15 +13786,20 @@ most of how they win at all.
 
 ### Still open
 
-- **Why the Unbound cannot convert.** They end with more units and more people
-  than the no-dispersal arm and the same handful of wins. The probe to write
-  counts what their army *does*: attacks made, cities taken, fights declined.
-- **The Hive at 42%.** Unasked for, loud, and nothing here touched it.
-- **The Wandering Folk at zero.** Section 153 has it; this is the confirmation
-  at scale.
-- `GUEST_LIST.reach` is still unmeasured. Sixteen Spirit Parties is enough
-  that an arm would now differ from the control, which it would not have been
-  before this sweep.
+- ~~**Why the Unbound cannot convert.**~~ **Answered by section 169**, and not
+  by the army: they end with 5.8 cities and 40 to 57 units on both seed sets,
+  and 0.5 to 0.7 works of three. They reach the *ending advance* in 3 of 18,
+  because their road to it is 1035 beakers against the Hive's 165.
+- ~~**The Hive at 42%.**~~ **Superseded.** Section 160's arrival shuffle took a
+  third off it and section 161's reprice took it to **21%** against an even
+  20%. The 42% was a pre-160 number and this line outlived it by five sections.
+- ~~**The Wandering Folk at zero.**~~ **Half answered.** Section 160 roughly
+  doubled their establishment -- 5 of 18 to 9 and 12 on the two sets, section
+  169 -- and their win share did not move off 3%. The remaining half is the
+  road, which is section 169's open item.
+- `GUEST_LIST.reach` is still unmeasured, and section 169 found the rule does
+  fire: **0 of 12 tuned, 2 of 12 held-out**, where this and section 163 both
+  recorded a flat zero.
 
 ## 157. The Wandering Folk are not short of gold. They are killed on arrival
 
@@ -15216,6 +15221,21 @@ return want >= 0;                                        // the sum
 
 ### It is always the sum, and the gate is dead
 
+> **Corrected by section 170, and this heading is wrong.** The gate is not
+> dead. Standing reaches -30 or below in **113 of 136 pair-games and 18 games
+> of 18**, bottoms out on the **-50 floor** in the median pair-game, and sixty
+> per cent of all pair-turns are spent below the gate.
+>
+> The reason this section saw zero is that its sample was **conditioned on the
+> gate having already passed**. `withOne` tests `willTalkTo` at line 365 and
+> the asker never asks; `aiAccepts` tests the identical symmetric value at line
+> 288. Every offer that reaches the gate below has already passed it. "213
+> refusals, zero gate firings" is a tautology, not a measurement.
+>
+> Everything in this section about **the sum** stands, for the offers that get
+> made. What it describes is a filtered population: the pairs still on speaking
+> terms. Section 170 has the figures and the mechanism.
+
 **213 refusals across both seed sets. The standing gate fired in none of
 them.**
 
@@ -15307,6 +15327,761 @@ Nothing above is recommended. They are the three places the sum could move.
 
 ### Still open
 
-- **What standing actually reaches.** The gate at -30 never fired, but this
-  measured refusals rather than standing, so the distribution is unknown. One
-  counter in `standing` answers it.
+- ~~**What standing actually reaches.**~~ **Answered by section 170**, and it
+  reverses this section's conclusion: standing reaches the gate in 18 games of
+  18 and the median pair-game ends on the -50 floor. The gate fires constantly,
+  upstream of what was counted here.
+
+## 169. It was never the price. It is the road, and nobody chose its length
+
+Section 161 repriced the Hive's ending because the Hive won too much, and it
+worked -- 27% to 21% against an even 20%. This asked the question one column
+over, which nothing had asked: **do the other four sides ever reach an ending
+at all?**
+
+They mostly do not, and the reason is not what anything in this file had
+assumed.
+
+### The table that answers it
+
+Depth and road are read off `TECHS` and are exact rather than sampled. The
+counts are `tools/out/endings.md` and `endings-held-out.md`, nine games each.
+Win shares are section 161's shipped arm, 108 games each set.
+
+| faction | ending advance | depth | road, cumulative beakers | learned it | wins |
+|---|---|---|---|---|---|
+| **hivekin** | `all-is-the-hive` | **4** | **165** | **18/18** | 21% |
+| orc | `somebody-knocked` | 6 | 430 | 5/18 | 15% |
+| wandering | `nowhere-left-but-up` | 6 | 700 | 4/18 | **3%** |
+| human | `do-not-touch` | 6 | 965 | 10/18 | 30% |
+| **unbound** | `arrangement-permanent` | **7** | **1035** | **3/18** | **6%** |
+
+**The Hive's road is 165 beakers. The Unbound's is 1035 -- 6.3 times as far.**
+The Hive learns its ending advance in every game ever measured; the Unbound
+learn theirs in three of eighteen. Learning it is monotone in road length
+across all five sides, and nothing in the game connects the two numbers, so
+nothing could have noticed.
+
+> **Corrected by section 172. The table above is a description and the causal
+> reading of it was wrong.** Moving the Hive's road from 165 to 300 to 430 --
+> one faction, nothing else touched, 324 games -- left its win share at 20.4%,
+> 23.1% and 16.7%, non-monotone, with the two seed sets disagreeing on
+> direction, and the Hive still reaching and winning by its ending in every
+> arm.
+>
+> Road length across five factions covaries with income, tree depth, arrival
+> turn and whether the ending is that side's only route to a win at all, so the
+> correlation compared five different games. In the same run the **Horde swings
+> 8.3 points from a lever that cannot touch it**, against the Hive's 3.7 from
+> the lever that can.
+>
+> A table with five rows and a monotone column is not an experiment. The rest
+> of this section -- the probes, the establishment figures, the self-blocking
+> counts -- is unaffected.
+
+### Which is why section 161's reprice moved so little
+
+Price is the second-order term. Three sides pay **exactly 1000** for their
+three works -- orc, wandering and unbound -- and win 15%, 3% and 6%. The
+Kingdom pays the **most** at 1200 and wins the **most** at 30%. Across the
+five sides the works price has no relationship to the win share at all.
+
+| faction | three works | total |
+|---|---|---|
+| hivekin | 240 + 240 + 320 | **800** (lerped to 800-1333) |
+| orc | 300 + 300 + 400 | 1000 |
+| wandering | 300 + 300 + 400 | 1000 |
+| unbound | 300 + 300 + 400 | 1000 |
+| human | 360 + 360 + 480 | 1200 |
+
+Section 161 was not wrong -- the Hive did win too much and the works were
+cheap -- but it corrected the smaller of the two asymmetries it was sitting on
+and could not see the larger one from where it stood, because it measured one
+faction's price across three arms rather than five factions' roads across one.
+
+### This is the same mistake for the fourth time, and now it has a count
+
+Section 125 gave the Hive the shortest road in the game **deliberately**: at
+the time they could not win at all, and the game had **three** sides. Sections
+142 and 152 added two more. Section 161 wrote the lesson down -- *"nobody
+re-asks a balance target when a faction is added"* -- and then the thing it
+had just said went unchecked in the next column over.
+
+The four instances, so the fifth is cheaper to spot: section 160's arrival
+order, section 136's turn-ninety anchor, section 125's three-sided win target,
+and now section 125's road length.
+
+### The Wandering Folk: section 160 fixed the half nobody was measuring
+
+Section 157 measured them at **5 of 18 establishing**, with thirteen games
+ending on `founders 2, techs 1, gold 50 -> 50` -- never built a unit, never
+finished an advance, never earned a coin. That was **before** section 160's
+arrival shuffle. Re-run on both seed sets:
+
+| | section 157 | tuned | held-out |
+|---|---|---|---|
+| alive at the end | 5/18 | **9/18** | **12/18** |
+| stalled on `founders 2, techs 1` | **13/18** | 6/18 | 3/18 |
+| founders ever built | 2 to 23 | 8.4 | 10.0 |
+| cities, best -> end | 1 -> 0 (stalled) | 4.8 -> 3.3 | 6.3 -> 4.7 |
+| advances | 1 (stalled) | 14.2 | 18.7 |
+
+Establishment roughly doubled and **the win share did not move off 3%**. They
+are no longer killed on arrival; they are stopped 700 beakers short of the only
+ending they have. The two findings are not in conflict -- they are the two
+halves of one game, and section 157 could only see the first.
+
+### The Unbound: the army is not the problem, and section 156 can be closed
+
+Section 156's open item asked *"why the Unbound cannot convert"* and named the
+probe: count what their army does. Their army is fine.
+
+| | tuned | held-out |
+|---|---|---|
+| alive at the end | 10/12 | 10/12 |
+| cities | 5.8 | 5.6 |
+| units | **57.3** | **40.5** |
+| advances | 21.2 | 18.9 |
+| **ending advance reached** | **7/12** | **4/12** |
+| **works standing** | **0.7 of 3** | **0.5 of 3** |
+| doorway shut, of turns it exists | 24% | 31% |
+| ever fielded an Archon | 3/12 | 1/12 |
+
+Five or six cities and forty to fifty-seven units, and half a work. Whatever
+the Unbound's problem is, it was never that nobody turned up.
+
+### And their own army shuts their own door, 670 times in 24 games
+
+The largest single number either probe produced, and both sets agree:
+
+| at a loss, a Circle town was blocked by... | tuned | held-out |
+|---|---|---|
+| **one of their own units** | **301** | **369** |
+| somebody else's | 0 | 6 |
+
+`reformSites` excludes a Circle city if **any** unit stands on it, which was
+written to stop an enemy stack camping the door. Measured, the enemy does it
+**six times in twenty-four games** and the Unbound do it to themselves **six
+hundred and seventy**. A faction whose rule fields forty-plus units is its own
+counter, and the clause meant to protect the door is what closes it.
+
+Not fixed here, because "ignore your own units" and "ignore your own units
+unless the city is besieged" are different rules and nobody has chosen.
+
+### Three smaller things the probes settled in passing
+
+- **`GUEST_LIST` is not a permanent zero.** Guests taken in: **0 of 12 tuned,
+  2 of 12 held-out**. Sections 156 and 163 both recorded a flat zero and this
+  one nearly did too; it fires, rarely. What the rate *should* be is still
+  unestablished.
+- **Section 165's fix holds in played games.** `0 blasted, 0 clubbed (0.0%)`
+  on both sets, where the two death paths used to skip `destroyUnit` entirely.
+  That had only ever been shown in its own test.
+- **`MOODS` says seven and holds six.** `sim/diplomacy.ts` opens the ladder
+  with *"The seven names, worst first"* over a six-entry array. Harmless --
+  every reader is a loop -- but it is the ninth or tenth hand-maintained list
+  in this file and nothing asserts the count.
+
+### A probe that accepted a flag and ignored it
+
+`wandererprobe` took `PROBE_SEEDS=held-out`, ignored it, replayed the same
+eighteen games and overwrote its report with figures **identical to the
+decimal**. Which is indistinguishable, from the outside, from a finding that
+reproduced perfectly on a second seed set -- the most convincing possible
+output and entirely worthless. It was caught only because the identity was too
+good.
+
+Fixed: it honours the flag and writes `wanderer-probe-held-out.md`. The salt
+stays `wanderers` so section 157's 5-of-18 remains comparable. This is the
+fourth probe this arc whose reader was wrong -- sections 166, 167 and the two
+in 163 -- and the second failure mode: not a reader that under-counts, but a
+flag that silently does nothing.
+
+### Shipped
+
+- `tools/standingprobe.run.test.ts` and `npm run standingprobe`, which is
+  section 168's one open item: it samples `standing` for every **met** pair
+  every half-turn through `playGame`'s watch hook. An observer, not a counter
+  in the rule, because `standing` is a pure read through `peek` and so moves no
+  RNG; and met-only, because an unmet pair reads 0 and would bury the
+  distribution under fake zeroes. **Run on both sets in section 170**, which
+  reverses section 168's conclusion about the gate.
+- `wandererprobe` honours `PROBE_SEEDS`.
+
+### Still open
+
+- ~~**The road lengths themselves.**~~ **Answered by section 172, and the
+  answer is no.** The knob was built (`ENDING_ROAD`) and swept over 324 games;
+  tripling the Hive's road moves nothing, and the mechanism this item assumed
+  does not exist. The spread is still unchosen and now known not to matter.
+- ~~**Whether a short road is even the right fix.**~~ **Moot.** Neither
+  direction is a fix, because the lever is inert in the direction that was
+  measurable.
+- **The Unbound's self-blocking clause**, above.
+- **`GUEST_LIST`'s intended rate**, above.
+
+## 170. The gate was never dead. Section 168 was looking down the wrong barrel
+
+Section 168 found that `aiAccepts`'s standing gate fired in **none of 213
+refusals**, and concluded that *"the rule currently decides nothing, so the
+Angered band is flavour rather than mechanism"*. It was careful to say it had
+measured refusals rather than standing and that the distribution was unknown.
+
+The distribution is now known and **it says the opposite**. Both seed sets,
+eighteen games each, `tools/out/standing.md` and `standing-held-out.md`:
+
+| | tuned | held-out |
+|---|---|---|
+| pairs that met | 136 of 180 | 137 of 180 |
+| **pair-games reaching -30 or below** | **113 of 136** | **116 of 137** |
+| **games containing one** | **18 of 18** | **18 of 18** |
+| pair-games that ever went negative | 133 of 136 | 135 of 137 |
+| median worst a pair reached | **-50** | **-50** |
+| mean worst | -42.6 | -43.5 |
+
+The median pair-game does not merely reach the Angered band. It bottoms out on
+**the floor of the scale**, -50, and it does so in five sides out of five.
+
+### Where pairs spend their lives
+
+| band | tuned | held-out |
+|---|---|---|
+| Joyful | 2.1% | 1.7% |
+| Peace | 4.1% | 5.3% |
+| Uneasy | 20.3% | 18.0% |
+| Concerned | 7.7% | 6.1% |
+| Tense | 7.4% | 7.3% |
+| **Angered** | **58.4%** | **61.6%** |
+
+Six-sided war spends roughly **sixty per cent of all pair-turns below the
+gate**. Section 135's floor is not decorative and never was.
+
+### So why did section 168 see zero?
+
+**Because the sample was conditioned on the gate having already passed**, and
+no number of extra games would ever have shown it. `withOne` in
+`ai/diplomacy.ts`:
+
+```ts
+const willTalk = willTalkTo(state, me.id, them.id);
+...
+if (!willTalk) return;              // line 365 -- the asker never asks
+...
+propose(state, aiTerms(state, me, them));
+```
+
+and `aiAccepts`:
+
+```ts
+if (!willTalkTo(state, me.id, them.id)) return false;   // line 288
+```
+
+`pairKey` sorts its arguments, so one record holds one `standing` for the pair
+and **`willTalkTo(a, b)` and `willTalkTo(b, a)` are the same number**. The
+asker tests it at line 365 and declines to speak; the answerer tests the
+identical value at line 288. Every offer that reaches line 288 has already
+passed the test line 288 is about to apply.
+
+**The gate in `aiAccepts` cannot fire on an AI's offer.** Section 168's "213
+refusals, zero gate firings" is not a measurement of standing. It is a
+tautology, and it reported a structural certainty as an empirical finding.
+
+The line is not dead code: a **human** player's offer reaches `propose` and
+then `aiAccepts` without `withOne` ever having gated it, so for a human asker
+line 288 is the only gate there is. It is dead for exactly the population
+section 168 sampled -- AI against AI -- which is all a sweep contains.
+
+### What this does to section 168's three options
+
+Section 168 offered three places the sum could move and recommended none. One
+of them is now answered and one has lost its premise:
+
+- **"Decide the Angered band means something, or retire it."** Answered. It
+  means a great deal: it suppresses offers across sixty per cent of pair-turns,
+  silently, at a line nobody was watching. Retiring it would be a large
+  behavioural change rather than tidying up a dead rule.
+- **"Let gold do more."** Unaffected and still the cheapest lever.
+- **The refusal distribution** -- median -0.72 and -0.43 short -- is still
+  correct for the offers that *get made*. It is now known to describe a
+  **filtered** population: the pairs civil enough to be on speaking terms at
+  all. The quarter within 0.28 of agreement is a quarter of that remnant, not
+  of all hostile pairs.
+
+### And the Hive's refusals are a selection effect too
+
+Section 168's sharpest number was that the same human AI accepts the Horde in
+19 of 22 and the Hive in 1 of 28, and explained it by the strength ratio: the
+Hive arrives late, so it is weak, so everyone it asks is strong. That
+explanation survives, but it is now **half** of one.
+
+The Hive is held at a mean worst of **-46.9 and -46.6**, the angriest of the
+five sides on both sets. So the Hive's offers are not merely refused on the
+sum -- most of the offers it would have made were never made at all, and the
+28 that reached an answer are the civil tail of its relationships.
+
+### The lesson, which is the one this file keeps relearning
+
+A zero means one of two things and they are not close: *the rule never
+happened*, or *the rule was upstream of what you counted*. Sections 163 and
+164 found the first. This is the second, and it is harder, because the counter
+was correct, the sample was real, and the conclusion was still backwards.
+
+The check that would have caught it is cheap and worth naming: **before
+concluding a branch never fires, find the other call sites of its condition.**
+There were two.
+
+### Shipped
+
+- `tools/standingprobe.run.test.ts` run on both sets, and its figures above.
+- Section 168's open item closed, and its conclusion about the Angered band
+  corrected in place.
+
+### Still open
+
+- **Whether the floor should be the floor.** Sixty per cent of pair-turns
+  below -30 means most of this game's relationships are past talking, which
+  may be correct for a game about two hordes and three latecomers, or may mean
+  `DIPLOMACY_AI.refuses` is set where nothing can escape it. Unmeasured, and
+  it is an arm: -30 against -40 against off.
+- **Nothing ever climbs out.** `forgets: 1` only ever walks standing back
+  toward zero, and the median pair still ends on -50. Whether a pair can
+  recover from the floor at all has not been measured, only assumed.
+- **The human asker's path through line 288** is the one place the gate is
+  live, and no probe plays a human.
+
+## 172. The road is not the reason. Section 169 measured a confound
+
+324 games, three arms, two seed sets. The sweep's own estimate was *"about 81
+minutes (49-105)"*; it took **100.5 minutes at 18.6s a game**.
+
+Section 169 found that how often a side learns its ending advance is monotone
+in the cumulative cost of the road to it, across all five factions, and read
+that as the explanation for the win shares. Jeremy ruled on it: *"Hivekin
+lengthen to match the others more closely."*
+
+**Measured by moving that one number and nothing else, the road does not do
+anything at all.**
+
+### The answer
+
+`ENDING_ROAD.hivekin`, which multiplies the cost of `all-is-the-hive` and
+reaches nothing else in the game. Wins per 108 games:
+
+| arm | road | hivekin | advances | still wins by its own ending |
+|---|---|---|---|---|
+| `as shipped` | 165 | **22 (20.4%)** | 16.5 / 19.5 | 8 / 14 |
+| `twice the road` | 300 | **25 (23.1%)** | 17.1 / 19.0 | 8 / 16 |
+| `horde parity` | 430 | **18 (16.7%)** | 16.4 / 17.3 | 6 / 10 |
+
+Not monotone, and the two sets do not agree on a direction: tuned runs 8, 9, 7
+and held-out runs 14, 16, 11. Tripling what the advance costs -- 100 beakers to
+365 -- moves the Hive's win share by less than four points, in no consistent
+direction, and **they still reach the ending and still win with it in every
+arm**.
+
+### And it is not section 125's cliff either
+
+The arms were built expecting a cliff, because section 125 measured roads of
+860, 710 and 610 at **0 wins of 12** with `advances` pinned at **11.8** in
+every arm. That was the prediction to check: if `advances` pinned near 12
+again, the lever could not deliver the ruling at any setting.
+
+`advances` did not pin. It sits at **16.4 to 19.5 in all three arms**, barely
+moving. Section 125's cliff is gone -- section 153's stagger replaced the
+turn-105 arrival and the Hive now has a far longer life and more income than
+the 9.9 beakers a turn that made it -- and what replaced the cliff is not a
+slope. **The Hive simply absorbs the cost.** 265 extra beakers is one advance
+of seventeen, in a game it now has three hundred turns to play.
+
+### The four untouched factions are the noise gauge, and they are the finding
+
+`ENDING_ROAD.hivekin` cannot affect anybody else. So every move in the other
+four columns is chance, by construction, and this sweep measures its own noise
+floor for free:
+
+| | `as shipped` | `twice the road` | `horde parity` | swing |
+|---|---|---|---|---|
+| orc | 14 (13.0%) | 15 (13.9%) | **23 (21.3%)** | **8.3 pts** |
+| human | 34 (31.5%) | **40 (37.0%)** | 37 (34.3%) | 5.5 pts |
+| unbound | 10 (9.3%) | 10 (9.3%) | 9 (8.3%) | 1.0 pt |
+| wandering | 3 (2.8%) | 3 (2.8%) | 4 (3.7%) | 0.9 pt |
+| **hivekin** (the lever) | 22 (20.4%) | 25 (23.1%) | 18 (16.7%) | **3.7 pts** |
+| unfinished | 25 | 15 | 17 | |
+
+**The Horde swings 8.3 points from nothing whatsoever, and the faction the
+lever actually moves swings 3.7.** An arm-to-arm swing of eight points is
+inside chance in this design, which is a sharper version of
+`sweep-noise-at-108-games` than that memory had: it is not an estimate of the
+noise band, it is a direct observation of it, in the same run.
+
+Anything read off the Hive's column here would have been read off noise. The
+honest reading is that the lever is **inert**.
+
+### Why section 169's table was wrong, and it is a textbook confound
+
+Section 169 compared **five different factions** and found road length tracked
+how often each learned its ending. Road length across those five covaries with
+every other thing that differs between them -- income per turn, how deep their
+tree is, what turn they arrive, how many cities they hold, and crucially
+**whether the ending is their only route to a win at all**. The Kingdom has the
+second-longest road and the most wins because it also wins by dominance and
+points; the Hive's every win is its own ending.
+
+So the correlation was real and the causal claim on top of it was not. Moving
+the road **within one faction**, holding all of that fixed, is the controlled
+version of the same question, and it answers no.
+
+This is `attribution-needs-the-same-bar` in a shape that memory does not cover:
+not a rare-event count read too confidently, but a five-point cross-sectional
+correlation that looked like a mechanism. **A table with five rows and a
+monotone column is not an experiment.** The giveaway available at the time and
+not taken: section 125 had already run the intervention and found the road
+moved the Hive from 2/12 to 0/12 -- a lever worth two wins in twelve, not the
+thing holding the other four factions down.
+
+### What this means for the Hive, which is that it was already finished
+
+The control arm puts the Hive on **20.4% against an even share of 20%** for
+five sides. Section 161 landed it there by repricing the works, and section 169
+reopened a question that was closed, on the strength of a correlation.
+
+Jeremy's ruling was made on section 169's table and the ruling is not wrong --
+it is unexecutable, because the lever it would act through does not move the
+outcome. Nothing is shipped. `ENDING_ROAD` stays at 1 for all five.
+
+### So the live problem is unchanged and it is the latecomers
+
+| | share | even share |
+|---|---|---|
+| human | 31.5% | 20% |
+| hivekin | 20.4% | 20% |
+| orc | 13.0% | 20% |
+| **unbound** | **9.3%** | 20% |
+| **wandering** | **2.8%** | 20% |
+
+The Wandering Folk win three games in a hundred and eight, which is where
+section 156 found them, where section 160 left them after doubling their
+establishment, and where this leaves them after three arms that had nothing to
+do with them. **Their road was never the reason, so shortening it was never
+going to be the fix** -- which this sweep establishes as firmly for them as for
+the Hive, since the mechanism it refutes is the same one.
+
+### Shipped
+
+- `ENDING_ROAD` stays, at 1 for every faction. It is a measured dead end rather
+  than an untried idea now, which is worth more than deleting it: the next
+  section tempted by road length has a 324-game answer.
+- Section 169's road table corrected in place: kept as a description, with the
+  causal reading struck.
+
+### Still open
+
+- ~~**Why the Wandering Folk win 3%.**~~ **Throughput measured in section 173,
+  and it is not that either.** They earn 21.7 and 16.1 beakers a turn -- more
+  than the Horde on the tuned set -- with the second-best trade split in the
+  game, and win 1 of 36. The Hive has the worst rate in the game and wins 8.
+  The recommendation in this section was wrong. What section 173 did find is
+  that the three newest factions never build a science building: the advance
+  was learned in 71 games and the building raised in 2.
+- **Whether the Hive should be at 20% at all**, now that it is. Nobody has
+  re-asked whether an even share is the target for a side that arrives late and
+  plays no expansion game, as opposed to the right answer being deliberately
+  below even.
+- **`advances` as a column nobody reads.** It was 11.8 for the Hive in section
+  125 and is 16.4 to 19.5 now, and no section recorded that it had tripled. It
+  moved because section 153 changed arrivals, which is the fifth instance of a
+  number anchored to a world that then moved.
+
+## 173. Throughput measured: it is not the economy, and three factions never build a library
+
+Section 172 ruled out the road and recommended throughput as the next thing to
+measure, on the strength of section 125's *"9.9 beakers a turn against 19.1 and
+32.4"*. `tools/throughputprobe.run.test.ts`, 18 games on each set.
+
+**The recommendation was wrong and the probe says so on both sets.** The
+Wandering Folk are not short of research.
+
+### The decomposition
+
+`manageRates` is faction-neutral -- two parts study to one coin out of whatever
+`TRADE_STEPS` is left after `calm` -- so there are only four ways to be short
+of advances, and this separates them rather than choosing between them.
+
+| | beakers a turn | turns with a city | beakers all told | advances | wins/18 |
+|---|---|---|---|---|---|
+| human | 23.9 / 29.6 | 250 / 255 | 5966 / 7546 | 28.8 / 31.9 | 3 / 5 |
+| orc | 15.9 / 14.7 | 260 / 233 | 4129 / 3410 | 29.1 / 26.7 | 3 / 2 |
+| **hivekin** | **9.5 / 11.0** | 209 / 191 | 1986 / 2110 | 19.3 / 19.3 | **4 / 4** |
+| unbound | 16.3 / 12.3 | 156 / 133 | 2550 / 1629 | 16.0 / 13.3 | 3 / 1 |
+| **wandering** | **21.7 / 16.1** | **120 / 157** | 2613 / 2515 | 14.7 / 18.2 | **0 / 1** |
+
+**The Wandering Folk out-earn the Horde per turn on the tuned set and win
+nothing. The Hive has the worst rate in the game and wins the most.** Whatever
+holds the latecomers down, it is not beakers per turn.
+
+### And `calm` is not it either, which was the pre-registered guess
+
+Written down before the run so it could not be fitted afterwards: section 85
+found the Horde's cities *"not small, on fire"*, and `calm` is uncapped until
+`TRADE_STEPS - 2`, so a side at its content limit everywhere could be left two
+steps to split. The Wandering Folk have the **second-best rates in the game**.
+
+| | coin | study | **calm** | rioting | at the limit |
+|---|---|---|---|---|---|
+| human | 3.7 / 3.8 | 7.3 / 7.5 | **0.9 / 0.8** | 4.5% / 3.4% | 7.0% / 5.4% |
+| **wandering** | 3.7 / 3.7 | **7.3 / 7.3** | **1.0 / 1.0** | 3.5% / 4.0% | 11.8% / 12.0% |
+| hivekin | 3.6 / 3.6 | 7.2 / 7.2 | 1.3 / 1.2 | 13.5% / 10.8% | 11.9% / 9.6% |
+| orc | 3.5 / 3.6 | 6.9 / 7.0 | 1.7 / 1.4 | 9.9% / 8.3% | 14.4% / 14.2% |
+| unbound | 3.4 / 3.6 | 6.7 / 7.0 | 1.9 / 1.4 | 12.0% / 9.1% | 15.4% / 13.1% |
+
+The Horde riots nearly three times as much as the Wandering Folk and wins five
+times more often. `calm` costs the worst-affected side 1.9 steps of twelve.
+
+### The one thing that is real, mechanical and on both sets
+
+**The three newest factions never build a science building.**
+
+| side | learned the advance | ever built one |
+|---|---|---|
+| human | 18/18, 18/18 | **13/18, 18/18** |
+| orc | 18/18, 18/18 | **13/18, 9/18** |
+| hivekin | 11/18, 11/18 | **1/18, 1/18** |
+| unbound | 13/18, 12/18 | **0/18, 0/18** |
+| wandering | 11/18, 13/18 | **0/18, 1/18** |
+
+Across both sets the three latecomers learned the advance in **71 games and
+built the building in 2**. The two empires: **53 of 72**. The measured science
+bonus is **0.0% for hivekin and unbound on both sets** and 0.0/0.1% for the
+Wandering Folk, against 3.3/6.9% and 6.7/3.9%.
+
+**Nothing about the buildings explains it.** Every faction has two, at the same
+130 and 60 shields for the same 0.5 bonus, and the cheap one comes off
+`hammers-of-glory` -- **one shared advance, depth 3, road 155, the same for all
+five**. Price, road and availability are identical by construction.
+
+**Nor is it a hand-maintained list**, which was the obvious suspect after eight
+or nine of them in this file. The step is faction-blind:
+
+```ts
+const wanted =
+  options.buildings.find((b) => b.scienceBonus || b.goldBonus) ?? ...
+if (wanted && city.size >= 3 && withRng(state, (r) => r.chance(0.4))) {
+```
+
+So the rule can see their buildings and chooses something else. It sits at
+**step 4**, behind the garrison, the riot lid, the ending works, the follies,
+expansion and the road crews -- and the three latecomers each have standing
+wants the empires do not: Retrieval Circles and an Anchor Totem, Caravans,
+Burrowers. The plausible reading is that something earlier always wins, forever.
+
+**That is a hypothesis and this section does not promote it.** Section 172's
+lesson is three days old: a mechanism that fits the numbers is not a measured
+mechanism.
+
+### A secondary finding nobody asked for: the Kingdom wastes a third of its research
+
+| | banked at the end | turns with nothing researchable |
+|---|---|---|
+| **human** | **1641 / 2572** | **15% / 19%** |
+| orc | 212 / 106 | 1% / 0% |
+| hivekin | 47 / 123 | 0% / 1% |
+
+The Kingdom finishes its tree and keeps earning into a void for a fifth of the
+game, banking two to three thousand beakers it can never spend. It wins 31.5%
+of games while throwing away roughly a third of its research, which says its
+share is **understated** rather than lucky, and that the first side to be given
+something to do with surplus beakers will not be the one that needs it.
+
+The other three factions' banked figures move between sets (430/134, 690/172)
+and are not read as anything.
+
+### Two bugs in the probe, both caught before the real run
+
+- **`turns with a city` was 4x too big.** `playGame`'s watch hook fires about
+  four times a game turn, so an observation count is not a turn count. The
+  *rate* was unaffected -- each observation reads a per-turn income, so the mean
+  is per-turn, which is why the Hive landed on the 9.5 that matches section
+  125's 9.9 -- but every cumulative figure was inflated. It counts distinct
+  `state.turn` values now.
+- **A rate and an absolute count are not comparable.** The Unbound looked
+  efficient at 23.9 beakers a turn until `turns with a city` showed they live
+  102 turns to the Kingdom's 248. Both columns ship together for that reason.
+
+### Still open
+
+- ~~**Why step 4 never fires for three factions.**~~ **Answered by section
+  174, and it does fire.** Starvation was right for the Hive (2.8%/0.9%) and
+  the Unbound (5.1%/4.0%) and wrong for the Wandering Folk, who answer at step
+  4 more often than anybody (16.3%/17.1%) and pick their science building
+  **100% of the time**. It never completes: they bank 112 and 118 shields
+  toward a building costing 130, because the 40% roll and the unconditional
+  re-choice put a ceiling on what a small, short-lived empire can finish.
+- **Whether a science building is worth having.** 0.5 on a 60-shield building
+  is untested; the two empires that build it are also the two that live
+  longest, which is section 172's confound in miniature. An arm that forces it
+  would answer both this and the item above.
+- **Why the two latecomers die.** `turns with a city` is 120-157 against
+  233-260, and that is **not** offered here as a cause: a side that is killed
+  stops counting turns and a side that wins ends the game, so turns-alive is
+  partly the outcome it would be explaining. Separating them wants the rate
+  measured only over games the side survives, which this probe does not split.
+- **Section 125's figure has drifted and nobody noticed.** It measured the Hive
+  at 9.9 beakers a turn against 19.1 and 32.4. Today: 9.5-11.0 against
+  14.7-15.9 and 23.9-29.6. The Hive is unchanged and **both empires have come
+  down by a quarter**, which no section recorded.
+
+## 174. The step-tag counter: a building costing 130 cannot be built
+
+Section 173 found that the three newest factions learn the advance for a
+science building in 71 games and raise one in 3, with identical prices, an
+identical bonus and the same shared advance opening it for all five. It named
+the step that would build one, guessed that something earlier was starving it,
+and said explicitly that the guess was a guess. Jeremy: *"do the step-tag
+counter"*.
+
+`PRODUCTION_TRACE` in `ai/ai.ts` tags all thirteen of `chooseProduction`'s
+return points and tallies them by faction. Off unless a probe asks; `control()`
+pins it off **and empties the counts**, which otherwise pool across the two arms
+of a run and read as one distribution.
+
+**Verified inert before anything was read off it**: 1730 tests across 120 files
+and **zero fixture drift**, `late-game.w2c` included, which replays 299 turns of
+AI decisions. Instrumentation that moved the RNG would have described a
+different game than section 173 measured.
+
+### The guess was right for two factions and wrong for the third
+
+Share of all production decisions answered by each step:
+
+| | step 4 | what answers instead |
+|---|---|---|
+| **wandering** | **16.3% / 17.1%** | nothing -- the highest in the game |
+| orc | 15.7% / 15.8% | -- |
+| human | 14.4% / 16.4% | -- |
+| unbound | 5.1% / 4.0% | **road crew 19.4% / 15.0%** |
+| hivekin | 2.8% / 0.9% | garrison 27-32%, expand 18.5%, ending work 13-15% |
+
+The Hive is starved exactly as guessed. The Unbound are too. **The Wandering
+Folk reach step 4 more often than the Kingdom or the Horde** and still build
+nothing, so for them the guess was wrong.
+
+### And step 4 picks their science building every single time
+
+| side | what step 4 bought, commonest first |
+|---|---|
+| unbound | **sigilStacks 100%** |
+| wandering | **knottedRecord 100%** |
+| hivekin | theRenderingPit 95%, **theScentRecord** 5% |
+| human | market 73%, **scriptorium** 21%, **library** 7% |
+| orc | treasury 74%, **thinkingRock** 14%, catapult 8%, barracks 4% |
+
+So nobody is refusing to build a library. **They choose one at every
+opportunity and it never finishes.**
+
+### The answer, and it is a number between 118 and 130
+
+| side | cost it works toward | peak shields in **that** city | ever built |
+|---|---|---|---|
+| human | 60 / 130 | **150 / 159** | 14/18, 18/18 |
+| orc | 60 / 60 | **88 / 67** | 14/18, 15/18 |
+| hivekin | 60 / 60 | **57 / 57** | 1/18, 1/18 |
+| **unbound** | **130** | **81 / 93** | **0/18, 0/18** |
+| **wandering** | **130** | **112 / 118** | **0/18, 1/18** |
+
+**The two that never build one approach the line and never cross it** -- 112 of
+130, 118 of 130 -- and the Hive stalls at **57 of 60**, which is why it manages
+one game in eighteen rather than none.
+
+The mechanism, read off the code rather than inferred from the table:
+
+1. `city.producing = chooseProduction(...)` runs **unconditionally every turn
+   for every city**. Nothing preserves what a city was already building.
+2. Step 4 commits on a **40% roll**, so three turns in five fall through to
+   step 5 and the city builds a soldier.
+3. Shields survive a switch, but a **completing unit spends them** --
+   `city.shields -= cost`.
+
+So a city banks toward a building only on the turns it happens to be selected,
+and the pool keeps draining into cheap soldiers in between. That puts a
+**ceiling** on what can ever be finished, set by the city's shield income and
+how long it lives. Measured, that ceiling sits around **120** for the
+latecomers. A 60-shield building is comfortably under it. A 130-shield building
+is just over.
+
+**The Kingdom crosses 130 on the held-out set** -- 159 shields, 18 of 18
+libraries -- because it holds 6.6 cities for 255 turns. The ceiling is not a
+constant, it is income times survival, and the same 40% churn that is harmless
+to a big old empire is fatal to a small young one.
+
+Difficulty is not involved: `aiCost` is **1** on normal, so 130 is 130.
+
+### Which leaves the question of why they pick the dear one
+
+Every faction has a 60-shield science building and a 130-shield one. All five
+of the **cheap** ones come off `hammers-of-glory` -- one shared advance, depth
+3, road 155. The dear ones come off each faction's own advance.
+
+The Kingdom and the Horde learn `hammers-of-glory` in **18 games of 18**. The
+latecomers pick the 130-shield building **100% of the time**, which means the
+60-shield one is not in their options -- and since it is a plain building with
+no ending or folly handling to divert it, the only thing that can keep it out
+is the advance.
+
+**So two faults compound**: they are pushed to the building they cannot afford,
+*and* their ceiling is lower than its price. Either alone would be survivable.
+
+That last step is an inference from "picks the dear one 100% of the time"
+rather than a counter, and it is the one thing in this section that is not
+directly measured. It is a one-line counter and it should be measured before
+anything is changed.
+
+### A thing nobody was looking for: the Unbound build road crews
+
+**15.0% to 19.4% of every production decision**, against the two empires'
+**0.5% to 0.7%**. Thirty times the rate, on both sets. Whatever that is, it is
+not a rounding error, and it is most of why their step 4 fires at 4-5% against
+the Wandering Folk's 16-17%.
+
+Unexamined here. `roadWorkToDo || postWorkToDo || improveWorkToDo` with
+`workers < wanted` is the gate, and a side that never finishes the work it is
+asked for would ask forever.
+
+### The correction I made and then had to take back
+
+Partway through this I read `peak shields anywhere` -- 222 for the Unbound, 180
+for the Wandering Folk -- against the 130 cost and announced the mechanism
+refuted. That was wrong, and wrong in a way worth recording: **the richest city
+in the empire peaking at 180 while it builds soldiers says nothing about
+whether the city holding the library can reach 130.** The right column is
+shields in *that* city while it is selected, and it had to be measured
+separately.
+
+Two bad comparisons in one arc -- section 169's five-row correlation and this
+one -- and both had the same shape: a number that looked like it bore on the
+question and did not.
+
+### Shipped
+
+- `PRODUCTION_TRACE` and `step()` in `ai/ai.ts`, thirteen tagged returns, off
+  by default and pinned off in `control()`.
+- `void owner;` removed from the tail of `chooseProduction`; it stood only to
+  silence an unused-variable warning that `step(owner, ...)` makes moot.
+- The probe reports the step distribution, what step 4 bought, and the shields
+  question in the one city that matters.
+- **No behaviour changed.** `git diff -- src/` is the trace, the tags and that
+  one deleted line.
+
+### Still open
+
+- **Whether the latecomers learn `hammers-of-glory`.** One counter, named
+  above, and it decides whether the fix is research priority or price.
+- **The 40% roll and the unconditional re-choice.** This is a **faction-blind
+  production fault** that happens to bite whoever's cheapest economy building
+  is dear, and it caps what any small or short-lived empire can ever build. A
+  guard -- keep building what you were building -- is the obvious change and is
+  exactly the kind of obvious change this file has measured and rejected four
+  times. It wants an arm, not a patch.
+- **The Unbound's road crews**, above.
+- **Whether a science building is worth anything.** 0.5 for 60 shields has
+  never been tested, and the two factions that build one are also the two that
+  live longest, which is section 172's confound again.

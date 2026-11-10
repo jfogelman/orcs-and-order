@@ -18,6 +18,7 @@ import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
+import { ENDING_ROAD } from '../src/sim/research';
 import { UPGRADES } from '../src/model/upgrades';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
@@ -172,6 +173,16 @@ export const LEVERS: Record<string, object> = {
    * enough to get it.
    */
   UPGRADES,
+  /**
+   * Section 171: the length of each faction's road to its ending advance.
+   *
+   * Registered the moment the lever exists, for the reason the notes above
+   * give -- and this one especially, because section 169 found the road is the
+   * column that explains the win shares, so an arm on it that the fingerprint
+   * could not see would be the most expensive duplicate this guard has ever
+   * refused to catch.
+   */
+  ENDING_ROAD,
   GUEST_LIST,
   DIPLOMACY_AI,
   ATTRITION,

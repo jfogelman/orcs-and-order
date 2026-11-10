@@ -176,10 +176,58 @@ export const TECH_ESCALATION = 0.035;
  */
 export const BEAKERS_PER_TRADE = { multiplier: 1.25 };
 
+/**
+ * A multiplier on the advance that opens each faction's ending works, by the
+ * faction whose ending it is. Section 171.
+ *
+ * **Section 169 measured the thing this is a knob for.** The cumulative cost of
+ * the road to an ending advance -- the advance plus every prerequisite -- runs
+ * from the Hive's **165 beakers** to the Unbound's **1035**, a 6.3x spread
+ * nobody chose, and how often a side learns its ending advance is monotone in
+ * that number across all five:
+ *
+ * | faction | depth | road | learned it | wins |
+ * |---|---|---|---|---|
+ * | hivekin | 4 | 165 | 18/18 | 21% |
+ * | orc | 6 | 430 | 5/18 | 15% |
+ * | wandering | 6 | 700 | 4/18 | 3% |
+ * | human | 6 | 965 | 10/18 | 30% |
+ * | unbound | 7 | 1035 | 3/18 | 6% |
+ *
+ * Section 125 made the Hive's road the shortest in the game deliberately, for
+ * a **three**-sided game in which it could not otherwise win at all. Two
+ * factions arrived after that and nobody re-asked -- the fourth instance of
+ * section 161's own lesson.
+ *
+ * Jeremy's ruling of 2026-11-08, given both directions and the measurement:
+ * *"Hivekin lengthen to match the others more closely."* So this exists to be
+ * turned **up** for one faction rather than down for three, which is also the
+ * conservative half: section 161 found that over-correcting the Hive does not
+ * melt the runaway, it **moves** it -- at `double-ish` the Kingdom inherited it
+ * at 37%.
+ *
+ * Applied here rather than by editing `cost` in `model/techs.ts` because
+ * `techCost` is the single door every reader goes through -- the AI's chooser,
+ * the turn's accrual, the advances screen, the Horde report -- so a lever here
+ * cannot be half-applied, and section 59's rule is that a control arm is a flag
+ * and never a stashed edit.
+ */
+export const ENDING_ROAD: Record<string, number> = {
+  hivekin: 1,
+  orc: 1,
+  human: 1,
+  unbound: 1,
+  wandering: 1,
+};
+
 export function techCost(player: Player, t: TechDef): number {
   const known = Math.max(0, player.techs.length - 1);
+  // The ending-road lever, before escalation and the difficulty handicap, so
+  // it reads as "this advance costs this much" rather than as a rebate on
+  // somebody else's arithmetic.
+  const road = t.flags?.includes('ending') && t.faction ? (ENDING_ROAD[t.faction] ?? 1) : 1;
   // Section 113: the AI's discount (or surcharge) at a level other than Normal.
-  return handicapCost(player, Math.round(t.cost * (1 + known * TECH_ESCALATION)));
+  return handicapCost(player, Math.round(t.cost * road * (1 + known * TECH_ESCALATION)));
 }
 
 export function setResearch(state: GameState, player: Player, id: TechId | null): void {
