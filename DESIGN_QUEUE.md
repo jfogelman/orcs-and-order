@@ -16462,3 +16462,125 @@ Not re-based here, because that is a decision about what the test is for.
   Nothing in this section made it slower; section 135 widened it from six
   seeds to twelve and the runtime grew with it. Left alone here because it is
   shared config and the flake is not this change's, but CI will hit it.
+
+## Section 177: the road-crew budget counts the unit that founds
+
+Section 176's step counter left one thing named and unexplained: step 3d, the
+road crew, answers **17.1%** of the Unbound's production decisions against
+**0.2-0.6%** for the empires, and that is what starves their step 4. I read the
+step and narrowed it to the worker budget **by elimination** -- which is an
+argument, and this arc has already paid twice for arguments that fitted the
+numbers. So the first thing built here is the counter that turns it into a
+measurement.
+
+### What the step does
+
+```ts
+const workers =
+  settlers +                                    // units flagged `settler`
+  playerCities(...).filter((c) => ... unitType(c.producing.id).settler).length;
+const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
+const worker = options.units.find((u) => u.works);   // the unit that DIGS
+if (worker && workers < wanted && (roadWorkToDo(...) || ...)) { ... }
+```
+
+It builds the unit flagged `works` and budgets against the units flagged
+`settler`. Section 136 had already found this seam and fixed two of its three
+sites -- the unit choice above, and the dispatch at `ai.ts:3259`, which reads
+`type.settler || type.works` -- and left the budget reading one flag while the
+step builds the other.
+
+The flag table, off `src/model/units.ts`:
+
+| faction | the digger it builds | cost | `works` | `settler` |
+|---|---|---|---|---|
+| orc | Peon | 20 | yes | **yes** |
+| human | Peasant | 20 | yes | **yes** |
+| wandering | Wanderer | 25 | yes | **yes** |
+| hivekin | **Worker** | **15** | yes | **no** |
+| unbound | **Effigy** | 20 | yes | **no** |
+
+The Hive's Worker is the cheapest unit they own, so section 176's cost sort
+reaches it first every time. The Effigy costs 20, the same as the Domovoi that
+*does* carry both flags, and is declared first -- so a stable sort by cost
+hands `find` the Effigy. Neither faction's road crew is visible to the count
+that is meant to limit it.
+
+### ROAD_TRACE, and three conditions counted where they are evaluated
+
+`PRODUCTION_TRACE` can only see which step *answered*. `ROAD_TRACE` counts each
+of step 3d's conditions at the point it is evaluated, plus `would be full` --
+the same budget read against `works` -- so one run says both what the fault is
+and whether the fix would close it. 72 games, both seed sets, tuned / held-out:
+
+| side | gate open | no digger | budget full | no work | fires | mean workers | mean diggers | would be full |
+|---|---|---|---|---|---|---|---|---|
+| orc | 10778 / 8463 | 0.0% | 98.6 / 98.5% | 0.0 / 0.1% | 1.3 / 1.3% | 1.29 / 1.35 | **1.29 / 1.35** | 98.6 / 98.5% |
+| human | 8956 / 11432 | 0.0% | 98.8 / 98.6% | 0.0 / 0.4% | 1.2 / 1.0% | 1.42 / 1.64 | **1.42 / 1.64** | 98.8 / 98.6% |
+| wandering | 3718 / 5652 | 0.0% | 99.6 / 98.8% | 0.0% | 0.4 / 1.2% | 2.27 / 1.96 | **2.27 / 1.96** | 99.6 / 98.8% |
+| hivekin | 1577 / 1033 | 0.0% | **63.7 / 29.1%** | 0.1 / 5.4% | **36.2 / 65.4%** | 1.49 / 0.61 | **3.68 / 5.95** | 49.0 / 86.4% |
+| unbound | 3158 / 2162 | 0.0% | **42.0 / 46.9%** | 0.5 / 0.0% | **57.5 / 53.1%** | 0.88 / 0.79 | **14.14 / 11.33** | **99.7 / 99.3%** |
+
+**The identity is the proof.** For the three factions whose digger also founds
+cities, `mean workers` and `mean diggers` are the same number to two decimals
+in all six measurements -- they have to be, it is one unit carrying both flags.
+Those three close the budget 98.5-99.6% of the time and fire about 1%. The
+Unbound's budget reads **0.79-0.88** while the field holds **11.33-14.14**
+diggers, and the step answers **more than half** their production decisions.
+
+**And the other two conditions are eliminated by measurement rather than by
+argument.** `no digger` is 0.0% for every faction on both sets; `no work`
+never exceeds 5.4%. Of the step's three conditions only the budget differs
+between factions -- and the Wandering Folk are the control case: thousands of
+decisions reaching the step with work to do, and 0.4-1.2% firing, because
+their flag sits right.
+
+### Two corrections to the diagnosis I gave before the counter
+
+- **"The budget never closes for the Unbound" was wrong.** It closes 42-47% of
+  the time, because they do build Domovoi, which carries both flags. The share
+  comes from the gap between 0.8 counted and 11-14 standing, not from a budget
+  that never fires.
+- **The gate-open figure I reported (78.8-93%) measured the wrong gate.** A
+  throwaway probe had instrumented `cities >= targetCities` alone; the step's
+  outer gate also wants `city.size >= SETTLER.minCitySize` and `bridges`. The
+  Wandering Folk reached the step **zero times** in a six-game smoke, which is
+  how that showed up. That probe's `mean cities` column was also inflated
+  about fourfold by the watch hook firing several times a turn -- the section
+  173 mistake, made again in my own instrument, which is why `ROAD_TRACE`
+  counts only shares of a denominator counted the same way.
+
+A six-game smoke of the real counter also put the Unbound's budget at 84.9%
+full, against 42-47% over 72 games. One base deep is not a measurement.
+
+### The arm, and why it is an arm
+
+`AI_TUNING.roadBudgetByWork` -- one boolean, both halves of the count reading
+the same flag, pinned `false` in `control()` and registered through `AI_TUNING`,
+which the sweep's fingerprint already covers. Two arms, because there is one
+lever and no second fault in series with it.
+
+The prediction is **per faction**, read off `would be full`:
+
+- **Unbound: 99.7 and 99.3%.** Counted by `works` their budget lands exactly
+  where the empires sit, so step 3d should fall from 57% of their decisions to
+  about 1%, and roughly half their production should go somewhere else.
+- **Hive: 49.0 and 86.4%.** Their digger costs 15 and does not survive, so the
+  budget would be full far less often -- expect step 3d roughly halved, not
+  ended.
+
+**No prediction on wins, and that is deliberate.** Section 4e's rush-buying,
+section 53's forward bases and section 176's production guard were all repairs
+this obvious, and all three measured harmful or inert to the sides they were
+meant to help -- twice because the side with the least slack valued flexibility
+over what the repair bought it. This is also not section 176's shape: that sort
+was worth 0-2 wins in 108 and shipped on being *harmless*, where this
+redirects half of one faction's production. Columns to watch beside the win
+shares: unfinished games, the Unbound's cities and routes (roads are what
+their trade rides on, and 8-14 diggers do lay a network), and fights.
+
+`tests/roadBudget.test.ts` locks the asymmetry as data, the lever's contract
+both ways, and the shipped default. It cannot be a failing-first test: the
+lever did not exist before this section, and the behaviour it would assert is
+the behaviour that has not been measured yet. The red test belongs with the
+fix, if the fix ships.

@@ -55,6 +55,10 @@ export const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
+  // Section 177: and the budget counting the founder, which is the shipped
+  // game and the fault. Pinned here so the arm that turns it round is the only
+  // thing that differs.
+  AI_TUNING.roadBudgetByWork = false;
   AI_TUNING.guardTheGold = true;
   POSTING.enabled = false;
   SPECIALS.chance = 0.06;

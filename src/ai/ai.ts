@@ -1314,10 +1314,15 @@ export function chooseProduction(
     city.size >= SETTLER.minCitySize &&
     hasFlag(owner, 'bridges')
   ) {
+    // Section 177: by the flag that digs, or by the flag that founds. Both
+    // halves have to read the same flag, or a city would count what it is
+    // building differently from what is already standing.
+    const inBudget = (id: string): boolean =>
+      AI_TUNING.roadBudgetByWork ? unitType(id).works === true : unitType(id).settler === true;
     const workers =
-      settlers +
+      allUnitsOf(state, city.owner).filter((u) => inBudget(u.type)).length +
       playerCities(state, city.owner).filter(
-        (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).settler,
+        (c) => c.id !== city.id && c.producing.kind === 'unit' && inBudget(c.producing.id),
       ).length;
     const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
     // The one that digs, not the one that founds. For the two empires they are
@@ -2999,6 +3004,25 @@ export const AI_TUNING = {
   buildRoads: true,
   /** Cities per road worker the AI keeps once expansion is done. */
   citiesPerRoadWorker: 4,
+  /**
+   * Whether that budget counts the unit that digs or the unit that founds.
+   *
+   * Section 177. The step builds `options.units.find((u) => u.works)` and then
+   * budgets against units flagged `settler`, which for the two empires and the
+   * Wandering Folk is the same unit -- `ROAD_TRACE` measures their two counts
+   * as identical to two decimals, so the budget closes 98.5 to 99.6% of the
+   * time and the step fires about 1%. The Hive's Worker and the Unbound's
+   * Effigy are `works` and not `settler`, so for them the budget counts
+   * something else: the Unbound's reads 0.8 while the field holds 11 to 14
+   * diggers, and the step answers more than half their production decisions.
+   *
+   * A lever rather than a fix in place, because it is faction-blind in the
+   * code and a balance change to exactly those two AIs -- and because three
+   * obvious repairs in this arc (section 4e's rush-buying, 53's forward bases,
+   * 176's production guard) measured harmful to the sides they were meant to
+   * help.
+   */
+  roadBudgetByWork: false,
   /**
    * Whether a soldier stays in a city whose buildings are waiting on one.
    *

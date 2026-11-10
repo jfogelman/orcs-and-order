@@ -105,7 +105,14 @@ describe('the AI builds an army rather than a single unit type', () => {
     // argues about decimals -- and the margin above is about two seeds wide.
     expect(Math.min(...counts), where).toBeGreaterThan(1);
     expect(mean, where).toBeGreaterThanOrEqual(2.5);
-  });
+    // Section 177: twelve whole games to turn 140, which needs 46s in a file
+    // of its own and measured 123546ms and 120571ms under a loaded suite --
+    // against `vitest.config.ts`'s 120_000. Both failures were this timeout
+    // rather than either assertion above, and the second came with the suite
+    // at 122 files. Per-test rather than raising the global cap, because
+    // nothing else in the suite wants two minutes and a cap that hides a
+    // genuinely hung test is worth keeping.
+  }, 300_000);
 
   it('still prefers the better unit rather than buying at random', () => {
     const built = armyOf(20260824, 1, 70);
