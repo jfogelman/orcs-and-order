@@ -1113,6 +1113,31 @@ function step(player: Player, tag: string, choice: ProductionItem): ProductionIt
   return choice;
 }
 
+/**
+ * Section 177: inside the road-crew step, which of its three conditions says no.
+ *
+ * `PRODUCTION_TRACE` can only see which step *answered*, and the question here
+ * is about a step that answers far too often for two factions and never for
+ * three. The share alone does not say why: the outer gate, the digger's
+ * existence and the worker budget are three separate conditions, and I had
+ * narrowed it to the budget by elimination -- which is an argument, not a
+ * measurement. This counts each condition where it is actually evaluated.
+ *
+ * It also carries `would be full`, the same budget read with the count the
+ * step arguably meant -- units flagged `works` rather than `settler` -- so one
+ * run says both whether the budget is the culprit and whether counting
+ * diggers would close it.
+ */
+export const ROAD_TRACE: { on: boolean; counts: Record<string, number> } = {
+  on: false,
+  counts: {},
+};
+
+function roadTally(player: Player, tag: string, n = 1): void {
+  const key = `${player.faction}|${tag}`;
+  ROAD_TRACE.counts[key] = (ROAD_TRACE.counts[key] ?? 0) + n;
+}
+
 export function chooseProduction(
   state: GameState,
   city: City,
@@ -1300,13 +1325,35 @@ export function chooseProduction(
     // **Grub** -- their founder, and the expensive one -- every time the AI
     // wanted a road crew.
     const worker = options.units.find((u) => u.works);
-    if (
-      worker &&
-      workers < wanted &&
+    // Same condition as before, named so the counter below can report which
+    // half of it said no. The predicates are still only reached when there is
+    // a digger to build and room in the budget for it.
+    const underBudget = workers < wanted;
+    const work =
+      worker !== undefined &&
+      underBudget &&
       (roadWorkToDo(state, city.owner) ||
         (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)) ||
-        improveWorkToDo(state, city.owner))
-    ) {
+        improveWorkToDo(state, city.owner));
+    if (ROAD_TRACE.on) {
+      // Instrumentation only: the budget as it would read if it counted the
+      // unit that digs instead of the unit that founds.
+      const diggers =
+        allUnitsOf(state, city.owner).filter((u) => unitType(u.type).works).length +
+        playerCities(state, city.owner).filter(
+          (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).works,
+        ).length;
+      roadTally(owner, 'gate open');
+      roadTally(owner, 'sum workers', workers);
+      roadTally(owner, 'sum diggers', diggers);
+      roadTally(owner, 'sum wanted', wanted);
+      if (diggers >= wanted) roadTally(owner, 'would be full');
+      roadTally(
+        owner,
+        !worker ? 'no digger' : !underBudget ? 'budget full' : work ? 'fires' : 'no work',
+      );
+    }
+    if (worker && work) {
       return step(owner, '3d road crew', { kind: 'unit', id: worker.id });
     }
   }

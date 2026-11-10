@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { HELD_OUT_BASES, playGame, seedSet, TUNED_BASES } from './sweep';
 import { control } from './control';
-import { PRODUCTION_TRACE } from '../src/ai/ai';
+import { PRODUCTION_TRACE, ROAD_TRACE } from '../src/ai/ai';
 import {
   cityIncome,
   cityScienceBonus,
@@ -251,6 +251,10 @@ describe('throughput', () => {
     control();
     // Section 174. After `control()`, which pins it off and empties it.
     PRODUCTION_TRACE.on = true;
+    // Section 177. Same place, same reason: the step counter said the road
+    // crew answers 17% of the Unbound's decisions, and this says which of that
+    // step's conditions lets it.
+    ROAD_TRACE.on = true;
     // Section 176. Cheapest-first shipped, so the default run is the shipped
     // game and `PROBE_FIRST_MATCH=1` replays the fault for comparison. The
     // report name says which, because two runs of this probe over the same
@@ -560,6 +564,39 @@ describe('throughput', () => {
           '|---|---|',
           ...picks,
         ].join('\n');
+      })(),
+      '',
+      '## inside the road-crew step (section 177)',
+      '',
+      'Step 3d answers 17% of the Unbound’s production decisions and 0.2--0.6%',
+      'of each empire’s. It has three conditions, and the share alone does not',
+      'say which of them differs. These are counted where each is evaluated,',
+      'over the decisions that reached the step with its outer gate open.',
+      '',
+      '`budget full` is `workers < wanted` saying no, where `workers` counts',
+      'units flagged `settler`. `would be full` is the same budget read against',
+      'units flagged `works` -- the ones that actually dig -- which is what the',
+      'step builds. For the empires the two flags sit on one unit and the',
+      'columns should agree; where they disagree, the budget is counting a unit',
+      'the faction never builds.',
+      '',
+      '| side | gate open | no digger | budget full | no work | **fires** | mean workers | mean diggers | mean wanted | **would be full** |',
+      '|---|---|---|---|---|---|---|---|---|---|',
+      ...(() => {
+        const n = (f: string, tag: string) => ROAD_TRACE.counts[`${f}|${tag}`] ?? 0;
+        return sides.map((f) => {
+          const open = n(f, 'gate open');
+          // Every column below is counted over exactly these decisions, so a
+          // share of `open` is like-weighted -- unlike a per-turn mean, which
+          // the hook firing several times a turn would inflate.
+          const pc = (tag: string) => (open ? `${((100 * n(f, tag)) / open).toFixed(1)}%` : '--');
+          const av = (tag: string) => (open ? (n(f, tag) / open).toFixed(2) : '--');
+          return (
+            `| ${f} | ${open} | ${pc('no digger')} | **${pc('budget full')}** | ` +
+            `${pc('no work')} | **${pc('fires')}** | ${av('sum workers')} | ` +
+            `${av('sum diggers')} | ${av('sum wanted')} | **${pc('would be full')}** |`
+          );
+        });
       })(),
     ].join('\n');
 
