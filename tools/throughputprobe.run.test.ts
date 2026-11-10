@@ -2,7 +2,14 @@ import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { HELD_OUT_BASES, playGame, seedSet, TUNED_BASES } from './sweep';
 import { control } from './control';
-import { cityIncome, cityScienceBonus, cityYield, contentLimit } from '../src/sim/city';
+import { PRODUCTION_TRACE } from '../src/ai/ai';
+import {
+  cityIncome,
+  cityScienceBonus,
+  cityYield,
+  contentLimit,
+  productionCostIn,
+} from '../src/sim/city';
 import { researchableTechs, TRADE_STEPS } from '../src/sim/research';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
@@ -114,6 +121,26 @@ interface Tally {
    */
   knewAdvance: number;
   builtScience: number;
+  heldScienceAtEnd: number;
+  /**
+   * City-turns with a science building selected, and the most shields any of
+   * their cities ever banked. Section 174: step 4 picks their science building
+   * 100% of the time and they finish it in 1 game of 36, so the question is
+   * whether it is ever selected for long enough to pay for itself.
+   */
+  sciSelected: number;
+  peakShields: number;
+  /**
+   * The most shields ever seen in a city **while that city had a science
+   * building selected**, and the cost it was working toward.
+   *
+   * `peakShields` across all cities was the wrong comparison and briefly
+   * looked like a refutation: the richest city peaking at 180 says nothing
+   * when it is building something else. This is the number the question was
+   * always about.
+   */
+  peakShieldsWhileSci: number;
+  sciCost: number;
   /** End-of-game figures, one per game. */
   techs: number[];
   wins: number;
@@ -139,6 +166,11 @@ function blank(): Tally {
     idle: 0,
     knewAdvance: 0,
     builtScience: 0,
+    heldScienceAtEnd: 0,
+    sciSelected: 0,
+    peakShields: 0,
+    peakShieldsWhileSci: 0,
+    sciCost: 0,
     techs: [],
     wins: 0,
     games: 0,
@@ -149,9 +181,20 @@ function mean(xs: number[]): number {
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
 }
 
+/** This faction's science buildings, read off the data rather than listed. */
+function sciIds(faction: string): Set<string> {
+  return new Set(
+    Object.values(BUILDINGS)
+      .filter((b) => (b.faction === faction || b.faction === 'both') && !!b.scienceBonus)
+      .map((b) => b.id),
+  );
+}
+
 describe('throughput', () => {
   it('asks where each faction’s research goes', () => {
     control();
+    // Section 174. After `control()`, which pins it off and empties it.
+    PRODUCTION_TRACE.on = true;
     const held = process.env.PROBE_SEEDS === 'held-out';
     const which = held ? 'held-out' : 'tuned';
     const perBase = Number(process.env.PROBE_PER_BASE ?? 6);
@@ -165,6 +208,8 @@ describe('throughput', () => {
       games += 1;
       let last: GameState | null = null;
       const seen = new Set<string>();
+      /** Factions that held a science building at any point this game. */
+      const everBuilt = new Set<string>();
       // Distinct game turns each side held a city, because the hook fires
       // several times a turn and a total built from observations is that many
       // times too big.
@@ -188,6 +233,14 @@ describe('throughput', () => {
           // Nothing left to learn, so every beaker from here is banked and
           // wasted. A pure read, like everything else sampled in here.
           if (researchableTechs(p).length === 0) t.idle += 1;
+          // **Ever built, watched as it happens.** The first version of this
+          // asked the end state, which only sees cities the side still holds
+          // -- and the two factions it was asked about are the two that lose
+          // theirs, 120 to 157 turns alive against 233 to 260. A library built
+          // and then captured read as never built.
+          if (!everBuilt.has(f) && cities.some((c) => c.buildings.some((b) => sciIds(f).has(b)))) {
+            everBuilt.add(f);
+          }
           t.cities += cities.length;
           t.rateCoin += p.rates?.coin ?? 0;
           t.rateBeakers += p.rates?.beakers ?? 0;
@@ -198,6 +251,12 @@ describe('throughput', () => {
             t.trade += cityYield(s, c).trade;
             t.beakers += cityIncome(s, c, p).beakers;
             t.sciBonus += cityScienceBonus(s, c);
+            if (c.producing.kind === 'building' && sciIds(f).has(c.producing.id)) {
+              t.sciSelected += 1;
+              if (c.shields > t.peakShieldsWhileSci) t.peakShieldsWhileSci = c.shields;
+              t.sciCost = productionCostIn(s, c, c.producing);
+            }
+            if (c.shields > t.peakShields) t.peakShields = c.shields;
             if (c.disorder) t.rioting += 1;
             else if (c.size >= contentLimit(s, c)) t.atLimit += 1;
           }
@@ -217,14 +276,14 @@ describe('throughput', () => {
         // Read off the data rather than hard-coded: whichever buildings carry
         // a science bonus for this faction, and whichever advances unlock
         // them. A building renamed or re-rooted keeps this honest.
-        const mine = Object.values(BUILDINGS).filter(
-          (b) => (b.faction === p.faction || b.faction === 'both') && !!b.scienceBonus,
-        );
-        const ids = new Set(mine.map((b) => b.id));
+        const ids = sciIds(p.faction as string);
         const unlocks = TECHS.filter((x) => x.buildings.some((b) => ids.has(b)));
         if (unlocks.some((x) => p.techs.includes(x.id))) t.knewAdvance += 1;
+        // Watched during play, not read off the end state -- see the note at
+        // the sampling site.
+        if (everBuilt.has(p.faction as string)) t.builtScience += 1;
         if (playerCities(end, p.id).some((c) => c.buildings.some((b) => ids.has(b)))) {
-          t.builtScience += 1;
+          t.heldScienceAtEnd += 1;
         }
         if (end.winner === p.id) t.wins += 1;
       }
@@ -301,12 +360,77 @@ describe('throughput', () => {
       'learns the advance and never builds is `chooseProduction`, and a side',
       'that never learns it is research priority.',
       '',
-      '| side | learned the advance | ever built one |',
-      '|---|---|---|',
+      '| side | ever built one | city-turns building one | peak shields in THAT city | what it costs there | peak anywhere |',
+      '|---|---|---|---|---|---|',
       ...sides.map((f) => {
         const t = by[f];
-        return `| ${f} | **${t.knewAdvance}/${t.games}** | **${t.builtScience}/${t.games}** |`;
+        return (
+          `| ${f} | **${t.builtScience}/${t.games}** | ` +
+          `${t.cityTurns ? ((100 * t.sciSelected) / t.cityTurns).toFixed(1) : 0}% | ` +
+          `**${t.peakShieldsWhileSci}** | **${t.sciCost}** | ${t.peakShields} |`
+        );
       }),
+      '',
+      '## which step of chooseProduction answered (section 174)',
+      '',
+      'Every decision each side made, by the step that made it. Step 4 is the',
+      'one that would build a science building, and it is last of the ones that',
+      'can: anything above it answering first is a decision step 4 never sees.',
+      '',
+      (() => {
+        // Step 4 carries the chosen building's id, so collapse it back to the
+        // step for this table and break it out underneath.
+        const tags = [
+          ...new Set(
+            Object.keys(PRODUCTION_TRACE.counts).map((k) => k.split('|')[1].split(':')[0]),
+          ),
+        ].sort();
+        const countOf = (f: string, tag: string) =>
+          Object.entries(PRODUCTION_TRACE.counts)
+            .filter(([k]) => k.split('|')[0] === f && k.split('|')[1].split(':')[0] === tag)
+            .reduce((a, [, n]) => a + n, 0);
+        const head = `| side | ${tags.join(' | ')} |`;
+        const rule = `|${'---|'.repeat(tags.length + 1)}`;
+        const rows = sides.map((f) => {
+          const total = tags.reduce((a, tag) => a + countOf(f, tag), 0);
+          const cells = tags.map((tag) => {
+            const pc = total ? (100 * countOf(f, tag)) / total : 0;
+            const txt = `${pc.toFixed(1)}%`;
+            return tag.startsWith('4') ? `**${txt}**` : txt;
+          });
+          return `| ${f} | ${cells.join(' | ')} |`;
+        });
+
+        // And what step 4 actually bought, which is the question the step
+        // alone could not answer.
+        const picks = sides.map((f) => {
+          const mine = Object.entries(PRODUCTION_TRACE.counts)
+            .filter(([k]) => k.startsWith(`${f}|4 economy/defence:`))
+            .map(([k, n]) => [k.split(':')[1], n] as const)
+            .sort((a, b) => b[1] - a[1]);
+          const tot = mine.reduce((a, [, n]) => a + n, 0) || 1;
+          const sci = sciIds(f);
+          const shown = mine
+            .slice(0, 6)
+            .map(
+              ([id, n]) =>
+                `${sci.has(id) ? `**${id}**` : id} ${((100 * n) / tot).toFixed(0)}%`,
+            );
+          return `| ${f} | ${shown.join(', ') || '--'} |`;
+        });
+
+        return [
+          head,
+          rule,
+          ...rows,
+          '',
+          '### and what step 4 bought, commonest first (science buildings bold)',
+          '',
+          '| side | picks |',
+          '|---|---|',
+          ...picks,
+        ].join('\n');
+      })(),
     ].join('\n');
 
     writeFileSync(

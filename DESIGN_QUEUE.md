@@ -15909,10 +15909,13 @@ and are not read as anything.
 
 ### Still open
 
-- **Why step 4 never fires for three factions.** One counter answers it: a tag
-  on what `chooseProduction` returned, tallied by faction. That separates "the
-  wants starve it" from "`city.size >= 3` and a 40% roll are never both true"
-  from something else. **Cheap, and nothing should be changed before it.**
+- ~~**Why step 4 never fires for three factions.**~~ **Answered by section
+  174, and it does fire.** Starvation was right for the Hive (2.8%/0.9%) and
+  the Unbound (5.1%/4.0%) and wrong for the Wandering Folk, who answer at step
+  4 more often than anybody (16.3%/17.1%) and pick their science building
+  **100% of the time**. It never completes: they bank 112 and 118 shields
+  toward a building costing 130, because the 40% roll and the unconditional
+  re-choice put a ceiling on what a small, short-lived empire can finish.
 - **Whether a science building is worth having.** 0.5 on a 60-shield building
   is untested; the two empires that build it are also the two that live
   longest, which is section 172's confound in miniature. An arm that forces it
@@ -15926,3 +15929,159 @@ and are not read as anything.
   at 9.9 beakers a turn against 19.1 and 32.4. Today: 9.5-11.0 against
   14.7-15.9 and 23.9-29.6. The Hive is unchanged and **both empires have come
   down by a quarter**, which no section recorded.
+
+## 174. The step-tag counter: a building costing 130 cannot be built
+
+Section 173 found that the three newest factions learn the advance for a
+science building in 71 games and raise one in 3, with identical prices, an
+identical bonus and the same shared advance opening it for all five. It named
+the step that would build one, guessed that something earlier was starving it,
+and said explicitly that the guess was a guess. Jeremy: *"do the step-tag
+counter"*.
+
+`PRODUCTION_TRACE` in `ai/ai.ts` tags all thirteen of `chooseProduction`'s
+return points and tallies them by faction. Off unless a probe asks; `control()`
+pins it off **and empties the counts**, which otherwise pool across the two arms
+of a run and read as one distribution.
+
+**Verified inert before anything was read off it**: 1730 tests across 120 files
+and **zero fixture drift**, `late-game.w2c` included, which replays 299 turns of
+AI decisions. Instrumentation that moved the RNG would have described a
+different game than section 173 measured.
+
+### The guess was right for two factions and wrong for the third
+
+Share of all production decisions answered by each step:
+
+| | step 4 | what answers instead |
+|---|---|---|
+| **wandering** | **16.3% / 17.1%** | nothing -- the highest in the game |
+| orc | 15.7% / 15.8% | -- |
+| human | 14.4% / 16.4% | -- |
+| unbound | 5.1% / 4.0% | **road crew 19.4% / 15.0%** |
+| hivekin | 2.8% / 0.9% | garrison 27-32%, expand 18.5%, ending work 13-15% |
+
+The Hive is starved exactly as guessed. The Unbound are too. **The Wandering
+Folk reach step 4 more often than the Kingdom or the Horde** and still build
+nothing, so for them the guess was wrong.
+
+### And step 4 picks their science building every single time
+
+| side | what step 4 bought, commonest first |
+|---|---|
+| unbound | **sigilStacks 100%** |
+| wandering | **knottedRecord 100%** |
+| hivekin | theRenderingPit 95%, **theScentRecord** 5% |
+| human | market 73%, **scriptorium** 21%, **library** 7% |
+| orc | treasury 74%, **thinkingRock** 14%, catapult 8%, barracks 4% |
+
+So nobody is refusing to build a library. **They choose one at every
+opportunity and it never finishes.**
+
+### The answer, and it is a number between 118 and 130
+
+| side | cost it works toward | peak shields in **that** city | ever built |
+|---|---|---|---|
+| human | 60 / 130 | **150 / 159** | 14/18, 18/18 |
+| orc | 60 / 60 | **88 / 67** | 14/18, 15/18 |
+| hivekin | 60 / 60 | **57 / 57** | 1/18, 1/18 |
+| **unbound** | **130** | **81 / 93** | **0/18, 0/18** |
+| **wandering** | **130** | **112 / 118** | **0/18, 1/18** |
+
+**The two that never build one approach the line and never cross it** -- 112 of
+130, 118 of 130 -- and the Hive stalls at **57 of 60**, which is why it manages
+one game in eighteen rather than none.
+
+The mechanism, read off the code rather than inferred from the table:
+
+1. `city.producing = chooseProduction(...)` runs **unconditionally every turn
+   for every city**. Nothing preserves what a city was already building.
+2. Step 4 commits on a **40% roll**, so three turns in five fall through to
+   step 5 and the city builds a soldier.
+3. Shields survive a switch, but a **completing unit spends them** --
+   `city.shields -= cost`.
+
+So a city banks toward a building only on the turns it happens to be selected,
+and the pool keeps draining into cheap soldiers in between. That puts a
+**ceiling** on what can ever be finished, set by the city's shield income and
+how long it lives. Measured, that ceiling sits around **120** for the
+latecomers. A 60-shield building is comfortably under it. A 130-shield building
+is just over.
+
+**The Kingdom crosses 130 on the held-out set** -- 159 shields, 18 of 18
+libraries -- because it holds 6.6 cities for 255 turns. The ceiling is not a
+constant, it is income times survival, and the same 40% churn that is harmless
+to a big old empire is fatal to a small young one.
+
+Difficulty is not involved: `aiCost` is **1** on normal, so 130 is 130.
+
+### Which leaves the question of why they pick the dear one
+
+Every faction has a 60-shield science building and a 130-shield one. All five
+of the **cheap** ones come off `hammers-of-glory` -- one shared advance, depth
+3, road 155. The dear ones come off each faction's own advance.
+
+The Kingdom and the Horde learn `hammers-of-glory` in **18 games of 18**. The
+latecomers pick the 130-shield building **100% of the time**, which means the
+60-shield one is not in their options -- and since it is a plain building with
+no ending or folly handling to divert it, the only thing that can keep it out
+is the advance.
+
+**So two faults compound**: they are pushed to the building they cannot afford,
+*and* their ceiling is lower than its price. Either alone would be survivable.
+
+That last step is an inference from "picks the dear one 100% of the time"
+rather than a counter, and it is the one thing in this section that is not
+directly measured. It is a one-line counter and it should be measured before
+anything is changed.
+
+### A thing nobody was looking for: the Unbound build road crews
+
+**15.0% to 19.4% of every production decision**, against the two empires'
+**0.5% to 0.7%**. Thirty times the rate, on both sets. Whatever that is, it is
+not a rounding error, and it is most of why their step 4 fires at 4-5% against
+the Wandering Folk's 16-17%.
+
+Unexamined here. `roadWorkToDo || postWorkToDo || improveWorkToDo` with
+`workers < wanted` is the gate, and a side that never finishes the work it is
+asked for would ask forever.
+
+### The correction I made and then had to take back
+
+Partway through this I read `peak shields anywhere` -- 222 for the Unbound, 180
+for the Wandering Folk -- against the 130 cost and announced the mechanism
+refuted. That was wrong, and wrong in a way worth recording: **the richest city
+in the empire peaking at 180 while it builds soldiers says nothing about
+whether the city holding the library can reach 130.** The right column is
+shields in *that* city while it is selected, and it had to be measured
+separately.
+
+Two bad comparisons in one arc -- section 169's five-row correlation and this
+one -- and both had the same shape: a number that looked like it bore on the
+question and did not.
+
+### Shipped
+
+- `PRODUCTION_TRACE` and `step()` in `ai/ai.ts`, thirteen tagged returns, off
+  by default and pinned off in `control()`.
+- `void owner;` removed from the tail of `chooseProduction`; it stood only to
+  silence an unused-variable warning that `step(owner, ...)` makes moot.
+- The probe reports the step distribution, what step 4 bought, and the shields
+  question in the one city that matters.
+- **No behaviour changed.** `git diff -- src/` is the trace, the tags and that
+  one deleted line.
+
+### Still open
+
+- **Whether the latecomers learn `hammers-of-glory`.** One counter, named
+  above, and it decides whether the fix is research priority or price.
+- **The 40% roll and the unconditional re-choice.** This is a **faction-blind
+  production fault** that happens to bite whoever's cheapest economy building
+  is dear, and it caps what any small or short-lived empire can ever build. A
+  guard -- keep building what you were building -- is the obvious change and is
+  exactly the kind of obvious change this file has measured and rejected four
+  times. It wants an arm, not a patch.
+- **The Unbound's road crews**, above.
+- **Whether a science building is worth anything.** 0.5 for 60 shields has
+  never been tested, and the two factions that build one are also the two that
+  live longest, which is section 172's confound again.

@@ -12,7 +12,7 @@
  * A probe that contradicts a sweep should be a finding about the game, never a
  * finding about which file you ran it from. One definition, imported by both.
  */
-import { AI_TUNING, PERSONALITIES } from '../src/ai/ai';
+import { AI_TUNING, PERSONALITIES, PRODUCTION_TRACE } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
@@ -98,6 +98,12 @@ export const control = () => {
   // or shorten three -- and an arm that shortens the Unbound's must inherit a
   // Hive that was not left long by the arm before it.
   for (const f of Object.keys(ENDING_ROAD)) ENDING_ROAD[f] = 1;
+  // Section 174: the production step counter off, and its tally emptied. Off
+  // because it is instrumentation and a probe that wants it says so; emptied
+  // because the counts are module state and would otherwise pool across two
+  // arms of the same run and read as one.
+  PRODUCTION_TRACE.on = false;
+  for (const k of Object.keys(PRODUCTION_TRACE.counts)) delete PRODUCTION_TRACE.counts[k];
   // Section 136: and the Hive opens able to build a fighter, as both empires
   // always have. Pinned here so an arm that is not asking about it inherits
   // the shipped game rather than whatever the previous arm left behind.

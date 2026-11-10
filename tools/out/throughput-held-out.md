@@ -48,10 +48,34 @@ cheap one comes off the same shared advance for all five. So a side that
 learns the advance and never builds is `chooseProduction`, and a side
 that never learns it is research priority.
 
-| side | learned the advance | ever built one |
-|---|---|---|
-| hivekin | **11/18** | **1/18** |
-| human | **18/18** | **18/18** |
-| orc | **18/18** | **9/18** |
-| unbound | **12/18** | **0/18** |
-| wandering | **13/18** | **1/18** |
+| side | ever built one | city-turns building one | peak shields in THAT city | what it costs there | peak anywhere |
+|---|---|---|---|---|---|
+| hivekin | **1/18** | 0.1% | **57** | **60** | 178 |
+| human | **18/18** | 5.9% | **159** | **130** | 386 |
+| orc | **15/18** | 3.2% | **67** | **60** | 182 |
+| unbound | **0/18** | 2.7% | **93** | **130** | 119 |
+| wandering | **1/18** | 15.6% | **118** | **130** | 147 |
+
+## which step of chooseProduction answered (section 174)
+
+Every decision each side made, by the step that made it. Step 4 is the
+one that would build a science building, and it is last of the ones that
+can: anything above it answering first is a decision step 4 never sees.
+
+| side | 0 nothing buildable | 1 garrison | 2 expand | 3 content building | 3 placate | 3a ending work | 3a' folly | 3b siege | 3c supply | 3d road crew | 4 economy/defence | 5 biggest stick |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| hivekin | 1.7% | 32.1% | 18.7% | 2.4% | 1.2% | 13.5% | 1.0% | 0.0% | 2.4% | 6.6% | **0.9%** | 19.5% |
+| human | 2.5% | 22.7% | 1.9% | 5.5% | 1.4% | 3.9% | 5.8% | 0.0% | 4.9% | 0.5% | **16.4%** | 34.5% |
+| orc | 1.8% | 16.5% | 4.1% | 6.7% | 3.4% | 0.9% | 4.9% | 0.0% | 7.0% | 0.6% | **15.8%** | 38.4% |
+| unbound | 2.8% | 23.2% | 5.4% | 5.1% | 4.1% | 4.9% | 10.5% | 0.0% | 8.1% | 15.0% | **4.0%** | 16.9% |
+| wandering | 2.5% | 22.9% | 5.2% | 4.5% | 2.3% | 0.5% | 3.7% | 0.1% | 3.0% | 0.4% | **17.1%** | 37.7% |
+
+### and what step 4 bought, commonest first (science buildings bold)
+
+| side | picks |
+|---|---|
+| hivekin | theRenderingPit 85%, **theScentRecord** 15% |
+| human | market 58%, **scriptorium** 21%, **library** 19%, barracks 1%, walls 1%, exchange 0% |
+| orc | treasury 69%, **thinkingRock** 21%, catapult 6%, barracks 4%, bigVault 0% |
+| unbound | **sigilStacks** 100% |
+| wandering | **knottedRecord** 100%, strongboxWagon 0%, **routeBook** 0% |
