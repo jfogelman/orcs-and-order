@@ -18,7 +18,7 @@ import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
-import { ENDING_ROAD } from '../src/sim/research';
+import { BUILD_ORDER, ENDING_ROAD } from '../src/sim/research';
 import { UPGRADES } from '../src/model/upgrades';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { GOBLIN_SCOUT } from '../src/model/units';
@@ -183,6 +183,14 @@ export const LEVERS: Record<string, object> = {
    * refused to catch.
    */
   ENDING_ROAD,
+  /**
+   * Section 176: whether what a city can build arrives in cost order or in the
+   * order its advances did. Registered with the lever, as everything above is
+   * -- and this one matters especially, because `AI_TUNING` is already in this
+   * table and an arm that moved only `keepBuilding` would fingerprint as
+   * different while an arm that moved only this one would not.
+   */
+  BUILD_ORDER,
   GUEST_LIST,
   DIPLOMACY_AI,
   ATTRITION,

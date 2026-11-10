@@ -118,6 +118,37 @@ export function unlockedUnits(player: Player): UnitTypeDef[] {
     .sort((a, b) => a.cost - b.cost);
 }
 
+/**
+ * Whether what a city can build comes back in **cost order** or in the order
+ * its advances happened to arrive. Section 176.
+ *
+ * **Off is the game as measured, and off is a bug.** The loop below fills a Set
+ * by walking `player.techs`, and a Set keeps insertion order, so this returns
+ * buildings ordered by *when each advance was learned*. Five rules in `ai.ts`
+ * then take the **first match** of a predicate over it -- which content
+ * building calms a city, which ending work is begun, which supply house, which
+ * economy building, which barracks or wall -- so research order silently
+ * decides all five, permanently.
+ *
+ * Section 175 measured what that costs in one of the five. Every faction has a
+ * 60-shield science building off a shared advance and a 130-shield one off its
+ * own; a side that learns its own first can never reach the cheap one, because
+ * `find` stops before it. **Cheap-learned-first was 45/45 for the three
+ * factions that build a library and 0/37 for the two that never do** -- and
+ * section 174 measured the 130-shield building as above the ceiling that
+ * production churn puts on a small empire, so they are locked onto the one
+ * thing they cannot finish.
+ *
+ * That nobody intended it is settled by `unlockedUnits` directly above, which
+ * builds its Set the same way and **sorts by cost**. This function never got
+ * the line. So `on` is not a new idea, it is the sibling's behaviour.
+ *
+ * A lever rather than a patch because it changes what every AI in the game
+ * builds, and because it compounds with `AI_TUNING.keepBuilding` -- see the
+ * note there.
+ */
+export const BUILD_ORDER = { cheapest: false };
+
 export function unlockedBuildings(player: Player): BuildingDef[] {
   const ids = new Set<string>();
   for (const id of player.techs) {
@@ -125,10 +156,13 @@ export function unlockedBuildings(player: Player): BuildingDef[] {
     if (!t) continue;
     for (const b of t.buildings) ids.add(b);
   }
-  return [...ids]
+  const offered = [...ids]
     .map((id) => BUILDINGS[id])
     .filter((b): b is BuildingDef => b !== undefined)
     .filter((b) => b.faction === 'both' || b.faction === player.faction);
+  // Cheapest first, exactly as `unlockedUnits` does it. Sorted on a copy of a
+  // list this function just built, so nothing shared is reordered.
+  return BUILD_ORDER.cheapest ? offered.sort((a, b) => a.cost - b.cost) : offered;
 }
 
 /**
