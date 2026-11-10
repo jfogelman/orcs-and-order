@@ -16073,8 +16073,13 @@ question and did not.
 
 ### Still open
 
-- **Whether the latecomers learn `hammers-of-glory`.** One counter, named
-  above, and it decides whether the fix is research priority or price.
+- ~~**Whether the latecomers learn `hammers-of-glory`.**~~ **Measured in
+  section 175, and they do** -- in about half their games, with the building
+  offered in the yard every time they know it. The inference above is struck.
+  They are locked onto the dear building by **research order**:
+  `unlockedBuildings` returns advances in the order they were learned and step
+  4 takes the first match. Cheap-learned-first is **45/45** for the three
+  factions that build a library and **0/37** for the two that never do.
 - **The 40% roll and the unconditional re-choice.** This is a **faction-blind
   production fault** that happens to bite whoever's cheapest economy building
   is dear, and it caps what any small or short-lived empire can ever build. A
@@ -16085,3 +16090,163 @@ question and did not.
 - **Whether a science building is worth anything.** 0.5 for 60 shields has
   never been tested, and the two factions that build one are also the two that
   live longest, which is section 172's confound again.
+
+## 175. Research order is build priority, and nobody meant it to be
+
+Section 174 left one step inferred rather than measured: it found the Unbound
+and the Wandering Folk picking their **130-shield** science building 100% of the
+time and never finishing it, and reasoned the **60-shield** one must therefore
+not be in their options. Jeremy: *"once it's merged we'll do the counter
+check"*.
+
+**The inference was wrong, and what replaced it is a bug.**
+
+### The counter
+
+Each faction has two science buildings. The cheap one costs 60 and comes off
+`hammers-of-glory`, one shared advance at depth 3 for all five; the dear one
+costs 130 and comes off that faction's own. Three steps can fail -- the advance,
+the city's yard, the building -- and `offered` is read from `buildOptions`,
+which is what the city is actually shown, rather than re-derived from the tech
+list, which would only have reproduced section 174's guess.
+
+| side | cheap: knew / offered / built | dear: knew / offered / built | **cheap learned first** |
+|---|---|---|---|
+| human | 18/18/**14**, 18/18/**18** | 16/13/1, 18/18/3 | **16/16, 18/18** |
+| orc | 18/18/**14**, 18/18/**15** | 2/2/0, 1/0/0 | **2/2, 1/1** |
+| hivekin | 11/11/**1**, 11/11/**1** | 5/5/0, 3/3/0 | **5/5, 3/3** |
+| **unbound** | 9/9/**0**, 8/8/**0** | 13/13/0, 12/12/0 | **0/9, 0/8** |
+| **wandering** | 9/9/**0**, 11/11/**0** | 11/11/0, 13/13/1 | **0/9, 0/11** |
+
+**`knew` equals `offered` in every single row.** Learning the advance always
+puts the building in the yard; nothing anywhere fails at availability. And the
+latecomers *do* learn the cheap advance -- hivekin 22 of 36, wandering 20,
+unbound 17 -- so it is sitting there, offered, in half their games, and they
+raise it **once between them**.
+
+### The mechanism, and it is four lines in `unlockedBuildings`
+
+```ts
+for (const id of player.techs) {
+  const t = TECHS_BY_ID[id];
+  for (const b of t.buildings) ids.add(b);
+}
+return [...ids].map((id) => BUILDINGS[id])
+```
+
+It walks `player.techs` **in the order they were learned** and fills a Set in
+that order. A Set keeps insertion order, so `options.buildings` is ordered by
+*when each advance arrived* -- not by cost, not by the declaration order in
+`buildings.ts`. And step 4 takes the first match:
+
+```ts
+options.buildings.find((b) => b.scienceBonus || b.goldBonus)
+```
+
+**So research order is build priority, permanently.** A side that learns its
+130-shield economy advance before `hammers-of-glory` is locked onto the dear
+building for the rest of the game: the cheap one enters the yard later and
+`find` never reaches it.
+
+### Which the last column measures exactly
+
+**45 of 45 for the three factions that build a library. 0 of 37 for the two
+that never do.** Both seed sets, no overlap, no exceptions.
+
+The Unbound and the Wandering Folk learn their own economy advance first in
+**every game in which they learn both** -- 0 of 17 and 0 of 20 -- and are
+therefore pinned to a 130-shield building, which section 174 measured as above
+the ~120-shield ceiling that production churn imposes on a small, short-lived
+empire. **Two faults in series: locked onto the dear one, and unable to finish
+the dear one.** Either alone would be survivable, and the first is why the
+second ever gets to apply.
+
+### And it explains the Hive differently, which is the check that it is right
+
+The Hive learns the cheap one first in **8 of 8** and still builds one in 1 game
+of 18 -- because its step 4 answers **0.1% to 2.8%** of decisions, starved by
+garrison, expansion and ending works. Its peak shields while building one is
+**57 against a cost of 60**.
+
+So the three factions fail for two different reasons and the counters separate
+them cleanly: the Hive is starved, the other two are mis-ordered. A single
+explanation covering all three would have been the wrong shape.
+
+### Two corrections this cost
+
+- **Section 174's inference is struck**: the cheap building is available in
+  about half their games. The reasoning was *"a plain building with no ending or
+  folly handling to divert it can only be missing if the advance is unlearned"*,
+  which was sound and still wrong, because it assumed `find` would reach the
+  building if it existed. Array order was never checked.
+- **A contradiction I flagged and then dissolved.** Section 174's step-4 picks
+  were `knottedRecord` 100% while the cheap one was offered in half the games,
+  which looked like an inconsistency between two measurements. It was not: both
+  were right, and the expectation that `find` would reach `routeBook` was the
+  thing that was wrong.
+
+### The sibling function sorts, which settles whether anybody meant this
+
+`unlockedUnits`, twelve lines above `unlockedBuildings` in the same file,
+builds its Set the same way and then ends:
+
+```ts
+  .sort((a, b) => a.cost - b.cost);
+```
+
+**`unlockedBuildings` has no sort at all.** The units path was deliberately put
+in cost order and the buildings path was never given the same line. That is an
+omission rather than a decision, and it is why `options.units.find((u) =>
+u.settler)` is safe while `options.buildings.find(...)` is not.
+
+### It is not only step 4
+
+Every first-match read of `options.buildings` is reading research order. There
+are six:
+
+| site | what it picks first by research order |
+|---|---|
+| `ai.ts:1192` | which **content building** calms a city |
+| `ai.ts:1218` | which **ending work** is begun |
+| `ai.ts:1276` | which **supply house** is built |
+| `ai.ts:1317` | **science or gold**, the one measured here |
+| `ai.ts:1318` | which **barracks or wall** |
+| `wants.ts:197` | immune -- it filters by `id` |
+
+So the same fault silently decides four other things, for every faction. None
+of them has been measured, and all of them are fixed by the one missing line.
+
+### The fix, and why it is not applied here
+
+One line: take the cheapest match rather than the first.
+
+```ts
+// instead of .find(...)
+[...options.buildings].filter((b) => b.scienceBonus || b.goldBonus).sort((a, b) => a.cost - b.cost)[0]
+```
+
+It is faction-blind, it is clearly a bug rather than a lever -- nobody designed
+build priority to be research order -- and it is also a balance change to every
+AI in the game, which is this file's whole subject. Section 174 said the obvious
+fix to the churn wants an arm rather than a patch; the same applies here, and
+the two belong in the same sweep because they compound.
+
+**Nothing is shipped.** The counter is, and the mechanism is named.
+
+### Still open
+
+- **The arm.** Cheapest-match against first-match, and the production guard --
+  keep building what you were building -- as a second lever. They compound, so
+  measuring either alone would attribute the other's effect to it.
+- **Why they always learn the dear advance first.** `sigil-bound` is road 135
+  against `hammers-of-glory`'s 155, so for the Unbound the cheaper road is
+  genuinely their own. `signature-mystic` is road **165**, dearer, and the
+  Wandering Folk still take it first -- so for them it is the research plan in
+  `PERSONALITIES`, not cost. Two different causes again, and unmeasured.
+- **Whether a science building is worth having at all.** 0.5 for 60 shields is
+  still untested, and the factions that build one are the ones that live
+  longest, which is section 172's confound.
+- ~~**Whether anything else is ordered this way.**~~ **Counted, above: six
+  sites, five of them live.** Content buildings, ending works, supply houses,
+  economy and defence all take the first match. What that costs is unmeasured
+  for all four of the others.

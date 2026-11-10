@@ -56,6 +56,23 @@ that never learns it is research priority.
 | unbound | **0/18** | 3.9% | **81** | **130** | 222 |
 | wandering | **0/18** | 15.1% | **112** | **130** | 180 |
 
+## the cheap one against the dear one (section 175)
+
+Each faction has two science buildings. The **cheap** one costs 60 and
+comes off `hammers-of-glory`, one shared advance at depth 3 for all five
+factions; the **dear** one costs 130 and comes off that faction’s own.
+Three steps can fail -- learning the advance, the building appearing in a
+city’s yard, and raising it -- and `offered` is read from
+`buildOptions`, which is what the city is actually shown.
+
+| side | cheap: knew / offered / built | dear: knew / offered / built | cheap learned first |
+|---|---|---|---|
+| hivekin | **11** / **11** / **1** | 5 / 5 / 0 | **5/5** | (of 18)
+| human | **18** / **18** / **14** | 16 / 13 / 1 | **16/16** | (of 18)
+| orc | **18** / **18** / **14** | 2 / 2 / 0 | **2/2** | (of 18)
+| unbound | **9** / **9** / **0** | 13 / 13 / 0 | **0/9** | (of 18)
+| wandering | **9** / **9** / **0** | 11 / 11 / 0 | **0/9** | (of 18)
+
 ## which step of chooseProduction answered (section 174)
 
 Every decision each side made, by the step that made it. Step 4 is the
