@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { HELD_OUT_BASES, playGame, seedSet, TUNED_BASES } from './sweep';
 import { control } from './control';
-import { PRODUCTION_TRACE, ROAD_TRACE } from '../src/ai/ai';
+import { AI_TUNING, PRODUCTION_TRACE, ROAD_TRACE } from '../src/ai/ai';
 import {
   cityIncome,
   cityScienceBonus,
@@ -260,12 +260,23 @@ describe('throughput', () => {
     // report name says which, because two runs of this probe over the same
     // seeds differ only in these counters and are otherwise indistinguishable.
     if (process.env.PROBE_FIRST_MATCH === '1') BUILD_ORDER.cheapest = false;
+    // Section 177: and the same for the road-crew budget, so the prediction
+    // recorded before the sweep -- step 3d falling to about 1% of the Unbound's
+    // decisions and roughly halving for the Hive -- can be read against what
+    // the lever actually did, rather than inferred from the sweep's `roads`
+    // column. `budget full` and `would be full` should agree in this arm,
+    // because in it they are the same count.
+    if (process.env.PROBE_ROAD_BY_WORK === '1') AI_TUNING.roadBudgetByWork = true;
     const held = process.env.PROBE_SEEDS === 'held-out';
-    const arm = BUILD_ORDER.cheapest ? '' : '-firstmatch';
+    const arm =
+      (BUILD_ORDER.cheapest ? '' : '-firstmatch') +
+      (AI_TUNING.roadBudgetByWork ? '-diggers' : '');
     // `which` is the seed salt as well as the label, so the arm must not touch
     // it: both arms have to play the same games to be comparable at all.
     const which = held ? 'held-out' : 'tuned';
-    const title = `${which}${BUILD_ORDER.cheapest ? '' : ', first match (section 175)'}`;
+    const title =
+      `${which}${BUILD_ORDER.cheapest ? '' : ', first match (section 175)'}` +
+      `${AI_TUNING.roadBudgetByWork ? ', budget counts diggers (section 177)' : ''}`;
     const perBase = Number(process.env.PROBE_PER_BASE ?? 6);
     const seeds = seedSet(which, held ? HELD_OUT_BASES : TUNED_BASES, perBase).seeds;
 

@@ -16582,5 +16582,84 @@ their trade rides on, and 8-14 diggers do lay a network), and fights.
 `tests/roadBudget.test.ts` locks the asymmetry as data, the lever's contract
 both ways, and the shipped default. It cannot be a failing-first test: the
 lever did not exist before this section, and the behaviour it would assert is
-the behaviour that has not been measured yet. The red test belongs with the
-fix, if the fix ships.
+the behaviour that had not been measured when it was written.
+
+**The arm ran, and the lever shipped.** What follows was written after it.
+
+### The measurement, and what shipped
+
+216 games, two arms, both seed sets. The run printed **"about 54 minutes
+(32-70, depending on how many run to the turn limit)"** and took **70.4**, the
+top of its range.
+
+| arm | set | unfin | turns | fights | caps | **roads** |
+|---|---|---|---|---|---|---|
+| counting founders | tuned | 13 | 256 | 464 | 14.7 | **108** |
+| counting founders | held-out | 7 | 253 | 440 | 13.2 | **105** |
+| counting diggers | tuned | 8 | 252 | 455 | 13.7 | **81** |
+| counting diggers | held-out | 8 | 248 | 437 | 13.1 | **84** |
+
+Wins pooled over 108 games an arm: orc 16 -> 11, human 35 -> 40, hive 23 ->
+25, wandering 3 -> 3, unbound 11 -> 13.
+
+**`AI_TUNING.roadBudgetByWork = true` ships.** Three reasons, in the order
+they carry weight:
+
+- **The step does what it exists for, verified rather than inferred.** A
+  second `ROAD_TRACE` run with the lever on: step 3d falls from **53-57%** of
+  the Unbound's production decisions to **0.8-1.8%**, and from **36-65%** of
+  the Hive's to **3.3-7.4%** -- where the empires have always sat. The Unbound
+  field **1.7-2.2** diggers instead of 11-14. `mean workers` and `mean
+  diggers` are now identical for every faction and `budget full` equals `would
+  be full` in every row, which is the lever's contract read back off a
+  measurement. The sweep's `roads` column agrees independently: **108 and 105
+  down to 81 and 84**.
+- **No faction's balance moves.** Nothing shifted more than five wins in 108,
+  and nothing cleared the two-sets-plus-a-second-column bar. The orc's 16 ->
+  11 agrees on both sets but has no second column behind it -- their units go
+  28.6 -> 25.0 on tuned and 25.6 -> **26.7** on held-out. The human's 35 -> 40
+  is +1 on tuned, and their units and pop fall on *both* sets, which is the
+  wrong direction for a side winning more. The Hive's sets disagree outright.
+- **What did move is the Unbound's position rather than their wins.** Cities
+  **3.09 -> 3.50** and **2.69 -> 3.17**, routes **0.0/0.1 -> 0.2/0.3**, both
+  sets agreeing: the redirected shields become half a city and their first
+  trade routes. Unfinished games 20 -> 16 pooled, turns and fights flat.
+
+No Orcpedia entry: nothing a player can see changes, because the budget is
+read only by `chooseProduction`.
+
+### The prediction that was wrong, and why it was wrong
+
+The Unbound landed on the predicted ~1% to the decimal. **The Hive did not.**
+`would be full` said 49.0 and 86.4%, so the section predicted "roughly
+halved"; the step actually fell to **3.3 and 7.4%**, a fifth to a tenth.
+
+The error is methodological and worth more than the number: `would be full`
+measured the counterfactual **at the broken equilibrium**, where the Hive were
+carrying 3.68-5.95 diggers. Once the budget counts them the equilibrium moves
+to about one, and one is enough to close a budget of one. **A counterfactual
+column read off the distribution the fault produced is a lower bound on how
+much the fix bites, not an estimate of where it settles.**
+
+### Fixture drift: a cascade, not a signal
+
+All three moved, and `late-game.w2c` -- which section 176 did not move at all
+-- went **118 units to 84** and **18 cities to 22**, with 27 of 34 unit-type
+counts changing across all five factions. Expected: the lever changes two
+factions' production from mid-game onward and the RNG is shared, so a 200-turn
+replay reshuffles wholesale. Nothing in it is evidence either way, which is
+the point of having 216 games instead.
+
+### Still open
+
+- **The Unbound peak at 11-12 cities and finish with about three.** Visible in
+  section 176's gate probe and untouched by this: they expand perfectly well
+  and are then ground down. A different problem from this one, with no
+  hypothesis yet.
+- **`SECONDS_PER_GAME` says 15 and this run measured 19.6.** Section 176's 432
+  games averaged 15.3, so one run on a machine I cannot account for is not
+  grounds to re-base the constant -- which is the same mistake as the stale
+  2.92 calibration, pointed the other way. Noted, left.
+- **The stale bar on `fields several kinds of fighter`** (2.92 documented, 5.92
+  measured). Its *timeout* is fixed here; its calibration is still a question
+  about what the test is for.

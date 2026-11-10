@@ -67,11 +67,12 @@ describe('road-crew budget', () => {
     }
   });
 
-  it('ships with the budget counting founders', () => {
-    // Pinned, so turning the lever on is a decision somebody made rather than
-    // a default that drifted. Section 176's sort shipped on 432 games saying
-    // it was worth 0 to 2 wins; this is a much larger redirection and has not
-    // been measured yet.
-    expect(AI_TUNING.roadBudgetByWork).toBe(false);
+  it('ships with the budget counting the unit that digs', () => {
+    // Pinned, so a change to this is a decision somebody made rather than a
+    // default that drifted. Shipped on 216 games over two seed sets: step 3d
+    // fell from 53-57% of the Unbound's production decisions to 0.8-1.8% and
+    // from 36-65% of the Hive's to 3.3-7.4%, with no faction's win share
+    // moving past the noise bar and unfinished games down from 20 to 16.
+    expect(AI_TUNING.roadBudgetByWork).toBe(true);
   });
 });

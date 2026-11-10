@@ -256,7 +256,7 @@ const buildArms = (): Arm[] => {
     },
   });
 
-  return [road('as shipped', false), road('counts diggers', true)];
+  return [road('counts founders', false), road('as shipped', true)];
 };
 
 const ARMS: Arm[] = buildArms();

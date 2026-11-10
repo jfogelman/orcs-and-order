@@ -3016,13 +3016,26 @@ export const AI_TUNING = {
    * something else: the Unbound's reads 0.8 while the field holds 11 to 14
    * diggers, and the step answers more than half their production decisions.
    *
-   * A lever rather than a fix in place, because it is faction-blind in the
-   * code and a balance change to exactly those two AIs -- and because three
-   * obvious repairs in this arc (section 4e's rush-buying, 53's forward bases,
-   * 176's production guard) measured harmful to the sides they were meant to
-   * help.
+   * Measured as an arm before shipping, because three obvious repairs in this
+   * arc (section 4e's rush-buying, 53's forward bases, 176's production guard)
+   * measured harmful to the sides they were meant to help. 216 games, two seed
+   * sets. It ships because:
+   *
+   * - **The step does what it was for.** Step 3d falls from 53-57% of the
+   *   Unbound's production decisions to **0.8-1.8%** and from 36-65% of the
+   *   Hive's to **3.3-7.4%**, landing where the empires have always sat. The
+   *   Unbound field 1.7-2.2 diggers instead of 11-14. The sweep's `roads`
+   *   column agrees independently: 108 and 105 a game down to 81 and 84.
+   * - **Nobody's balance moves.** No faction shifted more than five wins in
+   *   108, and none of the shifts cleared the two-set-plus-second-column bar.
+   *   Unfinished games went 20 to 16 pooled; turns and fights are flat.
+   * - **What did move is the Unbound's position**: cities 3.09 to 3.50 and
+   *   2.69 to 3.17, routes 0.0/0.1 to 0.2/0.3, both sets agreeing. The
+   *   redirected shields turn into half a city and their first trade routes.
+   *
+   * Nothing a player can see changes: this is read only by `chooseProduction`.
    */
-  roadBudgetByWork: false,
+  roadBudgetByWork: true,
   /**
    * Whether a soldier stays in a city whose buildings are waiting on one.
    *
