@@ -2854,6 +2854,26 @@ function chooseResearch(state: GameState, player: Player, personality: AiPersona
  */
 export const AI_TUNING = {
   /**
+   * Whether a city part-way through a building keeps at it. Section 176.
+   *
+   * **Off is the game as measured.** See the call site in `aiTurn` for the
+   * mechanism and section 174 for the figures. In short: production is
+   * re-chosen every turn, step 4 commits on a 40% roll, and a completing unit
+   * spends the shields a building was accumulating -- so a small or
+   * short-lived empire has a ceiling of roughly 120 shields on anything it can
+   * ever finish, whatever its income says.
+   *
+   * It compounds with `BUILD_ORDER.cheapest`, which is why both are levers and
+   * why the sweep is a 2x2: the ordering fault points two factions at a
+   * 130-shield building, and this fault is what makes 130 unreachable. Fixing
+   * either alone would be credited with the other's effect.
+   *
+   * **This is the kind of obvious repair this file has measured and rejected
+   * before** -- section 4e's rush-buying and section 53's forward bases both
+   * looked this reasonable -- so it ships only if it measures.
+   */
+  keepBuilding: false,
+  /**
    * Whether a shared folly is preferred over one of its own. Section 111.
    *
    * A shared folly is the only building in the game somebody else can take from
@@ -3185,6 +3205,26 @@ export function runAiTurn(state: GameState, playerId: number): void {
 
   const frontier = frontierTiles(state, player);
   for (const city of playerCities(state, playerId)) {
+    // Section 176: a city that is part-way through a building keeps at it.
+    //
+    // Off is the game as measured. `chooseProduction` is re-run here every turn
+    // for every city and its answer overwrites whatever was under way, and step
+    // 4 only commits on a 40% roll -- so a city holds a building for about two
+    // turns in five and spends the shields on a soldier in between, because a
+    // completing unit takes them out of the same pool. Section 174 measured the
+    // ceiling that puts on what can ever be finished: the Unbound and the
+    // Wandering Folk bank 112 and 118 shields toward a 130-shield building and
+    // the Hive stalls at 57 of 60.
+    //
+    // Deliberately narrow. Only a **building**, only one already paid into, and
+    // only while it is still on offer -- so a city is never stuck on something
+    // captured out from under it, already built elsewhere, or no longer legal.
+    // Units are left alone: they are cheap, they finish, and a city that will
+    // not stop making a soldier is a different and worse bug.
+    if (AI_TUNING.keepBuilding && city.producing.kind === 'building' && city.shields > 0) {
+      const id = city.producing.id;
+      if (buildOptions(state, city).buildings.some((b) => b.id === id)) continue;
+    }
     city.producing = chooseProduction(state, city, personality);
   }
   if (AI_TUNING.rushBuying) spendGold(state, player);

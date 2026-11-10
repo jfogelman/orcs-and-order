@@ -24,7 +24,7 @@ import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { RUINS } from '../src/sim/ruins';
 import { HIVE_ENDING, HIVEKIN } from '../src/sim/hivekin';
-import { ENDING_ROAD } from '../src/sim/research';
+import { BUILD_ORDER, ENDING_ROAD } from '../src/sim/research';
 import { ARRIVALS } from '../src/sim/arrivals';
 import { TECHS_BY_ID } from '../src/model/techs';
 import { PREY } from '../src/sim/barbarians';
@@ -102,6 +102,11 @@ export const control = () => {
   // because it is instrumentation and a probe that wants it says so; emptied
   // because the counts are module state and would otherwise pool across two
   // arms of the same run and read as one.
+  // Section 176: both halves of the build-choice fault at the game as
+  // measured. Pinned here rather than left to the arms, because the control
+  // arm has to be the shipped game and these are two independent switches.
+  BUILD_ORDER.cheapest = true;
+  AI_TUNING.keepBuilding = false;
   PRODUCTION_TRACE.on = false;
   for (const k of Object.keys(PRODUCTION_TRACE.counts)) delete PRODUCTION_TRACE.counts[k];
   // Section 136: and the Hive opens able to build a fighter, as both empires

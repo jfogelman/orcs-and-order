@@ -5,7 +5,8 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { ENDING_ROAD } from '../src/sim/research';
+import { BUILD_ORDER } from '../src/sim/research';
+import { AI_TUNING } from '../src/ai/ai';
 
 /**
  * The question this sweep is currently asking.
@@ -153,15 +154,66 @@ const buildArms = (): Arm[] => {
    * The road is `65 + 100 x multiplier`: `all-is-the-hive` costs 100 of its
    * own and its prerequisites sum to 65.
    */
-  const road = (label: string, mult: number): Arm => ({
+  /**
+   * ## Section 176: the two halves of the build-choice fault, as a 2x2
+   *
+   * The road ladder above is spent -- section 172 measured it inert. Sections
+   * 174 and 175 then found two faults in how a city decides what to build, and
+   * they are in series:
+   *
+   * - **`BUILD_ORDER.cheapest`.** `unlockedBuildings` returns buildings in the
+   *   order their advances were learned, because it fills a Set by walking
+   *   `player.techs`. Five rules take the *first match* over that list, so
+   *   research order silently decides which content building, ending work,
+   *   supply house, economy building and barracks every AI builds. Measured in
+   *   one of the five: cheap-learned-first is **45/45** for the three factions
+   *   that build a library and **0/37** for the two that never do. The sibling
+   *   `unlockedUnits` sorts by cost and this function never got the line.
+   * - **`AI_TUNING.keepBuilding`.** Production is re-chosen every turn and step
+   *   4 commits on a 40% roll, so a city holds a building two turns in five and
+   *   a completing unit spends the shields in between. Section 174 measured the
+   *   ceiling: 112 and 118 shields banked toward a 130-shield building, and the
+   *   Hive stalling at 57 of 60.
+   *
+   * **Four arms rather than three, which is 432 games and the reason for it.**
+   * The ordering fault points two factions at a 130-shield building; the churn
+   * fault is what makes 130 unreachable. Fix the order alone and they are
+   * pointed at a 60-shield building they can finish. Fix the churn alone and
+   * they can finish the 130 one. Either arm alone would be credited with the
+   * other's effect, and a three-arm ladder cannot separate them. `attribution-
+   * needs-the-same-bar`, applied before the measurement instead of after.
+   *
+   * ## What would count
+   *
+   * `cheapest` is the one with a prediction attached: the Unbound and the
+   * Wandering Folk should start building libraries at all, from 0 and 1 of 36.
+   * If that column does not move, section 175's mechanism is wrong.
+   *
+   * `keepBuilding` has **no prediction and is the one to be suspicious of**.
+   * Section 4e's rush-buying and section 53's forward bases were both repairs
+   * this obvious and both measured as harmful or inert. A guard that makes
+   * every empire finish more buildings also makes the Kingdom finish more
+   * buildings, and the Kingdom is already on 31.5%.
+   *
+   * The column to watch beside the win shares is **unfinished games**: both
+   * levers move shields out of soldiers and into buildings, and section 160
+   * retired a measured gain for costing a third of all games to the turn limit.
+   */
+  const build = (label: string, cheapest: boolean, keep: boolean): Arm => ({
     label,
     apply: () => {
       control();
-      ENDING_ROAD.hivekin = mult;
+      BUILD_ORDER.cheapest = cheapest;
+      AI_TUNING.keepBuilding = keep;
     },
   });
 
-  return [road('as shipped', 1), road('twice the road', 2.35), road('horde parity', 3.65)];
+  return [
+    build('as shipped', false, false),
+    build('cheapest first', true, false),
+    build('keep building', false, true),
+    build('both', true, true),
+  ];
 };
 
 const ARMS: Arm[] = buildArms();

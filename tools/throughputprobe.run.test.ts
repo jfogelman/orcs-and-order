@@ -10,7 +10,8 @@ import {
   contentLimit,
   productionCostIn,
 } from '../src/sim/city';
-import { researchableTechs, TRADE_STEPS } from '../src/sim/research';
+import { BUILD_ORDER, researchableTechs, TRADE_STEPS } from '../src/sim/research';
+import { buildOptions } from '../src/sim/city';
 import { BUILDINGS } from '../src/model/buildings';
 import { TECHS } from '../src/model/techs';
 import { playerCities } from '../src/sim/gamestate';
@@ -123,6 +124,31 @@ interface Tally {
   builtScience: number;
   heldScienceAtEnd: number;
   /**
+   * Section 175, split cheap against dear. Each is: knew the unlocking
+   * advance, had the building offered in a city's yard, and raised one.
+   * `offered` is the column section 174 could not see -- it is the difference
+   * between "never learned it" and "learned it and it still never appeared".
+   */
+  cheapKnew: number;
+  cheapOffered: number;
+  cheapBuilt: number;
+  dearKnew: number;
+  dearOffered: number;
+  dearBuilt: number;
+  /**
+   * Games where both advances were learned, and of those, how often the
+   * **cheap** one was learned first.
+   *
+   * `unlockedBuildings` walks `player.techs` in the order they were learned and
+   * fills a Set in that order, so `options.buildings` is ordered by *when the
+   * advance arrived*, not by cost -- and step 4's `find` stops at the first
+   * match. A faction that learns its 130-shield economy advance first is
+   * locked onto that building forever, even after the 60-shield one reaches
+   * the yard. This is the counter for that.
+   */
+  bothKnown: number;
+  cheapFirst: number;
+  /**
    * City-turns with a science building selected, and the most shields any of
    * their cities ever banked. Section 174: step 4 picks their science building
    * 100% of the time and they finish it in 1 game of 36, so the question is
@@ -167,6 +193,14 @@ function blank(): Tally {
     knewAdvance: 0,
     builtScience: 0,
     heldScienceAtEnd: 0,
+    cheapKnew: 0,
+    cheapOffered: 0,
+    cheapBuilt: 0,
+    dearKnew: 0,
+    dearOffered: 0,
+    dearBuilt: 0,
+    bothKnown: 0,
+    cheapFirst: 0,
     sciSelected: 0,
     peakShields: 0,
     peakShieldsWhileSci: 0,
@@ -183,11 +217,33 @@ function mean(xs: number[]): number {
 
 /** This faction's science buildings, read off the data rather than listed. */
 function sciIds(faction: string): Set<string> {
-  return new Set(
-    Object.values(BUILDINGS)
-      .filter((b) => (b.faction === faction || b.faction === 'both') && !!b.scienceBonus)
-      .map((b) => b.id),
-  );
+  return new Set(sciBuildings(faction).map((b) => b.id));
+}
+
+/** Both of them, cheapest first. Every faction has exactly two. */
+function sciBuildings(faction: string) {
+  return Object.values(BUILDINGS)
+    .filter((b) => (b.faction === faction || b.faction === 'both') && !!b.scienceBonus)
+    .sort((a, b) => a.cost - b.cost);
+}
+
+/**
+ * Section 175: the advance that opens one, if any one advance does.
+ *
+ * Section 174 left exactly one step inferred rather than measured. It found the
+ * Unbound and the Wandering Folk picking their **130-shield** science building
+ * 100% of the time and never finishing it, and reasoned that the 60-shield one
+ * must therefore not be in their options -- which, for a plain building with no
+ * ending or folly handling to divert it, can only mean the advance is unlearned.
+ *
+ * All five factions' cheap one comes off `hammers-of-glory`, a shared advance at
+ * depth 3 and road 155, which the two empires learn in 18 games of 18. If the
+ * latecomers do not, the fix is research priority. If they do, then something
+ * else keeps a learned building out of the yard and section 174's reasoning was
+ * wrong.
+ */
+function unlockOf(buildingId: string): string | null {
+  return TECHS.find((t) => t.buildings.includes(buildingId))?.id ?? null;
 }
 
 describe('throughput', () => {
@@ -195,8 +251,17 @@ describe('throughput', () => {
     control();
     // Section 174. After `control()`, which pins it off and empties it.
     PRODUCTION_TRACE.on = true;
+    // Section 176. Cheapest-first shipped, so the default run is the shipped
+    // game and `PROBE_FIRST_MATCH=1` replays the fault for comparison. The
+    // report name says which, because two runs of this probe over the same
+    // seeds differ only in these counters and are otherwise indistinguishable.
+    if (process.env.PROBE_FIRST_MATCH === '1') BUILD_ORDER.cheapest = false;
     const held = process.env.PROBE_SEEDS === 'held-out';
+    const arm = BUILD_ORDER.cheapest ? '' : '-firstmatch';
+    // `which` is the seed salt as well as the label, so the arm must not touch
+    // it: both arms have to play the same games to be comparable at all.
     const which = held ? 'held-out' : 'tuned';
+    const title = `${which}${BUILD_ORDER.cheapest ? '' : ', first match (section 175)'}`;
     const perBase = Number(process.env.PROBE_PER_BASE ?? 6);
     const seeds = seedSet(which, held ? HELD_OUT_BASES : TUNED_BASES, perBase).seeds;
 
@@ -210,6 +275,8 @@ describe('throughput', () => {
       const seen = new Set<string>();
       /** Factions that held a science building at any point this game. */
       const everBuilt = new Set<string>();
+      /** Section 175, per game: `<faction>|cheap|offered` and friends. */
+      const sawIt = new Set<string>();
       // Distinct game turns each side held a city, because the hook fires
       // several times a turn and a total built from observations is that many
       // times too big.
@@ -233,6 +300,31 @@ describe('throughput', () => {
           // Nothing left to learn, so every beaker from here is banked and
           // wasted. A pure read, like everything else sampled in here.
           if (researchableTechs(p).length === 0) t.idle += 1;
+
+          // Section 175. Cheap and dear, separately, at the three steps that
+          // can fail: the advance, the yard, the building. `buildOptions` is
+          // the authority on what a city is actually offered -- asking the
+          // tech list would re-derive the same guess section 174 made.
+          const pair = sciBuildings(f);
+          for (let i = 0; i < pair.length; i += 1) {
+            const which = i === 0 ? 'cheap' : 'dear';
+            const def = pair[i];
+            const unlock = unlockOf(def.id);
+            if (unlock && p.techs.includes(unlock)) sawIt.add(`${f}|${which}|knew`);
+            if (cities.some((c) => c.buildings.includes(def.id))) {
+              sawIt.add(`${f}|${which}|built`);
+            }
+            // Last and guarded: `buildOptions` does real work, and this would
+            // otherwise run per city, per faction, four times a turn. Once the
+            // answer is yes for this game it cannot become no.
+            const key = `${f}|${which}|offered`;
+            if (
+              !sawIt.has(key) &&
+              cities.some((c) => buildOptions(s, c).buildings.some((b) => b.id === def.id))
+            ) {
+              sawIt.add(key);
+            }
+          }
           // **Ever built, watched as it happens.** The first version of this
           // asked the end state, which only sees cities the side still holds
           // -- and the two factions it was asked about are the two that lose
@@ -282,6 +374,24 @@ describe('throughput', () => {
         // Watched during play, not read off the end state -- see the note at
         // the sampling site.
         if (everBuilt.has(p.faction as string)) t.builtScience += 1;
+        // Section 175's nine counters, folded in once per game.
+        const fx = p.faction as string;
+        if (sawIt.has(`${fx}|cheap|knew`)) t.cheapKnew += 1;
+        if (sawIt.has(`${fx}|cheap|offered`)) t.cheapOffered += 1;
+        if (sawIt.has(`${fx}|cheap|built`)) t.cheapBuilt += 1;
+        if (sawIt.has(`${fx}|dear|knew`)) t.dearKnew += 1;
+        if (sawIt.has(`${fx}|dear|offered`)) t.dearOffered += 1;
+        if (sawIt.has(`${fx}|dear|built`)) t.dearBuilt += 1;
+        // Learned-order, off the end state: `p.techs` is the order they came.
+        const two = sciBuildings(fx);
+        if (two.length === 2) {
+          const ci = p.techs.indexOf(unlockOf(two[0].id) as never);
+          const di = p.techs.indexOf(unlockOf(two[1].id) as never);
+          if (ci >= 0 && di >= 0) {
+            t.bothKnown += 1;
+            if (ci < di) t.cheapFirst += 1;
+          }
+        }
         if (playerCities(end, p.id).some((c) => c.buildings.some((b) => ids.has(b)))) {
           t.heldScienceAtEnd += 1;
         }
@@ -294,7 +404,7 @@ describe('throughput', () => {
     const perCity = (f: string, n: number) => (by[f].cityTurns ? n / by[f].cityTurns : 0);
 
     const report = [
-      `# throughput, ${which} (${games} games, ${perBase} a base)`,
+      `# throughput, ${title} (${games} games, ${perBase} a base)`,
       '',
       `Sampled per half-turn, over player-turns in which the side held at least`,
       `one city. Rates are out of ${TRADE_STEPS} steps.`,
@@ -371,6 +481,26 @@ describe('throughput', () => {
         );
       }),
       '',
+      '## the cheap one against the dear one (section 175)',
+      '',
+      'Each faction has two science buildings. The **cheap** one costs 60 and',
+      'comes off `hammers-of-glory`, one shared advance at depth 3 for all five',
+      'factions; the **dear** one costs 130 and comes off that faction’s own.',
+      'Three steps can fail -- learning the advance, the building appearing in a',
+      'city’s yard, and raising it -- and `offered` is read from',
+      '`buildOptions`, which is what the city is actually shown.',
+      '',
+      '| side | cheap: knew / offered / built | dear: knew / offered / built | cheap learned first |',
+      '|---|---|---|---|',
+      ...sides.map((f) => {
+        const t = by[f];
+        return (
+          `| ${f} | **${t.cheapKnew}** / **${t.cheapOffered}** / ` +
+          `**${t.cheapBuilt}** | ${t.dearKnew} / ${t.dearOffered} / ` +
+          `${t.dearBuilt} | **${t.cheapFirst}/${t.bothKnown}** | (of ${t.games})`
+        );
+      }),
+      '',
       '## which step of chooseProduction answered (section 174)',
       '',
       'Every decision each side made, by the step that made it. Step 4 is the',
@@ -434,7 +564,7 @@ describe('throughput', () => {
     ].join('\n');
 
     writeFileSync(
-      held ? 'tools/out/throughput-held-out.md' : 'tools/out/throughput.md',
+      `tools/out/throughput${held ? '-held-out' : ''}${arm}.md`,
       `${report}\n`,
       'utf8',
     );
