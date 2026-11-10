@@ -91,6 +91,27 @@ describe('the AI builds an army rather than a single unit type', () => {
     // past.
     //
     // Measured when this was set: 2.92 on the code before slice 4, 2.67 after.
+    //
+    // **Re-based in section 177, and the bar is 4.0.** The game now scores
+    // `4, 7, 2, 11, 3, 4, 6, 3, 9, 11, 10, 2` over these twelve seeds -- mean
+    // **6.0**, min 2, max 11 -- so the documented 2.92 above was stale by
+    // better than a factor of two and a bar of 2.5 could not see variety
+    // halving. Section 135 widened the roster and the measurement roughly
+    // doubled with it; nothing re-read the bar at the time.
+    //
+    // 4.0 rather than something tighter, which is the whole argument: **the
+    // number this test measures moves by whole kinds for legitimate reasons.**
+    // Section 135's change moved it by 3.0 all by itself, which is six times
+    // the margin a bar at 5.5 would leave. A tripwire half a kind below the
+    // current reading is a tripwire that fails the next time somebody adds a
+    // unit, and the paragraph above is the record of where that ends up. 4.0
+    // catches variety falling by a third, leaves a collapse (near one) failing
+    // by a mile, and does not argue about decimals.
+    //
+    // The seeds play orc against human only (`opponents: ['human']`), so
+    // section 177's own change -- which moves production for the Hive and the
+    // Unbound and nobody else -- cannot reach this measurement. It read 6.0
+    // before and after, as it must.
     const seeds = [
       20260824, 4242, 31337, 90125, 5150, 112358,
       7, 1618, 27182, 86753, 404, 999331,
@@ -103,8 +124,14 @@ describe('the AI builds an army rather than a single unit type', () => {
     // here as a one whatever the mean did. Added while the bar was being
     // re-based, because a tripwire that can only see a mean is a tripwire that
     // argues about decimals -- and the margin above is about two seeds wide.
+    //
+    // Section 177 kept this and did not re-base it, because it states the
+    // collapse directly rather than through an average. It is the tight one
+    // now: two seeds currently score 2, so a single seed losing a single kind
+    // trips it. That is the correct definition of the failure, so if it ever
+    // goes off, read the seeds before touching the assertion.
     expect(Math.min(...counts), where).toBeGreaterThan(1);
-    expect(mean, where).toBeGreaterThanOrEqual(2.5);
+    expect(mean, where).toBeGreaterThanOrEqual(4);
     // Section 177: twelve whole games to turn 140, which needs 46s in a file
     // of its own and measured 123546ms and 120571ms under a loaded suite --
     // against `vitest.config.ts`'s 120_000. Both failures were this timeout
