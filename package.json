@@ -26,7 +26,8 @@
     "endingsprobe": "vitest run --config vitest.sweep.config.ts tools/endingsprobe.run.test.ts",
     "exorcistprobe": "vitest run --config vitest.sweep.config.ts tools/exorcistprobe.run.test.ts",
     "standingprobe": "vitest run --config vitest.sweep.config.ts tools/standingprobe.run.test.ts",
-    "throughput": "vitest run --config vitest.sweep.config.ts tools/throughputprobe.run.test.ts"
+    "throughput": "vitest run --config vitest.sweep.config.ts tools/throughputprobe.run.test.ts",
+    "cityloss": "vitest run --config vitest.sweep.config.ts tools/citylossprobe.run.test.ts"
   },
   "devDependencies": {
     "jsdom": "^30.1.2",

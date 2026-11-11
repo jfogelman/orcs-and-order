@@ -16462,3 +16462,322 @@ Not re-based here, because that is a decision about what the test is for.
   Nothing in this section made it slower; section 135 widened it from six
   seeds to twelve and the runtime grew with it. Left alone here because it is
   shared config and the flake is not this change's, but CI will hit it.
+
+## Section 177: the road-crew budget counts the unit that founds
+
+Section 176's step counter left one thing named and unexplained: step 3d, the
+road crew, answers **17.1%** of the Unbound's production decisions against
+**0.2-0.6%** for the empires, and that is what starves their step 4. I read the
+step and narrowed it to the worker budget **by elimination** -- which is an
+argument, and this arc has already paid twice for arguments that fitted the
+numbers. So the first thing built here is the counter that turns it into a
+measurement.
+
+### What the step does
+
+```ts
+const workers =
+  settlers +                                    // units flagged `settler`
+  playerCities(...).filter((c) => ... unitType(c.producing.id).settler).length;
+const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
+const worker = options.units.find((u) => u.works);   // the unit that DIGS
+if (worker && workers < wanted && (roadWorkToDo(...) || ...)) { ... }
+```
+
+It builds the unit flagged `works` and budgets against the units flagged
+`settler`. Section 136 had already found this seam and fixed two of its three
+sites -- the unit choice above, and the dispatch at `ai.ts:3259`, which reads
+`type.settler || type.works` -- and left the budget reading one flag while the
+step builds the other.
+
+The flag table, off `src/model/units.ts`:
+
+| faction | the digger it builds | cost | `works` | `settler` |
+|---|---|---|---|---|
+| orc | Peon | 20 | yes | **yes** |
+| human | Peasant | 20 | yes | **yes** |
+| wandering | Wanderer | 25 | yes | **yes** |
+| hivekin | **Worker** | **15** | yes | **no** |
+| unbound | **Effigy** | 20 | yes | **no** |
+
+The Hive's Worker is the cheapest unit they own, so section 176's cost sort
+reaches it first every time. The Effigy costs 20, the same as the Domovoi that
+*does* carry both flags, and is declared first -- so a stable sort by cost
+hands `find` the Effigy. Neither faction's road crew is visible to the count
+that is meant to limit it.
+
+### ROAD_TRACE, and three conditions counted where they are evaluated
+
+`PRODUCTION_TRACE` can only see which step *answered*. `ROAD_TRACE` counts each
+of step 3d's conditions at the point it is evaluated, plus `would be full` --
+the same budget read against `works` -- so one run says both what the fault is
+and whether the fix would close it. 72 games, both seed sets, tuned / held-out:
+
+| side | gate open | no digger | budget full | no work | fires | mean workers | mean diggers | would be full |
+|---|---|---|---|---|---|---|---|---|
+| orc | 10778 / 8463 | 0.0% | 98.6 / 98.5% | 0.0 / 0.1% | 1.3 / 1.3% | 1.29 / 1.35 | **1.29 / 1.35** | 98.6 / 98.5% |
+| human | 8956 / 11432 | 0.0% | 98.8 / 98.6% | 0.0 / 0.4% | 1.2 / 1.0% | 1.42 / 1.64 | **1.42 / 1.64** | 98.8 / 98.6% |
+| wandering | 3718 / 5652 | 0.0% | 99.6 / 98.8% | 0.0% | 0.4 / 1.2% | 2.27 / 1.96 | **2.27 / 1.96** | 99.6 / 98.8% |
+| hivekin | 1577 / 1033 | 0.0% | **63.7 / 29.1%** | 0.1 / 5.4% | **36.2 / 65.4%** | 1.49 / 0.61 | **3.68 / 5.95** | 49.0 / 86.4% |
+| unbound | 3158 / 2162 | 0.0% | **42.0 / 46.9%** | 0.5 / 0.0% | **57.5 / 53.1%** | 0.88 / 0.79 | **14.14 / 11.33** | **99.7 / 99.3%** |
+
+**The identity is the proof.** For the three factions whose digger also founds
+cities, `mean workers` and `mean diggers` are the same number to two decimals
+in all six measurements -- they have to be, it is one unit carrying both flags.
+Those three close the budget 98.5-99.6% of the time and fire about 1%. The
+Unbound's budget reads **0.79-0.88** while the field holds **11.33-14.14**
+diggers, and the step answers **more than half** their production decisions.
+
+**And the other two conditions are eliminated by measurement rather than by
+argument.** `no digger` is 0.0% for every faction on both sets; `no work`
+never exceeds 5.4%. Of the step's three conditions only the budget differs
+between factions -- and the Wandering Folk are the control case: thousands of
+decisions reaching the step with work to do, and 0.4-1.2% firing, because
+their flag sits right.
+
+### Two corrections to the diagnosis I gave before the counter
+
+- **"The budget never closes for the Unbound" was wrong.** It closes 42-47% of
+  the time, because they do build Domovoi, which carries both flags. The share
+  comes from the gap between 0.8 counted and 11-14 standing, not from a budget
+  that never fires.
+- **The gate-open figure I reported (78.8-93%) measured the wrong gate.** A
+  throwaway probe had instrumented `cities >= targetCities` alone; the step's
+  outer gate also wants `city.size >= SETTLER.minCitySize` and `bridges`. The
+  Wandering Folk reached the step **zero times** in a six-game smoke, which is
+  how that showed up. That probe's `mean cities` column was also inflated
+  about fourfold by the watch hook firing several times a turn -- the section
+  173 mistake, made again in my own instrument, which is why `ROAD_TRACE`
+  counts only shares of a denominator counted the same way.
+
+A six-game smoke of the real counter also put the Unbound's budget at 84.9%
+full, against 42-47% over 72 games. One base deep is not a measurement.
+
+### The arm, and why it is an arm
+
+`AI_TUNING.roadBudgetByWork` -- one boolean, both halves of the count reading
+the same flag, pinned `false` in `control()` and registered through `AI_TUNING`,
+which the sweep's fingerprint already covers. Two arms, because there is one
+lever and no second fault in series with it.
+
+The prediction is **per faction**, read off `would be full`:
+
+- **Unbound: 99.7 and 99.3%.** Counted by `works` their budget lands exactly
+  where the empires sit, so step 3d should fall from 57% of their decisions to
+  about 1%, and roughly half their production should go somewhere else.
+- **Hive: 49.0 and 86.4%.** Their digger costs 15 and does not survive, so the
+  budget would be full far less often -- expect step 3d roughly halved, not
+  ended.
+
+**No prediction on wins, and that is deliberate.** Section 4e's rush-buying,
+section 53's forward bases and section 176's production guard were all repairs
+this obvious, and all three measured harmful or inert to the sides they were
+meant to help -- twice because the side with the least slack valued flexibility
+over what the repair bought it. This is also not section 176's shape: that sort
+was worth 0-2 wins in 108 and shipped on being *harmless*, where this
+redirects half of one faction's production. Columns to watch beside the win
+shares: unfinished games, the Unbound's cities and routes (roads are what
+their trade rides on, and 8-14 diggers do lay a network), and fights.
+
+`tests/roadBudget.test.ts` locks the asymmetry as data, the lever's contract
+both ways, and the shipped default. It cannot be a failing-first test: the
+lever did not exist before this section, and the behaviour it would assert is
+the behaviour that had not been measured when it was written.
+
+**The arm ran, and the lever shipped.** What follows was written after it.
+
+### The measurement, and what shipped
+
+216 games, two arms, both seed sets. The run printed **"about 54 minutes
+(32-70, depending on how many run to the turn limit)"** and took **70.4**, the
+top of its range.
+
+| arm | set | unfin | turns | fights | caps | **roads** |
+|---|---|---|---|---|---|---|
+| counting founders | tuned | 13 | 256 | 464 | 14.7 | **108** |
+| counting founders | held-out | 7 | 253 | 440 | 13.2 | **105** |
+| counting diggers | tuned | 8 | 252 | 455 | 13.7 | **81** |
+| counting diggers | held-out | 8 | 248 | 437 | 13.1 | **84** |
+
+Wins pooled over 108 games an arm: orc 16 -> 11, human 35 -> 40, hive 23 ->
+25, wandering 3 -> 3, unbound 11 -> 13.
+
+**`AI_TUNING.roadBudgetByWork = true` ships.** Three reasons, in the order
+they carry weight:
+
+- **The step does what it exists for, verified rather than inferred.** A
+  second `ROAD_TRACE` run with the lever on: step 3d falls from **53-57%** of
+  the Unbound's production decisions to **0.8-1.8%**, and from **36-65%** of
+  the Hive's to **3.3-7.4%** -- where the empires have always sat. The Unbound
+  field **1.7-2.2** diggers instead of 11-14. `mean workers` and `mean
+  diggers` are now identical for every faction and `budget full` equals `would
+  be full` in every row, which is the lever's contract read back off a
+  measurement. The sweep's `roads` column agrees independently: **108 and 105
+  down to 81 and 84**.
+- **No faction's balance moves.** Nothing shifted more than five wins in 108,
+  and nothing cleared the two-sets-plus-a-second-column bar. The orc's 16 ->
+  11 agrees on both sets but has no second column behind it -- their units go
+  28.6 -> 25.0 on tuned and 25.6 -> **26.7** on held-out. The human's 35 -> 40
+  is +1 on tuned, and their units and pop fall on *both* sets, which is the
+  wrong direction for a side winning more. The Hive's sets disagree outright.
+- **What did move is the Unbound's position rather than their wins.** Cities
+  **3.09 -> 3.50** and **2.69 -> 3.17**, routes **0.0/0.1 -> 0.2/0.3**, both
+  sets agreeing: the redirected shields become half a city and their first
+  trade routes. Unfinished games 20 -> 16 pooled, turns and fights flat.
+
+No Orcpedia entry: nothing a player can see changes, because the budget is
+read only by `chooseProduction`.
+
+### The prediction that was wrong, and why it was wrong
+
+The Unbound landed on the predicted ~1% to the decimal. **The Hive did not.**
+`would be full` said 49.0 and 86.4%, so the section predicted "roughly
+halved"; the step actually fell to **3.3 and 7.4%**, a fifth to a tenth.
+
+The error is methodological and worth more than the number: `would be full`
+measured the counterfactual **at the broken equilibrium**, where the Hive were
+carrying 3.68-5.95 diggers. Once the budget counts them the equilibrium moves
+to about one, and one is enough to close a budget of one. **A counterfactual
+column read off the distribution the fault produced is a lower bound on how
+much the fix bites, not an estimate of where it settles.**
+
+### Fixture drift: a cascade, not a signal
+
+All three moved, and `late-game.w2c` -- which section 176 did not move at all
+-- went **118 units to 84** and **18 cities to 22**, with 27 of 34 unit-type
+counts changing across all five factions. Expected: the lever changes two
+factions' production from mid-game onward and the RNG is shared, so a 200-turn
+replay reshuffles wholesale. Nothing in it is evidence either way, which is
+the point of having 216 games instead.
+
+### Still open
+
+- **The Unbound peak at 11-12 cities and finish with about three.** Visible in
+  section 176's gate probe and untouched by this: they expand perfectly well
+  and are then ground down. A different problem from this one, with no
+  hypothesis yet.
+- **`SECONDS_PER_GAME` says 15 and this run measured 19.6.** Section 176's 432
+  games averaged 15.3, so one run on a machine I cannot account for is not
+  grounds to re-base the constant -- which is the same mistake as the stale
+  2.92 calibration, pointed the other way. Noted, left.
+- **The stale bar on `fields several kinds of fighter`** (2.92 documented, 5.92
+  measured). Its *timeout* is fixed here; its calibration is still a question
+  about what the test is for.
+
+## Section 178: the Unbound are not ground down, they are a coin flip
+
+Section 177 closed with a claim of mine: *"the Unbound peak at 11-12 cities and
+finish with about three -- they expand fine and are then ground down."* **That
+was wrong, and the way it was wrong is worth recording before the numbers.**
+The 11-12 came from a column headed **max** cities in section 177's throwaway
+gate probe, and I set it against a **mean** final. A maximum against a mean is
+not a trend, it is two different questions, and four sections of this arc had
+quietly inherited the resulting story.
+
+`tools/citylossprobe.run.test.ts`, 18 games a seed set, reports in
+`tools/out/cityloss*.md`. Losses are detected by comparing owner maps between
+watch-hook calls -- not read from the log, which trims at about 400 entries and
+undercounts worst in exactly the busiest games.
+
+### What is actually there
+
+| side | mean peak (T/H) | mean final | drop | eliminated |
+|---|---|---|---|---|
+| orc | 7.2 / 6.7 | 5.5 / 4.6 | 1.7 / 2.1 | 2 / 2 of 18 |
+| human | 7.9 / 9.0 | 6.5 / 8.2 | 1.4 / 0.8 | 2 / 0 |
+| hivekin | 5.7 / 6.0 | 3.7 / 3.0 | 2.0 / 3.0 | 3 / 4 |
+| wandering | 4.3 / 5.6 | 2.4 / 3.9 | 1.9 / 1.7 | **9 / 9** |
+| unbound | 5.3 / 5.0 | 3.7 / 3.6 | **1.6 / 1.4** | **9 / 8** |
+
+The Unbound's mean peak is **5.0-5.3**, not 11, and their peak-to-final drop is
+**the smallest in the game**. They are not ground down. The Hive are: 2.0 and
+3.0 off their peak, losing **6.3 and 10.4 cities a game** with **88-92%** of
+them cities they founded themselves.
+
+**What the latecomers do instead is die outright, about half the time**, where
+the empires almost never do. And a mean final that folds in nine zeroes is
+mostly reporting that death rate rather than how big a side gets. Split:
+
+| unbound | tuned | held-out |
+|---|---|---|
+| survived | 9 of 18 | 10 of 18 |
+| final, survivors | **7.3** mean / 6.0 median | **6.4** / 6.0 |
+| peak, survivors | 8.1 / 7.0 | 7.3 / 7.0 |
+| peak, **eliminated** | 2.6 / **2.0** | 2.1 / **1.0** |
+| elim turn | 104 / **79** / 49 earliest | 99 / **72** / 54 |
+| before turn 100 | 6 of 8 | 5 of 7 |
+
+**So they are bimodal, not weak.** When the Unbound survive they end on 6 to 7
+cities, which is second only to the Kingdom. When they do not, they never got
+going at all -- a median peak of **two cities on tuned and one on held-out**.
+There is no middle case, and no grinding down: the games are decided by whether
+they establish, and decided early.
+
+### The slot, and the part the slot does not explain
+
+Section 160 found the arrival slot beats the faction, and this is the same
+finding with a sharper edge. For **both** factions that actually get eliminated,
+on **both** seed sets -- four cells out of four -- the games that ended in
+elimination had **later** arrival slots than the games the side survived:
+
+| side, set | `due`, survived | `due`, eliminated | gap |
+|---|---|---|---|
+| unbound, tuned | 29 / 26 (n=9) | 47 / 61 (n=9) | **+18** |
+| unbound, held-out | 41 / 39 (n=10) | 52 / 57 (n=8) | **+11** |
+| wandering, tuned | 33 / 36 (n=9) | 43 / 42 (n=9) | **+10** |
+| wandering, held-out | 24 / 20 (n=9) | 40 / 39 (n=9) | **+16** |
+
+The Hive, which is rarely eliminated, points both ways (46 to 40 on tuned,
+37 to 44 on held-out) at n of 3 and 4, which is no signal at all. Four cells
+agreeing in direction at 10-18 turns is the strongest thing in this section.
+
+**But the slot cannot be the whole story, and the lifespan column is why.**
+Elimination turn minus arrival turn has a median of **25 turns on tuned and 14
+on held-out, with a minimum of 5 on both**. A side that is gone five turns after
+it arrives is not dying because it arrived late. A late slot raises the risk;
+arriving at all is what is fragile.
+
+Two things rule out a scheduling bug as the explanation: `came` minus `due` is
+**0.0 in every game on both sets**, so the stagger does exactly what it says;
+and `due` spans **14 to 66**, so section 160's `latecomers` shuffle is genuinely
+rotating the seats rather than handing the Unbound turn 60 as it did in every
+game this project measured before section 160.
+
+### Incidental findings, two of them dead code
+
+- **Raiders have never taken a city.** Not in any game, with the raiders setting
+  on *or* off -- the probe was run both ways. Raider-held towns returned to a
+  founder: **0**. Deleted with no founder: **0**.
+- **`abandonSeat` never fires.** The Hive abandoning its seat is 0.0 a game for
+  every faction in every run.
+- **Razing is about half of every faction's losses**, and the mean size of a
+  lost city is about 3. A capture that would leave nobody alive razes instead,
+  so small cities are being *destroyed* rather than changing hands -- which
+  removes them from the game rather than transferring them, and is why the
+  capture columns do not sum to the loss columns.
+- **The Unbound are not passive.** They take 2.7 cities a game by capture,
+  third behind the Horde's 4.4 and the Kingdom's 3.5, and they take more from
+  the Wandering Folk (1.2) than anyone takes from anyone else in that table.
+
+### What this makes the next question
+
+Not *when* a latecomer arrives -- section 160 measured that and shipped the
+shuffle -- but **what it arrives with**. A five-turn lifespan is a side that
+appears next to two empires sixty turns into their development and has nothing.
+The levers are the founder count, the escort, and the shields budget section 157
+turned the escort into; `HIVEKIN.founders` and `HIVEKIN.escort` are the existing
+shape of that dial for one faction and there is no equivalent for the other two.
+
+Unmeasured and worth saying out loud: nothing here establishes that a bigger
+arrival would help. The three obvious repairs in the preceding arc -- section
+4e's rush-buying, 53's forward bases and 176's production guard -- all measured
+harmful or inert to the sides they were built for. This wants an arm.
+
+### Limits of this section
+
+Every conditional cell is n of 10 or fewer and several are n of 2 or 3; the
+report states each n beside its column. The two sets disagree outright on the
+Wandering Folk's lifespan (median 30 against 106) and on their final-cities
+figure (4.9 against 7.9), so neither is averaged here. Nothing in this section
+is a tested difference. It is a shape, and the shape is consistent across both
+sets where it matters.

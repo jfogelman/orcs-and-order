@@ -1113,6 +1113,31 @@ function step(player: Player, tag: string, choice: ProductionItem): ProductionIt
   return choice;
 }
 
+/**
+ * Section 177: inside the road-crew step, which of its three conditions says no.
+ *
+ * `PRODUCTION_TRACE` can only see which step *answered*, and the question here
+ * is about a step that answers far too often for two factions and never for
+ * three. The share alone does not say why: the outer gate, the digger's
+ * existence and the worker budget are three separate conditions, and I had
+ * narrowed it to the budget by elimination -- which is an argument, not a
+ * measurement. This counts each condition where it is actually evaluated.
+ *
+ * It also carries `would be full`, the same budget read with the count the
+ * step arguably meant -- units flagged `works` rather than `settler` -- so one
+ * run says both whether the budget is the culprit and whether counting
+ * diggers would close it.
+ */
+export const ROAD_TRACE: { on: boolean; counts: Record<string, number> } = {
+  on: false,
+  counts: {},
+};
+
+function roadTally(player: Player, tag: string, n = 1): void {
+  const key = `${player.faction}|${tag}`;
+  ROAD_TRACE.counts[key] = (ROAD_TRACE.counts[key] ?? 0) + n;
+}
+
 export function chooseProduction(
   state: GameState,
   city: City,
@@ -1289,10 +1314,15 @@ export function chooseProduction(
     city.size >= SETTLER.minCitySize &&
     hasFlag(owner, 'bridges')
   ) {
+    // Section 177: by the flag that digs, or by the flag that founds. Both
+    // halves have to read the same flag, or a city would count what it is
+    // building differently from what is already standing.
+    const inBudget = (id: string): boolean =>
+      AI_TUNING.roadBudgetByWork ? unitType(id).works === true : unitType(id).settler === true;
     const workers =
-      settlers +
+      allUnitsOf(state, city.owner).filter((u) => inBudget(u.type)).length +
       playerCities(state, city.owner).filter(
-        (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).settler,
+        (c) => c.id !== city.id && c.producing.kind === 'unit' && inBudget(c.producing.id),
       ).length;
     const wanted = Math.max(1, Math.floor(cities / AI_TUNING.citiesPerRoadWorker));
     // The one that digs, not the one that founds. For the two empires they are
@@ -1300,13 +1330,35 @@ export function chooseProduction(
     // **Grub** -- their founder, and the expensive one -- every time the AI
     // wanted a road crew.
     const worker = options.units.find((u) => u.works);
-    if (
-      worker &&
-      workers < wanted &&
+    // Same condition as before, named so the counter below can report which
+    // half of it said no. The predicates are still only reached when there is
+    // a digger to build and room in the budget for it.
+    const underBudget = workers < wanted;
+    const work =
+      worker !== undefined &&
+      underBudget &&
       (roadWorkToDo(state, city.owner) ||
         (AI_TUNING.buildPosts && postWorkToDo(state, city.owner)) ||
-        improveWorkToDo(state, city.owner))
-    ) {
+        improveWorkToDo(state, city.owner));
+    if (ROAD_TRACE.on) {
+      // Instrumentation only: the budget as it would read if it counted the
+      // unit that digs instead of the unit that founds.
+      const diggers =
+        allUnitsOf(state, city.owner).filter((u) => unitType(u.type).works).length +
+        playerCities(state, city.owner).filter(
+          (c) => c.id !== city.id && c.producing.kind === 'unit' && unitType(c.producing.id).works,
+        ).length;
+      roadTally(owner, 'gate open');
+      roadTally(owner, 'sum workers', workers);
+      roadTally(owner, 'sum diggers', diggers);
+      roadTally(owner, 'sum wanted', wanted);
+      if (diggers >= wanted) roadTally(owner, 'would be full');
+      roadTally(
+        owner,
+        !worker ? 'no digger' : !underBudget ? 'budget full' : work ? 'fires' : 'no work',
+      );
+    }
+    if (worker && work) {
       return step(owner, '3d road crew', { kind: 'unit', id: worker.id });
     }
   }
@@ -2952,6 +3004,38 @@ export const AI_TUNING = {
   buildRoads: true,
   /** Cities per road worker the AI keeps once expansion is done. */
   citiesPerRoadWorker: 4,
+  /**
+   * Whether that budget counts the unit that digs or the unit that founds.
+   *
+   * Section 177. The step builds `options.units.find((u) => u.works)` and then
+   * budgets against units flagged `settler`, which for the two empires and the
+   * Wandering Folk is the same unit -- `ROAD_TRACE` measures their two counts
+   * as identical to two decimals, so the budget closes 98.5 to 99.6% of the
+   * time and the step fires about 1%. The Hive's Worker and the Unbound's
+   * Effigy are `works` and not `settler`, so for them the budget counts
+   * something else: the Unbound's reads 0.8 while the field holds 11 to 14
+   * diggers, and the step answers more than half their production decisions.
+   *
+   * Measured as an arm before shipping, because three obvious repairs in this
+   * arc (section 4e's rush-buying, 53's forward bases, 176's production guard)
+   * measured harmful to the sides they were meant to help. 216 games, two seed
+   * sets. It ships because:
+   *
+   * - **The step does what it was for.** Step 3d falls from 53-57% of the
+   *   Unbound's production decisions to **0.8-1.8%** and from 36-65% of the
+   *   Hive's to **3.3-7.4%**, landing where the empires have always sat. The
+   *   Unbound field 1.7-2.2 diggers instead of 11-14. The sweep's `roads`
+   *   column agrees independently: 108 and 105 a game down to 81 and 84.
+   * - **Nobody's balance moves.** No faction shifted more than five wins in
+   *   108, and none of the shifts cleared the two-set-plus-second-column bar.
+   *   Unfinished games went 20 to 16 pooled; turns and fights are flat.
+   * - **What did move is the Unbound's position**: cities 3.09 to 3.50 and
+   *   2.69 to 3.17, routes 0.0/0.1 to 0.2/0.3, both sets agreeing. The
+   *   redirected shields turn into half a city and their first trade routes.
+   *
+   * Nothing a player can see changes: this is read only by `chooseProduction`.
+   */
+  roadBudgetByWork: true,
   /**
    * Whether a soldier stays in a city whose buildings are waiting on one.
    *

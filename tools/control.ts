@@ -12,7 +12,7 @@
  * A probe that contradicts a sweep should be a finding about the game, never a
  * finding about which file you ran it from. One definition, imported by both.
  */
-import { AI_TUNING, PERSONALITIES, PRODUCTION_TRACE } from '../src/ai/ai';
+import { AI_TUNING, PERSONALITIES, PRODUCTION_TRACE, ROAD_TRACE } from '../src/ai/ai';
 import { CALM, POSTING } from '../src/sim/city';
 import { TRADE } from '../src/sim/trade';
 import { PILLAGE } from '../src/sim/roads';
@@ -55,6 +55,10 @@ export const control = () => {
   AI_TUNING.calmRateAtLimit = 1;
   AI_TUNING.buildRoads = true;
   AI_TUNING.citiesPerRoadWorker = 4;
+  // Section 177: and the road-crew budget counting the unit that digs, which
+  // shipped on 216 games. Pinned here, like every lever above, or a later
+  // probe measures a game that is not the one that ships.
+  AI_TUNING.roadBudgetByWork = true;
   AI_TUNING.guardTheGold = true;
   POSTING.enabled = false;
   SPECIALS.chance = 0.06;
@@ -109,6 +113,9 @@ export const control = () => {
   AI_TUNING.keepBuilding = false;
   PRODUCTION_TRACE.on = false;
   for (const k of Object.keys(PRODUCTION_TRACE.counts)) delete PRODUCTION_TRACE.counts[k];
+  // Section 177: and the road-crew counter, for the same two reasons.
+  ROAD_TRACE.on = false;
+  for (const k of Object.keys(ROAD_TRACE.counts)) delete ROAD_TRACE.counts[k];
   // Section 136: and the Hive opens able to build a fighter, as both empires
   // always have. Pinned here so an arm that is not asking about it inherits
   // the shipped game rather than whatever the previous arm left behind.

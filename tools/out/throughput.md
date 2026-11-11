@@ -96,3 +96,25 @@ can: anything above it answering first is a decision step 4 never sees.
 | orc | treasury 68%, **thinkingRock** 18%, catapult 7%, barracks 3%, bigVault 3%, **biggerRock** 0% |
 | unbound | titheBasin 75%, **sigilStacks** 16%, **wallOfNames** 6%, titheVault 3% |
 | wandering | strongboxWagon 53%, **knottedRecord** 26%, **routeBook** 16%, tollPost 6% |
+
+## inside the road-crew step (section 177)
+
+Step 3d answers 17% of the Unbound’s production decisions and 0.2--0.6%
+of each empire’s. It has three conditions, and the share alone does not
+say which of them differs. These are counted where each is evaluated,
+over the decisions that reached the step with its outer gate open.
+
+`budget full` is `workers < wanted` saying no, where `workers` counts
+units flagged `settler`. `would be full` is the same budget read against
+units flagged `works` -- the ones that actually dig -- which is what the
+step builds. For the empires the two flags sit on one unit and the
+columns should agree; where they disagree, the budget is counting a unit
+the faction never builds.
+
+| side | gate open | no digger | budget full | no work | **fires** | mean workers | mean diggers | mean wanted | **would be full** |
+|---|---|---|---|---|---|---|---|---|---|
+| hivekin | 1577 | 0.0% | **63.7%** | 0.1% | **36.2%** | 1.49 | 3.68 | 1.04 | **49.0%** |
+| human | 8956 | 0.0% | **98.8%** | 0.0% | **1.2%** | 1.42 | 1.42 | 1.25 | **98.8%** |
+| orc | 10778 | 0.0% | **98.6%** | 0.0% | **1.3%** | 1.29 | 1.29 | 1.10 | **98.6%** |
+| unbound | 3158 | 0.0% | **42.0%** | 0.5% | **57.5%** | 0.88 | 14.14 | 1.19 | **99.7%** |
+| wandering | 3718 | 0.0% | **99.6%** | 0.0% | **0.4%** | 2.27 | 2.27 | 1.15 | **99.6%** |

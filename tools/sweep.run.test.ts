@@ -5,7 +5,6 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { BUILD_ORDER } from '../src/sim/research';
 import { AI_TUNING } from '../src/ai/ai';
 
 /**
@@ -199,21 +198,65 @@ const buildArms = (): Arm[] => {
    * levers move shields out of soldiers and into buildings, and section 160
    * retired a measured gain for costing a third of all games to the turn limit.
    */
-  const build = (label: string, cheapest: boolean, keep: boolean): Arm => ({
+  /**
+   * ## Section 177: the road-crew budget, counted by the flag that digs
+   *
+   * Step 3d builds `options.units.find((u) => u.works)` and then budgets
+   * against units flagged `settler`. For the two empires and the Wandering
+   * Folk that is one unit, and `ROAD_TRACE` measures the two counts as
+   * identical to two decimals over 72 games on both seed sets: the budget
+   * closes 98.5 to 99.6% of the time and the step fires about 1%. The Hive's
+   * Worker (15, and the cheapest thing they own, so the cost sort always
+   * reaches it first) and the Unbound's Effigy (20, declared before the
+   * equally-priced Domovoi, so the tie-break takes it) are `works` and not
+   * `settler`. Their budgets therefore count something they rarely build --
+   * the Unbound's reads **0.8** while the field holds **11 to 14** diggers --
+   * and step 3d answers **53 to 57%** of their production decisions against
+   * everyone else's 1%.
+   *
+   * Two arms, not four: there is one lever and no second fault in series with
+   * it.
+   *
+   * ## What would count
+   *
+   * The mechanism is already measured, so this arm is only about the
+   * consequence. `ROAD_TRACE`'s `would be full` column is the prediction, and
+   * it is a *different* prediction per faction:
+   *
+   * - **Unbound 99.7 and 99.3%.** Counted by `works` their budget lands
+   *   exactly where the empires already sit, so step 3d should fall from 57%
+   *   of their decisions to about 1% and roughly half their production should
+   *   go somewhere else. That is a large redirection, not a tidy-up: section
+   *   176 shipped on a change worth 0 to 2 wins in 108, and this is not that
+   *   shape.
+   * - **Hive 49.0 and 86.4%.** Their digger costs 15 and does not survive, so
+   *   the budget would be full far less often. Expect step 3d roughly halved
+   *   rather than ended.
+   *
+   * **No prediction on wins, and that is the point.** Section 4e's
+   * rush-buying, section 53's forward bases and section 176's production guard
+   * were all repairs this obvious, and all three measured harmful or inert to
+   * the sides they were meant to help -- twice because the side with the least
+   * slack valued flexibility over the thing the repair bought it. The Unbound
+   * currently spend half their production on Effigies and finish 1 library in
+   * 36; if the redirected shields go into soldiers that die, this will read as
+   * harmful and should stay off.
+   *
+   * Columns to watch beside the win shares: **unfinished games** (shields
+   * moving out of roads and into anything else), the Unbound's **cities** and
+   * **routes** (roads are what their trade rides on, and 8 to 14 diggers do
+   * lay a network), and **fights** -- the guard in section 176 bought fewer
+   * fights for exactly the two factions it was meant to help.
+   */
+  const road = (label: string, byWork: boolean): Arm => ({
     label,
     apply: () => {
       control();
-      BUILD_ORDER.cheapest = cheapest;
-      AI_TUNING.keepBuilding = keep;
+      AI_TUNING.roadBudgetByWork = byWork;
     },
   });
 
-  return [
-    build('as shipped', false, false),
-    build('cheapest first', true, false),
-    build('keep building', false, true),
-    build('both', true, true),
-  ];
+  return [road('counts founders', false), road('as shipped', true)];
 };
 
 const ARMS: Arm[] = buildArms();
