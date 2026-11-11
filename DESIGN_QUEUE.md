@@ -16663,3 +16663,121 @@ the point of having 216 games instead.
 - **The stale bar on `fields several kinds of fighter`** (2.92 documented, 5.92
   measured). Its *timeout* is fixed here; its calibration is still a question
   about what the test is for.
+
+## Section 178: the Unbound are not ground down, they are a coin flip
+
+Section 177 closed with a claim of mine: *"the Unbound peak at 11-12 cities and
+finish with about three -- they expand fine and are then ground down."* **That
+was wrong, and the way it was wrong is worth recording before the numbers.**
+The 11-12 came from a column headed **max** cities in section 177's throwaway
+gate probe, and I set it against a **mean** final. A maximum against a mean is
+not a trend, it is two different questions, and four sections of this arc had
+quietly inherited the resulting story.
+
+`tools/citylossprobe.run.test.ts`, 18 games a seed set, reports in
+`tools/out/cityloss*.md`. Losses are detected by comparing owner maps between
+watch-hook calls -- not read from the log, which trims at about 400 entries and
+undercounts worst in exactly the busiest games.
+
+### What is actually there
+
+| side | mean peak (T/H) | mean final | drop | eliminated |
+|---|---|---|---|---|
+| orc | 7.2 / 6.7 | 5.5 / 4.6 | 1.7 / 2.1 | 2 / 2 of 18 |
+| human | 7.9 / 9.0 | 6.5 / 8.2 | 1.4 / 0.8 | 2 / 0 |
+| hivekin | 5.7 / 6.0 | 3.7 / 3.0 | 2.0 / 3.0 | 3 / 4 |
+| wandering | 4.3 / 5.6 | 2.4 / 3.9 | 1.9 / 1.7 | **9 / 9** |
+| unbound | 5.3 / 5.0 | 3.7 / 3.6 | **1.6 / 1.4** | **9 / 8** |
+
+The Unbound's mean peak is **5.0-5.3**, not 11, and their peak-to-final drop is
+**the smallest in the game**. They are not ground down. The Hive are: 2.0 and
+3.0 off their peak, losing **6.3 and 10.4 cities a game** with **88-92%** of
+them cities they founded themselves.
+
+**What the latecomers do instead is die outright, about half the time**, where
+the empires almost never do. And a mean final that folds in nine zeroes is
+mostly reporting that death rate rather than how big a side gets. Split:
+
+| unbound | tuned | held-out |
+|---|---|---|
+| survived | 9 of 18 | 10 of 18 |
+| final, survivors | **7.3** mean / 6.0 median | **6.4** / 6.0 |
+| peak, survivors | 8.1 / 7.0 | 7.3 / 7.0 |
+| peak, **eliminated** | 2.6 / **2.0** | 2.1 / **1.0** |
+| elim turn | 104 / **79** / 49 earliest | 99 / **72** / 54 |
+| before turn 100 | 6 of 8 | 5 of 7 |
+
+**So they are bimodal, not weak.** When the Unbound survive they end on 6 to 7
+cities, which is second only to the Kingdom. When they do not, they never got
+going at all -- a median peak of **two cities on tuned and one on held-out**.
+There is no middle case, and no grinding down: the games are decided by whether
+they establish, and decided early.
+
+### The slot, and the part the slot does not explain
+
+Section 160 found the arrival slot beats the faction, and this is the same
+finding with a sharper edge. For **both** factions that actually get eliminated,
+on **both** seed sets -- four cells out of four -- the games that ended in
+elimination had **later** arrival slots than the games the side survived:
+
+| side, set | `due`, survived | `due`, eliminated | gap |
+|---|---|---|---|
+| unbound, tuned | 29 / 26 (n=9) | 47 / 61 (n=9) | **+18** |
+| unbound, held-out | 41 / 39 (n=10) | 52 / 57 (n=8) | **+11** |
+| wandering, tuned | 33 / 36 (n=9) | 43 / 42 (n=9) | **+10** |
+| wandering, held-out | 24 / 20 (n=9) | 40 / 39 (n=9) | **+16** |
+
+The Hive, which is rarely eliminated, points both ways (46 to 40 on tuned,
+37 to 44 on held-out) at n of 3 and 4, which is no signal at all. Four cells
+agreeing in direction at 10-18 turns is the strongest thing in this section.
+
+**But the slot cannot be the whole story, and the lifespan column is why.**
+Elimination turn minus arrival turn has a median of **25 turns on tuned and 14
+on held-out, with a minimum of 5 on both**. A side that is gone five turns after
+it arrives is not dying because it arrived late. A late slot raises the risk;
+arriving at all is what is fragile.
+
+Two things rule out a scheduling bug as the explanation: `came` minus `due` is
+**0.0 in every game on both sets**, so the stagger does exactly what it says;
+and `due` spans **14 to 66**, so section 160's `latecomers` shuffle is genuinely
+rotating the seats rather than handing the Unbound turn 60 as it did in every
+game this project measured before section 160.
+
+### Incidental findings, two of them dead code
+
+- **Raiders have never taken a city.** Not in any game, with the raiders setting
+  on *or* off -- the probe was run both ways. Raider-held towns returned to a
+  founder: **0**. Deleted with no founder: **0**.
+- **`abandonSeat` never fires.** The Hive abandoning its seat is 0.0 a game for
+  every faction in every run.
+- **Razing is about half of every faction's losses**, and the mean size of a
+  lost city is about 3. A capture that would leave nobody alive razes instead,
+  so small cities are being *destroyed* rather than changing hands -- which
+  removes them from the game rather than transferring them, and is why the
+  capture columns do not sum to the loss columns.
+- **The Unbound are not passive.** They take 2.7 cities a game by capture,
+  third behind the Horde's 4.4 and the Kingdom's 3.5, and they take more from
+  the Wandering Folk (1.2) than anyone takes from anyone else in that table.
+
+### What this makes the next question
+
+Not *when* a latecomer arrives -- section 160 measured that and shipped the
+shuffle -- but **what it arrives with**. A five-turn lifespan is a side that
+appears next to two empires sixty turns into their development and has nothing.
+The levers are the founder count, the escort, and the shields budget section 157
+turned the escort into; `HIVEKIN.founders` and `HIVEKIN.escort` are the existing
+shape of that dial for one faction and there is no equivalent for the other two.
+
+Unmeasured and worth saying out loud: nothing here establishes that a bigger
+arrival would help. The three obvious repairs in the preceding arc -- section
+4e's rush-buying, 53's forward bases and 176's production guard -- all measured
+harmful or inert to the sides they were built for. This wants an arm.
+
+### Limits of this section
+
+Every conditional cell is n of 10 or fewer and several are n of 2 or 3; the
+report states each n beside its column. The two sets disagree outright on the
+Wandering Folk's lifespan (median 30 against 106) and on their final-cities
+figure (4.9 against 7.9), so neither is averaged here. Nothing in this section
+is a tested difference. It is a shape, and the shape is consistent across both
+sets where it matters.
