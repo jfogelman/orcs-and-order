@@ -78,6 +78,35 @@ describe('the report counts sides rather than seats', () => {
     expect(rows[0].wins.hivekin).toBeUndefined();
   });
 
+  it('counts the games a side ended with no city, and shows them', () => {
+    // Section 179, and the same lesson as the Hive's missing economy above.
+    // `cities` is a mean, and section 178 found that for the two latecomers it
+    // is mostly reporting how often they are wiped out rather than how big
+    // they get: the Unbound end on zero in 8 or 9 games of 18, and on 6 or 7
+    // when they do not. A mean cannot show a bimodal side, so the arm that
+    // tries to fix it needs a column of its own to move.
+    const rows = summarise([
+      arm('a', [
+        outcome({ sides: ['orc', 'unbound'], cities: { orc: 6, unbound: 0 } }),
+        outcome({ sides: ['orc', 'unbound'], cities: { orc: 5, unbound: 4 } }),
+      ]),
+    ]);
+    expect(rows[0].wipedOut.unbound).toBe(1);
+    // Absent and nil are different facts here too: a side that played every
+    // game and survived every one is a zero, and a side that was not in the
+    // arm has no key at all.
+    expect(rows[0].wipedOut.orc, 'played twice, never wiped out').toBe(0);
+    expect(rows[0].wipedOut.hivekin, 'not in this arm').toBeUndefined();
+    // And the mean it is there to disambiguate still folds the zero in, which
+    // is the whole reason the column is needed rather than a nicety.
+    expect(rows[0].cities.unbound).toBe(2);
+
+    const text = report([
+      arm('a', [outcome({ sides: ['orc', 'unbound'], cities: { orc: 6, unbound: 0 } })]),
+    ]);
+    expect(text, 'the column has to be on the page, not just in the data').toMatch(/gone/);
+  });
+
   it('averages a side over the games it was in, not over the whole arm', () => {
     // **The half of this that is not cosmetic.** Dividing by every game would
     // report a faction present in half of them at half its real size, which

@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { AI_TUNING } from '../src/ai/ai';
+import { HIVEKIN } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -248,15 +248,91 @@ const buildArms = (): Arm[] => {
    * lay a network), and **fights** -- the guard in section 176 bought fewer
    * fights for exactly the two factions it was meant to help.
    */
-  const road = (label: string, byWork: boolean): Arm => ({
+  /**
+   * ## Section 179: what a latecomer arrives with
+   *
+   * Section 178 went looking for the Unbound being ground down and found the
+   * opposite: their peak-to-final drop is the *smallest* in the game, and what
+   * actually happens is that they are **wiped out in 8 or 9 games of 18**,
+   * while when they survive they finish on 6 to 7 cities, second only to the
+   * Kingdom. They are bimodal, and it is decided early -- median elimination
+   * turn 72 to 79, and the games they lose have a median peak of **one or two
+   * cities**. They never establish.
+   *
+   * Section 160 had already found the arrival *slot* beats the faction, and
+   * section 178 confirmed it from a second direction: in all four
+   * faction-by-set cells, the eliminated games drew later slots than the
+   * survived ones, by 10 to 18 turns. But the slot cannot explain a lifespan
+   * whose median is 25 turns and 14 and whose minimum is **5 on both sets**. A
+   * side gone five turns after arriving is not dying of a late slot.
+   *
+   * ## The lever, and the arithmetic that makes it a candidate
+   *
+   * Every latecomer arrives through one routine, `maybeArrive`, governed by
+   * constants that happen to live under `HIVEKIN`: `founders` is a count (2)
+   * and the escort is a **shields budget** since section 157 -- deliberately,
+   * so that "a dearer founder should not mean a lonelier one" while the escort
+   * stays "what it costs". Divided by each faction's own starter:
+   *
+   * | faction | starter | cost | escort at 40 | at 60 | at 80 |
+   * |---|---|---|---|---|---|
+   * | hivekin | fodder | 10 | **4** | 6 | 8 |
+   * | wandering | wf-skirmisher | 13 | **3** | 4 | 6 |
+   * | unbound | revenant | 20 | **2** | 3 | 4 |
+   *
+   * So the faction with the dearest starter arrives with **half the guard the
+   * Hive does** out of an identical budget -- and it is the one that dies
+   * within 5 to 25 turns of arriving, half the time. The Hive, on four bodies,
+   * is wiped out in 3 or 4 games of 18.
+   *
+   * **Three arms, a dose ladder rather than a switch.** 40 is the shipped
+   * game; 60 and 80 are the two readings of "the dearest starter still gets
+   * three or four". A ladder because a monotone response across three doses is
+   * evidence and a single better arm is a coin landing the right way up --
+   * section 172 spent a whole section learning that from a two-arm ladder that
+   * turned out to be flat.
+   *
+   * ## What would count
+   *
+   * The column is **`gone`**, added to the report in this section: games a
+   * side ended holding no city. The sweep has reported `cities` as a mean
+   * since the beginning and could not see this at all, which is why section
+   * 178 needed a probe of its own to find it. The Unbound sit at 8 or 9 of 18.
+   * If a bigger guard is the answer, that falls and their `cities` mean rises
+   * *because* the zeroes leave it, not because the survivors get bigger.
+   *
+   * **No prediction on wins, and a specific reason to distrust the obvious
+   * one.** This is the fourth repair in this arc that looked obvious: section
+   * 4e's rush-buying, 53's forward bases and 176's production guard all
+   * measured harmful or inert to the sides they were built for, twice because
+   * the side with the least slack valued flexibility over what the repair
+   * bought it.
+   *
+   * **And the attribution is confounded by design, which has to be said
+   * plainly.** A shared budget moves all three latecomers: the Hive goes from
+   * four bodies to six and eight, and it is already on an even win share after
+   * section 161. So an improvement in the Unbound cannot be cleanly separated
+   * from a board where every latecomer arrives stronger. The design that
+   * *would* isolate it is a floor on bodies rather than a bigger budget --
+   * `Math.max(3, floor(shields / cost))` -- which leaves the cheap-starter
+   * factions exactly where they are. That is a different design claim, so it
+   * is not smuggled in here; if this ladder moves the `gone` column, the floor
+   * is the arm that says whose guard did it.
+   *
+   * Columns to watch beside `gone`: the **Hive's** win share and cities, since
+   * it gains most in absolute bodies; **unfinished games**, because a side
+   * that survives instead of dying is a side still playing at the turn limit;
+   * and **fights**, which rose the last time more soldiers appeared on the map.
+   */
+  const escort = (label: string, shields: number): Arm => ({
     label,
     apply: () => {
       control();
-      AI_TUNING.roadBudgetByWork = byWork;
+      HIVEKIN.escortShields = shields;
     },
   });
 
-  return [road('counts founders', false), road('as shipped', true)];
+  return [escort('as shipped (40)', 40), escort('60 shields', 60), escort('80 shields', 80)];
 };
 
 const ARMS: Arm[] = buildArms();
