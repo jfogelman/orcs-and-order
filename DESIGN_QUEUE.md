@@ -16781,3 +16781,207 @@ Wandering Folk's lifespan (median 30 against 106) and on their final-cities
 figure (4.9 against 7.9), so neither is averaged here. Nothing in this section
 is a tested difference. It is a shape, and the shape is consistent across both
 sets where it matters.
+
+## 179. The escort budget, answered the other way round: the Unbound stop being wiped out at four bodies
+
+324 games, three arms, two seed sets, the shipped default seating. The sweep's
+own estimate was *"about 81 minutes (49-105, depending on how many run to the
+turn limit)"*; it took **97.3 minutes at 18.0s a game**. Outside the estimate
+and near the top of the stated range, and not a clean comparison this time: the
+run overlapped the end of a suite pass for its first few minutes. The 15s in
+`SECONDS_PER_GAME` is now wrong in the same direction for the third sweep
+running.
+
+Section 178 asked what a latecomer *arrives with*, having found that the
+Unbound are not ground down but wiped out -- 8 or 9 games of 18, and 6 or 7
+cities when they survive. Since section 157 the escort is a shields budget
+divided by each faction's own starter, so the three latecomers arrive behind
+very different guards:
+
+| | starter | cost | **40 (shipped)** | 60 | 80 |
+|---|---|---|---|---|---|
+| Hivekin | Fodder-caste | 10 | **4** | 6 | 8 |
+| Wandering Folk | Skirmisher | 13 | **3** | 4 | 6 |
+| Unbound | Revenant | 20 | **2** | 3 | 4 |
+
+### The column the arm was built for, and it moved
+
+Games a side ended holding no city, out of 54 an arm and seed set. Every one of
+the five factions was in every one of the 324 games, so these are rates out of
+54 with nothing to adjust for.
+
+| gone | 40 | 60 | **80** |
+|---|---|---|---|
+| Unbound, tuned | 26 | 22 | **19** |
+| Unbound, held-out | 30 | 30 | **22** |
+| **pooled /108** | **56 (52%)** | 52 | **41 (38%)** |
+
+Non-increasing in both sets. Paired by seed -- the same 108 maps in every arm,
+one map a game -- 40 against 80 is **21 games rescued against 6 lost, exact
+McNemar p = 0.006**; held-out alone is p = 0.039 and tuned alone p = 0.12, the
+same direction in both. Unpaired on the pooled totals it is p = 0.055, which is
+the figure to quote if the pairing is doubted; the pairing is sound here because
+seed fixes the map and the arrival schedule.
+
+Three further Unbound columns move with it, both sets agreeing: cities 3.50 /
+3.17 → **4.00 / 4.06**, units 31.1 / 25.6 → **34.2 / 36.3**, advances 13.6 /
+13.4 → **16.6 / 16.2**. That is the bar `sweep-noise-at-108-games` sets, met on
+the column the arm existed to move.
+
+### And it is composition, not strength -- which is what `gone` was added to show
+
+Conditioning on the games they survived, the Unbound end **smaller**:
+
+| Unbound, survivors only | 40 | 80 |
+|---|---|---|
+| n | 28 / 24 | **35 / 32** |
+| cities | 6.75 / 7.12 | **6.17 / 6.84** |
+| population | 48.2 / 49.0 | 44.9 / 47.7 |
+| advances | 22.1 / 25.3 | 23.1 / 25.7 |
+
+Every headline rise above is the zeroes leaving the mean. The arm converts dead
+games into live, slightly-smaller ones; it does not make a surviving Unbound
+empire better at anything. **This is the whole case for the column.** Read off
+`cities` alone, 3.50 → 4.00 looks like a side getting stronger, and it is a side
+dying less often while its survivors get a little worse.
+
+Wins agree that nothing got stronger: the Unbound take 13 → 13 → **16** of 108,
+which at that rate is indistinguishable from chance
+(`attribution-needs-the-same-bar`), and is not quoted as a gain.
+
+### Section 159 ran this arm and reported no
+
+This is the uncomfortable part. Section 159 swept 26 / 40 / **90** shields on
+this harness, and 90 shields buys 9 / 6 / **4** -- for the two sides that matter
+here, *the same arm as 80*. It shipped 40 and wrote the lever off, because at 90
+the Wandering Folk went down on four columns in both sets and the Hive went up
+on four.
+
+Neither of those reproduced. The Wandering Folk at 80 against 40: cities 3.13 /
+2.24 → 3.20 / 3.13, population 23.4 / 17.8 → 24.2 / 24.7, units 15.8 / 10.2 →
+17.1 / 16.2, recruiting 36% / 25% → 38% / 33% -- flat to up on all four, which
+is section 159's finding with the sign reversed. The Hive's wins are 25 → 31 →
+26 of 108 against section 159's monotone 37 → 40 → 42, and its `gone` does not
+move in either direction (24 → 19 → 22, p = 0.87). The board is not the one
+section 159 measured: section 160 shipped the `latecomers` shuffle -- which
+section 159 itself named as the Wandering Folk's real problem -- and 161, 163
+and 174-177 followed.
+
+What section 159 could not have seen either way is the Unbound's elimination
+rate, because `gone` did not exist and `cities` is a mean. It quoted their wins
+(2 → 3 → 0 of 108) and nothing else, and wins are the one column this arm does
+not move. **That is the third time a number the report does not print has cost
+a section**: section 125's missing hive ending, section 140's fourteen sections
+of missing Hive economy, and now a lever rejected while the column it moves was
+off the page.
+
+### What the 60 arm says, and why it is not a finding
+
+The Wandering Folk's best arm is 60, not 80: `gone` 65 → **53** → 60 of 108,
+paired p = 0.029 at 60, with cities, population and units up in both sets. By
+the usual bar that is a result. Three things argue against believing it:
+
+- It is not monotone. 3 bodies → 4 helps, 3 → 6 does nothing.
+- Section 159's own probe compared **2** bodies against **6** for this faction
+  on a subset of these same seeds and found 5 of 18 standing either way.
+  Together with this run, that is "2 and 6 alike, 4 better", which is a bump,
+  and a bump across three sections is more often a false positive than a
+  mechanism.
+- It is one cell of six faction-by-arm comparisons. The bar in
+  `sweep-noise-at-108-games` was written for a pre-specified column, not for
+  the best of six.
+
+So: unresolved, and worth a note rather than a number.
+
+The pattern it *suggests* -- noticed after the fact, and said plainly as
+post-hoc -- is that **four bodies is a threshold and shields are not the
+dial**. Each faction improves exactly at the arm that puts it on four (the
+Wandering at 60, the Unbound at 80), the Hive sits on four or more in every arm
+and never moves, and the Unbound's 3-body arm does nothing at all. The design
+that tests this is a floor on bodies rather than a bigger budget, and it is a
+different claim, not smuggled in here.
+
+### What it costs, and the cost is the reason not to ship it
+
+Raising a *shared* budget to fix one faction inflates all three, and the board
+stops resolving:
+
+| of 108 | 40 | 60 | **80** |
+|---|---|---|---|
+| ran out of turns | **16** | 22 | **28** |
+| Kingdom wins | **40** | 29 | **28** |
+| dominance endings | 22 | 13 | 13 |
+
+Unfinished games paired 40 → 80 is **18 against 6, p = 0.023**; the Kingdom's
+wins are 21 against 9, p = 0.043. A quarter of games not finishing is a real
+cost twice over: the harness's own warning says those games are not draws and
+every number above is short of them, and a game nobody can close is worse to
+play than an uneven one.
+
+The two are connected, and only partly. Pooled over all 324 games, the chance a
+game runs out of turns is set almost entirely by how many sides are still
+holding cities at the end:
+
+| sides left standing | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|
+| games | 34 | 122 | 127 | 41 |
+| ran out of turns | **0%** | 5% | 26% | **66%** |
+
+The arm moves that distribution the wrong way -- mean sides standing 3.44 →
+3.59, four-survivor games 37 → 47 of 108 -- but only by about two games of the
+twelve. The rest is within strata: four-survivor games went 9/37 unfinished to
+16/47, five-survivor 7/14 to 10/13, both on small n. So the clock is not what
+rescues the Unbound (of the 41 games they ended with nothing, 2 were unfinished,
+the same 2 as at 40 shields); it is that a board where more latecomers survive
+is a board nobody has the army to finish, and that is the cost of buying
+survival with a shared budget rather than a targeted one.
+
+It would be easy to read the win table as balance arriving:
+
+| wins /108 | orc | Kingdom | Hive | Wandering | Unbound | unfinished | spread |
+|---|---|---|---|---|---|---|---|
+| 40 | 11 | **40** | 25 | 3 | 13 | 16 | 37 |
+| 60 | 8 | 29 | 31 | 5 | 13 | 22 | 26 |
+| 80 | 7 | 28 | 26 | 3 | 16 | 28 | 25 |
+
+The spread falls 37 → 25, and almost all of it is the unfinished column
+absorbing the Kingdom's twelve lost wins. The Wandering Folk are on 3 at both
+ends and the orcs lose four. **More even here mostly means less decided**, and
+that is the kind of improvement that looks good in a table and bad on a
+Saturday.
+
+### What I would ship: not this
+
+Not 80 shields. The finding is real and the route to it is wasteful -- the Hive
+goes from four bodies to eight to buy the Unbound their third and fourth, and
+the Hive is the faction that moves least in this entire run. The confounding was
+recorded before the run was started and it is now load-bearing: nothing here
+separates "the Unbound arrive with a guard" from "every latecomer arrives with a
+guard, so no latecomer can be finished off" -- and the unfinished column says
+the second is happening.
+
+The next arm is a **floor on escort bodies at the shipped 40**, which is worth
+being honest about: 40 shields buys at most four of the cheapest starter, so a
+floor of four is "everybody arrives with four" with the budget kept as a ceiling
+for a future expensive starter. It keeps what section 157 was actually for --
+the class is priced, faction six needs no entry, the hand-maintained list stays
+retired -- and it gives the Hive nothing it does not already have, which is the
+arm this run says to run. It does not contradict section 125 either: two was
+measured for the Hive, "three and four add almost nothing" was measured for the
+Hive, and the Hive is the one faction already at four.
+
+### Limits of this section
+
+- Three arms, 108 games each. The effect size on the column that moved is 15
+  games of 108; a second column agreeing in both sets is the only reason it is
+  stated at all.
+- Every p-value here is one of about a dozen computed on this run and none are
+  corrected. The Unbound's 0.006 survives any correction worth applying; the
+  Wandering's 0.029 does not, which is why it is written up as unresolved.
+- The arms differ in *three* factions' arrival packages at once. No part of this
+  run can attribute an effect to one faction's guard.
+- 26% of the 80-shield arm ran out of turns, and those games are missing from
+  every mean in it. `gone` is not one of them, which was worth checking rather
+  than assuming: of the 41 games the Unbound ended with no city, **2 were
+  unfinished**, the same 2 as at 40 shields. The rescued games are not hiding in
+  the unfinished bucket.
