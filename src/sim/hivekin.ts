@@ -107,6 +107,36 @@ export const HIVEKIN = {
    */
   escortShields: 40,
   /**
+   * Fewest escort a latecomer may arrive with, whatever its starter costs.
+   * Section 179. **One, which is the budget's own old floor, so this ships
+   * inert.**
+   *
+   * Section 179 swept the budget at 40 / 60 / 80 and found the thing section
+   * 159 could not see: the Unbound's *elimination rate* falls, 56 games of 108
+   * ending with no city to 41, paired 21 rescued against 6 lost, p = 0.006.
+   * It is not that they get stronger -- conditioned on surviving they end
+   * slightly **smaller** -- it is that two Revenants is not enough to hold the
+   * ground and four is.
+   *
+   * **The budget is the wrong dial for that.** Reaching four Revenants by
+   * raising a shared budget to 80 also takes the Hive from four bodies to
+   * eight, and the Hive is the faction that moves least in the whole run,
+   * while the board stops resolving: 16 games of 108 out of turns to 28,
+   * p = 0.023. A floor reaches the same four and gives the Hive nothing it
+   * does not already have.
+   *
+   * This is section 157's own reasoning about *founders* applied to the
+   * escort. It kept founders a count because "a dearer founder should not
+   * mean a lonelier one"; the escort was made a budget because what holds
+   * ground is worth pricing. Both are true, and a floor is where they meet --
+   * the budget still prices the class, faction six still needs no entry here,
+   * and nobody arrives below the count that can hold a spot.
+   *
+   * Note what it is *not*: an override. A cheap starter above the floor keeps
+   * every body its budget buys, so this only ever lifts the dear end.
+   */
+  escortFloor: 1,
+  /**
    * Turns of grace before anything may attack them.
    *
    * They arrive with two Fodder-caste and a Grub. Anything standing nearby
@@ -419,7 +449,12 @@ export function maybeArrive(state: GameState): void {
   // should not mean a lonelier one. The escort is what has to hold the ground
   // and is therefore what is worth measuring in what it costs.
   const escortCost = Math.max(1, unitType(def.starterUnit).cost);
-  const escort = Math.max(1, Math.floor(HIVEKIN.escortShields / escortCost));
+  // Section 179: the floor is the dear end of the same rule, and it defaults
+  // to the 1 this line already had.
+  const escort = Math.max(
+    HIVEKIN.escortFloor,
+    Math.floor(HIVEKIN.escortShields / escortCost),
+  );
   const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + escort);
   around.forEach(([x, y], n) => {
     const type = n < HIVEKIN.founders - 1 ? def.settlerUnit : def.starterUnit;

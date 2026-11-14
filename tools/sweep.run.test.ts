@@ -324,15 +324,79 @@ const buildArms = (): Arm[] => {
    * that survives instead of dying is a side still playing at the turn limit;
    * and **fights**, which rose the last time more soldiers appeared on the map.
    */
-  const escort = (label: string, shields: number): Arm => ({
+  /**
+   * ## Section 179b: the same four bodies, bought the other way
+   *
+   * The ladder above ran. The column moved: the Unbound ended with no city in
+   * **56 games of 108 at 40 shields and 41 at 80**, non-increasing in both
+   * sets, paired by seed 21 rescued against 6 lost, exact McNemar **p =
+   * 0.006**. Conditioned on surviving they end slightly *smaller*, so it is an
+   * elimination result and not a strength one -- which is exactly what `gone`
+   * was added to be able to say.
+   *
+   * **And the route to it was wasteful.** 80 shields takes the Hive from four
+   * bodies to eight, and the Hive is the faction that moves least in the whole
+   * run (`gone` 24 → 19 → 22, p = 0.87; wins 25 → 31 → 26). Meanwhile the
+   * board stops resolving: games out of turns 16 → 22 → **28** of 108, paired
+   * p = 0.023, and pooled over all 324 games the chance of running out is set
+   * almost entirely by how many sides are still standing -- 0% at two, 5% at
+   * three, 26% at four, **66% at five**.
+   *
+   * So this arm buys the same four Revenants with a **floor on bodies** at the
+   * shipped budget, which is section 157's own reasoning about founders -- "a
+   * dearer founder should not mean a lonelier one" -- applied to the escort,
+   * and keeps what the budget was for: the class is priced, the dear end has a
+   * minimum, faction six still needs no entry.
+   *
+   * | faction | starter | cost | **shipped** | floor 4 | floor 6 |
+   * |---|---|---|---|---|---|
+   * | hivekin | fodder | 10 | **4** | 4 | 6 |
+   * | wandering | wf-skirmisher | 13 | **3** | 4 | 6 |
+   * | unbound | revenant | 20 | **2** | 4 | 6 |
+   *
+   * **The middle arm is the one that discriminates**, and it does what 80
+   * shields could not: it moves the Unbound to four and the Hive not at all.
+   * Written down before the run, because it is the whole reason to spend
+   * another 97 minutes:
+   *
+   * - If **four bodies** is what the Unbound were missing, floor 4 reproduces
+   *   most of the `gone` drop -- 56 towards 41 of 108 -- while the unfinished
+   *   column stays near 16 rather than going to 28.
+   * - If what actually happened at 80 was **every latecomer arriving
+   *   stronger**, floor 4 moves `gone` far less, because two of the three
+   *   factions barely change.
+   * - Either way the Hive is the control: it is on four in both of the first
+   *   two arms, so anything that moves for it between them is noise, and the
+   *   run carries its own noise estimate for once.
+   *
+   * Floor 6 is there because 80 shields was not a clean reading of "more is
+   * better" either -- it is the dose arm, and if the unfinished cost comes
+   * back at floor 6 with the Hive back up at six bodies, that is a second
+   * pointer at whose guard was buying it.
+   *
+   * It also re-asks the one cell section 179 left unresolved. The Wandering
+   * Folk's best arm there was 60 shields -- four bodies, `gone` 65 → 53 of
+   * 108, p = 0.029, with cities, population and units up in both sets -- but
+   * it broke monotonicity (3 → 6 bodies did nothing), section 159's own probe
+   * found 2 and 6 bodies alike for them, and it was the best of six cells. It
+   * was written up as unresolved. Floor 4 puts them on four again on the same
+   * 108 maps, which is an independent test of that cell rather than a
+   * re-reading of it.
+   *
+   * **Three bodies is not an arm**, and that is a saving rather than an
+   * omission: a floor of 3 only changes the Unbound, from two to three, and
+   * the 60-shield arm already measured the Unbound at three bodies as inert
+   * (52 of 108 against 56, paired p = 0.56).
+   */
+  const floor = (label: string, bodies: number): Arm => ({
     label,
     apply: () => {
       control();
-      HIVEKIN.escortShields = shields;
+      HIVEKIN.escortFloor = bodies;
     },
   });
 
-  return [escort('as shipped (40)', 40), escort('60 shields', 60), escort('80 shields', 80)];
+  return [floor('as shipped (no floor)', 1), floor('floor of 4', 4), floor('floor of 6', 6)];
 };
 
 const ARMS: Arm[] = buildArms();
@@ -405,6 +469,16 @@ describe('sweep', () => {
     // of exactly 54 -- so it printed its whole table and *then* failed on the
     // timeout. A third seat makes games longer, and a measurement that has to
     // be read out of a failed test is one somebody will eventually throw away.
-    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
+    //
+    // **The floor was raised to twenty minutes in section 179b, because a
+    // smoke run failed on it.** `SWEEP_PER_BASE=1` is 18 games, which scales
+    // to 450s and so used to take the 600s floor -- and the three-arm floor
+    // smoke took **705s, 39.2s a game** against the 18.0s the same code
+    // averaged over 324. A short run pays all of the warm-up and none of the
+    // amortisation, so the floor cannot be a per-game figure at all. It
+    // printed its whole table and then failed, which is the one outcome this
+    // comment already existed to prevent, and a failed smoke is worse than a
+    // slow one: the next person reads it as a broken arm.
+    Math.max(1_200_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
   );
 });

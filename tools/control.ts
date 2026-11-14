@@ -127,6 +127,8 @@ export const control = () => {
   // superseded count. Set here so the probes play the shipped arrival rather
   // than whatever an arm left behind -- which is the whole point of this file.
   HIVEKIN.escortShields = 40;
+  // Section 179: the floor on escort bodies, which ships inert at 1.
+  HIVEKIN.escortFloor = 1;
   // Section 160: the arrival order. Pinned here so a probe plays the shipped
   // order rather than whatever arm ran last, and so flipping the shipped
   // default is one edit in two files rather than a hunt.

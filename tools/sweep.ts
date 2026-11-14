@@ -629,8 +629,19 @@ export interface SweepOptions {
  * 13.4 and 15.7 seconds a game. Same reason as before, one seat further on:
  * three sides take more turns each than two, and almost every game now runs to
  * the limit. At 8 this told Jeremy to expect 29 minutes for a run that took 57.
+ *
+ * **Recalibrated to 18 for section 179b**, off the three 324-game runs since
+ * the fifth faction: 15.2s a game for section 159, **19.6** for 177 and
+ * **18.0** for 179. Fifteen was right for the first of those and has told
+ * Jeremy 81 minutes for the last two runs, which took 106 and 97. The median
+ * of the three is what this is now, and the estimate's own spread (0.6x to
+ * 1.3x) covers the rest.
+ *
+ * It is deliberately a single number for a whole run and not a per-arm one: an
+ * arm that keeps more sides alive plays longer games, which is most of the
+ * variance here and is not knowable before the run.
  */
-export const SECONDS_PER_GAME = 15;
+export const SECONDS_PER_GAME = 18;
 
 export function estimate(games: number): string {
   const mins = (games * SECONDS_PER_GAME) / 60;
