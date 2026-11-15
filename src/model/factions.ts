@@ -49,6 +49,22 @@ export interface FactionDef {
   starterUnit: string;
   cityNames: string[];
   blurb: string;
+  /**
+   * The short list: what playing this side actually changes, in two or three
+   * lines. Section 181.
+   *
+   * **Not the rules.** The Orcpedia carries those in full and is one keypress
+   * away the whole game; this is the thing a player reads *before* there is an
+   * Orcpedia to read, on the picker and again when they first meet somebody.
+   * So it answers one question -- how is this different from the others -- and
+   * stops.
+   *
+   * Required rather than optional on purpose: a sixth faction cannot be added
+   * without somebody deciding what makes it worth picking, which is exactly
+   * the decision that went missing when the Hivekin arrived with no entry in
+   * any roster filter.
+   */
+  differs: string[];
 }
 
 export const FACTIONS: Record<FactionId, FactionDef> = {
@@ -67,6 +83,11 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     blurb:
       'Enormously strong, enormously numerous, and collectively unable to ' +
       'count past four without a research programme.',
+    differs: [
+      'No rule of its own. This is the plain game, played straight.',
+      'The largest roster in the game, and the one that leans hardest to attack: more ways to hit than to hold.',
+      'If you want to be told how a thing works once and then get on with it, this is the side.',
+    ],
     cityNames: [
       'Skullgrind',
       'Bonechew',
@@ -109,6 +130,11 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     blurb:
       'Organised, literate, and in possession of a formal committee process ' +
       'for deciding that two soldiers may stand beside one another.',
+    differs: [
+      'No rule of its own either. The even-handed side.',
+      'Fewer kinds of soldier than the Horde, and steadier ones: they hold about as well as they hit.',
+      'The side that rewards building and sitting still, because nothing in its roster is in a hurry.',
+    ],
     cityNames: [
       'Highmarch',
       'Aldenwatch',
@@ -155,6 +181,11 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     blurb:
       'Patient, numerous, and entirely without ambition, on the grounds that ' +
       'whatever happens next was always going to be what happened next.',
+    differs: [
+      'A Queen who never moves. Lose her and you have a countdown, not a defeat.',
+      'Burrower-castes travel under the ground, so walls and distance mean less to you than to anybody else.',
+      'The weakest soldiers in the game. You are not meant to win the war: your ending is, and it is priced by how long you have had.',
+    ],
     cityNames: [
       'The First Hollow',
       'Second Hollow',
@@ -219,6 +250,11 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     blurb:
       'No homeland, no birthright, and no particular feelings about either. ' +
       'Whatever they have, somebody agreed to hand over.',
+    differs: [
+      'You recruit instead of training: gold turns a rival soldier into yours, raiders included.',
+      'Building your own costs a quarter more than anybody else pays. The cheap path runs through a Caravan that can see the target.',
+      'A recruit joins at your matching tier, so nothing you take beats what you could build.',
+    ],
     // Mine. Every name is a transaction, a direction, or a thing nobody got
     // round to deciding -- which between them is the whole faction.
     cityNames: [
@@ -284,6 +320,11 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     blurb:
       'Died, and then carried on, and have since declined every opportunity ' +
       'to make anything of it. The arrangement suits them.',
+    differs: [
+      'Killed is not gone. Your dead disperse, and given somewhere to stand they re-form.',
+      'Only an exorcism puts one of yours down for good, which is a thing the other sides have to go and learn how to do.',
+      'The fewest kinds of soldier and the cheapest. You lose fights and keep the army.',
+    ],
     // Mine. Every name is a thing that was supposed to be temporary, a thing
     // nobody has got round to, or a place described by what happened there --
     // which between them is the whole faction.

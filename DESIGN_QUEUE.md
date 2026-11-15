@@ -17230,3 +17230,101 @@ before the arm rather than after it:
 
 The second and third of those are reasons the arm wants `gone`, `wins` and
 banked gold read together, not a treasury column on its own.
+
+## 181. The short list: what each side changes, before there is an Orcpedia to read
+
+Jeremy: *"I think we should have a modal popup to explain the high level
+mechanics of each faction where there are differentiators (like recruitment,
+exorcism, etc)"*, and then, on where it goes: *"First contact plus the hover on
+the game picker -- the 'complete rules' in the orcpedia is already there for
+those that want to read about it in full, but I want to have the short list for
+players that are looking for a quick differentiator between factions to decide
+which to play. They will always have the full orcpedia once they've started
+playing."*
+
+That is the whole specification and it settles the thing that would otherwise
+have been got wrong: **this is not the rules.** The Orcpedia has those, in full,
+one keypress away for the entire game. This answers one question -- how is this
+side different from the other four -- and stops.
+
+### What the audit found first, which changes the shape of it
+
+Before writing a word of it, what is actually different per side:
+
+| side | has |
+|---|---|
+| Hivekin | `HIVE_RULES` in the Orcpedia: the Queen, burrowing, the arrival-priced ending |
+| Unbound | `UNBOUND_RULES`: dispersing, re-forming, exorcism |
+| Wandering Folk | Recruit (`recruiting.ts` gates on `faction !== 'wandering'`) -- documented in the **economy** pane, not with the faction |
+| Horde | **nothing** |
+| Kingdom | **nothing** |
+
+Grepped across the sim: there is no branch on `'orc'` or `'human'` outside
+flavour naming, and `endings.ts` records that three `=== 'orc'` were
+deliberately taken out. The two empires differ by roster, advance tree and an
+AI temperament lean, and that is all.
+
+So two of the five entries say *"no rule of its own"*, and that is the honest
+answer rather than a gap to pad. For a player choosing a side it may be the
+single most useful line on the screen.
+
+What the roster audit gave, for the lines that needed a fact rather than a
+feeling (whole tree, unweighted):
+
+| | fighters | attack | defence | cost |
+|---|---|---|---|---|
+| orc | 33 | 7.82 | 4.61 | 57.9 |
+| human | 25 | 6.84 | 5.88 | 52.6 |
+| wandering | 23 | 6.96 | 4.22 | **70.8** |
+| hivekin | 20 | 4.15 | 3.20 | 49.4 |
+| unbound | 13 | 4.46 | 3.46 | 45.5 |
+
+The Horde leans to attack at 1.70 and the Kingdom is nearly square at 1.16,
+which is what *"more ways to hit than to hold"* is standing on. And the
+Wandering Folk having the dearest units in the game is not decoration -- it is
+`recruiting.ts`'s *"Create, the ordinary training path at a quarter more than
+anybody else pays"*, so the two lines in their entry are the same fact from
+both ends.
+
+### Where it lives
+
+`FactionDef.differs: string[]`, **required rather than optional**. A sixth
+faction cannot be added without somebody deciding what makes it worth picking,
+which is the decision that went missing when the Hivekin arrived with no entry
+in any roster filter.
+
+Shown in two places off the one array, so they cannot drift:
+
+- **The picker**, under the Play-as row. Hovering a card shows that side's
+  list; leaving goes back to the chosen side's, suffixed *"-- your pick"*. It
+  opens on the chosen side rather than empty, because a player who has already
+  decided should not have to go hunting to see their own.
+- **First contact**, in the dialog that already exists, under the mood and
+  **above** the two envoys. It was below them at first, which put it under the
+  fold at 1280x900: the one place the information is worth having is the one
+  place nobody would have scrolled to find it.
+
+### The panel has a fixed floor, and a test holds it there
+
+Measured in the running game, the five lists rendered at 99, 99, 116, 151 and
+99 pixels. Sweeping the cards would have shoved the Begin button up and down
+**52 pixels under the cursor**, which is the kind of thing that makes a hover
+panel feel broken rather than informative. The Wandering Folk's entry was
+tightened and the panel floored at 124, and all five now render at exactly
+that.
+
+That floor is only safe while the lists stay about the same size, so it is a
+test rather than a hope: every list is 2 to 4 lines and no line over 135
+characters, checked for every faction in `FACTION_IDS`. A sixth faction with a
+paragraph in it fails that test instead of silently making the dialog jump.
+
+### Checked
+
+- `tests/ui/contact.test.ts`: the dialog shows the met side's lines and **not
+  the player's own** -- showing your own list on meeting somebody is the dialog
+  talking to the wrong side of the table -- plus the length bound above.
+- `tests/ui/picker.test.ts`, new: opens on the chosen side and says so, follows
+  the cursor, goes back on `mouseleave`, follows a change of choice. Each was
+  run against the code with the matching wire cut, and fails there.
+- Driven in the browser besides, which is where the below-the-fold problem and
+  the 52-pixel jump were found. Neither would have failed a test.

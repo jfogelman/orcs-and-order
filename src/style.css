@@ -2483,3 +2483,41 @@ kbd {
 .pedia-zoom-caption[hidden] {
   display: none;
 }
+
+/* ---------------------------------------------- the short list (section 181)
+   Shown under the faction row on the new-game picker, and again in the
+   first-contact dialog. Two places, one block, so they cannot drift apart. */
+.faction-note {
+  margin-top: 8px;
+  padding: 8px 10px;
+  /* Tall enough for the longest of the five at this width, so sweeping the
+     cards does not shove the Begin button up and down under the cursor. */
+  min-height: 124px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--stone-lo);
+}
+
+.faction-note-head {
+  font-family: var(--title-font);
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.faction-note-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: '\2014\00a0';
+}
+
+.faction-note-list li {
+  color: var(--parch);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 3px;
+}
+
+.faction-note-list li:last-child {
+  margin-bottom: 0;
+}
