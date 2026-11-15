@@ -17133,7 +17133,7 @@ the arrival package.
 - 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
   short of every mean in them.
 
-## 180. Tribute is a share of the purse now — BUILT, unmeasured
+## 180. Tribute is a share of the purse now — MEASURED, 324 games
 
 Jeremy, having read section 154's item 1 back: *"Proportional one-off, I assume
 the three factions without mentioning wandering folk was just an error (gold is
@@ -17209,10 +17209,10 @@ Driven in the running game: 600 against 800 gives *pay 60 / pay 120 / demand
 talks and breaking it. It reads the constants rather than restating them, so
 the share, the cap and the floor cannot drift out of the text.
 
-### What is not known
+### What was predicted, before the arm ran
 
-**Nothing here is measured.** No sweep has run. What is predicted, written down
-before the arm rather than after it:
+Kept as written, so the section below can be read against it rather than
+alongside a tidied-up version of it:
 
 - The three dead-gold sides (Hive, Unbound, Wandering Folk) are the ones with
   deep purses and small armies, so they are the side that **pays**. Their
@@ -17229,7 +17229,99 @@ before the arm rather than after it:
   deadest gold is untouched and the band, not the share, is the lever.
 
 The second and third of those are reasons the arm wants `gone`, `wins` and
-banked gold read together, not a treasury column on its own.
+banked gold read together, not a treasury column on its own. (The run could not
+do it: see below. The harness has no treasury column at all.)
+
+### Measured, 324 games
+
+The harness printed its own estimate and it is the one quoted: *"3 arms x 2
+sets. 324 games, about 97 minutes (58-126, depending on how many run to the
+turn limit)."* It finished in **92.5 min, 17.1s a game against SECONDS_PER_GAME
+of 18**.
+
+**The canary passed at full scale.** Arm 1 against section 179c's `as shipped
+(no floor)`: **108 rows compared on the same seeds, 52 data columns each, zero
+differing**. So nothing unpinned leaked into `control()` when TRIBUTE was added,
+and both runs' comparisons stand.
+
+| arm | Horde | Kingdom | Hive | Wandering | Unbound | nobody |
+|---|---|---|---|---|---|---|
+| flat 25 and 30 | 11 | **40** | 25 | 3 | 13 | 16 |
+| a share of the purse | 12 | **31** | 29 | 3 | 14 | 19 |
+| and offered more often | 12 | **30** | 29 | 4 | 15 | 18 |
+
+### The figure moved the game. The band did not.
+
+Paired on 108 maps, the figure step (arm 1 to arm 2) changes the winner on 22 of
+them, and the whole of it lands on one side: **the Kingdom loses 11 and gains 2,
+net -9, p = 0.022**. Nobody else is significant -- the Hive gains 4 at p = 0.29.
+
+It clears the bar this project set for believing a swing. **Both seed sets
+agree**: tuned 18 to 15, held-out 22 to 16. And **a second column moves with
+it**: *points* victories fall **13 to 7** (tuned 5 to 1, held-out 4 to 1),
+dominance 22 to 19, and fights per game fall in both sets (454.9 to 437.5 tuned,
+437.4 to 412.5 held-out).
+
+Those are the war victories, which says what happened without needing a theory
+about it. Of the eleven maps the Kingdom lost: it had been winning **five by
+dominance, four on points, two by Object**, and they went to the Hive (3), the
+Unbound (2), the Horde (2) and **to nobody at all (4)**. Unfinished games rise
+16 to 19.
+
+The band step is **dead**: same winner on 91 of 108 maps, the Kingdom net -1,
+every side p = 1.000. Widening the band to 1.1 / 0.9 offers tribute in more
+treaties and changes no outcome. **It does not ship.** `offersWhenOutmatched`
+stays 1.3 and `demandsWhenAhead` stays 0.8, now measured rather than inherited.
+
+So of the two candidate explanations section 180 was built to separate, it was
+the **figure**, not the band. That is worth more than the result itself: it
+retires the other half of the question instead of leaving it open.
+
+### Is it a balance win? Partly, and one side is untouched.
+
+The Kingdom went into this run at 40 of 92 decided games, nearly half, and the
+clear strongest side. 31 of 89 is a flatter table and the Hive is the main
+beneficiary. But three of the nine wins taken off it **became nobody's**, and a
+game that reaches turn 300 undecided is not a side's win redistributed, it is a
+game that got slower. The honest version is: the top came down, and part of the
+cost was paid in unfinished games rather than to another faction.
+
+**The Wandering Folk did not move: 3, 3, 4.** They are the side Jeremy named as
+the one gold matters most to, and the sink whose figure was just multiplied by
+twenty leaves them exactly where they were. Whatever is wrong at 3 wins in 108,
+the price of a treaty is not it.
+
+### What this run could not read, and that is a setup error
+
+Section 180 pre-registered **banked gold per side, read with `wins` and
+`gone`**, as the first thing to look at -- it is how a drained hoard is told
+from a transfer to the leader. **The harness does not record it.** The sweep's
+gold column is `routeGold`, which is income per turn from trade routes, not
+treasury; section 154's 728-banked figure came from a separate instrumented
+probe, not from a sweep.
+
+So the question the section exists to answer is still open after 92 minutes of
+measurement, and the reason is that the reading was specified for a column that
+was never there. Checking that the pre-registered read is a column the harness
+emits costs one grep, and it was not done.
+
+What that leaves genuinely unknown:
+
+- **Whether the three hoarding sides end with less banked.** Unmeasured. The
+  win shift is consistent with tribute mattering, which is weaker evidence than
+  the number itself.
+- **Whether the Hive is ever billed at all.** Also unmeasured, and the third
+  arm was supposed to answer it from the band side; since the band step is dead
+  in outcomes, it says nothing either way about who pays.
+- **Whether this is a sink or a transfer.** The leader losing wins argues
+  against the registered risk -- a transfer to the strongest side should not
+  cost the strongest side nine wins -- but that is an inference, and the
+  treasury column is what would settle it.
+
+The fix is a treasury column in the sweep record (`gold` per side at the end,
+beside `routeGold`) plus a tribute counter per side: paid, received, and
+billed-at-all. Both are a few lines in `tools/sweep.ts`, and once they exist
+every later gold section gets the reading for free instead of re-earning it.
 
 ## 181. The short list: what each side changes, before there is an Orcpedia to read
 
