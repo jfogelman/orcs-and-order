@@ -118,19 +118,29 @@ export const HIVEKIN = {
    * slightly **smaller** -- it is that two Revenants is not enough to hold the
    * ground and four is.
    *
-   * **The budget is the wrong dial for that.** Reaching four Revenants by
-   * raising a shared budget to 80 also takes the Hive from four bodies to
-   * eight, and the Hive is the faction that moves least in the whole run,
-   * while the board stops resolving: 16 games of 108 out of turns to 28,
-   * p = 0.023. A floor reaches the same four and gives the Hive nothing it
-   * does not already have.
+   * **And section 179c then measured this lever and it does nothing**, which
+   * is why it ships at 1 and why that paragraph above is a measurement rather
+   * than a reason. A floor of 4 puts the Unbound on the same four bodies as
+   * the 80-shield arm, with the Hive left alone -- and their elimination rate
+   * reads 49 games of 108 against that arm's 41, paired p = 0.18 the *wrong*
+   * way. Over five pooled arms there is no relation between the Unbound's own
+   * escort and how often they are wiped out -- two bodies 56 games, three 52,
+   * four 49 *and* 41, six 47 -- while total bodies does line up monotonically
+   * with games that never finish: 16, 21, 22, 24, 28. The cost is lawful, the
+   * benefit is not, and the Hive -- on four bodies in both arms, so its own
+   * control -- moved its cities *more* than the Unbound did.
    *
-   * This is section 157's own reasoning about *founders* applied to the
-   * escort. It kept founders a count because "a dearer founder should not
-   * mean a lonelier one"; the escort was made a budget because what holds
-   * ground is worth pricing. Both are true, and a floor is where they meet --
-   * the budget still prices the class, faction six still needs no entry here,
-   * and nobody arrives below the count that can hold a spot.
+   * So section 179's "two is not enough and four is" is withdrawn as an
+   * explanation and kept as a measurement. Do not raise this without a new
+   * reason; the arm has been run.
+   *
+   * It was built as section 157's own reasoning about *founders* applied to
+   * the escort. That section kept founders a count because "a dearer founder
+   * should not mean a lonelier one", and made the escort a budget because what
+   * holds ground is worth pricing; a floor is where those two meet, and it
+   * keeps both -- the budget still prices the class and faction six still
+   * needs no entry here. The reasoning survives the measurement. It simply
+   * turns out that what the dear end was short of is not bodies.
    *
    * Note what it is *not*: an override. A cheap starter above the floor keeps
    * every body its budget buys, so this only ever lifts the dear end.

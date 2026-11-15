@@ -16784,6 +16784,11 @@ sets where it matters.
 
 ## 179. The escort budget, answered the other way round: the Unbound stop being wiped out at four bodies
 
+> **The reading in this section is withdrawn by section 179c**, which built the
+> arm this one asked for and found no relation between the Unbound's own escort
+> and how often they are wiped out. The measurement below stands; the
+> explanation of it does not. Read both.
+
 324 games, three arms, two seed sets, the shipped default seating. The sweep's
 own estimate was *"about 81 minutes (49-105, depending on how many run to the
 turn limit)"*; it took **97.3 minutes at 18.0s a game**. Outside the estimate
@@ -16985,3 +16990,139 @@ Hive, and the Hive is the one faction already at four.
   than assuming: of the 41 games the Unbound ended with no city, **2 were
   unfinished**, the same 2 as at 40 shields. The rescued games are not hiding in
   the unfinished bucket.
+
+## 179c. The floor came back null, and it takes 179's reading with it
+
+324 games, three arms, two seed sets. The estimate -- recalibrated to 18s a
+game in this section -- said *"about 97 minutes (58-126)"* and it took **114.8
+minutes at 21.3s a game**. Inside the range this time, in the top third, and
+the first run where the harness's own promise and its outcome were the same
+order of thing.
+
+Section 179 measured the Unbound ending with no city in 56 games of 108 at the
+shipped budget and 41 at 80 shields, paired 21 rescued against 6, p = 0.006,
+and read it as *two Revenants is not enough to hold the ground and four is*. It
+also recorded, before the run, that the attribution was confounded by design: 80
+shields doubles the Hive too. This section built the arm that was supposed to
+separate those. **It does not reproduce.**
+
+### The shipped arm came back bit for bit, which is what makes the rest possible
+
+Before anything else: the shipped arm in this run is **identical to the shipped
+arm two days earlier in all 108 games and every column** -- turns, fights,
+captures, map hash, every faction's cities, population, units, advances, routes.
+Zero rows differ.
+
+That is worth more than a reassurance. It means the two runs' arms sit on the
+same 108 maps and can be pooled, so what was three arms and three arms is now
+**five arms in one design**, and the thing section 179 could not do -- hold the
+Unbound's own escort fixed while changing the others -- can be done after all:
+
+| arm | Hive | Wandering | **Unbound** | Unbound `gone` /108 | p vs shipped | ran out of turns |
+|---|---|---|---|---|---|---|
+| as shipped | 4 | 3 | **2** | 56 | -- | 16 |
+| floor of 4 | 4 | 4 | **4** | 49 | 0.25 | 21 |
+| 60 shields | 6 | 4 | **3** | 52 | 0.56 | 22 |
+| floor of 6 | 6 | 6 | **6** | 47 | 0.11 | 24 |
+| 80 shields | 8 | 6 | **4** | 41 | **0.006** | **28** |
+
+### The contrast the arm existed for
+
+**`floor of 4` and `80 shields` give the Unbound the same four bodies.** They
+differ only in what the *other two* latecomers bring. Unbound `gone` is 49
+against 41, and paired by map 80 shields is better by 18 to 10, p = 0.18 --
+nowhere near a difference, but the direction is the wrong one for the
+hypothesis and the hypothesis is the thing being tested. With their own guard
+held constant, the gap between the two best readings of this lever is not
+theirs.
+
+Order the arms by the Unbound's own bodies and there is no relation at all: 2 →
+56, 3 → 52, 4 → **49 and 41**, 6 → 47. The same four bodies reads as a
+seven-game improvement in one arm and a fifteen-game improvement in another.
+
+Order them by *total* bodies arriving on the board and one column lines up
+perfectly -- the cost:
+
+| bodies on the board | 9 | 12 | 13 | 18 | 18 |
+|---|---|---|---|---|---|
+| ran out of turns /108 | **16** | 21 | 22 | 24 | **28** |
+
+**The cost is lawful and the benefit is not.** That is the opposite shape from
+the one a shippable change has.
+
+### The Hive was the control and the control moved more than the subject
+
+Written into the arms before the run: the Hive is on four bodies in *both*
+shipped and `floor of 4`, so anything that moves for it between those two arms
+is the run's own noise-plus-side-effects, measured rather than assumed. It gives
+a yardstick this project has wanted for a long time.
+
+| between shipped and floor-of-4 | `gone` (t / h) | cities (t / h) |
+|---|---|---|
+| **Hivekin** -- lever unchanged | 15 / 9 → 10 / 12 | 2.63 / 3.35 → **3.41 / 2.96** |
+| **Unbound** -- lever doubled | 26 / 30 → 24 / 25 | 3.50 / 3.17 → **3.28 / 3.52** |
+
+The faction whose escort did not change moved its cities by +0.78 and −0.39. The
+faction whose escort went from two bodies to four moved its cities by −0.22 and
++0.35 -- **less than the control, and in disagreeing directions**. Six games of
+108 on `gone` against the control's own three-and-five. By the bar in
+`sweep-noise-at-108-games` that is not a result, and for once the noise estimate
+came out of the same run rather than out of a memory of other runs.
+
+### So nothing ships, and 179's reading is withdrawn
+
+`HIVEKIN.escortFloor` stays at **1**, which is the floor the line always had.
+What section 179 should have said is what this pair of runs says together:
+**four arms out of four move the Unbound's elimination rate mildly downwards,
+one of them clears significance, and the one that clears it is the extreme of
+five with no mechanism that survives holding their guard fixed.** The 56 → 41
+stands as a measurement and no longer stands as an explanation.
+
+This is `attribution-needs-the-same-bar` and `sweep-noise-at-108-games` arriving
+together, and the reason it was catchable at all is that the confound was written
+down *before* the first run rather than discovered in the second.
+
+The lever is kept rather than reverted, for three small reasons and no large
+one: it replaces a magic `1` with a named constant, the test beside it now
+counts units standing on a map where it used to assert `Math.max(1,
+Math.floor(1 / 20))` in the test file, and a starter dearer than the whole
+budget would need it. It is the same reasoning as `HIVEKIN.escort`, kept since
+section 157 as a superseded count.
+
+### What did survive, and it is not nothing
+
+**The Wandering Folk gain from a bigger escort on every arm and both sets, and
+it never saves them.** Cities and units against the shipped 3.13 / 2.24 and
+15.8 / 10.2:
+
+| | floor 4 | 60 shields | floor 6 | 80 shields |
+|---|---|---|---|---|
+| cities (t / h) | 3.80 / 2.65 | 3.89 / 3.15 | 3.70 / 2.65 | 3.20 / 3.13 |
+| units (t / h) | 18.8 / 13.0 | 18.9 / 15.7 | 20.9 / 12.7 | 17.1 / 16.2 |
+
+Sixteen cells of sixteen, up. Meanwhile `gone` is 65 → 59, 53, 58, 60: better in
+all four arms, significant in one (60 shields, p = 0.029, the cell section 179
+left unresolved; `floor of 4` puts them on the same four bodies and reads 12
+better to 6 worse, p = 0.24 -- agreeing in direction and not in strength, so it
+stays unresolved).
+
+That shape is exactly what section 159's probe found by a different route:
+tripling their escort made them die **later**, build more founders, and leave
+exactly as many standing. A bigger arrival makes the Wandering Folk *bigger
+while they last*. Whatever ends them is not what they land with, and this is now
+the third section to say so from a third direction. It belongs in whatever
+section finally takes up their survival, and the lever to stop reaching for is
+the arrival package.
+
+### Limits of this section
+
+- Pooling two runs is licensed by the shipped arm being bit-identical across
+  them, and by nothing else. It would not be licensed if any game had differed.
+- The five arms were not designed as one experiment; they are two three-arm
+  ladders sharing a control. The body counts are badly collinear --
+  `floor of 4` against `80 shields` is the only pair that isolates one faction's
+  guard, and it is a single pair.
+- Every p-value here is one of roughly twenty computed across the two runs and
+  none are corrected. The honest reading of the set is the shape, not any cell.
+- 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
+  short of every mean in them.
