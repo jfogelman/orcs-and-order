@@ -17328,3 +17328,71 @@ paragraph in it fails that test instead of silently making the dialog jump.
   run against the code with the matching wire cut, and fails there.
 - Driven in the browser besides, which is where the below-the-fold problem and
   the 52-pixel jump were found. Neither would have failed a test.
+
+## 182. Playing it on a phone — QUEUED, last
+
+Jeremy, 2026-11-15, placing it himself: *"an item for the end of the queue --
+optimize for playing the game on a device (phone/tablet) since the design
+currently works best with mouse/keyboard, not touch/tap/etc. But that can be at
+the very end of the queue, and doing that work will both help players that want
+to play on the go, and potentially help for any future port we might want to do
+for an app."*
+
+**It is last, and that is his instruction rather than my ranking.** Written
+down now so the shape is not re-derived later, not so it jumps the queue.
+
+### Why it is worth writing down early even though it is last
+
+The second half of his reason is the part that decays if it is left unwritten:
+a touch pass is **also the groundwork for a port**, because the things that
+make a game awkward on a phone are mostly the things that assume a pointer with
+hover, a right button and a keyboard. Every one of those assumptions is cheaper
+to find than to fix, and cheapest of all to stop adding.
+
+Which means this item has a job *before* it is started: anything built between
+now and then should avoid widening the gap where it costs nothing to avoid it.
+
+Section 181 was checked against that rule rather than assumed to fail it, and
+it **passes**: the picker panel is wired on `mouseenter`, but a tap selects the
+card, which fires `change`, which shows that side's list. Driven in the browser
+with a bare `click()` and no mouse event at all -- *"The Hive As It Stands --
+your pick"*. What touch loses is previewing a side without choosing it, and
+that is not a touch concept; tapping through the five costs nothing, since
+nothing is committed until Begin.
+
+Worth keeping because the first draft of this section asserted the opposite and
+was wrong. A hover handler is not automatically a touch bug, and guessing which
+ones are is how an audit produces a list of two hundred things that mostly
+work.
+
+### What is already known to be in the way
+
+Not an audit -- an audit is part of the work -- but what is visible from having
+written the interface:
+
+- **Information that lives only in a `title`.** Eight of them carry real prose
+  rather than a label: what a tile yields and *why* in the city panel's crop
+  grid, a unit's blurb and a structure's blurb in the build list, the mood bar's
+  explanation, a veteran chip's full line in the Orcpedia. A `title` has no tap
+  path at all -- it is not a degraded experience on touch, it is nothing -- and
+  the mood bar already shows the way out, since it carries the same text twice,
+  once as `title` and once as `data-tip`.
+- **The keyboard is a first-class input.** The Orcpedia has a whole *Every key*
+  topic, and B, F, S, N, Space, Enter, V and T are real controls. A phone has
+  none of them, so anything only reachable by key is unreachable.
+- **Right-click and drag.** The map pans by drag and the selection model uses
+  clicks that a touch surface will deliver as taps with slop; `dragMoved` and
+  `lastPointer` in `main.ts` already exist to tell a drag from a click and are
+  the right place to look first.
+- **The canvas is sized for a desktop viewport**, and the side panel, top bar
+  and city panel are laid out beside it rather than over it. A 390-point phone
+  is not a narrow desktop.
+- **Two-finger gestures do not exist.** Pinch to zoom is the one thing every
+  player will try first on a map.
+
+### The cheap thing to do in the meantime
+
+Nothing in this section, but a rule for the sections before it: **when a new
+control is added, give it a tap path at the same time or write down that it has
+none.** The fixing is not the expensive part. Finding out which of two hundred
+interactions quietly assumed a mouse, three years after they were written, is.

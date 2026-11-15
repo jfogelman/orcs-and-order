@@ -6,7 +6,7 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { PEACE, STANDING } from '../src/sim/diplomacy';
+import { PEACE, STANDING, TRIBUTE } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
@@ -136,6 +136,17 @@ export const LEVERS: Record<string, object> = {
   QUEEN,
   PREY,
   PEACE,
+  /**
+   * Section 180: what a treaty carries, and when it carries anything.
+   *
+   * Registered the day the arm was written, and the guard still caught it
+   * first: the smoke run refused `flat 25 and 30` and `a share of the purse`
+   * as one arm run twice, because the fingerprint could not see the setting
+   * that separates them. That is the third time this comment has been written
+   * about a different constant, which is the argument for the rule rather
+   * than against it.
+   */
+  TRIBUTE,
   // Section 135. Both of them, because an arm that moved one and not the other
   // would otherwise be invisible to the identity check below -- which is what
   // happened the first time slice 3's arms were run, and the guard caught it.
