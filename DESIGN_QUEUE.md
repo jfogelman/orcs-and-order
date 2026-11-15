@@ -12301,6 +12301,12 @@ items are not features at all.
 
 ### 1. Gold is still dead, and now it is dead only for the AI
 
+> **Acted on in section 180**, which builds the one option this item's own
+> re-measurement left standing: tribute, as a share of the payer's purse rather
+> than a flat 25. Mercenaries are closed here as measured-and-wrong, bribing a
+> city is untouched, and rush-buying stays retired. Read 180 for what shipped
+> and what it has not yet been measured doing.
+
 Section 4d measured a Horde that banked **475.6 gold a game into nothing** and
 a Kingdom on 189.6 — the Kingdom's lower because it *spends*. Section 4e gave
 gold a sink (rush-buying) and then measured the AI using it as **the worst
@@ -17126,3 +17132,101 @@ the arrival package.
   none are corrected. The honest reading of the set is the shape, not any cell.
 - 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
   short of every mean in them.
+
+## 180. Tribute is a share of the purse now — BUILT, unmeasured
+
+Jeremy, having read section 154's item 1 back: *"Proportional one-off, I assume
+the three factions without mentioning wandering folk was just an error (gold is
+critical to their recruitment capability), build it."* Both rulings are taken:
+the Wandering Folk are the third side with dead gold, and section 154's own
+sentence naming only two was the error.
+
+### What was wrong with the old number
+
+`aiTerms` has priced a treaty the same way since section 135: `min(me.gold, 25)`
+offered when outmatched, `min(them.gold, 30)` demanded when ahead. Those were
+set when the open question was whether gold could move at the table **at all**.
+
+Section 154 measured what the table now sits at. Sides end on **500 to 730
+banked**; the Kingdom banks 728 and spends 952 a game. Against that, 25 gold is
+not a term in anybody's decision -- it is a rounding error -- and section 168
+saw the same fact from the other end as peace terms moving **3 to 49 gold in a
+whole game**.
+
+So the lever was never "does gold work at the table". It was that the figure
+had not moved while the economy around it grew by a factor of twenty.
+
+### What ships
+
+`TRIBUTE` in `sim/diplomacy.ts`, pinned whole in `control()`:
+
+| | |
+|---|---|
+| `offers` | 0.2 of the **payer's own** purse, when badly outmatched |
+| `demands` | 0.25 of **their** purse, when well ahead |
+| `cap` | 120 in any one treaty |
+| `floor` | 10, below which nothing is written into the terms |
+| `offersWhenOutmatched` / `demandsWhenAhead` | 1.3 and 0.8, **unchanged** |
+| `proportional` | the switch; off is the old game, exactly |
+
+**The share is on the payer in both directions**, which is the shape of the one
+gold sink in this game that works. Section 136 priced turning a spy as
+`min(gold, buyer.gold)` and thereby made it wealth-proportional -- it drains the
+rich more than the poor -- and it got there for reasons that had nothing to do
+with the economy. This is that, on purpose, for the second time.
+
+**The cap is set against `goldScale`, not picked.** `aiAccepts` adds
+`gold / DIPLOMACY_AI.goldScale` to wanting peace and `goldScale` is 100, so 120
+is **1.2 points of wanting**. The strength ratio -- the thing the whole decision
+was built around -- is clamped to 1.5, for the reason `tiringCap` gives at
+length: a term that can exceed the entire decision on its own is a bug wearing a
+number. So gold can outweigh a grudge and can never outweigh the balance of
+power. Without the cap a side with 5000 banked buys peace from anybody,
+whatever is happening in the field.
+
+**The band is untouched and is now a lever.** Section 154 suspected the band,
+not the figure, is why most offers carry no gold. Making a payment bigger does
+not make it more frequent, so that stays a separate question with its own arm
+rather than being changed in the same breath.
+
+### The player's side of the table, which was the same stale number
+
+`offers()` in `ui/talks.ts` hardcoded 25, 50 and a demand of 25. Left alone,
+the player would have haggled in pennies while an AI across the table asked for
+a fifth of their treasury. The buttons are now priced off `tributeOf` -- the
+full rung and a half rung, out of the player's own purse, and the demand out of
+theirs. A rung the floor swallows is left out rather than shown at zero, and
+the demand is left out when they have nothing worth demanding, which it could
+never have been signed with anyway: `affordable` refuses it.
+
+Driven in the running game: 600 against 800 gives *pay 60 / pay 120 / demand
+120* (their 200 capped); 100 against 60 gives *10 / 20 / demand 15*; 30 against
+20 gives **"Offer peace" alone**, both rungs and the demand under the floor.
+
+### The Orcpedia
+
+*"Tribute, and why it is never a round number"*, under Diplomacy, between the
+talks and breaking it. It reads the constants rather than restating them, so
+the share, the cap and the floor cannot drift out of the text.
+
+### What is not known
+
+**Nothing here is measured.** No sweep has run. What is predicted, written down
+before the arm rather than after it:
+
+- The three dead-gold sides (Hive, Unbound, Wandering Folk) are the ones with
+  deep purses and small armies, so they are the side that **pays**. Their
+  banked gold should fall. That is the point of the section.
+- The gold goes to whoever is winning the war, who already has a working sink
+  in espionage. **This is the risk and it should be read first**: section 154's
+  case for tribute over mercenaries is that peace is worth most to the loser,
+  so the *value* runs opposite to wealth -- but the *coin* still runs toward
+  the leader. If the Kingdom's banked gold rises while nobody else's falls,
+  this is a transfer to the strongest side wearing a sink's clothes.
+- The Hive may never be billed at all. It wins by its own ending without
+  contesting the military dimension, so a band that only opens on a lopsided
+  *war* may simply never open for it -- in which case the faction with the
+  deadest gold is untouched and the band, not the share, is the lever.
+
+The second and third of those are reasons the arm wants `gone`, `wins` and
+banked gold read together, not a treasury column on its own.

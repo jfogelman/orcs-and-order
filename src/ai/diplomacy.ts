@@ -3,6 +3,8 @@ import { unitType } from '../model/units';
 import { raidersAtTheGate } from '../sim/barbarians';
 import {
   PEACE,
+  TRIBUTE,
+  tributeOf,
   lossesIn,
   pairKey,
   standing,
@@ -292,15 +294,20 @@ export function aiAccepts(state: GameState, terms: PeaceTerms): boolean {
 }
 
 /**
- * The terms this AI would open with. Much stronger, it demands a little for its
- * trouble; much weaker, it offers a little; otherwise it asks for nothing.
+ * The terms this AI would open with. Much stronger, it demands a share of
+ * their purse for its trouble; much weaker, it offers a share of its own;
+ * otherwise it asks for nothing.
+ *
+ * Section 180 made both of those a share rather than a flat 25 and 30. The
+ * band it happens in is unchanged -- see `TRIBUTE.offersWhenOutmatched`.
  */
 export function aiTerms(state: GameState, me: Player, them: Player): PeaceTerms {
   const mine = Math.max(1, strength(state, me.id));
   const theirs = Math.max(1, strength(state, them.id));
+  const odds = theirs / mine;
   let gold = 0;
-  if (theirs / mine > 1.3) gold = Math.min(me.gold, 25);
-  else if (theirs / mine < 0.8) gold = -Math.min(them.gold, 30);
+  if (odds > TRIBUTE.offersWhenOutmatched) gold = tributeOf(me.gold, 'offer');
+  else if (odds < TRIBUTE.demandsWhenAhead) gold = -tributeOf(them.gold, 'demand');
   return { from: me.id, to: them.id, gold };
 }
 
