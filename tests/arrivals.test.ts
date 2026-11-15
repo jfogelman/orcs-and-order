@@ -229,6 +229,20 @@ describe('a latecomer actually turns up', () => {
     expect(state.log.some((e) => e.player === 0 && /nobody had claimed/i.test(e.text))).toBe(true);
   });
 
+  /** How many of its own starter this faction actually turns up with. */
+  const escortFor = (faction: (typeof FACTION_IDS)[number]): number => {
+    const starter = FACTIONS[faction].starterUnit;
+    const state = game({ playerFaction: 'orc', opponents: ['human', faction] });
+    const due = arrivalTurnFor(state, 1);
+    for (let i = 0; i < due + 8 && state.players.length < 4; i++) {
+      for (let p = 0; p < state.players.length; p++) endPlayerTurn(state);
+    }
+    const late = state.players.find((p) => p.faction === faction);
+    if (!late) return -1;
+    return state.units.filter((u) => u.owner === late.id && unitType(u.type).base === starter)
+      .length;
+  };
+
   /**
    * Section 157: the escort is **a budget, not a count**.
    *
@@ -242,20 +256,6 @@ describe('a latecomer actually turns up', () => {
    * next cheap starter is covered by this on the day it compiles.
    */
   it('brings a budget of escort, so a cheap starter brings more of it', () => {
-    /** How many of its own starter this faction actually turns up with. */
-    const escortFor = (faction: (typeof FACTION_IDS)[number]): number => {
-      const starter = FACTIONS[faction].starterUnit;
-      const state = game({ playerFaction: 'orc', opponents: ['human', faction] });
-      const due = arrivalTurnFor(state, 1);
-      for (let i = 0; i < due + 8 && state.players.length < 4; i++) {
-        for (let p = 0; p < state.players.length; p++) endPlayerTurn(state);
-      }
-      const late = state.players.find((p) => p.faction === faction);
-      if (!late) return -1;
-      return state.units.filter((u) => u.owner === late.id && unitType(u.type).base === starter)
-        .length;
-    };
-
     // **Compared across factions rather than against a number.** The first
     // version asserted `escort > 1`, which the old fixed count of two also
     // satisfies -- it passed against the code it was written to catch. What
@@ -278,16 +278,54 @@ describe('a latecomer actually turns up', () => {
   });
 
   it('never leaves a side with no escort at all, however dear its starter', () => {
-    // The floor in `emerge`. A faction whose starter cost somebody later
-    // raises past the budget should arrive with one, not with none.
+    // A faction whose starter cost somebody later raises past the budget
+    // should arrive with one, not with none.
+    //
+    // **This used to assert the arithmetic rather than the game.** It read
+    // `expect(Math.max(1, Math.floor(1 / 20))).toBe(1)` -- a sum done in the
+    // test file, which would have passed with `emerge` deleted. It is asked of
+    // the units actually standing on the map now, which is what section 179's
+    // floor made easy to do: the 1 is a lever, so the test can name it.
     const was = HIVEKIN.escortShields;
     HIVEKIN.escortShields = 1;
     try {
-      const state = game({ opponents: ['hivekin'] });
-      expect(Math.max(1, Math.floor(HIVEKIN.escortShields / 20))).toBe(1);
-      void state;
+      expect(HIVEKIN.escortFloor, 'the shipped floor is the one this asserts').toBe(1);
+      expect(escortFor('unbound'), 'a 20-shield starter on a 1-shield budget').toBe(1);
     } finally {
       HIVEKIN.escortShields = was;
+    }
+  });
+
+  /**
+   * Section 179: the floor on escort bodies, which is the dear end of the
+   * same rule.
+   *
+   * The budget divides by the starter's cost, so at the shipped 40 the Hive
+   * brings four Fodder-caste at 10 and the Unbound two Revenants at 20 -- and
+   * section 179 measured the Unbound ending with no city in 56 games of 108,
+   * falling to 41 when they arrive with four. Reaching four by raising the
+   * shared budget to 80 also doubles the Hive, so the floor is the dial that
+   * only moves the side that needs it.
+   *
+   * Ships at 1, so this tests a lever rather than a change.
+   */
+  it('lifts a dear starter to the floor and leaves a cheap one its whole budget', () => {
+    const was = HIVEKIN.escortFloor;
+    try {
+      // Dear end: two Revenants becomes four.
+      HIVEKIN.escortFloor = 1;
+      expect(escortFor('unbound'), 'the shipped budget buys two Revenants').toBe(2);
+      HIVEKIN.escortFloor = 4;
+      expect(escortFor('unbound'), 'the floor lifts them to four').toBe(4);
+      // **Not an override, which is the half that could have been built
+      // wrong.** `escort = floor` would satisfy the line above and quietly
+      // *cut* every faction whose budget already buys more. A Fodder-caste
+      // costs 10, so 40 shields buys four, and a floor of two must not take
+      // two of them away.
+      HIVEKIN.escortFloor = 2;
+      expect(escortFor('hivekin'), 'a floor below the budget changes nothing').toBe(4);
+    } finally {
+      HIVEKIN.escortFloor = was;
     }
   });
 });

@@ -107,6 +107,46 @@ export const HIVEKIN = {
    */
   escortShields: 40,
   /**
+   * Fewest escort a latecomer may arrive with, whatever its starter costs.
+   * Section 179. **One, which is the budget's own old floor, so this ships
+   * inert.**
+   *
+   * Section 179 swept the budget at 40 / 60 / 80 and found the thing section
+   * 159 could not see: the Unbound's *elimination rate* falls, 56 games of 108
+   * ending with no city to 41, paired 21 rescued against 6 lost, p = 0.006.
+   * It is not that they get stronger -- conditioned on surviving they end
+   * slightly **smaller** -- it is that two Revenants is not enough to hold the
+   * ground and four is.
+   *
+   * **And section 179c then measured this lever and it does nothing**, which
+   * is why it ships at 1 and why that paragraph above is a measurement rather
+   * than a reason. A floor of 4 puts the Unbound on the same four bodies as
+   * the 80-shield arm, with the Hive left alone -- and their elimination rate
+   * reads 49 games of 108 against that arm's 41, paired p = 0.18 the *wrong*
+   * way. Over five pooled arms there is no relation between the Unbound's own
+   * escort and how often they are wiped out -- two bodies 56 games, three 52,
+   * four 49 *and* 41, six 47 -- while total bodies does line up monotonically
+   * with games that never finish: 16, 21, 22, 24, 28. The cost is lawful, the
+   * benefit is not, and the Hive -- on four bodies in both arms, so its own
+   * control -- moved its cities *more* than the Unbound did.
+   *
+   * So section 179's "two is not enough and four is" is withdrawn as an
+   * explanation and kept as a measurement. Do not raise this without a new
+   * reason; the arm has been run.
+   *
+   * It was built as section 157's own reasoning about *founders* applied to
+   * the escort. That section kept founders a count because "a dearer founder
+   * should not mean a lonelier one", and made the escort a budget because what
+   * holds ground is worth pricing; a floor is where those two meet, and it
+   * keeps both -- the budget still prices the class and faction six still
+   * needs no entry here. The reasoning survives the measurement. It simply
+   * turns out that what the dear end was short of is not bodies.
+   *
+   * Note what it is *not*: an override. A cheap starter above the floor keeps
+   * every body its budget buys, so this only ever lifts the dear end.
+   */
+  escortFloor: 1,
+  /**
    * Turns of grace before anything may attack them.
    *
    * They arrive with two Fodder-caste and a Grub. Anything standing nearby
@@ -419,7 +459,12 @@ export function maybeArrive(state: GameState): void {
   // should not mean a lonelier one. The escort is what has to hold the ground
   // and is therefore what is worth measuring in what it costs.
   const escortCost = Math.max(1, unitType(def.starterUnit).cost);
-  const escort = Math.max(1, Math.floor(HIVEKIN.escortShields / escortCost));
+  // Section 179: the floor is the dear end of the same rule, and it defaults
+  // to the 1 this line already had.
+  const escort = Math.max(
+    HIVEKIN.escortFloor,
+    Math.floor(HIVEKIN.escortShields / escortCost),
+  );
   const around = besideIt(state, spot.x, spot.y, HIVEKIN.founders - 1 + escort);
   around.forEach(([x, y], n) => {
     const type = n < HIVEKIN.founders - 1 ? def.settlerUnit : def.starterUnit;

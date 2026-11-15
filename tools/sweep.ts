@@ -629,8 +629,19 @@ export interface SweepOptions {
  * 13.4 and 15.7 seconds a game. Same reason as before, one seat further on:
  * three sides take more turns each than two, and almost every game now runs to
  * the limit. At 8 this told Jeremy to expect 29 minutes for a run that took 57.
+ *
+ * **Recalibrated to 18 for section 179b**, off the three 324-game runs since
+ * the fifth faction: 15.2s a game for section 159, **19.6** for 177 and
+ * **18.0** for 179. Fifteen was right for the first of those and has told
+ * Jeremy 81 minutes for the last two runs, which took 106 and 97. The median
+ * of the three is what this is now, and the estimate's own spread (0.6x to
+ * 1.3x) covers the rest.
+ *
+ * It is deliberately a single number for a whole run and not a per-arm one: an
+ * arm that keeps more sides alive plays longer games, which is most of the
+ * variance here and is not knowable before the run.
  */
-export const SECONDS_PER_GAME = 15;
+export const SECONDS_PER_GAME = 18;
 
 export function estimate(games: number): string {
   const mins = (games * SECONDS_PER_GAME) / 60;
@@ -767,6 +778,19 @@ export interface Summary {
   unfinished: number;
   turns: number;
   cities: PerSide;
+  /**
+   * Games this side ended holding no city at all, per side.
+   *
+   * Section 179. The sweep has reported `cities` as a mean since section 1,
+   * and section 178 found that for the two latecomers the mean is mostly
+   * reporting *this* rather than how big a side gets: the Unbound end on zero
+   * in 8 or 9 games of 18, and when they do not they finish on 6 or 7, which
+   * is second only to the Kingdom. A single mean cannot show a bimodal side,
+   * and a column the report does not have is a fact nobody can read across --
+   * which is the section 125 lesson about the missing `hive` ending, in a
+   * different column.
+   */
+  wipedOut: PerSide;
   population: PerSide;
   units: PerSide;
   techs: PerSide;
@@ -810,6 +834,24 @@ export interface Summary {
  * and with section 139 letting the opponents be chosen, "present in half the
  * games" is now an ordinary thing for an arm to be.
  */
+/**
+ * Count the games in which a side's value was zero, per side.
+ *
+ * Section 179. Keyed off every side that *played*, like `winsPerSide`, so a
+ * faction that was never wiped out reads as a zero rather than as absent --
+ * a missing key and a zero mean opposite things here.
+ */
+function zeroesPerSide(outcomes: Outcome[], pick: (o: Outcome) => PerSide): PerSide {
+  const out: Record<string, number> = {};
+  for (const o of outcomes) {
+    for (const f of o.sides) out[f] ??= 0;
+    for (const [faction, value] of Object.entries(pick(o))) {
+      if (value === 0) out[faction] = (out[faction] ?? 0) + 1;
+    }
+  }
+  return out as PerSide;
+}
+
 function meanPerSide(outcomes: Outcome[], pick: (o: Outcome) => PerSide): PerSide {
   const sum: Record<string, number> = {};
   const seen: Record<string, number> = {};
@@ -847,6 +889,7 @@ export function summarise(results: ArmResult[]): Summary[] {
     unfinished: r.outcomes.filter((o) => o.victory === null).length,
     turns: mean(r.outcomes.map((o) => o.turns)),
     cities: meanPerSide(r.outcomes, (o) => o.cities),
+    wipedOut: zeroesPerSide(r.outcomes, (o) => o.cities),
     population: meanPerSide(r.outcomes, (o) => o.population),
     units: meanPerSide(r.outcomes, (o) => o.units),
     techs: meanPerSide(r.outcomes, (o) => o.techs),
@@ -917,7 +960,7 @@ export function report(results: ArmResult[]): string {
   const blocks = sides.map((f) => {
     const subhead =
       `${label(f).padEnd(18)}${'set'.padEnd(10)}${pad('wins', 6)}${pad('cities', 8)}${pad('pop', 8)}` +
-      `${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}`;
+      `${pad('gone', 6)}${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}`;
     const lines = rows.map(
       (r) =>
         r.arm.padEnd(18) +
@@ -925,6 +968,7 @@ export function report(results: ArmResult[]): string {
         pad(r.wins[f] ?? '-', 6) +
         pad(cell(r.cities, f, 2), 8) +
         pad(cell(r.population, f, 1), 8) +
+        pad(r.wipedOut[f] ?? '-', 6) +
         pad(cell(r.units, f, 1), 8) +
         pad(cell(r.techs, f, 1), 8) +
         pad(cell(r.sacks, f, 1), 8) +

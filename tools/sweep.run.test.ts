@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { AI_TUNING } from '../src/ai/ai';
+import { HIVEKIN } from '../src/sim/hivekin';
 
 /**
  * The question this sweep is currently asking.
@@ -248,15 +248,155 @@ const buildArms = (): Arm[] => {
    * lay a network), and **fights** -- the guard in section 176 bought fewer
    * fights for exactly the two factions it was meant to help.
    */
-  const road = (label: string, byWork: boolean): Arm => ({
+  /**
+   * ## Section 179: what a latecomer arrives with
+   *
+   * Section 178 went looking for the Unbound being ground down and found the
+   * opposite: their peak-to-final drop is the *smallest* in the game, and what
+   * actually happens is that they are **wiped out in 8 or 9 games of 18**,
+   * while when they survive they finish on 6 to 7 cities, second only to the
+   * Kingdom. They are bimodal, and it is decided early -- median elimination
+   * turn 72 to 79, and the games they lose have a median peak of **one or two
+   * cities**. They never establish.
+   *
+   * Section 160 had already found the arrival *slot* beats the faction, and
+   * section 178 confirmed it from a second direction: in all four
+   * faction-by-set cells, the eliminated games drew later slots than the
+   * survived ones, by 10 to 18 turns. But the slot cannot explain a lifespan
+   * whose median is 25 turns and 14 and whose minimum is **5 on both sets**. A
+   * side gone five turns after arriving is not dying of a late slot.
+   *
+   * ## The lever, and the arithmetic that makes it a candidate
+   *
+   * Every latecomer arrives through one routine, `maybeArrive`, governed by
+   * constants that happen to live under `HIVEKIN`: `founders` is a count (2)
+   * and the escort is a **shields budget** since section 157 -- deliberately,
+   * so that "a dearer founder should not mean a lonelier one" while the escort
+   * stays "what it costs". Divided by each faction's own starter:
+   *
+   * | faction | starter | cost | escort at 40 | at 60 | at 80 |
+   * |---|---|---|---|---|---|
+   * | hivekin | fodder | 10 | **4** | 6 | 8 |
+   * | wandering | wf-skirmisher | 13 | **3** | 4 | 6 |
+   * | unbound | revenant | 20 | **2** | 3 | 4 |
+   *
+   * So the faction with the dearest starter arrives with **half the guard the
+   * Hive does** out of an identical budget -- and it is the one that dies
+   * within 5 to 25 turns of arriving, half the time. The Hive, on four bodies,
+   * is wiped out in 3 or 4 games of 18.
+   *
+   * **Three arms, a dose ladder rather than a switch.** 40 is the shipped
+   * game; 60 and 80 are the two readings of "the dearest starter still gets
+   * three or four". A ladder because a monotone response across three doses is
+   * evidence and a single better arm is a coin landing the right way up --
+   * section 172 spent a whole section learning that from a two-arm ladder that
+   * turned out to be flat.
+   *
+   * ## What would count
+   *
+   * The column is **`gone`**, added to the report in this section: games a
+   * side ended holding no city. The sweep has reported `cities` as a mean
+   * since the beginning and could not see this at all, which is why section
+   * 178 needed a probe of its own to find it. The Unbound sit at 8 or 9 of 18.
+   * If a bigger guard is the answer, that falls and their `cities` mean rises
+   * *because* the zeroes leave it, not because the survivors get bigger.
+   *
+   * **No prediction on wins, and a specific reason to distrust the obvious
+   * one.** This is the fourth repair in this arc that looked obvious: section
+   * 4e's rush-buying, 53's forward bases and 176's production guard all
+   * measured harmful or inert to the sides they were built for, twice because
+   * the side with the least slack valued flexibility over what the repair
+   * bought it.
+   *
+   * **And the attribution is confounded by design, which has to be said
+   * plainly.** A shared budget moves all three latecomers: the Hive goes from
+   * four bodies to six and eight, and it is already on an even win share after
+   * section 161. So an improvement in the Unbound cannot be cleanly separated
+   * from a board where every latecomer arrives stronger. The design that
+   * *would* isolate it is a floor on bodies rather than a bigger budget --
+   * `Math.max(3, floor(shields / cost))` -- which leaves the cheap-starter
+   * factions exactly where they are. That is a different design claim, so it
+   * is not smuggled in here; if this ladder moves the `gone` column, the floor
+   * is the arm that says whose guard did it.
+   *
+   * Columns to watch beside `gone`: the **Hive's** win share and cities, since
+   * it gains most in absolute bodies; **unfinished games**, because a side
+   * that survives instead of dying is a side still playing at the turn limit;
+   * and **fights**, which rose the last time more soldiers appeared on the map.
+   */
+  /**
+   * ## Section 179b: the same four bodies, bought the other way
+   *
+   * The ladder above ran. The column moved: the Unbound ended with no city in
+   * **56 games of 108 at 40 shields and 41 at 80**, non-increasing in both
+   * sets, paired by seed 21 rescued against 6 lost, exact McNemar **p =
+   * 0.006**. Conditioned on surviving they end slightly *smaller*, so it is an
+   * elimination result and not a strength one -- which is exactly what `gone`
+   * was added to be able to say.
+   *
+   * **And the route to it was wasteful.** 80 shields takes the Hive from four
+   * bodies to eight, and the Hive is the faction that moves least in the whole
+   * run (`gone` 24 → 19 → 22, p = 0.87; wins 25 → 31 → 26). Meanwhile the
+   * board stops resolving: games out of turns 16 → 22 → **28** of 108, paired
+   * p = 0.023, and pooled over all 324 games the chance of running out is set
+   * almost entirely by how many sides are still standing -- 0% at two, 5% at
+   * three, 26% at four, **66% at five**.
+   *
+   * So this arm buys the same four Revenants with a **floor on bodies** at the
+   * shipped budget, which is section 157's own reasoning about founders -- "a
+   * dearer founder should not mean a lonelier one" -- applied to the escort,
+   * and keeps what the budget was for: the class is priced, the dear end has a
+   * minimum, faction six still needs no entry.
+   *
+   * | faction | starter | cost | **shipped** | floor 4 | floor 6 |
+   * |---|---|---|---|---|---|
+   * | hivekin | fodder | 10 | **4** | 4 | 6 |
+   * | wandering | wf-skirmisher | 13 | **3** | 4 | 6 |
+   * | unbound | revenant | 20 | **2** | 4 | 6 |
+   *
+   * **The middle arm is the one that discriminates**, and it does what 80
+   * shields could not: it moves the Unbound to four and the Hive not at all.
+   * Written down before the run, because it is the whole reason to spend
+   * another 97 minutes:
+   *
+   * - If **four bodies** is what the Unbound were missing, floor 4 reproduces
+   *   most of the `gone` drop -- 56 towards 41 of 108 -- while the unfinished
+   *   column stays near 16 rather than going to 28.
+   * - If what actually happened at 80 was **every latecomer arriving
+   *   stronger**, floor 4 moves `gone` far less, because two of the three
+   *   factions barely change.
+   * - Either way the Hive is the control: it is on four in both of the first
+   *   two arms, so anything that moves for it between them is noise, and the
+   *   run carries its own noise estimate for once.
+   *
+   * Floor 6 is there because 80 shields was not a clean reading of "more is
+   * better" either -- it is the dose arm, and if the unfinished cost comes
+   * back at floor 6 with the Hive back up at six bodies, that is a second
+   * pointer at whose guard was buying it.
+   *
+   * It also re-asks the one cell section 179 left unresolved. The Wandering
+   * Folk's best arm there was 60 shields -- four bodies, `gone` 65 → 53 of
+   * 108, p = 0.029, with cities, population and units up in both sets -- but
+   * it broke monotonicity (3 → 6 bodies did nothing), section 159's own probe
+   * found 2 and 6 bodies alike for them, and it was the best of six cells. It
+   * was written up as unresolved. Floor 4 puts them on four again on the same
+   * 108 maps, which is an independent test of that cell rather than a
+   * re-reading of it.
+   *
+   * **Three bodies is not an arm**, and that is a saving rather than an
+   * omission: a floor of 3 only changes the Unbound, from two to three, and
+   * the 60-shield arm already measured the Unbound at three bodies as inert
+   * (52 of 108 against 56, paired p = 0.56).
+   */
+  const floor = (label: string, bodies: number): Arm => ({
     label,
     apply: () => {
       control();
-      AI_TUNING.roadBudgetByWork = byWork;
+      HIVEKIN.escortFloor = bodies;
     },
   });
 
-  return [road('counts founders', false), road('as shipped', true)];
+  return [floor('as shipped (no floor)', 1), floor('floor of 4', 4), floor('floor of 6', 6)];
 };
 
 const ARMS: Arm[] = buildArms();
@@ -329,6 +469,16 @@ describe('sweep', () => {
     // of exactly 54 -- so it printed its whole table and *then* failed on the
     // timeout. A third seat makes games longer, and a measurement that has to
     // be read out of a failed test is one somebody will eventually throw away.
-    Math.max(600_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
+    //
+    // **The floor was raised to twenty minutes in section 179b, because a
+    // smoke run failed on it.** `SWEEP_PER_BASE=1` is 18 games, which scales
+    // to 450s and so used to take the 600s floor -- and the three-arm floor
+    // smoke took **705s, 39.2s a game** against the 18.0s the same code
+    // averaged over 324. A short run pays all of the warm-up and none of the
+    // amortisation, so the floor cannot be a per-game figure at all. It
+    // printed its whole table and then failed, which is the one outcome this
+    // comment already existed to prevent, and a failed smoke is worse than a
+    // slow one: the next person reads it as a broken arm.
+    Math.max(1_200_000, ARMS.length * SETS.length * PER_BASE * 3 * 25_000),
   );
 });
