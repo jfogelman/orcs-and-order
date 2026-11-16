@@ -17126,3 +17126,108 @@ the arrival package.
   none are corrected. The honest reading of the set is the shape, not any cell.
 - 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
   short of every mean in them.
+
+## 183. The column section 180 asked for and did not have — DONE
+
+Jeremy, having read section 180's result: *"Add the gold column and tribute
+counter."*
+
+### What went wrong, exactly
+
+Section 180 priced a treaty as a share of the purse and pre-registered its
+reading **before** the arm ran, which is the habit this project has spent
+twenty sections building:
+
+> read banked gold per side together with `wins` and `gone`. If the Kingdom's
+> banked gold rises while nobody else's falls, this is a transfer to the
+> strongest side wearing a sink's clothes and should come back out.
+
+Then 324 games ran for 92 minutes and **could not answer it**. The sweep's only
+gold column is `routeGold`, which is income a turn from trade routes. Nothing
+anywhere recorded a treasury, and nothing recorded a payment. Section 154's
+"the Kingdom banks 728" came from a separate instrumented probe that was never
+folded back into the harness.
+
+**Nothing caught it, and that is the interesting part.** Not the identity
+guard, which compares settings. Not the suite, which was green. Not the smoke,
+which ran 18 games and printed a table with no gap in it. Not the canary, which
+passed. Pre-registering a reading is the right habit *and* it quietly adds a
+new way to be wrong: the reading is now prose, naming a quantity nobody checked
+was collected. The arm still runs. The result is still significant. The
+question it was run for is still open.
+
+### What ships
+
+Five columns per side in the sweep report, and a tally in the game.
+
+**In the game.** `state.diplomacy.tribute`, by player id:
+`{ paid, got, bills, takes }` -- gold handed over, gold taken, and the number
+of treaties that carried any in each direction. Written in exactly one place,
+`signPeace`, which is the single point where treaty gold changes hands: the AI
+path (`aiDiplomacy`) and both player paths in `talks.ts` all go through it, so
+there is no second place to forget. `tributeTally(state, id)` reads it and
+returns zeroes for a side that has never signed anything.
+
+Four numbers rather than one net figure, because a net figure answers none of
+the four questions: **a side that paid 300 and took 300 is not a side that
+never paid**.
+
+**In the report**, on the per-side block:
+
+| column | what it is |
+|---|---|
+| `gold` | mean gold **banked** at the end |
+| `paid` | mean tribute handed over in a game |
+| `got` | mean tribute taken in a game |
+| `billed` | **share of games** this side ever paid in |
+| `took` | share of games it ever was paid in |
+
+`billed` is a share and not a mean number of treaties on purpose. The open
+question is *"is the Hive ever billed at all"*, and one game in fifty is 0.02
+treaties a game, which prints as `0.0` and reads as never. 2% does not. There
+is a test for precisely that, because it is the mistake the column exists to
+stop.
+
+They go on the **same line as `wins` and `gone`**, which costs the block forty
+characters and is the whole point: the pre-registered reading was gold read
+*together with* those two, and a gold table on its own page is the version of
+this column that still would not answer it.
+
+`Gold` and `RouteGold` sit four characters apart in the raw rows. Both carry the
+word they differ by, so neither is "the gold column".
+
+### Tests
+
+- The tally records both sides of a payment, in gold and in treaties; a demand
+  bills the other side; two treaties add up. Each fails with the recording in
+  `signPeace` cut out -- checked.
+- A treaty with no gold on it stores **nothing at all**, and still reads as
+  zeroes rather than as a missing side. This one passes against the old code
+  too, which is its job: it is the one guarding the distinction section 180
+  could not make, between *never billed* and *not recorded*.
+- It survives a save and a load.
+- `report()` puts `gold` on the same line as `wins` and `gone`; `billed`
+  prints 2% for one game in fifty and 0% for none; the raw rows carry
+  `orcGold` and `orcRouteGold` as different columns. All three fail with the
+  columns cut from the table -- checked.
+
+### What this does not do
+
+**It does not re-answer section 180.** The columns are empty of history: they
+measure the next run, not the last one. Whether the hoarding sides end with
+less banked, and whether the Hive is ever billed, needs the §180 ladder run
+again with these columns present -- 324 games, about 97 minutes by the
+harness's own estimate. That is Jeremy's call, not something to spend an hour
+of his machine on unasked.
+
+What it does mean is that the *next* gold section gets the reading for free
+instead of re-earning it, and that the specific failure of section 180 cannot
+recur silently: a missing column is now a failing test rather than a quiet
+hour.
+
+### The rule that comes out of it
+
+**When a section's docblock names what to read, grep the harness for each named
+quantity before launching the real run.** The per-game record near `routeGold:`
+and the `measures` list in `rawRows` are the two places a column has to appear.
+A reading with no column is not a measurement plan, it is a sentence.

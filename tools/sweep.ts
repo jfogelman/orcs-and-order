@@ -6,7 +6,7 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { PEACE, STANDING } from '../src/sim/diplomacy';
+import { PEACE, STANDING, tributeTally } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
@@ -361,6 +361,34 @@ export interface Outcome {
    */
   links: PerSide;
   routeGold: PerSide;
+  /**
+   * Gold **banked** at the end, per side. Section 183.
+   *
+   * Not to be confused with `routeGold` above, which is income a turn from
+   * trade routes. Section 180 pre-registered "read banked gold per side" as
+   * the first thing to look at, ran 324 games, and then found that the only
+   * gold column in this file was the other one. The reading was specified in
+   * prose against a column that did not exist, nothing caught it -- not the
+   * identity guard, not the suite, not the smoke, because nothing was broken
+   * -- and a 92-minute run came back unable to answer the question it was
+   * built for. This is that column.
+   */
+  gold: PerSide;
+  /** Tribute gold handed over across the game, per side. */
+  tributePaid: PerSide;
+  /** Tribute gold taken across the game, per side. */
+  tributeGot: PerSide;
+  /**
+   * 1 if this side was ever billed for tribute in this game, 0 if never. A
+   * mean over the arm is therefore the **share of games** it paid in.
+   *
+   * A share and not a count of treaties, because the question section 180
+   * could not answer is "is the Hive ever billed **at all**", and a mean of
+   * 0.02 treaties a game prints as `0.0` and reads as never. 2% does not.
+   */
+  tributeBilled: PerSide;
+  /** The same, for being paid: 1 if it ever took tribute, 0 if never. */
+  tributeTook: PerSide;
 }
 
 function deepestGroup(types: string[]): number {
@@ -547,6 +575,11 @@ export function playGame(
     joined: each((id) => joinedShare(state, id)),
     links: each((id) => tradeLinks(state, id).length),
     routeGold: each((id) => tradeGold(state, id)),
+    gold: each((id) => state.players[id].gold),
+    tributePaid: each((id) => tributeTally(state, id).paid),
+    tributeGot: each((id) => tributeTally(state, id).got),
+    tributeBilled: each((id) => (tributeTally(state, id).bills > 0 ? 1 : 0)),
+    tributeTook: each((id) => (tributeTally(state, id).takes > 0 ? 1 : 0)),
   };
 }
 
@@ -816,6 +849,14 @@ export interface Summary {
   /** Mean trade routes standing at the end, and mean gold a turn from them. */
   links: PerSide;
   routeGold: PerSide;
+  /** Mean gold banked at the end, per side. Section 183. */
+  gold: PerSide;
+  /** Mean tribute paid and taken over a game, per side. */
+  tributePaid: PerSide;
+  tributeGot: PerSide;
+  /** Share of games in which this side was ever billed, and ever paid. */
+  tributeBilled: PerSide;
+  tributeTook: PerSide;
   /**
    * Every side that appeared in this arm, in table order.
    *
@@ -901,6 +942,11 @@ export function summarise(results: ArmResult[]): Summary[] {
     joined: meanPerSide(r.outcomes, (o) => o.joined),
     links: meanPerSide(r.outcomes, (o) => o.links),
     routeGold: meanPerSide(r.outcomes, (o) => o.routeGold),
+    gold: meanPerSide(r.outcomes, (o) => o.gold),
+    tributePaid: meanPerSide(r.outcomes, (o) => o.tributePaid),
+    tributeGot: meanPerSide(r.outcomes, (o) => o.tributeGot),
+    tributeBilled: meanPerSide(r.outcomes, (o) => o.tributeBilled),
+    tributeTook: meanPerSide(r.outcomes, (o) => o.tributeTook),
     /** Every side that appeared in this arm, in a stable order. */
     sides: FACTION_IDS.filter((f) => r.outcomes.some((o) => o.sides.includes(f))),
   }));
@@ -957,10 +1003,16 @@ export function report(results: ArmResult[]): string {
   // a third side would have pushed it past any terminal and a fifth is
   // coming. A side gets its own short table, which also means a run with one
   // side in it prints one table rather than a row full of dashes.
+  // The five gold columns go **here**, on the same line as `wins` and `gone`,
+  // rather than in a table of their own. That is the whole reason section 183
+  // exists: section 180's reading was "banked gold per side read *together
+  // with* wins and gone", and a separate table is the version of this column
+  // that would still not answer it. It costs the block forty characters.
   const blocks = sides.map((f) => {
     const subhead =
       `${label(f).padEnd(18)}${'set'.padEnd(10)}${pad('wins', 6)}${pad('cities', 8)}${pad('pop', 8)}` +
-      `${pad('gone', 6)}${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}`;
+      `${pad('gone', 6)}${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}` +
+      `${pad('gold', 8)}${pad('paid', 7)}${pad('got', 7)}${pad('billed', 8)}${pad('took', 7)}`;
     const lines = rows.map(
       (r) =>
         r.arm.padEnd(18) +
@@ -974,7 +1026,13 @@ export function report(results: ArmResult[]): string {
         pad(cell(r.sacks, f, 1), 8) +
         pad(cell(r.joined, f, 0, true), 8) +
         pad(cell(r.links, f, 1), 8) +
-        pad(cell(r.routeGold, f, 1), 8),
+        pad(cell(r.routeGold, f, 1), 8) +
+
+        pad(cell(r.gold, f, 0), 8) +
+        pad(cell(r.tributePaid, f, 0), 7) +
+        pad(cell(r.tributeGot, f, 0), 7) +
+        pad(cell(r.tributeBilled, f, 0, true), 8) +
+        pad(cell(r.tributeTook, f, 0, true), 7),
     );
     return [subhead, '-'.repeat(subhead.length), ...lines].join('\n');
   });
@@ -1012,6 +1070,15 @@ export function rawRows(results: ArmResult[]): string {
     ['Joined', (o) => o.joined],
     ['Links', (o) => o.links],
     ['RouteGold', (o) => o.routeGold],
+    // Section 183. `Gold` is banked at the end; `RouteGold` above is income a
+    // turn. Two columns four characters apart, so both carry the word they
+    // differ by rather than one being "the gold column".
+
+    ['Gold', (o) => o.gold],
+    ['TributePaid', (o) => o.tributePaid],
+    ['TributeGot', (o) => o.tributeGot],
+    ['TributeBilled', (o) => o.tributeBilled],
+    ['TributeTook', (o) => o.tributeTook],
   ];
   const cols = [
     'arm',

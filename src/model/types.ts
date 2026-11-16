@@ -1110,6 +1110,28 @@ export interface GameState {
     peace?: { since: number; until: number };
     /** Times each side has broken a peace, by player id. */
     distrust?: Record<number, number>;
+    /**
+     * What tribute each side has handed over and taken across the whole game,
+     * by player id. Section 183.
+     *
+     * `paid` and `got` are gold; `bills` and `takes` are the number of
+     * treaties that carried any, in each direction. Four numbers rather than
+     * one net figure because they answer four different questions, and a net
+     * figure answers none of them: a side that paid 300 and took 300 is not a
+     * side that never paid.
+     *
+     * **Why this is stored at all.** Section 180 priced a treaty as a share of
+     * the purse, pre-registered "read banked gold per side" as the first thing
+     * to look at, and then measured 324 games that could not answer it --
+     * nothing anywhere recorded a treasury or a payment. A tally kept here, at
+     * the one place gold actually changes hands, is the version that cannot be
+     * read off a trimmed log or inferred from a win count.
+     *
+     * Absent until the first treaty carries gold, like every other optional
+     * field here, so a save from before this loads as a game nobody has paid
+     * in -- which is what it is.
+     */
+    tribute?: Record<number, { paid: number; got: number; bills: number; takes: number }>;
     /** The turn each side's cities stop being ashamed of it, by player id. */
     shameUntil?: Record<number, number>;
     /**
