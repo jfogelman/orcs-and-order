@@ -6,7 +6,7 @@ import { FORTIFY_BONUS_REF, XP } from '../src/sim/combat';
 import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
-import { PEACE, STANDING, tributeTally } from '../src/sim/diplomacy';
+import { PEACE, STANDING, TRIBUTE, tributeTally } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
@@ -136,6 +136,17 @@ export const LEVERS: Record<string, object> = {
   QUEEN,
   PREY,
   PEACE,
+  /**
+   * Section 180: what a treaty carries, and when it carries anything.
+   *
+   * Registered the day the arm was written, and the guard still caught it
+   * first: the smoke run refused `flat 25 and 30` and `a share of the purse`
+   * as one arm run twice, because the fingerprint could not see the setting
+   * that separates them. That is the third time this comment has been written
+   * about a different constant, which is the argument for the rule rather
+   * than against it.
+   */
+  TRIBUTE,
   // Section 135. Both of them, because an arm that moved one and not the other
   // would otherwise be invisible to the identity check below -- which is what
   // happened the first time slice 3's arms were run, and the guard caught it.
@@ -1027,7 +1038,6 @@ export function report(results: ArmResult[]): string {
         pad(cell(r.joined, f, 0, true), 8) +
         pad(cell(r.links, f, 1), 8) +
         pad(cell(r.routeGold, f, 1), 8) +
-
         pad(cell(r.gold, f, 0), 8) +
         pad(cell(r.tributePaid, f, 0), 7) +
         pad(cell(r.tributeGot, f, 0), 7) +
@@ -1073,7 +1083,6 @@ export function rawRows(results: ArmResult[]): string {
     // Section 183. `Gold` is banked at the end; `RouteGold` above is income a
     // turn. Two columns four characters apart, so both carry the word they
     // differ by rather than one being "the gold column".
-
     ['Gold', (o) => o.gold],
     ['TributePaid', (o) => o.tributePaid],
     ['TributeGot', (o) => o.tributeGot],

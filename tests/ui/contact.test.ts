@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createGame, recomputeVisibility, spawnUnit } from '../../src/sim/gamestate';
 import { foundCity } from '../../src/sim/city';
-import { FACTIONS } from '../../src/model/factions';
+import { FACTIONS, FACTION_IDS } from '../../src/model/factions';
 import { checkContacts, haveMet, noteMeeting, openingBy, pairOpening } from '../../src/sim/contact';
 import { closeModal, isModalOpen } from '../../src/ui/dom';
 import type { GameState } from '../../src/model/types';
@@ -184,5 +184,50 @@ describe('being told you have met somebody', () => {
     app.adopt(state);
     app.promptPending();
     expect(dialog()).not.toMatch(/You have met/);
+  });
+});
+
+/**
+ * Section 181: the short list, which lives on the faction and is shown in two
+ * places -- the new-game picker, before there is an Orcpedia to read, and here,
+ * the moment somebody turns up.
+ */
+describe('the short list for a side you have just met', () => {
+  it('shows theirs, not yours, and reads it off the faction rather than a copy', async () => {
+    const state = board();
+    spawnUnit(state, 0, 'orc', 15, 10);
+    spawnUnit(state, 1, 'footman', 16, 10);
+    recomputeVisibility(state, 0);
+    app.adopt(state);
+    checkContacts(state, 0);
+    app.promptPending();
+
+    const said = dialog();
+    const theirs = FACTIONS[state.players[1].faction].differs;
+    expect(theirs.length, 'every faction has a short list').toBeGreaterThan(1);
+    for (const line of theirs) expect(said).toContain(line);
+
+    // Meeting somebody tells you about *them*. Showing your own list here
+    // would be the dialog talking to the wrong side of the table.
+    for (const line of FACTIONS[state.players[0].faction].differs) {
+      expect(said).not.toContain(line);
+    }
+  });
+
+  it('keeps every line short enough for the picker panel to hold five of them', () => {
+    // The panel under the faction row has a fixed floor so that sweeping the
+    // cards does not shove the Begin button up and down under the cursor.
+    // That only works while the lists stay about the same size, so the bound
+    // is checked here rather than discovered by a sixth faction later.
+    for (const id of FACTION_IDS) {
+      const lines = FACTIONS[id].differs;
+      expect(lines.length, `${id} has a short list`).toBeGreaterThan(1);
+      expect(lines.length, `${id}'s list stays short`).toBeLessThanOrEqual(4);
+      for (const line of lines) {
+        expect(line.length, `${id}: "${line.slice(0, 40)}..." fits the panel`).toBeLessThanOrEqual(
+          135,
+        );
+      }
+    }
   });
 });

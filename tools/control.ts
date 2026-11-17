@@ -28,7 +28,7 @@ import { BUILD_ORDER, ENDING_ROAD } from '../src/sim/research';
 import { ARRIVALS } from '../src/sim/arrivals';
 import { TECHS_BY_ID } from '../src/model/techs';
 import { PREY } from '../src/sim/barbarians';
-import { PEACE, STANDING } from '../src/sim/diplomacy';
+import { PEACE, STANDING, TRIBUTE } from '../src/sim/diplomacy';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
@@ -208,6 +208,17 @@ export const control = () => {
   // Slice 4: and the AI reads the number and weighs how the war has gone.
   DIPLOMACY_AI.readsStanding = true;
   DIPLOMACY_AI.weighsTheWar = true;
+  // Section 180: what a treaty carries is a share of the payer's purse rather
+  // than a flat 25 or 30. Pinned whole, bands included, because the band is a
+  // lever of its own and an arm that moves the share should not inherit a band
+  // the previous arm widened.
+  TRIBUTE.proportional = true;
+  TRIBUTE.offers = 0.2;
+  TRIBUTE.demands = 0.25;
+  TRIBUTE.cap = 120;
+  TRIBUTE.floor = 10;
+  TRIBUTE.offersWhenOutmatched = 1.3;
+  TRIBUTE.demandsWhenAhead = 0.8;
   GOBLIN_SCOUT.enabled = true;
   // Section 110's endings, at their shipping settings -- fifteen turns, not the
   // ten they were first measured at. Left at ten here, every arm since would have

@@ -51,6 +51,83 @@ export const PEACE = {
 };
 
 /**
+ * What gold rides on a treaty. Section 180.
+ *
+ * **A share of the payer's purse, not a figure.** The figures this replaces --
+ * 25 offered and 30 demanded, unchanged since section 135 -- were set when the
+ * question was whether gold could move at the table at all. Section 154
+ * measured the answer and it makes them absurd: sides end on 500 to 730
+ * banked, so 25 gold was never a term in anybody's decision, and section 168
+ * saw the same thing from the other end as peace terms moving 3 to 49 gold in
+ * a whole game.
+ *
+ * The share is on the **payer's** treasury in both directions, which is the
+ * shape of the one gold sink in this game that works: section 136 prices
+ * turning a spy as `min(gold, buyer.gold)`, so it drains the rich more than
+ * the poor, and it got there for reasons that had nothing to do with the
+ * economy. This is that on purpose.
+ */
+export const TRIBUTE = {
+  /**
+   * The switch, for sweeps. Off is the flat 25 and 30 of sections 135 to 179,
+   * exactly -- see `tributeOf`, which keeps the old path floorless so the off
+   * arm is the old game rather than nearly it.
+   */
+  proportional: true,
+  /** Share of its own purse a side offers, to buy a peace it badly wants. */
+  offers: 0.2,
+  /** Share of the other side's purse a stronger side demands for one. */
+  demands: 0.25,
+  /**
+   * The most one treaty can carry, however deep the purse.
+   *
+   * `aiAccepts` adds `gold / DIPLOMACY_AI.goldScale` to wanting peace, and
+   * `goldScale` is 100, so this is **1.2 points of wanting**. The strength
+   * ratio -- the thing the whole decision was built around -- is clamped to
+   * 1.5 for the reason `tiringCap` gives at length: a term that can exceed the
+   * entire decision on its own is a bug wearing a number. This sits under that
+   * clamp deliberately, so gold can outweigh a grudge and never outweigh the
+   * balance of power.
+   */
+  cap: 120,
+  /** Below this it is not worth writing into the terms at all. */
+  floor: 10,
+  /**
+   * How lopsided the war has to be before gold is on the table at all, as
+   * their strength over ours. Above the first, we are outmatched and offer;
+   * below the second, we are ahead and demand; between them nobody pays.
+   *
+   * Unchanged from section 135, and levers only so a sweep can ask whether the
+   * *band* is what keeps gold off the table -- section 154 suspected it, and
+   * making the payment bigger does not make it more frequent.
+   */
+  offersWhenOutmatched: 1.3,
+  demandsWhenAhead: 0.8,
+  /** The flat figures, for the off arm only. */
+  flatOffer: 25,
+  flatDemand: 30,
+};
+
+/**
+ * What a one-off tribute comes to, out of a treasury this size.
+ *
+ * `side` is which end of it is being priced: what a supplicant offers, or what
+ * a victor demands. Both are shares of whoever ends up paying.
+ */
+export function tributeOf(treasury: number, side: 'offer' | 'demand'): number {
+  const purse = Math.max(0, treasury);
+  if (!TRIBUTE.proportional) {
+    // The game before this section, exactly: a flat figure or the whole purse,
+    // whichever is less, and no floor. An off arm that is nearly the old game
+    // is not a control.
+    return Math.min(purse, side === 'offer' ? TRIBUTE.flatOffer : TRIBUTE.flatDemand);
+  }
+  const share = side === 'offer' ? TRIBUTE.offers : TRIBUTE.demands;
+  const gold = Math.min(Math.round(purse * share), TRIBUTE.cap, purse);
+  return gold < TRIBUTE.floor ? 0 : gold;
+}
+
+/**
  * What moves the number between two sides, and by how much. Section 135.
  *
  * Small, auditable, and nothing clever: every one of these is a thing that

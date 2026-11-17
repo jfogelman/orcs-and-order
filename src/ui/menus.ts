@@ -102,6 +102,7 @@ export function openNewGameMenu(
       <div class="panel-body">
         <div class="field-label">Play as</div>
         <div class="choice-row">${factionCards}</div>
+        <div class="faction-note" id="faction-note"></div>
 
         <div class="field-label" style="margin-top:12px">Against</div>
         <div class="choice-row" id="opponent-row">${opponentCards}</div>
@@ -257,6 +258,46 @@ export function openNewGameMenu(
         box.addEventListener('change', syncOpponents);
       });
       syncOpponents();
+
+      /**
+       * The short list, under the row. Section 181.
+       *
+       * Hovering shows that side's; moving off shows the one actually picked,
+       * so the note is never blank and never lies about which side is
+       * selected. The chosen side is also what it opens on, because a player
+       * who has already decided should see their own list rather than an
+       * empty box inviting them to go hunting for it.
+       *
+       * `mouseenter`, not `mouseover`: the card has children, and `mouseover`
+       * refires on every one of them.
+       */
+      const noteBox = root.querySelector<HTMLElement>('#faction-note');
+      const showPrimer = (id: FactionId, hovered: boolean) => {
+        if (!noteBox) return;
+        const f = FACTIONS[id];
+        noteBox.innerHTML = `
+          <div class="faction-note-head" style="color:${f.color}">
+            ${escapeHtml(f.civName)}${hovered ? '' : ' — your pick'}
+          </div>
+          <ul class="faction-note-list">
+            ${f.differs.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+          </ul>`;
+      };
+      const picked = (): FactionId =>
+        (root.querySelector<HTMLInputElement>('input[name="faction"]:checked')?.value as
+          | FactionId
+          | undefined) ?? current;
+      root.querySelectorAll<HTMLElement>('.choice-card.faction').forEach((card) => {
+        const id = card.dataset.faction as FactionId | undefined;
+        if (!id) return;
+        card.addEventListener('mouseenter', () => showPrimer(id, id !== picked()));
+        card.addEventListener('focusin', () => showPrimer(id, id !== picked()));
+        card.addEventListener('mouseleave', () => showPrimer(picked(), false));
+      });
+      root.querySelectorAll<HTMLInputElement>('input[name="faction"]').forEach((box) => {
+        box.addEventListener('change', () => showPrimer(picked(), false));
+      });
+      showPrimer(picked(), false);
 
       root.querySelector('#btn-start')?.addEventListener('click', () => {
         const faction =

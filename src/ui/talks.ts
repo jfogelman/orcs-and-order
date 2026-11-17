@@ -2,6 +2,8 @@ import type { FactionId, GameState, Player } from '../model/types';
 import { aiAccepts, wantPeace } from '../ai/diplomacy';
 import {
   PEACE,
+  TRIBUTE,
+  tributeOf,
   affordable,
   ashamed,
   atPeace,
@@ -242,15 +244,34 @@ function rivalsOf(state: GameState, viewerId: number): Player[] {
     .filter((p) => VOICES[p.faction]);
 }
 
-/** The offers on the table, as buttons: [label, gold]. Positive gold we pay. */
-function offers(me: Player, peace: boolean): Array<[string, number]> {
+/**
+ * The offers on the table, as buttons: [label, gold]. Positive gold we pay.
+ *
+ * Section 180: these were a hardcoded 25, 50 and a demand of 25, which was the
+ * same stale figure the AI was using and left the player haggling in pennies
+ * while an AI across the table asked for a fifth of their treasury. They are
+ * now the same share of the same purse the AI would price, and a half rung
+ * below it -- so the menu scales with the game instead of with section 135.
+ *
+ * A rung the floor swallows is left out rather than shown at zero, and the
+ * demand is left out when they have nothing worth demanding; it could never
+ * have been signed anyway, since `affordable` refuses it.
+ */
+function offers(me: Player, them: Player, peace: boolean): Array<[string, number]> {
   const out: Array<[string, number]> = [];
   const verb = peace ? `Renew for ${PEACE.term} turns` : 'Offer peace';
   out.push([verb, 0]);
-  for (const gold of [25, 50]) {
-    if (me.gold >= gold) out.push([`${verb}, and pay ${gold} gold`, gold]);
+  const full = tributeOf(me.gold, 'offer');
+  for (const gold of [Math.round(full / 2), full]) {
+    const already = out.some(([, g]) => g === gold);
+    if (gold >= TRIBUTE.floor && me.gold >= gold && !already) {
+      out.push([`${verb}, and pay ${gold} gold`, gold]);
+    }
   }
-  if (!peace) out.push(['Demand 25 gold for peace', -25]);
+  if (!peace) {
+    const ask = tributeOf(them.gold, 'demand');
+    if (ask > 0) out.push([`Demand ${ask} gold for peace`, -ask]);
+  }
   return out;
 }
 
@@ -349,7 +370,7 @@ export function openTalks(state: GameState, viewerId: number, onChange: () => vo
         ${voice(theirVoices.peace, theirWord(them.faction, peace, theyWant), true)}
       </div>
       <div class="button-row talks-offers">
-        ${offers(me, peace)
+        ${offers(me, them, peace)
           .map(
             ([label, gold]) =>
               `<button class="small" data-gold="${gold}">${escapeHtml(label)}</button>`,
