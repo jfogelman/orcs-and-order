@@ -28,12 +28,15 @@ import {
   talksWith,
   warLength,
   lossesIn,
+  TRIBUTE,
+  tributeOf,
 } from '../src/sim/diplomacy';
 import {
   DIPLOMACY_AI,
   HIVE_TABLE,
   aiAccepts,
   aiDiplomacy,
+  aiTerms,
   wantPeace,
   willTalkTo,
 } from '../src/ai/diplomacy';
@@ -628,5 +631,65 @@ describe('standing in the AI’s decisions (section 135)', () => {
     // The victim pays full price; the onlooker a smaller one.
     expect(standing(state, 0, hive)).toBe(watchedBefore + STANDING.brokenElsewhere);
     expect(STANDING.brokenElsewhere).toBeGreaterThan(STANDING.broken);
+  });
+});
+
+describe('what a treaty carries (section 180)', () => {
+  it('prices a tribute as a share of the payer, capped under the balance of power', () => {
+    // A fifth of the purse, offered; a quarter, demanded.
+    expect(tributeOf(400, 'offer')).toBe(80);
+    expect(tributeOf(400, 'demand')).toBe(100);
+
+    // The cap binds before a hoard can. It is below `goldScale` times the
+    // strength clamp on purpose, so gold never outweighs the war itself.
+    expect(tributeOf(10_000, 'offer')).toBe(TRIBUTE.cap);
+    expect(TRIBUTE.cap / DIPLOMACY_AI.goldScale).toBeLessThan(1.5);
+
+    // Nobody pays what they do not have, and a rung the floor swallows is
+    // nothing rather than a token.
+    expect(tributeOf(40, 'offer')).toBe(0);
+    expect(tributeOf(0, 'demand')).toBe(0);
+    expect(tributeOf(60, 'offer')).toBe(12);
+  });
+
+  it('is the old flat figure, floorless, with the lever off', () => {
+    // Saved and put back, not set back to `true`: a test that restores the
+    // shipped value by name leaves every test after it measuring the shipped
+    // game whatever the source says, and this one hid exactly that.
+    const was = TRIBUTE.proportional;
+    TRIBUTE.proportional = false;
+    try {
+      expect(tributeOf(400, 'offer')).toBe(25);
+      expect(tributeOf(400, 'demand')).toBe(30);
+      // Floorless, which is the point: the off arm has to be the old game and
+      // the old game let a pauper offer its last five coins.
+      expect(tributeOf(5, 'offer')).toBe(5);
+    } finally {
+      TRIBUTE.proportional = was;
+    }
+  });
+
+  it('offers out of its own purse when outmatched and demands out of theirs when ahead', () => {
+    const state = board();
+    state.players[0].gold = 300;
+    state.players[1].gold = 800;
+    const [me, them] = [state.players[0], state.players[1]];
+
+    // Evenly matched: nothing on the table either way.
+    spawnUnit(state, 0, 'orc', 5, 5);
+    spawnUnit(state, 1, 'orc', 20, 5);
+    expect(aiTerms(state, me, them).gold).toBe(0);
+
+    // Badly outmatched, it offers a fifth of its own 300 -- not of their 800.
+    for (let i = 0; i < 6; i++) spawnUnit(state, 1, 'orc', 20 + i, 7);
+    expect(aiTerms(state, me, them).gold).toBe(60);
+
+    // Well ahead, it demands a quarter of their purse, and the cap binds.
+    state.units.length = 0;
+    for (let i = 0; i < 8; i++) spawnUnit(state, 0, 'orc', 5 + i, 5);
+    spawnUnit(state, 1, 'orc', 20, 5);
+    expect(aiTerms(state, me, them).gold).toBe(-TRIBUTE.cap);
+    state.players[1].gold = 200;
+    expect(aiTerms(state, me, them).gold).toBe(-50);
   });
 });

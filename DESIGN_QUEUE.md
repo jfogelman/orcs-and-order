@@ -12301,6 +12301,12 @@ items are not features at all.
 
 ### 1. Gold is still dead, and now it is dead only for the AI
 
+> **Acted on in section 180**, which builds the one option this item's own
+> re-measurement left standing: tribute, as a share of the payer's purse rather
+> than a flat 25. Mercenaries are closed here as measured-and-wrong, bribing a
+> city is untouched, and rush-buying stays retired. Read 180 for what shipped
+> and what it has not yet been measured doing.
+
 Section 4d measured a Horde that banked **475.6 gold a game into nothing** and
 a Kingdom on 189.6 — the Kingdom's lower because it *spends*. Section 4e gave
 gold a sink (rush-buying) and then measured the AI using it as **the worst
@@ -17126,3 +17132,359 @@ the arrival package.
   none are corrected. The honest reading of the set is the shape, not any cell.
 - 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
   short of every mean in them.
+
+## 180. Tribute is a share of the purse now — MEASURED, 324 games
+
+Jeremy, having read section 154's item 1 back: *"Proportional one-off, I assume
+the three factions without mentioning wandering folk was just an error (gold is
+critical to their recruitment capability), build it."* Both rulings are taken:
+the Wandering Folk are the third side with dead gold, and section 154's own
+sentence naming only two was the error.
+
+### What was wrong with the old number
+
+`aiTerms` has priced a treaty the same way since section 135: `min(me.gold, 25)`
+offered when outmatched, `min(them.gold, 30)` demanded when ahead. Those were
+set when the open question was whether gold could move at the table **at all**.
+
+Section 154 measured what the table now sits at. Sides end on **500 to 730
+banked**; the Kingdom banks 728 and spends 952 a game. Against that, 25 gold is
+not a term in anybody's decision -- it is a rounding error -- and section 168
+saw the same fact from the other end as peace terms moving **3 to 49 gold in a
+whole game**.
+
+So the lever was never "does gold work at the table". It was that the figure
+had not moved while the economy around it grew by a factor of twenty.
+
+### What ships
+
+`TRIBUTE` in `sim/diplomacy.ts`, pinned whole in `control()`:
+
+| | |
+|---|---|
+| `offers` | 0.2 of the **payer's own** purse, when badly outmatched |
+| `demands` | 0.25 of **their** purse, when well ahead |
+| `cap` | 120 in any one treaty |
+| `floor` | 10, below which nothing is written into the terms |
+| `offersWhenOutmatched` / `demandsWhenAhead` | 1.3 and 0.8, **unchanged** |
+| `proportional` | the switch; off is the old game, exactly |
+
+**The share is on the payer in both directions**, which is the shape of the one
+gold sink in this game that works. Section 136 priced turning a spy as
+`min(gold, buyer.gold)` and thereby made it wealth-proportional -- it drains the
+rich more than the poor -- and it got there for reasons that had nothing to do
+with the economy. This is that, on purpose, for the second time.
+
+**The cap is set against `goldScale`, not picked.** `aiAccepts` adds
+`gold / DIPLOMACY_AI.goldScale` to wanting peace and `goldScale` is 100, so 120
+is **1.2 points of wanting**. The strength ratio -- the thing the whole decision
+was built around -- is clamped to 1.5, for the reason `tiringCap` gives at
+length: a term that can exceed the entire decision on its own is a bug wearing a
+number. So gold can outweigh a grudge and can never outweigh the balance of
+power. Without the cap a side with 5000 banked buys peace from anybody,
+whatever is happening in the field.
+
+**The band is untouched and is now a lever.** Section 154 suspected the band,
+not the figure, is why most offers carry no gold. Making a payment bigger does
+not make it more frequent, so that stays a separate question with its own arm
+rather than being changed in the same breath.
+
+### The player's side of the table, which was the same stale number
+
+`offers()` in `ui/talks.ts` hardcoded 25, 50 and a demand of 25. Left alone,
+the player would have haggled in pennies while an AI across the table asked for
+a fifth of their treasury. The buttons are now priced off `tributeOf` -- the
+full rung and a half rung, out of the player's own purse, and the demand out of
+theirs. A rung the floor swallows is left out rather than shown at zero, and
+the demand is left out when they have nothing worth demanding, which it could
+never have been signed with anyway: `affordable` refuses it.
+
+Driven in the running game: 600 against 800 gives *pay 60 / pay 120 / demand
+120* (their 200 capped); 100 against 60 gives *10 / 20 / demand 15*; 30 against
+20 gives **"Offer peace" alone**, both rungs and the demand under the floor.
+
+### The Orcpedia
+
+*"Tribute, and why it is never a round number"*, under Diplomacy, between the
+talks and breaking it. It reads the constants rather than restating them, so
+the share, the cap and the floor cannot drift out of the text.
+
+### What was predicted, before the arm ran
+
+Kept as written, so the section below can be read against it rather than
+alongside a tidied-up version of it:
+
+- The three dead-gold sides (Hive, Unbound, Wandering Folk) are the ones with
+  deep purses and small armies, so they are the side that **pays**. Their
+  banked gold should fall. That is the point of the section.
+- The gold goes to whoever is winning the war, who already has a working sink
+  in espionage. **This is the risk and it should be read first**: section 154's
+  case for tribute over mercenaries is that peace is worth most to the loser,
+  so the *value* runs opposite to wealth -- but the *coin* still runs toward
+  the leader. If the Kingdom's banked gold rises while nobody else's falls,
+  this is a transfer to the strongest side wearing a sink's clothes.
+- The Hive may never be billed at all. It wins by its own ending without
+  contesting the military dimension, so a band that only opens on a lopsided
+  *war* may simply never open for it -- in which case the faction with the
+  deadest gold is untouched and the band, not the share, is the lever.
+
+The second and third of those are reasons the arm wants `gone`, `wins` and
+banked gold read together, not a treasury column on its own. (The run could not
+do it: see below. The harness has no treasury column at all.)
+
+### Measured, 324 games
+
+The harness printed its own estimate and it is the one quoted: *"3 arms x 2
+sets. 324 games, about 97 minutes (58-126, depending on how many run to the
+turn limit)."* It finished in **92.5 min, 17.1s a game against SECONDS_PER_GAME
+of 18**.
+
+**The canary passed at full scale.** Arm 1 against section 179c's `as shipped
+(no floor)`: **108 rows compared on the same seeds, 52 data columns each, zero
+differing**. So nothing unpinned leaked into `control()` when TRIBUTE was added,
+and both runs' comparisons stand.
+
+| arm | Horde | Kingdom | Hive | Wandering | Unbound | nobody |
+|---|---|---|---|---|---|---|
+| flat 25 and 30 | 11 | **40** | 25 | 3 | 13 | 16 |
+| a share of the purse | 12 | **31** | 29 | 3 | 14 | 19 |
+| and offered more often | 12 | **30** | 29 | 4 | 15 | 18 |
+
+### The figure moved the game. The band did not.
+
+Paired on 108 maps, the figure step (arm 1 to arm 2) changes the winner on 22 of
+them, and the whole of it lands on one side: **the Kingdom loses 11 and gains 2,
+net -9, p = 0.022**. Nobody else is significant -- the Hive gains 4 at p = 0.29.
+
+It clears the bar this project set for believing a swing. **Both seed sets
+agree**: tuned 18 to 15, held-out 22 to 16. And **a second column moves with
+it**: *points* victories fall **13 to 7** (tuned 5 to 1, held-out 4 to 1),
+dominance 22 to 19, and fights per game fall in both sets (454.9 to 437.5 tuned,
+437.4 to 412.5 held-out).
+
+Those are the war victories, which says what happened without needing a theory
+about it. Of the eleven maps the Kingdom lost: it had been winning **five by
+dominance, four on points, two by Object**, and they went to the Hive (3), the
+Unbound (2), the Horde (2) and **to nobody at all (4)**. Unfinished games rise
+16 to 19.
+
+The band step is **dead**: same winner on 91 of 108 maps, the Kingdom net -1,
+every side p = 1.000. Widening the band to 1.1 / 0.9 offers tribute in more
+treaties and changes no outcome. **It does not ship.** `offersWhenOutmatched`
+stays 1.3 and `demandsWhenAhead` stays 0.8, now measured rather than inherited.
+
+So of the two candidate explanations section 180 was built to separate, it was
+the **figure**, not the band. That is worth more than the result itself: it
+retires the other half of the question instead of leaving it open.
+
+### Is it a balance win? Partly, and one side is untouched.
+
+The Kingdom went into this run at 40 of 92 decided games, nearly half, and the
+clear strongest side. 31 of 89 is a flatter table and the Hive is the main
+beneficiary. But three of the nine wins taken off it **became nobody's**, and a
+game that reaches turn 300 undecided is not a side's win redistributed, it is a
+game that got slower. The honest version is: the top came down, and part of the
+cost was paid in unfinished games rather than to another faction.
+
+**The Wandering Folk did not move: 3, 3, 4.** They are the side Jeremy named as
+the one gold matters most to, and the sink whose figure was just multiplied by
+twenty leaves them exactly where they were. Whatever is wrong at 3 wins in 108,
+the price of a treaty is not it.
+
+### What this run could not read, and that is a setup error
+
+Section 180 pre-registered **banked gold per side, read with `wins` and
+`gone`**, as the first thing to look at -- it is how a drained hoard is told
+from a transfer to the leader. **The harness does not record it.** The sweep's
+gold column is `routeGold`, which is income per turn from trade routes, not
+treasury; section 154's 728-banked figure came from a separate instrumented
+probe, not from a sweep.
+
+So the question the section exists to answer is still open after 92 minutes of
+measurement, and the reason is that the reading was specified for a column that
+was never there. Checking that the pre-registered read is a column the harness
+emits costs one grep, and it was not done.
+
+What that leaves genuinely unknown:
+
+- **Whether the three hoarding sides end with less banked.** Unmeasured. The
+  win shift is consistent with tribute mattering, which is weaker evidence than
+  the number itself.
+- **Whether the Hive is ever billed at all.** Also unmeasured, and the third
+  arm was supposed to answer it from the band side; since the band step is dead
+  in outcomes, it says nothing either way about who pays.
+- **Whether this is a sink or a transfer.** The leader losing wins argues
+  against the registered risk -- a transfer to the strongest side should not
+  cost the strongest side nine wins -- but that is an inference, and the
+  treasury column is what would settle it.
+
+The fix is a treasury column in the sweep record (`gold` per side at the end,
+beside `routeGold`) plus a tribute counter per side: paid, received, and
+billed-at-all. Both are a few lines in `tools/sweep.ts`, and once they exist
+every later gold section gets the reading for free instead of re-earning it.
+
+## 181. The short list: what each side changes, before there is an Orcpedia to read
+
+Jeremy: *"I think we should have a modal popup to explain the high level
+mechanics of each faction where there are differentiators (like recruitment,
+exorcism, etc)"*, and then, on where it goes: *"First contact plus the hover on
+the game picker -- the 'complete rules' in the orcpedia is already there for
+those that want to read about it in full, but I want to have the short list for
+players that are looking for a quick differentiator between factions to decide
+which to play. They will always have the full orcpedia once they've started
+playing."*
+
+That is the whole specification and it settles the thing that would otherwise
+have been got wrong: **this is not the rules.** The Orcpedia has those, in full,
+one keypress away for the entire game. This answers one question -- how is this
+side different from the other four -- and stops.
+
+### What the audit found first, which changes the shape of it
+
+Before writing a word of it, what is actually different per side:
+
+| side | has |
+|---|---|
+| Hivekin | `HIVE_RULES` in the Orcpedia: the Queen, burrowing, the arrival-priced ending |
+| Unbound | `UNBOUND_RULES`: dispersing, re-forming, exorcism |
+| Wandering Folk | Recruit (`recruiting.ts` gates on `faction !== 'wandering'`) -- documented in the **economy** pane, not with the faction |
+| Horde | **nothing** |
+| Kingdom | **nothing** |
+
+Grepped across the sim: there is no branch on `'orc'` or `'human'` outside
+flavour naming, and `endings.ts` records that three `=== 'orc'` were
+deliberately taken out. The two empires differ by roster, advance tree and an
+AI temperament lean, and that is all.
+
+So two of the five entries say *"no rule of its own"*, and that is the honest
+answer rather than a gap to pad. For a player choosing a side it may be the
+single most useful line on the screen.
+
+What the roster audit gave, for the lines that needed a fact rather than a
+feeling (whole tree, unweighted):
+
+| | fighters | attack | defence | cost |
+|---|---|---|---|---|
+| orc | 33 | 7.82 | 4.61 | 57.9 |
+| human | 25 | 6.84 | 5.88 | 52.6 |
+| wandering | 23 | 6.96 | 4.22 | **70.8** |
+| hivekin | 20 | 4.15 | 3.20 | 49.4 |
+| unbound | 13 | 4.46 | 3.46 | 45.5 |
+
+The Horde leans to attack at 1.70 and the Kingdom is nearly square at 1.16,
+which is what *"more ways to hit than to hold"* is standing on. And the
+Wandering Folk having the dearest units in the game is not decoration -- it is
+`recruiting.ts`'s *"Create, the ordinary training path at a quarter more than
+anybody else pays"*, so the two lines in their entry are the same fact from
+both ends.
+
+### Where it lives
+
+`FactionDef.differs: string[]`, **required rather than optional**. A sixth
+faction cannot be added without somebody deciding what makes it worth picking,
+which is the decision that went missing when the Hivekin arrived with no entry
+in any roster filter.
+
+Shown in two places off the one array, so they cannot drift:
+
+- **The picker**, under the Play-as row. Hovering a card shows that side's
+  list; leaving goes back to the chosen side's, suffixed *"-- your pick"*. It
+  opens on the chosen side rather than empty, because a player who has already
+  decided should not have to go hunting to see their own.
+- **First contact**, in the dialog that already exists, under the mood and
+  **above** the two envoys. It was below them at first, which put it under the
+  fold at 1280x900: the one place the information is worth having is the one
+  place nobody would have scrolled to find it.
+
+### The panel has a fixed floor, and a test holds it there
+
+Measured in the running game, the five lists rendered at 99, 99, 116, 151 and
+99 pixels. Sweeping the cards would have shoved the Begin button up and down
+**52 pixels under the cursor**, which is the kind of thing that makes a hover
+panel feel broken rather than informative. The Wandering Folk's entry was
+tightened and the panel floored at 124, and all five now render at exactly
+that.
+
+That floor is only safe while the lists stay about the same size, so it is a
+test rather than a hope: every list is 2 to 4 lines and no line over 135
+characters, checked for every faction in `FACTION_IDS`. A sixth faction with a
+paragraph in it fails that test instead of silently making the dialog jump.
+
+### Checked
+
+- `tests/ui/contact.test.ts`: the dialog shows the met side's lines and **not
+  the player's own** -- showing your own list on meeting somebody is the dialog
+  talking to the wrong side of the table -- plus the length bound above.
+- `tests/ui/picker.test.ts`, new: opens on the chosen side and says so, follows
+  the cursor, goes back on `mouseleave`, follows a change of choice. Each was
+  run against the code with the matching wire cut, and fails there.
+- Driven in the browser besides, which is where the below-the-fold problem and
+  the 52-pixel jump were found. Neither would have failed a test.
+
+## 182. Playing it on a phone — QUEUED, last
+
+Jeremy, 2026-11-15, placing it himself: *"an item for the end of the queue --
+optimize for playing the game on a device (phone/tablet) since the design
+currently works best with mouse/keyboard, not touch/tap/etc. But that can be at
+the very end of the queue, and doing that work will both help players that want
+to play on the go, and potentially help for any future port we might want to do
+for an app."*
+
+**It is last, and that is his instruction rather than my ranking.** Written
+down now so the shape is not re-derived later, not so it jumps the queue.
+
+### Why it is worth writing down early even though it is last
+
+The second half of his reason is the part that decays if it is left unwritten:
+a touch pass is **also the groundwork for a port**, because the things that
+make a game awkward on a phone are mostly the things that assume a pointer with
+hover, a right button and a keyboard. Every one of those assumptions is cheaper
+to find than to fix, and cheapest of all to stop adding.
+
+Which means this item has a job *before* it is started: anything built between
+now and then should avoid widening the gap where it costs nothing to avoid it.
+
+Section 181 was checked against that rule rather than assumed to fail it, and
+it **passes**: the picker panel is wired on `mouseenter`, but a tap selects the
+card, which fires `change`, which shows that side's list. Driven in the browser
+with a bare `click()` and no mouse event at all -- *"The Hive As It Stands --
+your pick"*. What touch loses is previewing a side without choosing it, and
+that is not a touch concept; tapping through the five costs nothing, since
+nothing is committed until Begin.
+
+Worth keeping because the first draft of this section asserted the opposite and
+was wrong. A hover handler is not automatically a touch bug, and guessing which
+ones are is how an audit produces a list of two hundred things that mostly
+work.
+
+### What is already known to be in the way
+
+Not an audit -- an audit is part of the work -- but what is visible from having
+written the interface:
+
+- **Information that lives only in a `title`.** Eight of them carry real prose
+  rather than a label: what a tile yields and *why* in the city panel's crop
+  grid, a unit's blurb and a structure's blurb in the build list, the mood bar's
+  explanation, a veteran chip's full line in the Orcpedia. A `title` has no tap
+  path at all -- it is not a degraded experience on touch, it is nothing -- and
+  the mood bar already shows the way out, since it carries the same text twice,
+  once as `title` and once as `data-tip`.
+- **The keyboard is a first-class input.** The Orcpedia has a whole *Every key*
+  topic, and B, F, S, N, Space, Enter, V and T are real controls. A phone has
+  none of them, so anything only reachable by key is unreachable.
+- **Right-click and drag.** The map pans by drag and the selection model uses
+  clicks that a touch surface will deliver as taps with slop; `dragMoved` and
+  `lastPointer` in `main.ts` already exist to tell a drag from a click and are
+  the right place to look first.
+- **The canvas is sized for a desktop viewport**, and the side panel, top bar
+  and city panel are laid out beside it rather than over it. A 390-point phone
+  is not a narrow desktop.
+- **Two-finger gestures do not exist.** Pinch to zoom is the one thing every
+  player will try first on a map.
+
+### The cheap thing to do in the meantime
+
+Nothing in this section, but a rule for the sections before it: **when a new
+control is added, give it a tap path at the same time or write down that it has
+none.** The fixing is not the expensive part. Finding out which of two hundred
+interactions quietly assumed a mouse, three years after they were written, is.

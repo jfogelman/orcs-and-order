@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { HIVEKIN } from '../src/sim/hivekin';
+import { TRIBUTE } from '../src/sim/diplomacy';
 
 /**
  * The question this sweep is currently asking.
@@ -388,15 +388,97 @@ const buildArms = (): Arm[] => {
    * the 60-shield arm already measured the Unbound at three bodies as inert
    * (52 of 108 against 56, paired p = 0.56).
    */
-  const floor = (label: string, bodies: number): Arm => ({
+  /**
+   * ## Section 180: what a treaty is worth, and whether it is ever offered
+   *
+   * Section 154's item 1 measured where gold actually goes and found **one
+   * sink that matters, and it is espionage**: turning a spy is the largest
+   * outgoing for every side that spends anything. The Kingdom banks 728 and
+   * spends 952 a game; the Hive banks 612 and spends 67; the Unbound bank 546
+   * and spend 80. Gold is not dead, it is dead **for three of the five**.
+   *
+   * Section 180 built the one option that survived that item's own
+   * re-measurement. Tribute is the only gold sink proposed here that cannot
+   * compound a lead: a sink that buys *power* pays whoever has the most gold,
+   * which is what retired rush-buying and killed the mercenary market, but a
+   * sink that buys *peace* is worth most to whoever is losing.
+   *
+   * ## The two things that could be wrong, and they are different things
+   *
+   * `aiTerms` attaches gold to a treaty only when the strength ratio passes
+   * **1.3 or 0.8**, and then a flat **25 or 30**. Section 168 measured the
+   * result as peace terms moving 3 to 49 gold in a whole game. There are two
+   * candidate explanations and the ladder is built to separate them:
+   *
+   * - **The figure.** 25 gold against a 600-gold treasury is not a term in
+   *   anybody's decision, whatever the band does.
+   * - **The band.** Most wars are not lopsided enough to open it, so most
+   *   treaties carry nothing however large the payment would have been.
+   *
+   * Making the payment bigger does not make it more frequent, so these do not
+   * substitute for each other and one arm cannot answer both.
+   *
+   * | arm | what a treaty carries | when it carries it |
+   * |---|---|---|
+   * | flat 25 and 30 | the game up to section 179 | 1.3 / 0.8 |
+   * | a share of the purse | 0.2 of the payer, 0.25 demanded, cap 120 | 1.3 / 0.8 |
+   * | and offered more often | the same share | **1.1 / 0.9** |
+   *
+   * Each step moves exactly one thing: arm 1 to 2 is the figure at the
+   * shipped band, arm 2 to 3 is the band at the shipped share.
+   *
+   * ## The first arm is also a canary
+   *
+   * `TRIBUTE.proportional = false` is the old game *exactly* -- `tributeOf`
+   * keeps that path floorless for this reason -- so arm 1 should reproduce
+   * section 179c's shipped arm **bit for bit**, on the same seeds. Section
+   * 179c established that a shared arm replays identically across runs, and
+   * that is what let two three-arm ladders pool into one five-arm design.
+   *
+   * So check it before reading anything else. If arm 1 differs from 179c's
+   * shipped rows, something unpinned has leaked into `control()` since, and
+   * every comparison in both runs is void. It costs nothing and it is the only
+   * cheap test of that there is.
+   *
+   * ## What would count, and what the risk is
+   *
+   * The sink works if the three hoarding sides **end with less banked**. That
+   * is the point of the section.
+   *
+   * But banked gold alone cannot tell a drained hoard from a transfer, and the
+   * risk was written into section 180 before it was built: **the coin flows to
+   * whoever is winning the war**, who already has a working sink in espionage.
+   * So read banked gold per side together with `wins` and `gone`. If the
+   * Kingdom's banked gold rises while nobody else's falls, this is a transfer
+   * to the strongest side wearing a sink's clothes and should come back out.
+   *
+   * A second thing to read rather than assume: the Hive may **never be
+   * billed**. It wins by its own ending without contesting the military
+   * dimension, so a band keyed to a lopsided war may simply never open for it
+   * -- in which case the faction with the deadest gold is untouched by both
+   * arms, and the band, not the share, is the whole lever. Arm 3 is the one
+   * that can say so.
+   */
+  const tribute = (label: string, apply: () => void): Arm => ({
     label,
     apply: () => {
       control();
-      HIVEKIN.escortFloor = bodies;
+      apply();
     },
   });
 
-  return [floor('as shipped (no floor)', 1), floor('floor of 4', 4), floor('floor of 6', 6)];
+  return [
+    tribute('flat 25 and 30 (the old game)', () => {
+      TRIBUTE.proportional = false;
+    }),
+    // `control()` already pins the shipped share, so this arm changes nothing
+    // on purpose: it is the shipped game, named.
+    tribute('a share of the purse', () => {}),
+    tribute('and offered more often', () => {
+      TRIBUTE.offersWhenOutmatched = 1.1;
+      TRIBUTE.demandsWhenAhead = 0.9;
+    }),
+  ];
 };
 
 const ARMS: Arm[] = buildArms();

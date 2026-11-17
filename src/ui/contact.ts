@@ -1,4 +1,5 @@
-import type { GameState } from '../model/types';
+import type { FactionId, GameState } from '../model/types';
+import { FACTIONS } from '../model/factions';
 import { advisorsFor } from '../model/advisors';
 import { STANDING, moodName, standing } from '../sim/diplomacy';
 import { type Opening, openingBy, openingTitle, pairOpening } from '../sim/contact';
@@ -71,6 +72,31 @@ function ourRead(faction: string, opening: Opening | undefined): string {
   }
 }
 
+/**
+ * What playing against this lot is going to be different about. Section 181.
+ *
+ * The same short list the picker shows, arriving the moment it starts to
+ * matter: you have just met them, and *now* is when "their dead get back up"
+ * is worth knowing. It is deliberately the short one -- the Orcpedia has the
+ * rules in full and is a keypress away from here on.
+ *
+ * Read off `FACTIONS[...].differs` rather than written again, so the two
+ * places that show this cannot drift apart.
+ */
+function primer(faction: FactionId, name: string): string {
+  const lines = FACTIONS[faction]?.differs ?? [];
+  if (lines.length === 0) return '';
+  return `
+    <div class="faction-note">
+      <div class="faction-note-head" style="color:${FACTIONS[faction].color}">
+        What is different about ${escapeHtml(name)}
+      </div>
+      <ul class="faction-note-list">
+        ${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+      </ul>
+    </div>`;
+}
+
 /** The envoy's portrait and name, for a side, or nothing if it has no envoy. */
 function envoyOf(faction: string): { id: string; name: string } | undefined {
   const who = advisorsFor(faction as never).find((a) => a.role === 'diplomacy');
@@ -139,6 +165,7 @@ export function openFirstContact(
         <p style="font-size:15px"><strong>${escapeHtml(moodName(state, viewerId, them))}</strong>
           <span class="muted">(${sign}${where}, on a scale of ${worst} to +${best})</span></p>
       </div>
+      ${primer(they.faction, they.name)}
       <div class="advisors talks-voices talks-across">
         ${voice(theirEnvoy, they.name, theirWord(state, them, viewerId, opening), true)}
       </div>

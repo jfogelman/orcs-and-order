@@ -20,7 +20,7 @@ import { COWED } from '../sim/status';
 import { HIVE_ENDING, HIVEKIN, QUEEN } from '../sim/hivekin';
 import { BURROW, burrows } from '../sim/burrow';
 import { DIFFICULTIES, difficultyOf } from '../sim/difficulty';
-import { MOODS, PEACE, STANDING } from '../sim/diplomacy';
+import { MOODS, PEACE, STANDING, TRIBUTE } from '../sim/diplomacy';
 import { RISK_BANDS, SPY, SPY_ACTIONS } from '../sim/spying';
 import { UNSEEN } from '../sim/unseen';
 import { SABOTAGE } from '../sim/sabotage';
@@ -1675,6 +1675,31 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           once the two of you have actually fought, a side that is losing, or building an
           ending, or beset by raiders, may ask &mdash; and offers made to you wait for the
           start of your turn.
+        </p>`,
+      },
+      {
+        title: 'Tribute, and why it is never a round number',
+        body: `
+        <p class="flavor">
+          <strong>Gold on a treaty is a share of whoever pays, not a price
+          list.</strong> Badly outmatched, a side offers about
+          ${Math.round(TRIBUTE.offers * 100)} parts in a hundred of its own treasury to be
+          let alone. Well ahead, it demands about ${Math.round(TRIBUTE.demands * 100)} in a
+          hundred of yours for the privilege of stopping. So the same peace costs a
+          full treasury a great deal and an empty one almost nothing, and a side
+          with ${TRIBUTE.floor} gold to its name is not asked for any of it.
+        </p>
+        <p class="flavor">
+          <strong>Nobody pays more than ${TRIBUTE.cap} for one treaty,</strong> however
+          deep the vault. Gold at the table is meant to outweigh a grudge and never to
+          outweigh the war itself &mdash; past this, a rich enough side would simply buy
+          peace from anybody, whatever was happening in the field.
+        </p>
+        <p class="flavor">
+          <strong>It only comes up when the war is lopsided.</strong> Between roughly
+          matched sides the terms carry no gold at all, in either direction, and the
+          offer is simply to stop. Your own buttons are priced off the same rule, which
+          is why they move as your treasury does.
         </p>`,
       },
       {
