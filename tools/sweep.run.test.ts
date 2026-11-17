@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { TRIBUTE } from '../src/sim/diplomacy';
+import { BRIBE } from '../src/sim/bribery';
 
 /**
  * The question this sweep is currently asking.
@@ -459,7 +459,75 @@ const buildArms = (): Arm[] => {
    * arms, and the band, not the share, is the whole lever. Arm 3 is the one
    * that can say so.
    */
-  const tribute = (label: string, apply: () => void): Arm => ({
+  /**
+   * Section 184: **buying a town, and whether the price is anywhere near
+   * right.**
+   *
+   * Section 183 reopened section 154's item 1 rather than closing it --
+   * tribute is a real sink, it reaches the Hive, and all three hoarding sides
+   * still end on 250 to 500 banked. Section 184 is that item's last untouched
+   * option: an agent beside a town makes an offer for the whole place.
+   *
+   * ## The question is the price, not whether it works
+   *
+   * `npm run spyprobe` over 24 games already answered "does it happen at all",
+   * which is the question that has wasted sweeps here before: 1.92 offers a
+   * game, **1.21 towns bought**, 537 gold spent. So the rung is on the board
+   * and an arm of it measures something.
+   *
+   * 1.21 towns a game against sides holding three to seven is a lot. The
+   * ladder is therefore a **price** ladder and not a switch-and-see:
+   *
+   * | arm | what a town costs | what it is |
+   * |---|---|---|
+   * | not for sale | -- | the game up to section 183 |
+   * | towns for sale | 80 + 45/size + 40/building + 20/body + 0.15 of theirs | as built |
+   * | dearer by half again | 160 + 90/size, the rest unchanged | the first lever 184 names |
+   *
+   * Arm 3 moves `base` and `perSize` only, deliberately leaving
+   * `ofTheirPurse` alone: that term is the anti-runaway argument and changing
+   * it in the same step would confuse "too cheap" with "pays the leader".
+   *
+   * ## The first arm is also a canary
+   *
+   * `BRIBE.enabled = false` consumes no dice -- `canBuyTown` refuses before
+   * any roll and the AI errand is gated on the same flag -- so arm 1 should
+   * reproduce **section 183's shipped arm, bit for bit**, on the same seeds.
+   * Check that before reading anything else. If it differs, something unpinned
+   * has leaked into `control()` since, and every comparison here is void.
+   *
+   * ## What to read, in columns that exist
+   *
+   * Section 180 pre-registered a reading against a column the harness did not
+   * have and spent 92 minutes finding out. Every quantity below is a column
+   * section 183 added or one that was already printed:
+   *
+   * - **`gold` per side**, which is the point: a sink should leave the three
+   *   hoarders with less banked. Tribute moved only the Hive, by a tenth.
+   * - **`cities` and `gone`**, read together. A town bought is a town moved
+   *   with no fight, so `cities` should move between sides while captures do
+   *   not. `gone` is the elimination column and it is the risk below.
+   * - **`wins`**, last. A sink that changes nobody's chances is a success
+   *   here, not a null: dead gold was the complaint.
+   *
+   * ## The risks, written down before the arm runs
+   *
+   * **The rush-buying shape.** If the Kingdom's `wins` rise while its `gold`
+   * falls, this is the leader converting a dead hoard into cities and
+   * `ofTheirPurse` has failed; that lever comes up rather than the rung coming
+   * out.
+   *
+   * **The Wandering Folk.** 1 win in 54 and 331 banked: the cheapest source of
+   * towns and the least able to buy one. Their last town is not for sale, so
+   * they cannot be eliminated this way -- but `cities` falling for them with
+   * `gone` flat is the signature of being bought down to one, and that wants a
+   * floor at two.
+   *
+   * **The agent's day.** No fixture game bought a town, yet all three diverge:
+   * a refused offer still spends the turn. Whatever the cheap rungs stop doing
+   * is part of what this arm costs, and `read`/`gossip` are not in the table.
+   */
+  const bribe = (label: string, apply: () => void): Arm => ({
     label,
     apply: () => {
       control();
@@ -468,15 +536,15 @@ const buildArms = (): Arm[] => {
   });
 
   return [
-    tribute('flat 25 and 30 (the old game)', () => {
-      TRIBUTE.proportional = false;
+    bribe('not for sale (the old game)', () => {
+      BRIBE.enabled = false;
     }),
-    // `control()` already pins the shipped share, so this arm changes nothing
+    // `control()` already pins the rule as built, so this arm changes nothing
     // on purpose: it is the shipped game, named.
-    tribute('a share of the purse', () => {}),
-    tribute('and offered more often', () => {
-      TRIBUTE.offersWhenOutmatched = 1.1;
-      TRIBUTE.demandsWhenAhead = 0.9;
+    bribe('towns for sale', () => {}),
+    bribe('dearer by half again', () => {
+      BRIBE.base = 160;
+      BRIBE.perSize = 90;
     }),
   ];
 };
