@@ -16,6 +16,7 @@ import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
+import { BRIBE } from '../src/sim/bribery';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
 import { BUILD_ORDER, ENDING_ROAD } from '../src/sim/research';
@@ -163,6 +164,9 @@ export const LEVERS: Record<string, object> = {
   TURNING,
   GOSSIP,
   INCITE,
+  // Section 184: buying a town. In the fingerprint the day the rule was
+  // written, so the arm that measures it is a real arm and not a duplicate.
+  BRIBE,
   HIVE_WORKS,
   /**
    * Section 153: the Unbound's whole rule, and the thing their ending does.

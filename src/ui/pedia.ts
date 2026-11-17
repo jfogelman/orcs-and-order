@@ -24,6 +24,7 @@ import { MOODS, PEACE, STANDING, TRIBUTE } from '../sim/diplomacy';
 import { RISK_BANDS, SPY, SPY_ACTIONS } from '../sim/spying';
 import { UNSEEN } from '../sim/unseen';
 import { SABOTAGE } from '../sim/sabotage';
+import { BRIBE } from '../sim/bribery';
 import { ROADS } from '../sim/roads';
 import { TRADE } from '../sim/trade';
 import { POSTS } from '../sim/posts';
@@ -1475,7 +1476,46 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           offered and by whom, and they will remember. That is why the button quotes a
           price in gold where the others quote a risk &mdash; the cost of failing here is
           not a chance, it is a certainty you are choosing to pay for.
-        </p>`,
+        </p>
+        ${
+          !BRIBE.enabled
+            ? ''
+            : `
+        ${subhead(`${SPY_ACTIONS.buy.verb} a town — ${techNamed('turning')}`)}
+        <p class="flavor">
+          <strong>A magistrate is also a person.</strong> The same advance that tells you
+          a soldier can be paid twice tells you who signs for a town, and an agent
+          standing at the gate can make that person an offer for the whole place.
+          <strong>Nothing is sacked.</strong> Every building is left standing, the walls
+          with them, and nobody dies &mdash; which is the entire difference between this
+          and an army. An army only ever buys you the ruins of a town; this buys you the
+          town.
+        </p>
+        <p class="flavor">
+          <strong>What it costs is a fact about the place</strong>: how large it is, what
+          is standing in it, how many soldiers are billeted there &mdash; and
+          <em>how much its owner has in the bank</em>. A rich empire is dear to buy from
+          and a poor one is cheap, so a hoard is its own kind of wall, and spending one
+          down is what makes you worth approaching. A town that somebody has already been
+          round making unhappy goes for
+          ${Math.round(BRIBE.unrestCut * 100)}% less, which is what fomenting discontent
+          is <em>for</em>: soften it one turn, buy it the next.
+        </p>
+        <p class="flavor">
+          <strong>A capital is never for sale, at any price.</strong> Not dearer &mdash;
+          refused. Whatever else happens to an empire, the seat of it cannot be bought
+          out from under it. And a town that has just changed hands this way is not for
+          sale again for ${BRIBE.settles} turns: it has had quite enough excitement.
+        </p>
+        <p class="flavor">
+          <strong>The garrison will not serve a bought magistrate</strong>, and will not
+          fight its own townsfolk either, so it marches home to the nearest town its side
+          still holds. You have bought a place, not an army &mdash; and the people in it
+          know exactly what they went for, so expect them to be sore about it for
+          ${BRIBE.resentment} turns. As with any offer made by walking up and speaking,
+          <strong>the money is gone either way and a refusal names you</strong>.
+        </p>`
+        }`,
       },
       {
         title: 'The agent nobody can see',

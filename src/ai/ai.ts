@@ -18,6 +18,14 @@ import { SPY, SPY_TRACE, canReach, canRead, lastReading, readCity, searchFrom } 
 import { goesUnseen } from '../sim/unseen';
 import { GOSSIP, askAround, canAsk, heardIsDistracted, lastGossip } from '../sim/gossip';
 import { INCITE, canIncite, incite, inciteExposure } from '../sim/incite';
+import {
+  BRIBE,
+  aiTownOffer,
+  buyExposure,
+  buyTown,
+  canBuyTown,
+  townPrice,
+} from '../sim/bribery';
 import { TURNING, aiOffer, askingPrice, canTurn, turnUnit } from '../sim/turning';
 import {
   SABOTAGE,
@@ -1944,6 +1952,30 @@ function actSpy(state: GameState, unit: Unit): void {
       SPY_TRACE.turnWrecked++;
       sabotage(state, unit, worth);
       return;
+    }
+  }
+
+  // Section 184: the town itself, if we can afford it.
+  //
+  // **Behind sabotage and ahead of turning a soldier**, which is the whole
+  // ordering argument in one line: wrecking an ending work stops somebody
+  // winning, and nothing else on this ladder is worth more than that -- but a
+  // town is worth more than a soldier, by about the margin of its own walls.
+  //
+  // The dearest affordable town first, for the same reason as the dearest
+  // soldier: the price is a fact about the target, so the most expensive thing
+  // a purse can be sure of is the best use of a purse that is otherwise never
+  // spent at all.
+  if (BRIBE.enabled && BRIBE.ai && buyExposure(unit) <= BRIBE.aiNamed) {
+    const forSale = state.cities
+      .filter((c) => canBuyTown(state, unit, c).ok && hostileOrNot(state, unit.owner, c.owner))
+      .sort((a, b) => townPrice(state, b) - townPrice(state, a));
+    for (const town of forSale) {
+      const offer = aiTownOffer(state, unit, town);
+      if (offer) {
+        buyTown(state, unit, town, offer.gold);
+        return;
+      }
     }
   }
 

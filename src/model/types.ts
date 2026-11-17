@@ -810,6 +810,19 @@ export interface City {
    * which is the judgement the order is asking the player to make.
    */
   unrest?: { until: number };
+  /**
+   * Who bought this town, and on what turn. Section 184.
+   *
+   * Set when a town changes hands for gold rather than being stormed, and read
+   * for one thing only: no town may be bought again within `BRIBE.settles`
+   * turns. **Without that the two richest sides pass a border town back and
+   * forth** for the rest of the game, which is the same failure `razeCity`'s
+   * note describes for storming one.
+   *
+   * Absent on every town that has never been sold, which is almost all of them
+   * and all of any old save.
+   */
+  sold?: { by: number; on: number };
   foundedTurn: number;
   /**
    * Who founded it, which is not always who holds it.

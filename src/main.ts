@@ -104,6 +104,8 @@ import {
   openReading,
   openSabotage,
   openSearch,
+  openTownOffer,
+  openTownResult,
 } from './ui/spying';
 import { canRead, canSearch, readCity, riskBand, searchFrom } from './sim/spying';
 import { goesUnseen } from './sim/unseen';
@@ -111,6 +113,7 @@ import { canSabotage, sabotage, sabotageBand, sabotagePhase } from './sim/sabota
 import { askingPrice, canTurn, turnUnit } from './sim/turning';
 import { askAround, canAsk } from './sim/gossip';
 import { canIncite, incite } from './sim/incite';
+import { buyTown, canBuyTown, townPrice } from './sim/bribery';
 import { appearsTo, couldWear, wearDisguise } from './sim/disguise';
 import { openFirstContact } from './ui/contact';
 import { metSides } from './sim/contact';
@@ -883,6 +886,19 @@ class App {
           )} &middot; <span class="risk">${escapeHtml(riskBand(unit, 'incite'))}</span></button>`,
       )
       .join('');
+    // Section 184: buying the town itself. Quotes a price in gold rather than
+    // a risk band, exactly as the offer to a soldier does and for the same
+    // reason -- what the player is choosing here is how much to pay, and the
+    // thing that can go wrong is certain to be reported either way.
+    const purchases = near
+      .filter((c) => canBuyTown(this.state, unit, c).ok)
+      .map(
+        (c) =>
+          `<button class="small" data-act="buytown" data-city="${c.id}" title="Make an offer for the whole place. Nothing is sacked, the garrison marches home, and a refusal names us.">Buy ${escapeHtml(
+            c.name,
+          )} &middot; <span class="risk">${townPrice(this.state, c)}g</span></button>`,
+      )
+      .join('');
     // Section 136 slice 7: ask a town what it thinks of its neighbours.
     const gossip = near
       .filter((c) => canAsk(this.state, unit, c).ok)
@@ -922,7 +938,7 @@ class App {
     const off = unit.disguise
       ? '<button class="small" data-act="wear" data-side="none" title="Be yourself again">Take it off</button>'
       : '';
-    return read + gossip + stir + wreck + offers + sweep + dress + off;
+    return read + gossip + stir + wreck + offers + purchases + sweep + dress + off;
   }
 
   /** Spend the turn reading a town, and say what came of it. */
@@ -987,6 +1003,35 @@ class App {
     this.refreshSidebar();
     openIncite(this.state, unit, city, out);
     this.selectNextIdle();
+  }
+
+  /**
+   * Make an offer for a whole town. Section 184.
+   *
+   * Two steps, as with an offer to a soldier: the dialog asks how generous to
+   * be, and only the choice made in it spends anything. The town's name and
+   * its owner are read **before** the purchase, because afterwards both have
+   * changed and the result dialog is about who it belonged to.
+   */
+  private orderBuyTown(cityId: number): void {
+    const unit = this.selected;
+    const city = this.state.cities.find((c) => c.id === cityId);
+    if (!unit || !city || unit.owner !== this.viewerId || isOver(this.state)) return;
+    const refused = canBuyTown(this.state, unit, city);
+    if (!refused.ok) {
+      this.flash(refused.reason ?? 'Not from here.');
+      return;
+    }
+    const former = this.state.players[city.owner]?.name ?? 'They';
+    openTownOffer(this.state, unit, city, (gold) => {
+      const out = buyTown(this.state, unit, city, gold);
+      this.playLogCues();
+      this.refreshHud();
+      this.refreshOverlays();
+      this.refreshSidebar();
+      openTownResult(city, former, out);
+      this.selectNextIdle();
+    });
   }
 
   /** Spend the day listening to what a town says about its neighbours. */
@@ -3468,6 +3513,9 @@ class App {
               break;
             case 'stir':
               this.orderStir(Number(btn.dataset.city));
+              break;
+            case 'buytown':
+              this.orderBuyTown(Number(btn.dataset.city));
               break;
             case 'ashore':
               this.orderAshore(Number(btn.dataset.id));
