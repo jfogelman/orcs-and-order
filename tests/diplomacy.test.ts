@@ -30,6 +30,7 @@ import {
   lossesIn,
   TRIBUTE,
   tributeOf,
+  tributeTally,
 } from '../src/sim/diplomacy';
 import {
   DIPLOMACY_AI,
@@ -691,5 +692,65 @@ describe('what a treaty carries (section 180)', () => {
     expect(aiTerms(state, me, them).gold).toBe(-TRIBUTE.cap);
     state.players[1].gold = 200;
     expect(aiTerms(state, me, them).gold).toBe(-50);
+  });
+});
+
+/**
+ * Section 183. The tally exists because section 180 pre-registered "read
+ * banked gold per side" and then measured 324 games that could not answer it:
+ * nothing in the game recorded a payment, and nothing noticed.
+ */
+describe('what a treaty was actually billed (section 183)', () => {
+  it('records the payment on both sides, in gold and in treaties', () => {
+    const state = board();
+    state.players[0].gold = 100;
+    state.players[1].gold = 10;
+    signPeace(state, { from: 0, to: 1, gold: 40 });
+
+    expect(tributeTally(state, 0), 'the payer').toEqual({
+      paid: 40,
+      got: 0,
+      bills: 1,
+      takes: 0,
+    });
+    expect(tributeTally(state, 1), 'the payee').toEqual({
+      paid: 0,
+      got: 40,
+      bills: 0,
+      takes: 1,
+    });
+  });
+
+  it('counts a demand as the other side paying, and adds a second treaty up', () => {
+    const state = board();
+    state.players[0].gold = 100;
+    state.players[1].gold = 100;
+    // Negative gold is a demand: 0 signs, 1 pays.
+    signPeace(state, { from: 0, to: 1, gold: -30 });
+    delete state.diplomacy!.pairs![pairKey(0, 1)]!.peace;
+    signPeace(state, { from: 0, to: 1, gold: -25 });
+
+    expect(tributeTally(state, 1)).toEqual({ paid: 55, got: 0, bills: 2, takes: 0 });
+    expect(tributeTally(state, 0)).toEqual({ paid: 0, got: 55, bills: 0, takes: 2 });
+  });
+
+  it('reads zeroes for a side that has never been billed, rather than nothing', () => {
+    const state = board();
+    // A treaty with no gold on it is not a bill, and a side that has signed
+    // nothing at all is not missing from the table -- "never billed" is the
+    // answer section 180 could not tell apart from "not recorded".
+    signPeace(state, { from: 0, to: 1, gold: 0 });
+    expect(tributeTally(state, 0)).toEqual({ paid: 0, got: 0, bills: 0, takes: 0 });
+    expect(tributeTally(state, 1)).toEqual({ paid: 0, got: 0, bills: 0, takes: 0 });
+    expect(state.diplomacy?.tribute, 'and nothing is stored at all').toBeUndefined();
+  });
+
+  it('survives a save and a load', () => {
+    const state = board();
+    state.players[0].gold = 100;
+    signPeace(state, { from: 0, to: 1, gold: 60 });
+    const back = deserialize(serialize(state));
+    expect(tributeTally(back, 0).paid).toBe(60);
+    expect(tributeTally(back, 1).takes).toBe(1);
   });
 });

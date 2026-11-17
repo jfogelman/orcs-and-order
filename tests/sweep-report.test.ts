@@ -45,6 +45,11 @@ function outcome(over: Partial<Outcome> & { sides: FactionId[] }): Outcome {
     joined: flat(0.5),
     links: flat(1),
     routeGold: flat(2),
+    gold: flat(400),
+    tributePaid: flat(0),
+    tributeGot: flat(0),
+    tributeBilled: flat(0),
+    tributeTook: flat(0),
     ...over,
   };
 }
@@ -216,5 +221,60 @@ describe('the raw rows name their own columns', () => {
     for (const f of FACTION_IDS) {
       expect(header, `${f} has no columns`).toContain(`${f}Cities`);
     }
+  });
+});
+
+/**
+ * Section 183: banked gold and the tribute tally, in the report.
+ *
+ * These are here because of the *way* section 180 failed. It wrote down what
+ * to read before it ran, the reading named a quantity, and the quantity had
+ * no column -- so 324 games came back unable to answer the question they were
+ * run for. Nothing was broken, so nothing caught it. A test that the column
+ * reaches the page is the cheapest thing that would have.
+ */
+describe('banked gold and what a treaty billed (section 183)', () => {
+  it('puts banked gold on the same line as wins and gone, not in a table of its own', () => {
+    const text = report([
+      arm('a', [
+        outcome({ sides: ['orc', 'human'], gold: { orc: 700, human: 200 } }),
+        outcome({ sides: ['orc', 'human'], gold: { orc: 500, human: 100 } }),
+      ]),
+    ]);
+    const block = text.split('\n\n').find((b) => b.startsWith('Orcs'))!;
+    const [head, , row] = block.split('\n');
+    // The reading section 180 asked for is gold *together with* wins and
+    // gone, so the test is that one line carries all three.
+    for (const col of ['wins', 'gone', 'gold']) {
+      expect(head, `${col} is not on the side's line`).toContain(col);
+    }
+    expect(row, 'the mean of 700 and 500').toContain('600');
+  });
+
+  it('tells never-billed from rarely-billed, which a mean of treaties cannot', () => {
+    // One game in fifty is 2%. As a mean number of treaties a game it is
+    // 0.02, which prints as 0.0 and reads as never -- and "is the Hive ever
+    // billed at all" is the question the column exists for.
+    const once = outcome({ sides: ['hivekin'], tributeBilled: { hivekin: 1 } });
+    const never = outcome({ sides: ['hivekin'], tributeBilled: { hivekin: 0 } });
+    const text = report([arm('a', [once, ...Array.from({ length: 49 }, () => never)])]);
+    const block = text.split('\n\n').find((b) => b.startsWith('Hivekin'))!;
+    expect(block.split('\n')[0]).toContain('billed');
+    expect(block, 'one game in fifty is 2%, not 0.0').toContain('2%');
+
+    const none = report([arm('a', Array.from({ length: 50 }, () => never))]);
+    expect(
+      none.split('\n\n').find((b) => b.startsWith('Hivekin'))!,
+      'and never billed reads 0%',
+    ).toContain('0%');
+  });
+
+  it('gives the raw rows a gold column that cannot be mistaken for route income', () => {
+    const rows = rawRows([arm('a', [outcome({ sides: ['orc', 'human'] })])]);
+    const header = rows.split('\n')[0].split('\t');
+    for (const col of ['orcGold', 'orcRouteGold', 'humanTributePaid', 'humanTributeBilled']) {
+      expect(header, `${col} is missing`).toContain(col);
+    }
+    expect(header.indexOf('orcGold')).not.toBe(header.indexOf('orcRouteGold'));
   });
 });

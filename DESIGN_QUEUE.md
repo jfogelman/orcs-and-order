@@ -17488,3 +17488,213 @@ Nothing in this section, but a rule for the sections before it: **when a new
 control is added, give it a tap path at the same time or write down that it has
 none.** The fixing is not the expensive part. Finding out which of two hundred
 interactions quietly assumed a mouse, three years after they were written, is.
+
+## 183. The column section 180 asked for and did not have — DONE, and it answered 180
+
+Jeremy, having read section 180's result: *"Add the gold column and tribute
+counter."*
+
+### What went wrong, exactly
+
+Section 180 priced a treaty as a share of the purse and pre-registered its
+reading **before** the arm ran, which is the habit this project has spent
+twenty sections building:
+
+> read banked gold per side together with `wins` and `gone`. If the Kingdom's
+> banked gold rises while nobody else's falls, this is a transfer to the
+> strongest side wearing a sink's clothes and should come back out.
+
+Then 324 games ran for 92 minutes and **could not answer it**. The sweep's only
+gold column is `routeGold`, which is income a turn from trade routes. Nothing
+anywhere recorded a treasury, and nothing recorded a payment. Section 154's
+"the Kingdom banks 728" came from a separate instrumented probe that was never
+folded back into the harness.
+
+**Nothing caught it, and that is the interesting part.** Not the identity
+guard, which compares settings. Not the suite, which was green. Not the smoke,
+which ran 18 games and printed a table with no gap in it. Not the canary, which
+passed. Pre-registering a reading is the right habit *and* it quietly adds a
+new way to be wrong: the reading is now prose, naming a quantity nobody checked
+was collected. The arm still runs. The result is still significant. The
+question it was run for is still open.
+
+### What ships
+
+Five columns per side in the sweep report, and a tally in the game.
+
+**In the game.** `state.diplomacy.tribute`, by player id:
+`{ paid, got, bills, takes }` -- gold handed over, gold taken, and the number
+of treaties that carried any in each direction. Written in exactly one place,
+`signPeace`, which is the single point where treaty gold changes hands: the AI
+path (`aiDiplomacy`) and both player paths in `talks.ts` all go through it, so
+there is no second place to forget. `tributeTally(state, id)` reads it and
+returns zeroes for a side that has never signed anything.
+
+Four numbers rather than one net figure, because a net figure answers none of
+the four questions: **a side that paid 300 and took 300 is not a side that
+never paid**.
+
+**In the report**, on the per-side block:
+
+| column | what it is |
+|---|---|
+| `gold` | mean gold **banked** at the end |
+| `paid` | mean tribute handed over in a game |
+| `got` | mean tribute taken in a game |
+| `billed` | **share of games** this side ever paid in |
+| `took` | share of games it ever was paid in |
+
+`billed` is a share and not a mean number of treaties on purpose. The open
+question is *"is the Hive ever billed at all"*, and one game in fifty is 0.02
+treaties a game, which prints as `0.0` and reads as never. 2% does not. There
+is a test for precisely that, because it is the mistake the column exists to
+stop.
+
+They go on the **same line as `wins` and `gone`**, which costs the block forty
+characters and is the whole point: the pre-registered reading was gold read
+*together with* those two, and a gold table on its own page is the version of
+this column that still would not answer it.
+
+`Gold` and `RouteGold` sit four characters apart in the raw rows. Both carry the
+word they differ by, so neither is "the gold column".
+
+### Tests
+
+- The tally records both sides of a payment, in gold and in treaties; a demand
+  bills the other side; two treaties add up. Each fails with the recording in
+  `signPeace` cut out -- checked.
+- A treaty with no gold on it stores **nothing at all**, and still reads as
+  zeroes rather than as a missing side. This one passes against the old code
+  too, which is its job: it is the one guarding the distinction section 180
+  could not make, between *never billed* and *not recorded*.
+- It survives a save and a load.
+- `report()` puts `gold` on the same line as `wins` and `gone`; `billed`
+  prints 2% for one game in fifty and 0% for none; the raw rows carry
+  `orcGold` and `orcRouteGold` as different columns. All three fail with the
+  columns cut from the table -- checked.
+
+### What the column could not do by itself
+
+The columns are empty of history: they measure the next run, not the last one.
+Answering section 180 meant running its ladder again with them present, which
+Jeremy asked for -- see below.
+
+What the column also means is that the *next* gold section gets the reading for
+free instead of re-earning it, and that the specific failure of section 180
+cannot recur silently: a missing column is now a failing test rather than a
+quiet hour.
+
+### What the columns found: the ladder again, 324 games
+
+Jeremy: *"Push it and run the §180 ladder again with the new columns."* The run
+is the same ladder on the same seeds, in a local tree with both branches merged
+-- neither alone has the arms and the columns together. The harness's own
+estimate: *"3 arms x 2 sets. 324 games, about 97 minutes (58-126, depending on
+how many run to the turn limit)."* It finished in **96.7 min**, 17.9s a game.
+
+**The instrumentation is inert, proven rather than assumed.** All three arms
+reproduce section 180's run **exactly** -- 108 rows each, all 54 pre-existing
+columns, zero differences -- and arm 1 still matches section 179c's shipped arm.
+So recording a payment does not change the game, the gold figures below are
+attached to precisely the games section 180 measured, and its win result stands
+unaltered rather than re-measured.
+
+#### 1. The Hive is billed, and the figure was what hid it
+
+Section 180's third open question, answered, and it is the strongest result in
+the run:
+
+| | billed: flat | share | gold paid: flat | share |
+|---|---|---|---|---|
+| Hive, tuned | 13% | **39%** | 3 | **51** |
+| Hive, held-out | 17% | **37%** | 4 | **45** |
+
+Paired per map: billed t = +3.43 and +3.05, sign test p = 0.003 and 0.007; gold
+paid t = +3.76 in both sets. Both seed sets, both columns, one direction.
+
+So the band **does** open for the Hive. Section 180 guessed it might never --
+the Hive wins by its own ending without contesting the war -- and that guess was
+wrong. What made the bill invisible was the figure: the Hive was already being
+billed in one game in seven and paying **3 gold** for it.
+
+That is the same verdict section 180 reached from the win column, arrived at
+from the other end, which is the best kind of agreement available here.
+
+#### 2. The sink drains one of the three hoarders, by about a tenth
+
+The point of the section was that the three dead-gold sides should **end with
+less banked**. One does.
+
+| side | tuned | held-out | pooled, paired |
+|---|---|---|---|
+| Hive | −44 (t −1.38) | **−80 (t −2.38)** | **−62, t = −2.68** |
+| Unbound | −31 | +21 | −5, t = −0.20 |
+| Wandering | +3 | +38 | +21, t = +0.72 |
+
+Only the Hive moves in one direction in both sets, and it moves by roughly what
+it pays: **−62 banked against +44 paid**. The hoard it comes out of is 540, so
+this is an **11% dent, not a drained treasury**.
+
+**Taking it no further than it goes.** The pooled t is 0.007 but the sign test
+is 0.17, and the per-set signs agree while neither set is significant alone. A
+mean that outruns its sign test is a skew: a minority of games where a lot of
+gold moves, not a shift across the board. The honest claim is *the Hive's pile
+is smaller by about a tenth*, and the second column moving with it -- the gold
+it pays -- is what makes that worth believing at all.
+
+The Unbound and Wandering Folk pay substantially more under the share (13 to 59
+and 20 to 34) and **bank exactly as much**. They earn it back. Whatever is dead
+about their gold, a treaty does not spend it.
+
+#### 3. The registered risk is retired, with a number
+
+Section 180 wrote the risk down before the arm ran: *"the coin still runs
+toward the leader... if the Kingdom's banked gold rises while nobody else's
+falls, this is a transfer to the strongest side wearing a sink's clothes and
+should come back out."*
+
+The coin does run toward the leader, hard. The Kingdom receives **+136 gold a
+game** (t = +7.32, up on 71 maps and down on 9), four times what it took before.
+
+And it banks **−10** (t = −0.19, up on 46 maps and down on 43). Nothing.
+
+So the premise of the risk holds and the conclusion does not: the leader
+collects the money, ends with no more of it, and -- from section 180 -- wins
+nine fewer games. It does not compound a lead. The lever stays in. That is the
+first time one of these registered risks has been closed by measurement rather
+than by argument, and it is exactly what the column was added for.
+
+(Part of why: the wider the band, the more the Kingdom **pays** as well --
+billed 6% to 7% to 22% tuned, 15% to 30% to 43% held-out. The leader is on both
+sides of the table.)
+
+#### 4. The band moves money and not outcomes
+
+Section 180 called the band step dead on outcomes -- 91 of 108 same winner,
+every side p = 1.000 -- and the gold columns show it is not dead *mechanically*:
+widening to 1.1/0.9 bills the Kingdom in more games (t = +3.87 pooled, up on 16
+maps and down on 1) while its receipts do not move (t = −0.78).
+
+That is a better statement than "no effect". The extra treaties a wider band
+catches are ones where **the money does not matter to the result**, which is a
+reason not to widen it rather than an absence of evidence.
+
+#### What this did not fix
+
+Section 154's finding was that gold is dead for three of five sides. After
+this: the Hive's pile is down a tenth, and the Unbound's and the Wandering
+Folk's are unchanged. All three still end on 250 to 500 banked.
+
+**Tribute is a real sink that now reaches the side it was aimed at, and it is
+not an answer to dead gold.** Section 154's item stays open, one faction
+narrower and with a measurement seam that the next attempt does not have to
+build.
+
+The run is at `sweep-results/2026-11-17T05-23-29-259Z.txt`.
+
+### The rule that comes out of it
+
+**When a section's docblock names what to read, grep the harness for each named
+quantity before launching the real run.** The per-game record near `routeGold:`
+and the `measures` list in `rawRows` are the two places a column has to appear.
+A reading with no column is not a measurement plan, it is a sentence.

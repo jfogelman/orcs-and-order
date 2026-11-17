@@ -472,6 +472,44 @@ export function shameContent(state: GameState, playerId: number): number {
   return PEACE.enabled && ashamed(state, playerId) ? PEACE.shameContent : 0;
 }
 
+/** What a side's tribute tally reads before it has ever signed anything. */
+export interface TributeTally {
+  /** Gold handed over, across the game. */
+  paid: number;
+  /** Gold taken, across the game. */
+  got: number;
+  /** Treaties that billed this side. */
+  bills: number;
+  /** Treaties that paid this side. */
+  takes: number;
+}
+
+/**
+ * This side's running tally, created on demand.
+ *
+ * Writable, and the only writer is `signPeace` -- the single place in the game
+ * where treaty gold changes hands. Anything that counted payments anywhere
+ * else would be counting offers, or log lines, instead.
+ */
+function tally(state: GameState, playerId: number): TributeTally {
+  const all = (relations(state).tribute ??= {});
+  return (all[playerId] ??= { paid: 0, got: 0, bills: 0, takes: 0 });
+}
+
+/**
+ * Read-only: what this side has paid and taken. Zeroes for a side that has
+ * never signed anything, and for every save written before section 183.
+ *
+ * Zeroes rather than `undefined` on purpose. "Never billed" is a real and
+ * interesting answer -- section 180 could not tell it from "not recorded" --
+ * and a reader that has to handle a missing side will eventually drop it from
+ * a table and call it absent instead.
+ */
+export function tributeTally(state: GameState, playerId: number): TributeTally {
+  const got = state.diplomacy?.tribute?.[playerId];
+  return { paid: got?.paid ?? 0, got: got?.got ?? 0, bills: got?.bills ?? 0, takes: got?.takes ?? 0 };
+}
+
 /** Whether these terms can be paid: nobody signs away gold they do not have. */
 export function affordable(state: GameState, terms: PeaceTerms): boolean {
   const payer = terms.gold >= 0 ? terms.from : terms.to;
@@ -490,6 +528,14 @@ export function signPeace(state: GameState, terms: PeaceTerms): boolean {
   const gold = Math.abs(terms.gold);
   state.players[payer].gold -= gold;
   state.players[payee].gold += gold;
+  if (gold > 0) {
+    const billed = tally(state, payer);
+    const paid = tally(state, payee);
+    billed.paid += gold;
+    billed.bills += 1;
+    paid.got += gold;
+    paid.takes += 1;
+  }
 
   const renewing = atPeace(state, terms.from, terms.to);
   const pair = between(state, terms.from, terms.to);
