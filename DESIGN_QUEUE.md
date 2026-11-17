@@ -17127,7 +17127,7 @@ the arrival package.
 - 21 to 28 games of 108 ran out of turns in the four non-shipped arms and are
   short of every mean in them.
 
-## 183. The column section 180 asked for and did not have — DONE
+## 183. The column section 180 asked for and did not have — DONE, and it answered 180
 
 Jeremy, having read section 180's result: *"Add the gold column and tribute
 counter."*
@@ -17211,19 +17211,124 @@ word they differ by, so neither is "the gold column".
   `orcGold` and `orcRouteGold` as different columns. All three fail with the
   columns cut from the table -- checked.
 
-### What this does not do
+### What the column could not do by itself
 
-**It does not re-answer section 180.** The columns are empty of history: they
-measure the next run, not the last one. Whether the hoarding sides end with
-less banked, and whether the Hive is ever billed, needs the §180 ladder run
-again with these columns present -- 324 games, about 97 minutes by the
-harness's own estimate. That is Jeremy's call, not something to spend an hour
-of his machine on unasked.
+The columns are empty of history: they measure the next run, not the last one.
+Answering section 180 meant running its ladder again with them present, which
+Jeremy asked for -- see below.
 
-What it does mean is that the *next* gold section gets the reading for free
-instead of re-earning it, and that the specific failure of section 180 cannot
-recur silently: a missing column is now a failing test rather than a quiet
-hour.
+What the column also means is that the *next* gold section gets the reading for
+free instead of re-earning it, and that the specific failure of section 180
+cannot recur silently: a missing column is now a failing test rather than a
+quiet hour.
+
+### What the columns found: the ladder again, 324 games
+
+Jeremy: *"Push it and run the §180 ladder again with the new columns."* The run
+is the same ladder on the same seeds, in a local tree with both branches merged
+-- neither alone has the arms and the columns together. The harness's own
+estimate: *"3 arms x 2 sets. 324 games, about 97 minutes (58-126, depending on
+how many run to the turn limit)."* It finished in **96.7 min**, 17.9s a game.
+
+**The instrumentation is inert, proven rather than assumed.** All three arms
+reproduce section 180's run **exactly** -- 108 rows each, all 54 pre-existing
+columns, zero differences -- and arm 1 still matches section 179c's shipped arm.
+So recording a payment does not change the game, the gold figures below are
+attached to precisely the games section 180 measured, and its win result stands
+unaltered rather than re-measured.
+
+#### 1. The Hive is billed, and the figure was what hid it
+
+Section 180's third open question, answered, and it is the strongest result in
+the run:
+
+| | billed: flat | share | gold paid: flat | share |
+|---|---|---|---|---|
+| Hive, tuned | 13% | **39%** | 3 | **51** |
+| Hive, held-out | 17% | **37%** | 4 | **45** |
+
+Paired per map: billed t = +3.43 and +3.05, sign test p = 0.003 and 0.007; gold
+paid t = +3.76 in both sets. Both seed sets, both columns, one direction.
+
+So the band **does** open for the Hive. Section 180 guessed it might never --
+the Hive wins by its own ending without contesting the war -- and that guess was
+wrong. What made the bill invisible was the figure: the Hive was already being
+billed in one game in seven and paying **3 gold** for it.
+
+That is the same verdict section 180 reached from the win column, arrived at
+from the other end, which is the best kind of agreement available here.
+
+#### 2. The sink drains one of the three hoarders, by about a tenth
+
+The point of the section was that the three dead-gold sides should **end with
+less banked**. One does.
+
+| side | tuned | held-out | pooled, paired |
+|---|---|---|---|
+| Hive | −44 (t −1.38) | **−80 (t −2.38)** | **−62, t = −2.68** |
+| Unbound | −31 | +21 | −5, t = −0.20 |
+| Wandering | +3 | +38 | +21, t = +0.72 |
+
+Only the Hive moves in one direction in both sets, and it moves by roughly what
+it pays: **−62 banked against +44 paid**. The hoard it comes out of is 540, so
+this is an **11% dent, not a drained treasury**.
+
+**Taking it no further than it goes.** The pooled t is 0.007 but the sign test
+is 0.17, and the per-set signs agree while neither set is significant alone. A
+mean that outruns its sign test is a skew: a minority of games where a lot of
+gold moves, not a shift across the board. The honest claim is *the Hive's pile
+is smaller by about a tenth*, and the second column moving with it -- the gold
+it pays -- is what makes that worth believing at all.
+
+The Unbound and Wandering Folk pay substantially more under the share (13 to 59
+and 20 to 34) and **bank exactly as much**. They earn it back. Whatever is dead
+about their gold, a treaty does not spend it.
+
+#### 3. The registered risk is retired, with a number
+
+Section 180 wrote the risk down before the arm ran: *"the coin still runs
+toward the leader... if the Kingdom's banked gold rises while nobody else's
+falls, this is a transfer to the strongest side wearing a sink's clothes and
+should come back out."*
+
+The coin does run toward the leader, hard. The Kingdom receives **+136 gold a
+game** (t = +7.32, up on 71 maps and down on 9), four times what it took before.
+
+And it banks **−10** (t = −0.19, up on 46 maps and down on 43). Nothing.
+
+So the premise of the risk holds and the conclusion does not: the leader
+collects the money, ends with no more of it, and -- from section 180 -- wins
+nine fewer games. It does not compound a lead. The lever stays in. That is the
+first time one of these registered risks has been closed by measurement rather
+than by argument, and it is exactly what the column was added for.
+
+(Part of why: the wider the band, the more the Kingdom **pays** as well --
+billed 6% to 7% to 22% tuned, 15% to 30% to 43% held-out. The leader is on both
+sides of the table.)
+
+#### 4. The band moves money and not outcomes
+
+Section 180 called the band step dead on outcomes -- 91 of 108 same winner,
+every side p = 1.000 -- and the gold columns show it is not dead *mechanically*:
+widening to 1.1/0.9 bills the Kingdom in more games (t = +3.87 pooled, up on 16
+maps and down on 1) while its receipts do not move (t = −0.78).
+
+That is a better statement than "no effect". The extra treaties a wider band
+catches are ones where **the money does not matter to the result**, which is a
+reason not to widen it rather than an absence of evidence.
+
+#### What this did not fix
+
+Section 154's finding was that gold is dead for three of five sides. After
+this: the Hive's pile is down a tenth, and the Unbound's and the Wandering
+Folk's are unchanged. All three still end on 250 to 500 banked.
+
+**Tribute is a real sink that now reaches the side it was aimed at, and it is
+not an answer to dead gold.** Section 154's item stays open, one faction
+narrower and with a measurement seam that the next attempt does not have to
+build.
+
+The run is at `sweep-results/2026-11-17T05-23-29-259Z.txt`.
 
 ### The rule that comes out of it
 
