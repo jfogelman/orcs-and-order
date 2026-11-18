@@ -18051,3 +18051,48 @@ two largest empires is exactly the kind of change that quietly takes a rung off
 the board, which is the failure this project has walked into twice. So the
 probe comes before anything else, and the question it is being asked is the
 only one that matters first: **does it still happen at all?**
+
+#### The floor is cheap: the probe, 24 games
+
+The question was whether narrowing the sellers to the large empires takes the
+rung off the board. It does not.
+
+| `npm run spyprobe`, per game | floor 1 | floor 4 |
+|---|---|---|
+| offers for a whole town | 1.92 | **1.71** |
+| towns bought | 1.21 | **1.13** |
+| refused (and named) | 0.71 | 0.58 |
+| gold spent on towns | 537 | 493 |
+
+**What that establishes, and what it does not.** It establishes existence and
+order of magnitude: no `NOBODY EVER OFFERED` warning, over a town bought a
+game, a few hundred gold a game still leaving a treasury. That was the
+question, and the answer is that the floor costs roughly a tenth of the rung.
+
+It does **not** establish that the difference is a tenth. The probe is not a
+paired instrument — the two runs are 24 different games, not the same 24 games
+played twice, because the floor changes behaviour and the games diverge from
+the first offer it blocks. 1.92 against 1.71 over 24 unpaired games is inside
+what this tool can resolve. Attribution needs the same bar as any other claim
+and the probe cannot clear it.
+
+**Why it costs so little is not instrumented, and the obvious answer is not
+evidence.** The comfortable story is that the sellers were already the two
+large empires, because they are the ones an agent can reach. That is a story,
+not a measurement: nothing here counts incidents **by victim**. Section 138
+already wanted that counter for an unexplained Horde gain, which makes two
+sections asking for the same instrument — the next one that needs it should
+build it rather than reason around it a third time.
+
+The corroborating fact that *is* measured: the three whole-game fixtures
+regenerate **byte-identical** across this change. Those games diverged
+enormously when the rung was first switched on, so their agents are certainly
+making offers, and the floor alters not one roll in them. Whatever they were
+offering for was never a side at or under four towns.
+
+**Standing recommendation.** Ship the floor as it is. It buys a design
+property — a purse can take from an empire but cannot finish one off — at a
+cost the instruments cannot distinguish from nothing. If it is ever worth
+knowing exactly, it is a two-arm ladder of `BRIBE.floor` on the shared seeds,
+and the honest reason to run it would be the *per-victim* question above
+rather than the throughput one.
