@@ -1508,6 +1508,13 @@ export function openPedia(state: GameState, player: Player, focus?: string): voi
           sale again for ${BRIBE.settles} turns: it has had quite enough excitement.
         </p>
         <p class="flavor">
+          <strong>Nor is anything for sale from a side down to ${BRIBE.floor} towns.</strong>
+          A purse can take from an empire; it cannot finish one off. In practice that
+          points this at the large neighbours rather than the struggling one, which is
+          the opposite of where money naturally goes &mdash; and it is why nobody ever
+          has to wonder where a turned-out garrison marches to.
+        </p>
+        <p class="flavor">
           <strong>The garrison will not serve a bought magistrate</strong>, and will not
           fight its own townsfolk either, so it marches home to the nearest town its side
           still holds. You have bought a place, not an army &mdash; and the people in it

@@ -112,6 +112,29 @@ export const BRIBE = {
    * war ever resolves.
    */
   settles: 15,
+  /**
+   * How many towns a side keeps, whatever anybody offers. Jeremy, after the
+   * 324-game run: *"floor at four"*.
+   *
+   * **Four, not one, and the difference is which empires this rung is aimed
+   * at.** At a floor of one it was only the elimination case that was closed:
+   * a side could be bought down to its last town and left there. Four means a
+   * purse can only take from an empire that still has an empire after the
+   * sale.
+   *
+   * Measured city counts put that squarely on the two largest -- the Kingdom
+   * ends on 7.4 towns and the Horde on 5.1, while the Hive (3.0), the Unbound
+   * (3.2) and the Wandering Folk (2.4-3.4) are at or under the floor for most
+   * of a game. So this is close to "only the big empires are for sale", which
+   * is the opposite of where a purse naturally points and is the reason for
+   * stating it as a number rather than leaving it at the last town.
+   *
+   * **It is not free.** The 324-game run measured the rule at a floor of one.
+   * Whatever this does to how often the rung fires at all is unmeasured until
+   * the probe says otherwise, and `BRIBE.floor` is in `LEVERS` so an arm of it
+   * is a real arm.
+   */
+  floor: 4,
   /** Whether the other side buys towns too. */
   ai: true,
   /** The most it will spend on one town, as a share of what is in the bank. */
@@ -179,25 +202,23 @@ export function canBuyTown(
   if (state.players[city.owner]?.barbarian) {
     return { ok: false, reason: 'There is nobody there who owns anything.' };
   }
-  // **A side's last town is not for sale**, which is a separate rule written
-  // out rather than left to fall out of the capital rule below.
+  // **A side keeps `BRIBE.floor` towns, whatever is offered.** Its own rule
+  // rather than something left to fall out of the capital rule below.
   //
   // **Asked first, and the order is the message.** Both rules refuse a side
   // down to one town, because `capitalOf` falls back to the oldest town a side
   // *holds* -- so whichever is asked first is the reason the player is given,
-  // and "it is all they have left" is the true one. A capital is a thing an
-  // empire has; a last town is a thing a side is down to.
+  // and "they are down to their last few" is the true one. A capital is a
+  // thing an empire has; a floor is a thing a side is down to.
   //
-  // It already fell out of it: `capitalOf` returns the oldest town a side
-  // *holds* when it founded none of them, so a side down to one town has that
-  // town as its capital whatever its history, and the capital rule refused it.
-  // Relying on that would mean this floor existed by accident, in another
-  // module, and would vanish the day `capitalOf` stopped falling back. It is
-  // also the answer to section 184's second registered risk -- that the
-  // Wandering Folk, who cannot defend a frontier town, would be bought out of
-  // the game -- so it is worth being a sentence somebody can find.
-  if (state.cities.filter((c) => c.owner === city.owner).length <= 1) {
-    return { ok: false, reason: 'It is all they have left. Nobody there is for sale.' };
+  // At a floor of one it would have fallen out of the capital rule anyway, in
+  // another module, to vanish the day `capitalOf` stopped falling back. At
+  // four it does not fall out of anything, and the elimination case it closes
+  // is the one section 184 registered as a risk before the arm ran -- the
+  // Wandering Folk, who cannot defend a frontier town, being bought out of the
+  // game rather than fought out of it.
+  if (state.cities.filter((c) => c.owner === city.owner).length <= BRIBE.floor) {
+    return { ok: false, reason: 'They are down to their last few. Nobody there is for sale.' };
   }
   // **Jeremy's ruling: a capital is never for sale, at any price.** Not dearer
   // -- refused. It takes the worst case off the board (an empire decapitated

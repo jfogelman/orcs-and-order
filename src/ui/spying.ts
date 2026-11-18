@@ -492,7 +492,8 @@ export function openTownOffer(
         an army, and it is what the money is for.</p>
         <p class="flavor">The price is the size of the place, what is standing in it, how
         many soldiers are billeted there &mdash; and how much ${escapeHtml(them)} have in
-        the bank. A rich empire is dear to buy from.</p>
+        the bank. A rich empire is dear to buy from, and a side down to
+        ${BRIBE.floor} towns sells nothing at all.</p>
       </div>
       <div class="panel-body">
         <div class="button-row">

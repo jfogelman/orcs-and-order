@@ -18011,3 +18011,43 @@ the general form: **grep the column's definition, not its name.** Section 183
 added the missing column and the habit survived it. The fix here is the same
 and is cheap — a per-game count of towns bought, beside `captures` — and
 without it no sweep of this rule can separate a war from a purse.
+
+### A floor at four, and what it is aimed at
+
+Jeremy, having read the run: *"then we'll do floor at four."*
+
+The rule shipped with a floor of **one** — a side's last town is not for sale —
+and that was only ever the elimination case. Four is a different statement:
+**a purse can take from an empire; it cannot finish one off.** `BRIBE.floor`,
+in `LEVERS`, so an arm of it is a real arm.
+
+What makes it more than a rounded-up number is where the measured city counts
+sit. From the 324-game run, towns held at the end:
+
+| side | towns |
+|---|---|
+| Kingdom | 7.4 |
+| Horde | 5.1 |
+| Unbound | 3.1–3.2 |
+| Hive | 3.0–3.6 |
+| Wandering Folk | 2.4–3.4 |
+
+So a floor of four is close to **"only the two large empires are for sale"**.
+That is the opposite of where a purse naturally points — the cheapest town on
+the board belongs to whoever is doing worst — and it is the half of section
+184's own finding that the price model could not fix on its own. The
+`ofTheirPurse` term makes a *rich* side dear; it does nothing about a poor one
+being cheap. The floor does.
+
+It also retires the second registered risk outright rather than by argument.
+That risk was the Wandering Folk, on 1 win in 54, being bought down rather than
+fought down; at this floor they are almost never for sale at all.
+
+**And it costs something that has to be measured, not assumed.** The 324-game
+result above was taken at a floor of one. Every one of those figures — the
+Kingdom's −271, the flat win column, the price step being inert — describes a
+rule that could buy from anybody with two towns. Narrowing the sellers to the
+two largest empires is exactly the kind of change that quietly takes a rung off
+the board, which is the failure this project has walked into twice. So the
+probe comes before anything else, and the question it is being asked is the
+only one that matters first: **does it still happen at all?**

@@ -44,17 +44,33 @@ function board(): { state: GameState; spy: Unit; town: City; seat: City } {
     p.gold = 5000;
   }
   // Their capital is the oldest town they founded, so it has to exist and be
-  // somewhere else, or every test here would be testing the capital rule --
-  // and they need a *second* town, or the last-town rule refuses as well.
+  // somewhere else, or every test here would be testing the capital rule.
   const seat = foundCity(state, spawnUnit(state, 1, 'peasant', 30, 10))!;
   const town = foundCity(state, spawnUnit(state, 1, 'peasant', 12, 10))!;
   // Big enough that the other side thinks it worth being named over, which is
   // a separate bar from anything the player faces.
   town.size = 4;
-  // And we hold a town of our own, so a town we buy is not instantly *our*
-  // capital -- which is what `capitalOf` would make it, and which would then
-  // refuse every test about buying one back.
-  foundCity(state, spawnUnit(state, 0, 'peon', 3, 10));
+  // **Both sides are kept well clear of `BRIBE.floor`.** A side at or under it
+  // sells nothing, so a board built at the floor would test that rule and
+  // nothing else -- and we hold towns of our own so that a town we buy is not
+  // instantly *our* capital, which is what `capitalOf` would make it.
+  for (const [x, y] of [
+    [34, 6],
+    [34, 14],
+    [26, 6],
+    [26, 14],
+  ]) {
+    foundCity(state, spawnUnit(state, 1, 'peasant', x, y));
+  }
+  for (const [x, y] of [
+    [3, 10],
+    [3, 14],
+    [6, 6],
+    [6, 14],
+    [9, 6],
+  ]) {
+    foundCity(state, spawnUnit(state, 0, 'peon', x, y));
+  }
   state.units = state.units.filter((u) => u.type === 'skulker' || u.owner === 2);
   const spy = spawnUnit(state, 0, 'skulker', 11, 10);
   return { state, spy, town, seat };
@@ -208,38 +224,84 @@ describe('what the money buys', () => {
   });
 
   it('marches the garrison home to their nearest other town', () => {
-    const { state, spy, town, seat } = board();
+    const { state, spy, town } = board();
     const guard = spawnUnit(state, 1, 'footman', town.x, town.y);
     guard.order = 'fortified';
+    // Worked out here rather than written down, because the board has five of
+    // their towns and "the nearest" is the claim -- an assertion naming one by
+    // hand would pass for a side that marched to any of them.
+    const away = (c: { x: number; y: number }) =>
+      Math.max(Math.abs(c.x - town.x), Math.abs(c.y - town.y));
+    const nearest = state.cities
+      .filter((c) => c.owner === 1 && c.id !== town.id)
+      .sort((a, b) => away(a) - away(b))[0];
+
     rig(true, () => buyTown(state, spy, town, townPrice(state, town)));
 
     expect(town.owner).toBe(0);
     // Still theirs, and standing somewhere else: not bought, not killed.
     expect(guard.owner).toBe(1);
-    expect([guard.x, guard.y]).toEqual([seat.x, seat.y]);
+    expect([guard.x, guard.y]).toEqual([nearest.x, nearest.y]);
     expect(state.units).toContain(guard);
   });
 
   /**
-   * **There is no "nowhere to march to", and that is the interesting part.**
+   * **A side keeps `BRIBE.floor` towns**, which is Jeremy's number after the
+   * 324-game run and not a round-off of the old last-town rule.
    *
-   * Jeremy asked what happens to a garrison with nowhere to go. The answer is
-   * that his two rulings together make the case impossible: a side whose only
-   * town is this one cannot sell it, so there is always a town to march to.
-   * So the thing to test is the rule that closes the gap, not the branch
-   * behind it -- and this is also the floor under section 184's second
-   * registered risk, that a side too weak to defend a frontier town could be
-   * bought out of the game.
+   * Tested at the boundary in both directions, because a floor that is a
+   * sentence in a docblock and an inequality in the code is exactly the kind
+   * of rule that ships off by one.
+   *
+   * It also closes the thing section 184 registered as a risk before the arm
+   * ran -- a side too weak to defend a frontier town being bought out of the
+   * game rather than fought out of it -- and it is why there is never
+   * "nowhere to march to": a side that can sell has towns left to march to.
    */
-  it('never sells a side’s last town, so there is always somewhere to march', () => {
-    const { state, spy, town, seat } = board();
-    state.cities = state.cities.filter((c) => c.id !== seat.id);
-    expect(state.cities.filter((c) => c.owner === 1)).toHaveLength(1);
+  it('keeps a side at the floor, and sells one town above it', () => {
+    const { state, spy, town } = board();
+    const theirs = state.cities.filter((c) => c.owner === 1);
+    expect(theirs.length).toBeGreaterThan(BRIBE.floor);
 
+    // Trimmed to exactly the floor: not for sale at any price.
+    while (state.cities.filter((c) => c.owner === 1).length > BRIBE.floor) {
+      // From the back, so their oldest town stays theirs and the capital rule
+      // is not what refuses this.
+      const rest = state.cities.filter((c) => c.owner === 1 && c.id !== town.id);
+      const drop = rest[rest.length - 1];
+      state.cities = state.cities.filter((c) => c !== drop);
+    }
+    expect(state.cities.filter((c) => c.owner === 1)).toHaveLength(BRIBE.floor);
     expect(canBuyTown(state, spy, town).ok).toBe(false);
-    expect(canBuyTown(state, spy, town).reason).toMatch(/all they have left/);
+    expect(canBuyTown(state, spy, town).reason).toMatch(/last few/);
     expect(buyTown(state, spy, town, 5000)).toEqual({ kind: 'impossible' });
     expect(town.owner).toBe(1);
+
+    // One above it, and the same town is for sale.
+    foundCity(state, spawnUnit(state, 1, 'peasant', 20, 4));
+    expect(state.cities.filter((c) => c.owner === 1)).toHaveLength(BRIBE.floor + 1);
+    expect(canBuyTown(state, spy, town).ok).toBe(true);
+  });
+
+  it('is a lever, not a constant: at a floor of one only the last town is safe', () => {
+    const { state, spy, town } = board();
+    const was = BRIBE.floor;
+    BRIBE.floor = 1;
+    try {
+      // Dropped from the back, so their *oldest* town survives: take that one
+      // away and the town under test becomes their capital, which is a
+      // different refusal and would make this test pass for the wrong reason.
+      while (state.cities.filter((c) => c.owner === 1).length > 2) {
+        const theirs = state.cities.filter((c) => c.owner === 1 && c.id !== town.id);
+        const drop = theirs[theirs.length - 1];
+        state.cities = state.cities.filter((c) => c !== drop);
+      }
+      expect(canBuyTown(state, spy, town).ok).toBe(true);
+      state.cities = state.cities.filter((c) => c.owner !== 1 || c.id === town.id);
+      expect(canBuyTown(state, spy, town).ok).toBe(false);
+    } finally {
+      BRIBE.floor = was;
+    }
   });
 
   it('survives a save and a load', () => {
