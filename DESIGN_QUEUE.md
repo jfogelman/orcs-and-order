@@ -17699,7 +17699,7 @@ quantity before launching the real run.** The per-game record near `routeGold:`
 and the `measures` list in `rawRows` are the two places a column has to appear.
 A reading with no column is not a measurement plan, it is a sentence.
 
-## 184. Buying a town, which is section 154's last untouched option
+## 184. Buying a town, which is section 154's last untouched option — MEASURED, 324 games
 
 Jeremy, having read section 183's result: *"then live thread."* The live
 thread is section 154's item 1, which section 183 reopened with a number
@@ -17915,3 +17915,99 @@ agent's day and still returns, so the agent does not then read, gossip or
 foment — and every roll after that lands differently. **The cheap rungs are
 what this is being spent instead of**, and that is a cost the sweep should be
 read for as carefully as the win column.
+
+### Measured, 324 games — and it works, on the wrong side
+
+The harness's own estimate: *"3 arms x 2 sets. 324 games, about 97 minutes
+(58-126, depending on how many run to the turn limit)."* It finished in **97.4
+min**, 18.0s a game. `sweep-results/2026-11-18T01-24-18-018Z.txt`.
+
+**The canary is clean.** Arm 1 reproduces section 183's shipped arm over 108
+rows and all 79 columns, zero differences. So the rule is inert when off, and
+everything below attaches to precisely the games sections 180 and 183
+measured.
+
+#### 1. It is a real sink, and the registered risk is retired
+
+The Kingdom's banked gold falls, on both seed sets, and it is the largest
+movement in the run:
+
+| | banked before | after | paired |
+|---|---|---|---|
+| tuned | 829 | 691 | **−138, t = −2.26** |
+| held-out | 1017 | 612 | **−404, t = −3.22**, 8 maps up / 26 down, p = 0.003 |
+
+Pooled, −271 a game at t = −3.84. And the thing the section was most afraid
+of **does not happen**: the Kingdom wins **31 of 108 before and 31 after**,
+same winner on 93 of 108 maps, every side's McNemar p ≥ 0.25. Money leaves the
+deepest treasury in the game and the win column does not move. That is the
+rush-buying shape asked for by name and answered no.
+
+Nobody is eliminated either. The Wandering Folk go 3 wins to 4, `gone`
+unchanged, and their `cities` **disagree between the seed sets** (+0.1 tuned,
+−0.4 held-out) — so the second registered risk does not fire. The last-town
+rule is doing its job and the floor at two is not needed on this evidence.
+
+#### 2. The price is not the lever. There is no lever here.
+
+Arm 3 charges half again as much for a town, and **every column disagrees
+between the seed sets** — gold, cities, fights, captures, all of them. The
+probe's 1.21 towns a game looked like something that wanted reining in; 324
+games say the reining-in buys nothing measurable.
+
+So the recommendation is to **ship it as built**, and that is a stronger
+statement than it sounds: the one arm designed to find the number wrong failed
+to.
+
+#### 3. It drains the one side whose gold was never dead
+
+This is the finding, and it is not a happy one.
+
+Section 154's re-measurement is explicit that the Kingdom is **not** one of the
+hoarding sides: it banks 725 and *spends* 950, so its deep treasury is working
+capital. The three sides with dead gold are the Hive, the Wandering Folk and
+the Unbound.
+
+This sink moves the Kingdom's pile by 271 a game — and for the other four,
+**the two seed sets disagree on the sign**: Horde −59 / +1, Hive −44 / +13,
+Unbound +2 / −14. Only the Wandering Folk agree, weakly (−31 / −63, sign tests
+0.405 and 0.804). Nothing is established for any of the three hoarders.
+
+The mechanism is in the probe, which counts agents per side at the end:
+
+    human    agents 3.21   gold 716
+    orc      agents 2.71   gold 119
+    hivekin  agents 1.38   gold 490
+    unbound  agents 1.29   gold 356
+    wandering agents 1.17  gold 376
+
+**Buying a town needs an agent standing beside it**, and the sides with the
+dead gold are the sides that do not go abroad. The Kingdom has nearly three
+times the Wandering Folk's agents and twice the purse, so it is the side that
+can reach the new sink — exactly as it was already the side reaching the old
+one, turning soldiers.
+
+**That is the same shape section 180 found and neither section named.** Both
+gold sinks built for item 1 are gated behind *doing something to somebody
+else*, and a side that hoards is a side that is not out doing things. Section
+154's item 1 is still open after two sections of work, and now it has a
+diagnosis rather than another candidate: **it wants a sink that does not need
+an agent abroad.**
+
+#### 4. A column that cannot answer what it was asked
+
+`caps` rises by 1.08 a game (t = +2.25, 40 maps up / 16 down, p = 0.002), and
+this section's pre-registered reading was *"a town bought is a town moved with
+no fight, so `cities` should move between sides while captures do not."*
+
+That reading cannot be answered, because `captures` in `sweep.ts` is counted by
+`sweepOwners()` — **every change of a city's owner**, however it happened. A
+bought town is a capture by that definition, and +1.08 is roughly the 1.21
+purchases a game the probe counted. The column is not wrong; the prose assumed
+a narrower meaning than the code has.
+
+Which is section 180's error wearing different clothes, and worth stating as
+the general form: **grep the column's definition, not its name.** Section 183
+added the missing column and the habit survived it. The fix here is the same
+and is cheap — a per-game count of towns bought, beside `captures` — and
+without it no sweep of this rule can separate a war from a purse.
