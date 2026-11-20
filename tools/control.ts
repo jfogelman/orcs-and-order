@@ -209,6 +209,11 @@ export const control = () => {
   // file exists to stop, and SPY itself was missing from here for two slices.
   BRIBE.enabled = true;
   BRIBE.ai = true;
+  // **Pinned, and this is not decoration.** An arm that sets `BRIBE.floor = 1`
+  // mutates the shared object, so without this line the *next* arm inherits
+  // it and two arms silently become one. Section 59's omission, which is the
+  // mistake this file exists to stop.
+  BRIBE.floor = 4;
   // #144: the Hive has a full set of ordinary buildings.
   HIVE_WORKS.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.

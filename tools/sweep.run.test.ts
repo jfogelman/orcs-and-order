@@ -527,7 +527,71 @@ const buildArms = (): Arm[] => {
    * a refused offer still spends the turn. Whatever the cheap rungs stop doing
    * is part of what this arm costs, and `read`/`gossip` are not in the table.
    */
-  const bribe = (label: string, apply: () => void): Arm => ({
+  /**
+   * Section 184's floor: **does it change who is for sale, or only how often?**
+   *
+   * The rule was measured at a floor of **one** -- a side's last town is not
+   * for sale, which is only the elimination case. Jeremy's number after that
+   * run is **four**: a purse can take from an empire but cannot finish one
+   * off. Against measured city counts (Kingdom 7.4, Horde 5.1, Unbound 3.1,
+   * Hive 3.0-3.6, Wandering 2.4-3.4) that is close to *only the two large
+   * empires are for sale*.
+   *
+   * ## Why this is worth machine time when the probe already said "cheap"
+   *
+   * The probe put offers at 1.71 a game against 1.92, and towns bought at 1.13
+   * against 1.21 -- but it is **unpaired**: 24 different games, not the same 24
+   * twice, because the floor changes behaviour and the games diverge from the
+   * first offer it blocks. That difference is inside what the tool can
+   * resolve, so it establishes that the rung survives and nothing finer.
+   *
+   * The question it cannot touch at all is the interesting one. *Whose* towns
+   * are for sale? The comfortable story -- that the sellers were already the
+   * large empires, being the ones an agent can reach -- is a story. Nothing
+   * counted it. Section 138 wanted the same instrument for an unexplained
+   * Horde gain, so two sections have now reasoned around it.
+   *
+   * ## So the columns came first
+   *
+   * `townsBought` and **`townsLost`** per side, written in `buyTown` and
+   * carried on `state.bribes`. `townsLost` is the per-victim figure, and it is
+   * also the repair for the one reading the last run could not answer:
+   * `captures` counts *every* change of a city's owner, so a bought town is a
+   * capture by that definition and "cities move but captures do not" was
+   * unanswerable.
+   *
+   * ## The arms, and arm 1 is a canary again
+   *
+   * | arm | floor | what it is |
+   * |---|---|---|
+   * | floor at one | 1 | the rule as measured over 324 games |
+   * | floor at four | 4 | as shipped, Jeremy's number |
+   *
+   * Recording a sale is bookkeeping and rolls no dice, so **arm 1 should
+   * reproduce the previous run's `towns for sale` arm bit for bit** on the
+   * same seeds. Check that before reading anything else; if it differs, the
+   * new columns are not inert and every figure here is void.
+   *
+   * ## What to read, pre-registered
+   *
+   * - **`sold` per side** (`townsLost`), first and for its own sake. If the
+   *   floor only lowers everyone's figure, it changed how often. If the
+   *   Wandering Folk's, the Hive's and the Unbound's go to nearly nothing
+   *   while the Kingdom's and the Horde's hold up, it changed **who** -- which
+   *   is the design property the floor was added for, measured rather than
+   *   argued.
+   * - **`bought` per side**, as the other half: who is doing the buying should
+   *   barely move, because the floor is a fact about the seller.
+   * - **`gold`, `wins`, `cities`, `gone`** after that. The 324-game run found
+   *   a real sink with a flat win column; the floor should not disturb either,
+   *   and if it does the reason will be in the two columns above.
+   *
+   * **The risk, written down first:** a floor that is nearly the median city
+   * count could take the rung off the board in the games that matter, and the
+   * probe cannot see that because it is unpaired. If `bought` collapses toward
+   * zero for every side, four is too high and the answer is three.
+   */
+  const floor = (label: string, apply: () => void): Arm => ({
     label,
     apply: () => {
       control();
@@ -536,16 +600,12 @@ const buildArms = (): Arm[] => {
   });
 
   return [
-    bribe('not for sale (the old game)', () => {
-      BRIBE.enabled = false;
+    floor('floor at one (as measured)', () => {
+      BRIBE.floor = 1;
     }),
-    // `control()` already pins the rule as built, so this arm changes nothing
-    // on purpose: it is the shipped game, named.
-    bribe('towns for sale', () => {}),
-    bribe('dearer by half again', () => {
-      BRIBE.base = 160;
-      BRIBE.perSize = 90;
-    }),
+    // `control()` pins Jeremy's four, so this arm changes nothing on purpose:
+    // it is the shipped game, named.
+    floor('floor at four (as shipped)', () => {}),
   ];
 };
 

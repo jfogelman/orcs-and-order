@@ -161,6 +161,31 @@ export const BRIBE = {
   aiNamed: 0.55,
 };
 
+export interface BribeTally {
+  /** Towns this side has bought. */
+  bought: number;
+  /** Towns bought out from under it. */
+  lost: number;
+}
+
+function tally(state: GameState, playerId: number): BribeTally {
+  const all = (state.bribes ??= {});
+  return (all[playerId] ??= { bought: 0, lost: 0 });
+}
+
+/**
+ * What this side has bought and had bought from it.
+ *
+ * Returns zeroes rather than `undefined`, so *never bought from* is
+ * distinguishable from *not recorded* -- the same shape as `tributeTally`, and
+ * for the same reason: a column that cannot tell those apart reads a game
+ * where nothing happened as a game that was not measured.
+ */
+export function bribeTally(state: GameState, playerId: number): BribeTally {
+  const got = state.bribes?.[playerId];
+  return { bought: got?.bought ?? 0, lost: got?.lost ?? 0 };
+}
+
 /** Whether this town has changed hands for money too recently to do it again. */
 export function settling(state: GameState, city: City): boolean {
   return city.sold !== undefined && state.turn < city.sold.on + BRIBE.settles;
@@ -389,6 +414,8 @@ export function buyTown(state: GameState, unit: Unit, city: City, gold: number):
   // for.
   city.unrest = { until: state.turn + BRIBE.resentment };
   SPY_TRACE.townsBought++;
+  tally(state, unit.owner).bought += 1;
+  tally(state, from.id).lost += 1;
   recomputeVisibility(state, unit.owner);
   recomputeVisibility(state, from.id);
 

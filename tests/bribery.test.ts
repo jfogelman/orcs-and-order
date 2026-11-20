@@ -4,6 +4,7 @@ import { capitalOf, foundCity } from '../src/sim/city';
 import {
   BRIBE,
   aiTownOffer,
+  bribeTally,
   buyOdds,
   buyTown,
   canBuyTown,
@@ -393,5 +394,30 @@ describe('what the other side will offer', () => {
     } finally {
       SPY.enabled = true;
     }
+  });
+});
+
+describe('who bought and who was bought from (section 184)', () => {
+  it('records both sides of a sale', () => {
+    const { state, spy, town } = board();
+    expect(bribeTally(state, 0)).toEqual({ bought: 0, lost: 0 });
+    rig(true, () => buyTown(state, spy, town, townPrice(state, town)));
+    expect(bribeTally(state, 0)).toEqual({ bought: 1, lost: 0 });
+    expect(bribeTally(state, 1)).toEqual({ bought: 0, lost: 1 });
+  });
+
+  it('stores nothing until a town is sold, and still reads as zeroes', () => {
+    const { state, spy, town } = board();
+    rig(false, () => buyTown(state, spy, town, townPrice(state, town)));
+    // A refusal is not a sale, and an old save is not a game nobody measured.
+    expect(state.bribes).toBeUndefined();
+    expect(bribeTally(state, 1)).toEqual({ bought: 0, lost: 0 });
+  });
+
+  it('survives a save and a load', () => {
+    const { state, spy, town } = board();
+    rig(true, () => buyTown(state, spy, town, townPrice(state, town)));
+    const back = deserialize(serialize(state));
+    expect(bribeTally(back, 1)).toEqual({ bought: 0, lost: 1 });
   });
 });

@@ -1054,6 +1054,22 @@ export interface GameState {
    */
   landmarks?: Array<{ turn: number; city: number; owner: number; id: BuildingId }>;
   /**
+   * Towns bought and towns sold out from under somebody, by player id.
+   * Section 184.
+   *
+   * **Two numbers and not one, because the interesting one is `lost`.** Who
+   * *buys* towns is easy to guess from a purse; who gets **bought from** is
+   * the question two sections have now reasoned around without measuring --
+   * section 138 wanted espionage incidents by victim for an unexplained Horde
+   * gain, and section 184 wanted them to know whether `BRIBE.floor` changes
+   * who is for sale or only how often. A story about which empires are cheap
+   * is not evidence, and this is the cheapest thing that would be.
+   *
+   * Absent until the first town changes hands for money, which is most games
+   * and every old save.
+   */
+  bribes?: Record<number, { bought: number; lost: number }>;
+  /**
    * Section 116: how the two empires stand. Absent on every save from before
    * diplomacy, which is a war that nobody has ever tried to end.
    */
