@@ -18096,3 +18096,61 @@ cost the instruments cannot distinguish from nothing. If it is ever worth
 knowing exactly, it is a two-arm ladder of `BRIBE.floor` on the shared seeds,
 and the honest reason to run it would be the *per-victim* question above
 rather than the throughput one.
+
+#### The floor arm, 216 games: it changed *who*, and only one of them
+
+The harness's own estimate: *"2 arms x 2 sets. 216 games, about 65 minutes
+(39-84, depending on how many run to the turn limit)."* It finished in **62.1
+min**, 17.2s a game. `sweep-results/2026-11-20T01-51-31-424Z.txt`.
+
+**The canary is clean.** Arm 1 reproduces the 324-game run's `towns for sale`
+arm over 108 rows and all 79 shared columns, zero differences — so recording
+who bought and who was sold from rolls no dice, and the ten new columns are
+inert additions to the same games.
+
+**The column answered the question it was built for.** Towns bought *from*
+each side, paired per map:
+
+| side | tuned | held-out | pooled |
+|---|---|---|---|
+| **Hivekin** | 0.26 → **0.13** | 0.44 → **0.28** | **−0.148, t = −2.36, 2 maps up / 13 down, sign p = 0.007** |
+| Horde | 0.24 → 0.26 | 0.31 → 0.35 | +0.028, p = 1.000 (*up*) |
+| Kingdom | 0.28 → 0.26 | 0.07 → 0.07 | −0.009, p = 1.000 |
+| Wandering Folk | 0.17 → 0.15 | 0.13 → 0.11 | −0.019, p = 1.000 |
+| Unbound | 0.11 → 0.09 | 0.15 → 0.13 | −0.019, p = 0.727 |
+
+Towns sold a game, all sides: 1.06 → 0.89 and 1.11 → 0.94. **Nearly the whole
+of that fall is the Hive**, whose exposure roughly halves on both seed sets.
+
+This is a direct measurement of the rule's own action rather than an outcome
+that might have drifted — the floor literally forbids a sale from a side
+holding four towns or fewer — so the usual demand for a second column moving
+with it does not apply in the same way. What it is, is narrower than predicted.
+
+**The prediction was that three small sides would be protected. One was.** And
+the reason the other two were not is worth more than the result:
+
+**An end-of-game column cannot justify a rule that fires mid-game.** The case
+for four was built on towns held *at the end* — Wandering Folk 2.4-3.4,
+Unbound 3.1-3.2 — which made a floor of four look like near-total protection
+for both. Their sold figures barely moved, because **a town is bought while a
+side still has five**, in the middle of the game, and the end-state count is
+what is left after being ground down afterwards. The inference was shaky and
+the data says so. The Hive is the side whose town count is low *while agents
+are abroad*, which is late, and it is the one the floor reaches.
+
+**Nothing else moved, which is the other half of the result.** Same winner on
+**104 of 108 maps**; every side's McNemar p ≥ 0.5 (Kingdom 31→29, Hive 32→31).
+Gold, cities and `gone` are null everywhere — the largest is the Hive's gold at
+t = −1.83 with a sign test of 0.424, which is nothing. Protecting a side from
+0.15 sales a game is too small a thing to move a game, and that is the honest
+size of what this buys.
+
+**The registered risk did not fire.** `bought` did not collapse toward zero:
+the Kingdom still buys 0.46 and 0.69 towns a game, the total is still about
+0.9. Four is not too high, and three is not needed.
+
+**Verdict: ship the floor at four.** It does what it was added for, at a
+measured cost of about 15% of the rung's activity and no effect on any outcome
+column. It protects one side rather than three, and the two it does not protect
+were never being bought from as often as the end-of-game table implied.
