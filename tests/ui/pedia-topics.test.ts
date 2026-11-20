@@ -5,6 +5,7 @@ import { CREATURES, UNIT_TYPES } from '../../src/model/units';
 import { BUILDINGS } from '../../src/model/buildings';
 import { abilityNotes, openPedia } from '../../src/ui/pedia';
 import { SPY_ACTIONS } from '../../src/sim/spying';
+import { BRIBE } from '../../src/sim/bribery';
 import { DIFFICULTIES } from '../../src/sim/difficulty';
 import { HIVEKIN } from '../../src/sim/hivekin';
 import { closeModal, isModalOpen } from '../../src/ui/dom';
@@ -223,6 +224,21 @@ describe('a long pane is topics, not a wall', () => {
       if (!act.ready) continue;
       expect(text, `the Espionage pane never says "${act.verb}"`).toContain(act.verb);
     }
+  });
+
+  it('states the numbers a player has to plan around, off the levers', () => {
+    // Section 184. Three figures decide whether buying a town is worth
+    // walking an agent across the map, and all three are levers -- so the
+    // pane reads them rather than repeating them, and this test fails the day
+    // somebody tunes one and leaves the book saying the old thing.
+    const text = pane('espionage').textContent ?? '';
+    expect(text, 'the floor').toContain(String(BRIBE.floor));
+    expect(text, 'the settling period').toContain(String(BRIBE.settles));
+    expect(text, 'the resentment').toContain(String(BRIBE.resentment));
+    expect(text, 'a capital is never for sale').toMatch(/capital is never for sale/i);
+    expect(text, 'and the floor is explained, not just printed').toMatch(
+      /down to \$?\{?BRIBE\.floor\}?|down to \d+ towns/i,
+    );
   });
 
   it('names the advance a gated rung wants, and claims none for the free ones', () => {

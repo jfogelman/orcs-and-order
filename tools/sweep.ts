@@ -7,6 +7,7 @@ import { DIFFICULTIES } from '../src/sim/difficulty';
 import { NAVAL } from '../src/ai/naval';
 import { INTIMIDATE, LEGION, RAIDER_TIERS } from '../src/sim/wilds';
 import { PEACE, STANDING, TRIBUTE, tributeTally } from '../src/sim/diplomacy';
+import { bribeTally } from '../src/sim/bribery';
 import { CONTACT } from '../src/sim/contact';
 import { NEGOTIATION } from '../src/model/factions';
 import { DISGUISE } from '../src/sim/disguise';
@@ -16,6 +17,7 @@ import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
+import { BRIBE } from '../src/sim/bribery';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DISPERSAL, GUEST_LIST } from '../src/sim/dispersal';
 import { BUILD_ORDER, ENDING_ROAD } from '../src/sim/research';
@@ -163,6 +165,9 @@ export const LEVERS: Record<string, object> = {
   TURNING,
   GOSSIP,
   INCITE,
+  // Section 184: buying a town. In the fingerprint the day the rule was
+  // written, so the arm that measures it is a real arm and not a duplicate.
+  BRIBE,
   HIVE_WORKS,
   /**
    * Section 153: the Unbound's whole rule, and the thing their ending does.
@@ -400,6 +405,18 @@ export interface Outcome {
   tributeBilled: PerSide;
   /** The same, for being paid: 1 if it ever took tribute, 0 if never. */
   tributeTook: PerSide;
+  /**
+   * Towns this side bought, and towns bought out from under it. Section 184.
+   *
+   * **`townsLost` is the column the section was actually missing.** `captures`
+   * counts every change of a city's owner, however it happened, so a town
+   * bought for gold is a capture by that definition -- which made section
+   * 184's pre-registered reading ("cities should move while captures do not")
+   * unanswerable. These two separate a war from a purse, and `townsLost`
+   * answers the one nobody has measured: *whose* towns are for sale.
+   */
+  townsBought: PerSide;
+  townsLost: PerSide;
 }
 
 function deepestGroup(types: string[]): number {
@@ -591,6 +608,8 @@ export function playGame(
     tributeGot: each((id) => tributeTally(state, id).got),
     tributeBilled: each((id) => (tributeTally(state, id).bills > 0 ? 1 : 0)),
     tributeTook: each((id) => (tributeTally(state, id).takes > 0 ? 1 : 0)),
+    townsBought: each((id) => bribeTally(state, id).bought),
+    townsLost: each((id) => bribeTally(state, id).lost),
   };
 }
 
@@ -868,6 +887,9 @@ export interface Summary {
   /** Share of games in which this side was ever billed, and ever paid. */
   tributeBilled: PerSide;
   tributeTook: PerSide;
+  /** Mean towns bought, and mean towns bought from this side. Section 184. */
+  townsBought: PerSide;
+  townsLost: PerSide;
   /**
    * Every side that appeared in this arm, in table order.
    *
@@ -958,6 +980,8 @@ export function summarise(results: ArmResult[]): Summary[] {
     tributeGot: meanPerSide(r.outcomes, (o) => o.tributeGot),
     tributeBilled: meanPerSide(r.outcomes, (o) => o.tributeBilled),
     tributeTook: meanPerSide(r.outcomes, (o) => o.tributeTook),
+    townsBought: meanPerSide(r.outcomes, (o) => o.townsBought),
+    townsLost: meanPerSide(r.outcomes, (o) => o.townsLost),
     /** Every side that appeared in this arm, in a stable order. */
     sides: FACTION_IDS.filter((f) => r.outcomes.some((o) => o.sides.includes(f))),
   }));
@@ -1023,7 +1047,8 @@ export function report(results: ArmResult[]): string {
     const subhead =
       `${label(f).padEnd(18)}${'set'.padEnd(10)}${pad('wins', 6)}${pad('cities', 8)}${pad('pop', 8)}` +
       `${pad('gone', 6)}${pad('units', 8)}${pad('techs', 8)}${pad('sacked', 8)}${pad('joined', 8)}${pad('routes', 8)}${pad('routeG', 8)}` +
-      `${pad('gold', 8)}${pad('paid', 7)}${pad('got', 7)}${pad('billed', 8)}${pad('took', 7)}`;
+      `${pad('gold', 8)}${pad('paid', 7)}${pad('got', 7)}${pad('billed', 8)}${pad('took', 7)}` +
+      `${pad('bought', 8)}${pad('sold', 7)}`;
     const lines = rows.map(
       (r) =>
         r.arm.padEnd(18) +
@@ -1042,7 +1067,12 @@ export function report(results: ArmResult[]): string {
         pad(cell(r.tributePaid, f, 0), 7) +
         pad(cell(r.tributeGot, f, 0), 7) +
         pad(cell(r.tributeBilled, f, 0, true), 8) +
-        pad(cell(r.tributeTook, f, 0, true), 7),
+        pad(cell(r.tributeTook, f, 0, true), 7) +
+        // Section 184. `sold` is towns bought *from* this side: the per-victim
+        // figure, which is the whole reason the floor arm is worth machine
+        // time. Beside the gold it was paid for, deliberately.
+        pad(cell(r.townsBought, f, 2), 8) +
+        pad(cell(r.townsLost, f, 2), 7),
     );
     return [subhead, '-'.repeat(subhead.length), ...lines].join('\n');
   });
@@ -1088,6 +1118,8 @@ export function rawRows(results: ArmResult[]): string {
     ['TributeGot', (o) => o.tributeGot],
     ['TributeBilled', (o) => o.tributeBilled],
     ['TributeTook', (o) => o.tributeTook],
+    ['TownsBought', (o) => o.townsBought],
+    ['TownsLost', (o) => o.townsLost],
   ];
   const cols = [
     'arm',

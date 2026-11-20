@@ -37,6 +37,7 @@ import { SABOTAGE } from '../src/sim/sabotage';
 import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
+import { BRIBE } from '../src/sim/bribery';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
@@ -203,6 +204,16 @@ export const control = () => {
   // Slice 8: and agents set towns talking against their own rulers.
   INCITE.enabled = true;
   INCITE.ai = true;
+  // Section 184: and agents buy towns outright. Pinned the day the rule was
+  // written, levers and all -- section 59's omission is the one mistake this
+  // file exists to stop, and SPY itself was missing from here for two slices.
+  BRIBE.enabled = true;
+  BRIBE.ai = true;
+  // **Pinned, and this is not decoration.** An arm that sets `BRIBE.floor = 1`
+  // mutates the shared object, so without this line the *next* arm inherits
+  // it and two arms silently become one. Section 59's omission, which is the
+  // mistake this file exists to stop.
+  BRIBE.floor = 4;
   // #144: the Hive has a full set of ordinary buildings.
   HIVE_WORKS.enabled = true;
   // Slice 4: and the AI reads the number and weighs how the war has gone.

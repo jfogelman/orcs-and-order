@@ -6,6 +6,9 @@ import type { TurnOutcome } from '../sim/turning';
 import type { StandingReading } from '../sim/gossip';
 import type { InciteOutcome } from '../sim/incite';
 import { TURNING, askingPrice, turnOdds } from '../sim/turning';
+import type { BuyOutcome } from '../sim/bribery';
+import { BRIBE, buyOdds, townPrice } from '../sim/bribery';
+import { talkingAlready } from '../sim/unrest';
 import { escapeHtml, openModal } from './dom';
 
 /**
@@ -439,6 +442,114 @@ export function openIncite(
         who to blame for it.</div>
         <p class="flavor">It takes patience away rather than forcing a riot. A town with
         room to spare will shrug this off; a town already stretched will not.</p>
+      </div>`,
+  });
+}
+
+/**
+ * The offer for a whole town, before it is made. Section 184.
+ *
+ * **Three named offers, as with a soldier**, and for the same reason: the
+ * decision is how generous to be, not what number to solve for. What is
+ * different is the panel above them, which exists because the price here is
+ * made of four things the player can *do something about* -- and one of them,
+ * the owner's bank, is a fact about somebody else that nothing else in the
+ * game shows you.
+ */
+export function openTownOffer(
+  state: GameState,
+  spy: Unit,
+  city: City,
+  onChoose: (gold: number) => void,
+): void {
+  const purse = state.players[spy.owner]?.gold ?? 0;
+  const them = state.players[city.owner]?.name ?? 'they';
+  const asking = townPrice(state, city);
+  const softened = talkingAlready(state, city) || city.disorder;
+  const row = (label: string, share: number) => {
+    const gold = Math.round(asking * share);
+    const odds = Math.round(buyOdds(state, spy, city, gold) * 100);
+    const afford = gold <= purse;
+    return `<button class="small${afford ? '' : ' disabled'}" data-gold="${gold}"
+              ${afford ? '' : 'disabled'}>${escapeHtml(label)} &middot; ${gold}g &middot; ${odds}%</button>`;
+  };
+  openModal({
+    title: `Buying ${city.name}`,
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <div class="stat-row"><span class="label">The asking price</span><span class="value">${asking}g</span></div>
+        <div class="stat-row"><span class="label">We have</span><span class="value">${purse}g</span></div>
+        ${
+          softened
+            ? `<div class="spy-notice safe"><strong>They are already unhappy</strong>, which
+               is ${Math.round(BRIBE.unrestCut * 100)}% off the asking price. This is what
+               fomenting discontent is for.</div>`
+            : ''
+        }
+        <p class="flavor">Nothing is sacked and nobody dies: every building is left
+        standing and the walls with them. That is the whole difference between this and
+        an army, and it is what the money is for.</p>
+        <p class="flavor">The price is the size of the place, what is standing in it, how
+        many soldiers are billeted there &mdash; and how much ${escapeHtml(them)} have in
+        the bank. A rich empire is dear to buy from, and a side down to
+        ${BRIBE.floor} towns sells nothing at all.</p>
+      </div>
+      <div class="panel-body">
+        <div class="button-row">
+          ${row('Thin', 0.5)}${row('Fair', 1)}${row('Generous', 1.6)}
+        </div>
+        <p class="flavor">The money is spent whatever the answer is, and a refusal names
+        us to ${escapeHtml(them)}. The garrison will not serve a bought magistrate and
+        marches home; the townsfolk will be sore about it for ${BRIBE.resentment} turns.</p>
+      </div>
+      <div class="modal-actions"><button class="small" data-act="never-mind">Never mind</button></div>`,
+    onMount: (root, close) => {
+      root.querySelectorAll<HTMLElement>('[data-gold]').forEach((b) => {
+        b.addEventListener('click', () => {
+          close();
+          onChoose(Number(b.dataset.gold));
+        });
+      });
+      root.querySelector('[data-act="never-mind"]')?.addEventListener('click', () => close());
+    },
+  });
+}
+
+/** What came of an offer for a town. Section 184. */
+export function openTownResult(
+  city: City,
+  former: string,
+  outcome: BuyOutcome,
+): void {
+  if (outcome.kind === 'bought') {
+    openModal({
+      title: 'Bought',
+      width: 'min(560px, 96vw)',
+      body: `
+        <div class="panel-body">
+          <p style="font-size:15px">${escapeHtml(city.name)} is ours, for ${outcome.gold} gold.
+          Not a building touched.</p>
+          <div class="spy-notice safe"><strong>The garrison would not serve a bought
+          magistrate</strong> and has marched home. ${escapeHtml(former)} know what
+          happened, and so does everybody who lives here &mdash; expect them to be sore
+          about it for ${BRIBE.resentment} turns.</div>
+          <p class="flavor">Nobody may buy this place again for ${BRIBE.settles} turns.
+          It has had quite enough excitement.</p>
+        </div>`,
+    });
+    return;
+  }
+  openModal({
+    title: 'Not For Sale',
+    width: 'min(560px, 96vw)',
+    body: `
+      <div class="panel-body">
+        <p style="font-size:15px">${escapeHtml(city.name)} heard the offer of
+        ${outcome.kind === 'refused' ? outcome.gold : 0} gold and showed our agent the door.</p>
+        <div class="spy-notice blown"><strong>We were named.</strong> An offer for a whole
+        town is made to somebody who signs for it, and somebody who signs for a town has
+        a report to write. The money is gone with it.</div>
       </div>`,
   });
 }

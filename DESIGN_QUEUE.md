@@ -17698,3 +17698,459 @@ The run is at `sweep-results/2026-11-17T05-23-29-259Z.txt`.
 quantity before launching the real run.** The per-game record near `routeGold:`
 and the `measures` list in `rawRows` are the two places a column has to appear.
 A reading with no column is not a measurement plan, it is a sentence.
+
+## 184. Buying a town, which is section 154's last untouched option — MEASURED, 324 games
+
+Jeremy, having read section 183's result: *"then live thread."* The live
+thread is section 154's item 1, which section 183 reopened with a number
+rather than closing: tribute is a real sink, it reaches the Hive, and all
+three hoarding sides still end on 250 to 500 banked. Of that item's three
+cheapest-first options, tribute shipped (180), mercenaries are closed as
+measured-and-wrong, and **bribing a city has never been touched**. This is
+it.
+
+### Why this one is worth building and rush-buying was not
+
+Section 4e's retirement of rush-buying is the trap to avoid, and its reason is
+still true: *rush-buying scales with how many cities you have to spend it in,
+so it pays the side that is already winning.* A gold sink that makes the leader
+stronger is not a sink, it is a lead.
+
+Buying a town looks like the same shape at first glance and is not, for one
+reason that has to be designed in rather than hoped for: **the price has a term
+in the victim's treasury.** A rich side is expensive to buy out. So the hoard
+that makes a side the best buyer is also what makes it the hardest to buy from,
+and the side that spends its hoard down is the side that becomes cheap. That is
+a self-correcting shape, it is Civ 2's own (incite cost carries the owner's
+gold), and it is the opposite of rush-buying's.
+
+The second reason is that it is **not a military action with a gold price on
+it**. Storming a town costs it: `captureCity` takes `sackSeverity` off its size,
+razes a building per point of that, and sets `ruinedUntil`. A bought town is
+whole — every building standing, nobody dead, the walls intact. That is what
+makes it worth a great deal of money, and it is also the entire design
+statement: *gold buys you the place as a place, where an army only ever buys
+you the ruins of one.*
+
+### What a town is asking
+
+A fact about the target, exactly as `askingPrice` is a fact about a soldier, so
+that two agents get quoted the same figure and the dial a player turns is what
+they **offer**:
+
+    base 80
+    + 45 a point of size
+    + 40 a standing building
+    + 20 a body in the garrison
+    + 0.15 of the owner's banked gold
+    x (1 - 0.3 if the town is already talking or rioting)
+
+Worked, against the figures section 183 measured. A Kingdom town of size 7 with
+four buildings and eight bodies in it, its owner holding 829: **839 gold**. A
+Wandering Folk town of size 3 with one building and three bodies, its owner
+holding 331: **365**. Fomented first (section 136 slice 8), that second town is
+**256**.
+
+Those are the numbers the whole section turns on, so they are stated before
+anything runs: a big fortified town is at the very top of what the richest side
+in the game can reach, and a small one on a poor side's frontier is affordable
+to the Horde's 243 **only** after an agent has spent a turn making it unhappy.
+The garrison term means a defended town is dearer than an empty one without
+making the purchase a combat calculation.
+
+### Jeremy's three rulings
+
+Asked before building, because each one changes the code rather than a number.
+
+**The garrison is pushed out, not bought and not killed.** *"Pushed out to
+their nearest town."* The soldiers refuse to serve a bought magistrate and will
+not fight their own townsfolk either, so they walk home — to their side's
+nearest remaining town. He also flagged the edge case, so: a side with no other
+town has its garrison put out of the gate onto the nearest tile it can stand
+on, and only if there is nowhere at all does it melt away. That ordering matters
+because the alternative — enemy soldiers standing inside a town you own — is a
+board state nothing else in this game produces.
+
+**A capital is never for sale, at any price.** Not dearer: refused. It takes the
+worst case off the board entirely (an empire decapitated by a purse) and gives
+every side one place that cannot be taken this way, which is also the answer to
+"what stops this ending a game on its own".
+
+**Unrest cuts the price, and the two-step play is intended.** Foment, then buy.
+It gives section 136's cheapest offensive rung a second purpose, and it means
+the dear rung rewards a player who planned two turns ago rather than one who
+happened to be rich today.
+
+### What ships
+
+`src/sim/bribery.ts`, built on `turning.ts`'s shape because the questions are
+the same ones: a price that is a fact about the target, gold as the dial, three
+named offers rather than a slider, and the money spent whether or not the answer
+is yes.
+
+- **A new rung on the ladder**: `buy`, `risk: 4.0`, between turning a soldier
+  (3.6) and the double (4.5). Risk is calibrated against the whole ladder and
+  not in isolation — the note in `SPY_ACTIONS` says why that matters.
+- **Gated on `everyone-has-a-price`**, the advance that already carries
+  turning. A sixth spy advance would need a name, and names come from Jeremy's
+  design doc rather than from me; the flag is one word if he wants one later.
+  The tree is untouched and the cost control is the price, not the research.
+- **Refusal is being named**, as with turning and for the same reason: you did
+  not watch from a hedge, you walked up and made an offer to somebody who has
+  a report to write. The agent lives — a saboteur is caught at the works, a
+  negotiator is merely shown the door.
+- **A bought town arrives resentful**: `city.unrest` is set for eight turns on
+  the new owner. The townsfolk were sold, and they know what they went for.
+- **A settling period**: `city.sold` records who bought it and when, and no
+  town may be bought again for fifteen turns. Without it the richest two sides
+  pass a border town back and forth, which is the same failure
+  `razeCity`'s note describes for storming one.
+
+### What is predicted, and the risk, written down before the arm runs
+
+Section 180 is the reason this section states its reading in terms of columns
+that exist. All five are in the sweep today, from section 183: `gold` banked
+per side, and `wins`, `cities`, `gone` beside it.
+
+**Predicted:** banked gold falls for the Hive and the Kingdom, the two deepest
+hoards, and `cities` moves between sides without `captures` moving — a town
+changing hands with no fight is the mechanism's own signature. The Wandering
+Folk, on 331 banked and 1 win in 54, are the side most likely to *lose* a town
+to this and the least able to buy one.
+
+**The registered risk is the one that killed rush-buying**: if the Kingdom's
+win count rises while its banked gold falls, this is not a sink, it is the
+leader converting a dead hoard into cities, and the owner's-treasury term has
+failed to do its job. The lever for that is `ofTheirPurse`, and it comes *up*
+rather than the whole rung coming out.
+
+**The second risk is the Wandering Folk**, who cannot defend a frontier town
+and would be the cheapest source of them. If their `cities` fall and their
+`gone` rises, the floor belongs in the rule — a side's last two towns not being
+for sale, the same shape as the capital ruling.
+
+### Two things the tests found, which changed the rules
+
+**Jeremy's edge case does not exist, and his own two rulings are why.** He
+asked what happens to a garrison with nowhere to march to. Building the
+fallback and then trying to test it showed there is no such case: a side whose
+only town is this one cannot sell it, so there is always a town to march to.
+That floor arrived by accident — `capitalOf` returns the oldest town a side
+*holds* when it founded none of them, so a side down to one town has that town
+as its capital, and the capital ruling refused it.
+
+Taking it as settled would have left the floor **existing by accident, in
+another module**, to vanish the day `capitalOf` stopped falling back. So it is
+now its own rule in `canBuyTown`, asked *before* the capital rule so that the
+truer sentence is the one the player is given: *it is all they have left*
+rather than *this is their capital*. The two fallbacks behind it are kept and
+documented as unreachable, and the deepest one was changed from deleting the
+soldier to leaving it standing — an unreachable branch that destroys somebody's
+units is the worst thing to be wrong about.
+
+That rule is also **the floor under this section's second registered risk**.
+The Wandering Folk, 1 win in 54 and 331 banked, cannot be bought out of the
+game: their last town is not for sale at any price. The risk is not retired —
+they can still be bought down *to* one town — but the elimination case is
+closed by a rule rather than by hoping the numbers are kind.
+
+**The AI reaches the rung, and it reaches it by ending its agent's turn.**
+Three whole-game fixtures diverge from turn ~76, and `"sold"` appears nowhere
+in any of them: no town was bought in any fixture game. The mechanism is the
+`return` — an offer made and refused still spends the agent's day, so the agent
+does not then read, gossip or foment, and every roll after that lands
+differently. Which means the first thing to measure is not whether buying a
+town wins games. It is **how often an agent spends its day being told no**, and
+the ladder's cheaper rungs are what it is being spent instead of.
+
+`npm run spyprobe` now counts offers for a town, towns bought, refusals and
+gold spent, with the same guard the other rungs have: *nobody ever offered for
+a town* and *offered and never once accepted* are both printed as warnings,
+because a rung the AI never reaches measures as a rung that does nothing. That
+is section 136's dearest lesson and it cost a sweep to learn.
+
+### Does it ever happen? The probe, 24 games
+
+Asked before paying for a sweep, which is the one habit this file has that
+reliably saves an hour and a half. `npm run spyprobe`, 24 games:
+
+    offers for a whole town 1.92 per game
+      towns bought          1.21
+      refused (and named)   0.71
+      gold spent on towns   537
+
+Against the same probe's figures for the rung below it — 14.46 offers for a
+*soldier* a game, 989 gold — and against banked hoards of 250 to 850 from
+section 183. So:
+
+**It is on the board.** No `NOBODY EVER OFFERED` warning, no *offered and never
+once accepted*. An arm of `BRIBE` will measure something, which is more than
+could be said for the Burrower-caste or for the first cut of the agent abroad.
+
+**It is a real sink.** 537 gold a game leaves a treasury for a town, which is
+half again what the soldier rung moves and goes to a single purchase rather
+than a dozen.
+
+**And it may well be too strong.** 1.21 towns changing hands a game, by
+payment, against sides holding three to seven. That is not a judgement the
+probe can make — it counts, it does not weigh — but it is the number to hold in
+mind when the sweep comes back, and the first lever to reach for is `base` and
+`perSize` rather than switching the rung off.
+
+### What the fixtures prove, and what they do not
+
+Three whole-game fixtures diverge from turn ~76, with 19,000 to 27,000 changed
+keys between them: whole different games. Rather than reasoning about that, the
+cause was **isolated and measured** — `BRIBE.ai = false`, regenerate, and all
+three come back **byte-identical to `main`**.
+
+So the entire drift is the AI errand, and nothing leaked from the parts that
+should be inert: not the new optional field on a city, not the new rung in the
+`SPY_ACTIONS` table, not the Orcpedia entry, not the price readers. The same
+discipline section 183's columns were held to, and the same answer.
+
+What it does *not* prove is that towns were bought in those games: `"sold"`
+appears nowhere in any fixture. An offer that is refused still spends the
+agent's day and still returns, so the agent does not then read, gossip or
+foment — and every roll after that lands differently. **The cheap rungs are
+what this is being spent instead of**, and that is a cost the sweep should be
+read for as carefully as the win column.
+
+### Measured, 324 games — and it works, on the wrong side
+
+The harness's own estimate: *"3 arms x 2 sets. 324 games, about 97 minutes
+(58-126, depending on how many run to the turn limit)."* It finished in **97.4
+min**, 18.0s a game. `sweep-results/2026-11-18T01-24-18-018Z.txt`.
+
+**The canary is clean.** Arm 1 reproduces section 183's shipped arm over 108
+rows and all 79 columns, zero differences. So the rule is inert when off, and
+everything below attaches to precisely the games sections 180 and 183
+measured.
+
+#### 1. It is a real sink, and the registered risk is retired
+
+The Kingdom's banked gold falls, on both seed sets, and it is the largest
+movement in the run:
+
+| | banked before | after | paired |
+|---|---|---|---|
+| tuned | 829 | 691 | **−138, t = −2.26** |
+| held-out | 1017 | 612 | **−404, t = −3.22**, 8 maps up / 26 down, p = 0.003 |
+
+Pooled, −271 a game at t = −3.84. And the thing the section was most afraid
+of **does not happen**: the Kingdom wins **31 of 108 before and 31 after**,
+same winner on 93 of 108 maps, every side's McNemar p ≥ 0.25. Money leaves the
+deepest treasury in the game and the win column does not move. That is the
+rush-buying shape asked for by name and answered no.
+
+Nobody is eliminated either. The Wandering Folk go 3 wins to 4, `gone`
+unchanged, and their `cities` **disagree between the seed sets** (+0.1 tuned,
+−0.4 held-out) — so the second registered risk does not fire. The last-town
+rule is doing its job and the floor at two is not needed on this evidence.
+
+#### 2. The price is not the lever. There is no lever here.
+
+Arm 3 charges half again as much for a town, and **every column disagrees
+between the seed sets** — gold, cities, fights, captures, all of them. The
+probe's 1.21 towns a game looked like something that wanted reining in; 324
+games say the reining-in buys nothing measurable.
+
+So the recommendation is to **ship it as built**, and that is a stronger
+statement than it sounds: the one arm designed to find the number wrong failed
+to.
+
+#### 3. It drains the one side whose gold was never dead
+
+This is the finding, and it is not a happy one.
+
+Section 154's re-measurement is explicit that the Kingdom is **not** one of the
+hoarding sides: it banks 725 and *spends* 950, so its deep treasury is working
+capital. The three sides with dead gold are the Hive, the Wandering Folk and
+the Unbound.
+
+This sink moves the Kingdom's pile by 271 a game — and for the other four,
+**the two seed sets disagree on the sign**: Horde −59 / +1, Hive −44 / +13,
+Unbound +2 / −14. Only the Wandering Folk agree, weakly (−31 / −63, sign tests
+0.405 and 0.804). Nothing is established for any of the three hoarders.
+
+The mechanism is in the probe, which counts agents per side at the end:
+
+    human    agents 3.21   gold 716
+    orc      agents 2.71   gold 119
+    hivekin  agents 1.38   gold 490
+    unbound  agents 1.29   gold 356
+    wandering agents 1.17  gold 376
+
+**Buying a town needs an agent standing beside it**, and the sides with the
+dead gold are the sides that do not go abroad. The Kingdom has nearly three
+times the Wandering Folk's agents and twice the purse, so it is the side that
+can reach the new sink — exactly as it was already the side reaching the old
+one, turning soldiers.
+
+**That is the same shape section 180 found and neither section named.** Both
+gold sinks built for item 1 are gated behind *doing something to somebody
+else*, and a side that hoards is a side that is not out doing things. Section
+154's item 1 is still open after two sections of work, and now it has a
+diagnosis rather than another candidate: **it wants a sink that does not need
+an agent abroad.**
+
+#### 4. A column that cannot answer what it was asked
+
+`caps` rises by 1.08 a game (t = +2.25, 40 maps up / 16 down, p = 0.002), and
+this section's pre-registered reading was *"a town bought is a town moved with
+no fight, so `cities` should move between sides while captures do not."*
+
+That reading cannot be answered, because `captures` in `sweep.ts` is counted by
+`sweepOwners()` — **every change of a city's owner**, however it happened. A
+bought town is a capture by that definition, and +1.08 is roughly the 1.21
+purchases a game the probe counted. The column is not wrong; the prose assumed
+a narrower meaning than the code has.
+
+Which is section 180's error wearing different clothes, and worth stating as
+the general form: **grep the column's definition, not its name.** Section 183
+added the missing column and the habit survived it. The fix here is the same
+and is cheap — a per-game count of towns bought, beside `captures` — and
+without it no sweep of this rule can separate a war from a purse.
+
+### A floor at four, and what it is aimed at
+
+Jeremy, having read the run: *"then we'll do floor at four."*
+
+The rule shipped with a floor of **one** — a side's last town is not for sale —
+and that was only ever the elimination case. Four is a different statement:
+**a purse can take from an empire; it cannot finish one off.** `BRIBE.floor`,
+in `LEVERS`, so an arm of it is a real arm.
+
+What makes it more than a rounded-up number is where the measured city counts
+sit. From the 324-game run, towns held at the end:
+
+| side | towns |
+|---|---|
+| Kingdom | 7.4 |
+| Horde | 5.1 |
+| Unbound | 3.1–3.2 |
+| Hive | 3.0–3.6 |
+| Wandering Folk | 2.4–3.4 |
+
+So a floor of four is close to **"only the two large empires are for sale"**.
+That is the opposite of where a purse naturally points — the cheapest town on
+the board belongs to whoever is doing worst — and it is the half of section
+184's own finding that the price model could not fix on its own. The
+`ofTheirPurse` term makes a *rich* side dear; it does nothing about a poor one
+being cheap. The floor does.
+
+It also retires the second registered risk outright rather than by argument.
+That risk was the Wandering Folk, on 1 win in 54, being bought down rather than
+fought down; at this floor they are almost never for sale at all.
+
+**And it costs something that has to be measured, not assumed.** The 324-game
+result above was taken at a floor of one. Every one of those figures — the
+Kingdom's −271, the flat win column, the price step being inert — describes a
+rule that could buy from anybody with two towns. Narrowing the sellers to the
+two largest empires is exactly the kind of change that quietly takes a rung off
+the board, which is the failure this project has walked into twice. So the
+probe comes before anything else, and the question it is being asked is the
+only one that matters first: **does it still happen at all?**
+
+#### The floor is cheap: the probe, 24 games
+
+The question was whether narrowing the sellers to the large empires takes the
+rung off the board. It does not.
+
+| `npm run spyprobe`, per game | floor 1 | floor 4 |
+|---|---|---|
+| offers for a whole town | 1.92 | **1.71** |
+| towns bought | 1.21 | **1.13** |
+| refused (and named) | 0.71 | 0.58 |
+| gold spent on towns | 537 | 493 |
+
+**What that establishes, and what it does not.** It establishes existence and
+order of magnitude: no `NOBODY EVER OFFERED` warning, over a town bought a
+game, a few hundred gold a game still leaving a treasury. That was the
+question, and the answer is that the floor costs roughly a tenth of the rung.
+
+It does **not** establish that the difference is a tenth. The probe is not a
+paired instrument — the two runs are 24 different games, not the same 24 games
+played twice, because the floor changes behaviour and the games diverge from
+the first offer it blocks. 1.92 against 1.71 over 24 unpaired games is inside
+what this tool can resolve. Attribution needs the same bar as any other claim
+and the probe cannot clear it.
+
+**Why it costs so little is not instrumented, and the obvious answer is not
+evidence.** The comfortable story is that the sellers were already the two
+large empires, because they are the ones an agent can reach. That is a story,
+not a measurement: nothing here counts incidents **by victim**. Section 138
+already wanted that counter for an unexplained Horde gain, which makes two
+sections asking for the same instrument — the next one that needs it should
+build it rather than reason around it a third time.
+
+The corroborating fact that *is* measured: the three whole-game fixtures
+regenerate **byte-identical** across this change. Those games diverged
+enormously when the rung was first switched on, so their agents are certainly
+making offers, and the floor alters not one roll in them. Whatever they were
+offering for was never a side at or under four towns.
+
+**Standing recommendation.** Ship the floor as it is. It buys a design
+property — a purse can take from an empire but cannot finish one off — at a
+cost the instruments cannot distinguish from nothing. If it is ever worth
+knowing exactly, it is a two-arm ladder of `BRIBE.floor` on the shared seeds,
+and the honest reason to run it would be the *per-victim* question above
+rather than the throughput one.
+
+#### The floor arm, 216 games: it changed *who*, and only one of them
+
+The harness's own estimate: *"2 arms x 2 sets. 216 games, about 65 minutes
+(39-84, depending on how many run to the turn limit)."* It finished in **62.1
+min**, 17.2s a game. `sweep-results/2026-11-20T01-51-31-424Z.txt`.
+
+**The canary is clean.** Arm 1 reproduces the 324-game run's `towns for sale`
+arm over 108 rows and all 79 shared columns, zero differences — so recording
+who bought and who was sold from rolls no dice, and the ten new columns are
+inert additions to the same games.
+
+**The column answered the question it was built for.** Towns bought *from*
+each side, paired per map:
+
+| side | tuned | held-out | pooled |
+|---|---|---|---|
+| **Hivekin** | 0.26 → **0.13** | 0.44 → **0.28** | **−0.148, t = −2.36, 2 maps up / 13 down, sign p = 0.007** |
+| Horde | 0.24 → 0.26 | 0.31 → 0.35 | +0.028, p = 1.000 (*up*) |
+| Kingdom | 0.28 → 0.26 | 0.07 → 0.07 | −0.009, p = 1.000 |
+| Wandering Folk | 0.17 → 0.15 | 0.13 → 0.11 | −0.019, p = 1.000 |
+| Unbound | 0.11 → 0.09 | 0.15 → 0.13 | −0.019, p = 0.727 |
+
+Towns sold a game, all sides: 1.06 → 0.89 and 1.11 → 0.94. **Nearly the whole
+of that fall is the Hive**, whose exposure roughly halves on both seed sets.
+
+This is a direct measurement of the rule's own action rather than an outcome
+that might have drifted — the floor literally forbids a sale from a side
+holding four towns or fewer — so the usual demand for a second column moving
+with it does not apply in the same way. What it is, is narrower than predicted.
+
+**The prediction was that three small sides would be protected. One was.** And
+the reason the other two were not is worth more than the result:
+
+**An end-of-game column cannot justify a rule that fires mid-game.** The case
+for four was built on towns held *at the end* — Wandering Folk 2.4-3.4,
+Unbound 3.1-3.2 — which made a floor of four look like near-total protection
+for both. Their sold figures barely moved, because **a town is bought while a
+side still has five**, in the middle of the game, and the end-state count is
+what is left after being ground down afterwards. The inference was shaky and
+the data says so. The Hive is the side whose town count is low *while agents
+are abroad*, which is late, and it is the one the floor reaches.
+
+**Nothing else moved, which is the other half of the result.** Same winner on
+**104 of 108 maps**; every side's McNemar p ≥ 0.5 (Kingdom 31→29, Hive 32→31).
+Gold, cities and `gone` are null everywhere — the largest is the Hive's gold at
+t = −1.83 with a sign test of 0.424, which is nothing. Protecting a side from
+0.15 sales a game is too small a thing to move a game, and that is the honest
+size of what this buys.
+
+**The registered risk did not fire.** `bought` did not collapse toward zero:
+the Kingdom still buys 0.46 and 0.69 towns a game, the total is still about
+0.9. Four is not too high, and three is not needed.
+
+**Verdict: ship the floor at four.** It does what it was added for, at a
+measured cost of about 15% of the rung's activity and no effect on any outcome
+column. It protects one side rather than three, and the two it does not protect
+were never being bought from as often as the end-of-game table implied.

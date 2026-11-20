@@ -50,6 +50,8 @@ function outcome(over: Partial<Outcome> & { sides: FactionId[] }): Outcome {
     tributeGot: flat(0),
     tributeBilled: flat(0),
     tributeTook: flat(0),
+    townsBought: flat(0),
+    townsLost: flat(0),
     ...over,
   };
 }
@@ -276,5 +278,53 @@ describe('banked gold and what a treaty billed (section 183)', () => {
       expect(header, `${col} is missing`).toContain(col);
     }
     expect(header.indexOf('orcGold')).not.toBe(header.indexOf('orcRouteGold'));
+  });
+});
+
+describe('who bought a town and who was bought from (section 184)', () => {
+  it('prints towns bought and towns sold beside the gold they cost', () => {
+    const text = report([
+      arm('a', [
+        outcome({ sides: ['human', 'wandering'], townsBought: { human: 2, wandering: 0 } }),
+        outcome({ sides: ['human', 'wandering'], townsBought: { human: 1, wandering: 0 } }),
+      ]),
+    ]);
+    const block = text.split('\n\n').find((b) => b.startsWith('Humans'))!;
+    const [head, , row] = block.split('\n');
+    for (const col of ['gold', 'bought', 'sold']) {
+      expect(head, `${col} is not on the side's line`).toContain(col);
+    }
+    expect(row, 'the mean of 2 and 1').toContain('1.50');
+  });
+
+  /**
+   * **The column the section was actually missing.** `captures` counts every
+   * change of a city's owner however it happened, so a bought town is a
+   * capture by that definition -- which is why "cities move but captures do
+   * not" could not be read off the last run. Two sides can have identical
+   * captures and opposite stories about why.
+   */
+  it('tells a side that buys from a side that is bought from', () => {
+    const text = report([
+      arm('a', [
+        outcome({
+          sides: ['human', 'wandering'],
+          townsBought: { human: 1, wandering: 0 },
+          townsLost: { human: 0, wandering: 1 },
+        }),
+      ]),
+    ]);
+    const buyer = text.split('\n\n').find((b) => b.startsWith('Humans'))!.split('\n')[2];
+    const seller = text.split('\n\n').find((b) => b.startsWith('Wanderin'))!.split('\n')[2];
+    expect(buyer, 'the buyer bought one and lost none').toMatch(/1\.00\s+0\.00/);
+    expect(seller, 'the seller bought none and lost one').toMatch(/0\.00\s+1\.00/);
+  });
+
+  it('gives the raw rows both halves, per side', () => {
+    const rows = rawRows([arm('a', [outcome({ sides: ['orc', 'human'] })])]);
+    const header = rows.split('\n')[0].split('\t');
+    for (const col of ['orcTownsBought', 'orcTownsLost', 'humanTownsBought', 'humanTownsLost']) {
+      expect(header, `${col} is missing`).toContain(col);
+    }
   });
 });

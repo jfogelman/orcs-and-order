@@ -196,6 +196,20 @@ export const SPY_ACTIONS: Record<string, SpyAction> = {
   incite: { verb: 'Foment discontent in', risk: 2.2, ready: true },
   sabotage: { verb: 'Sabotage the works at', risk: 2.8, ready: true },
   turn: { verb: 'Turn', risk: 3.6, ready: false },
+  /**
+   * Section 184: buying the town itself.
+   *
+   * **Above turning a soldier and below the double**, which is a judgement
+   * about who notices rather than about what it is worth. Buying a town is the
+   * largest thing on this ladder by a distance, but it is one conversation
+   * with one magistrate -- where turning a soldier means standing in front of
+   * somebody whose trade is standing watch, and the double means making an
+   * offer to a professional.
+   *
+   * As with every other weight here, the number means nothing in isolation and
+   * is only worth reading against the whole ladder.
+   */
+  buy: { verb: 'Buy', risk: 4.0, ready: true },
   double: { verb: 'Turn their agent in', risk: 4.5, ready: false },
 };
 
@@ -322,6 +336,11 @@ export const SPY_TRACE = {
   offersLater: 0,
   offersRefused: 0,
   goldSpentBuying: 0,
+  /** Section 184: offers made for a town, towns bought, offers refused. */
+  townOffers: 0,
+  townsBought: 0,
+  townOffersRefused: 0,
+  goldSpentOnTowns: 0,
 };
 
 /** What a reading tells you about a city. */

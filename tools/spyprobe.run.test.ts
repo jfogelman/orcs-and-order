@@ -54,6 +54,11 @@ interface Tally {
   offersLater: number;
   offersRefused: number;
   goldSpentBuying: number;
+  /** Section 184: offers for a whole town, towns bought, and what that cost. */
+  townOffers: number;
+  townsBought: number;
+  townOffersRefused: number;
+  goldSpentOnTowns: number;
   /** Distinct towns ever filed. A floor on reads, not a count of them. */
   filed: number;
   /** Agents still alive at the end -- the rest were caught out and killed. */
@@ -87,6 +92,10 @@ function tallyOf(state: GameState): Tally {
     offersLater: SPY_TRACE.offersLater,
     offersRefused: SPY_TRACE.offersRefused,
     goldSpentBuying: SPY_TRACE.goldSpentBuying,
+    townOffers: SPY_TRACE.townOffers,
+    townsBought: SPY_TRACE.townsBought,
+    townOffersRefused: SPY_TRACE.townOffersRefused,
+    goldSpentOnTowns: SPY_TRACE.goldSpentOnTowns,
     filed: 0,
     lived: 0,
   };
@@ -109,6 +118,7 @@ describe('is espionage ever on the board', () => {
       wrecks: 0, wrecked: 0, lostAtWorks: 0, wreckedEndings: 0,
       turnRead: 0, turnWrecked: 0, turnWalked: 0, turnStuck: 0, turnNoTarget: 0, turnFresh: 0,
       asked: 0, incites: 0, incitesTook: 0, incitesCaught: 0, offers: 0, offersTaken: 0, offersLater: 0, offersRefused: 0, goldSpentBuying: 0,
+      townOffers: 0, townsBought: 0, townOffersRefused: 0, goldSpentOnTowns: 0,
       filed: 0, lived: 0,
     });
     const totals: Tally = zero();
@@ -240,6 +250,20 @@ describe('is espionage ever on the board', () => {
     lines.push(`  gold spent buying   ${(totals.goldSpentBuying / n).toFixed(0)}`);
     if (totals.offers === 0) {
       lines.push('  **NOBODY EVER MADE AN OFFER.** Any arm of turning measures nothing.');
+    }
+    lines.push('');
+    lines.push(`offers for a whole town ${(totals.townOffers / n).toFixed(2)} per game`);
+    lines.push(`  towns bought          ${(totals.townsBought / n).toFixed(2)}`);
+    lines.push(`  refused (and named)   ${(totals.townOffersRefused / n).toFixed(2)}`);
+    lines.push(`  gold spent on towns   ${(totals.goldSpentOnTowns / n).toFixed(0)}`);
+    // Section 184, and the guard is the point of the probe rather than a
+    // decoration: a rung the AI never reaches measures as a rung that does
+    // nothing, which is how section 136 spent a sweep on an agent that was
+    // hardly ever on the board.
+    if (totals.townOffers === 0) {
+      lines.push('  **NOBODY EVER OFFERED FOR A TOWN.** Any arm of BRIBE measures nothing.');
+    } else if (totals.townsBought === 0) {
+      lines.push('  **OFFERED AND NEVER ONCE ACCEPTED.** The price or the odds is wrong.');
     }
     const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const had = firstAgentTurns.filter((t) => t > 0);
