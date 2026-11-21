@@ -18154,3 +18154,108 @@ the Kingdom still buys 0.46 and 0.69 towns a game, the total is still about
 measured cost of about 15% of the rung's activity and no effect on any outcome
 column. It protects one side rather than three, and the two it does not protect
 were never being bought from as often as the end-of-game table implied.
+
+## 185. The Wandering Folk do not get ground down, and the map is not full
+
+Jeremy: *"okay let's do the wandering folk check."* Two probes, 72 games, and
+both of this arc's standing explanations are now measured and wrong.
+
+### They are bimodal, which the win column cannot show
+
+Section 178's city-loss probe, re-run on today's game (it predates sections
+179-184), 18 games a set:
+
+| | tuned | held-out |
+|---|---|---|
+| survived | 7 of 18 — final **7.7**, median 7 | 11 of 18 — final **6.9**, median 7 |
+| eliminated after holding a town | 8 — peak **2.5, median 1.0** | 5 — peak **1.6, median 1.0** |
+| never held a town at all | 3 | 2 |
+| arrival turn, survived vs eliminated | 35 vs 40 | 25 vs 43 |
+
+**When they survive they finish as the largest empire on the board** — 7.7
+cities against the Kingdom's 7.4 and the Horde's 6.3. "The weakest faction" is
+the wrong description of a side that either gets going or never gets a second
+town. The Unbound are the same shape (10 and 11 survived at 6.8 and 6.0; 7 and
+6 eliminated at peak median 1.0).
+
+So **3 wins in 108 is not a strength problem**. It is a survival problem with a
+bimodal distribution behind it, and the mean of a bimodal thing describes
+nobody.
+
+### The Hive kills the easy explanation
+
+It arrives just as late — due 45 and 39 against the Wandering Folk's 38 and 32
+— and is eliminated 3 times and once in eighteen while founding roughly twice
+as many towns a game. **"Late means dead" is false as stated**, so the question
+is what the lateness costs that the Hive does not pay.
+
+Section 179c had already closed the other standing explanation: a bigger
+arrival package makes a weak latecomer larger while it lasts without saving it,
+agreed from three directions. So it is not what they arrive *with* either.
+
+### So: is there anywhere left to stand? No — there is plenty
+
+`canFoundCity` blocks a site for exactly three reasons — water, a terrain
+nothing grows on, and being within `MIN_CITY_SPACING` of a city — and nothing
+about borders or ownership. So "somewhere to put a town" is a count anybody
+could have taken at any moment, and nobody ever had. `npm run room`
+(`tools/roomprobe.run.test.ts`), measured at the first observation each side
+exists, 18 games a set:
+
+| side | arrives | legal sites | within reach | blocked by a neighbour |
+|---|---|---|---|---|
+| Horde / Kingdom | 1 | 961 | 125-159 | 20 |
+| Wandering Folk | 38 / 32 | **806 / 834** | **149 / 161** | 176 / 145 |
+| Unbound | 38 / 46 | 814 / 772 | 151 / 155 | 168 / 207 |
+| Hivekin | 45 / 39 | 784 / 811 | 154 / 177 | 197 / 168 |
+
+**The map does not fill up.** A side arriving on turn 38 still finds ~810 legal
+sites, ~150 of them within eight tiles of its own units. Eighteen per cent of
+the legal land has been taken, and the rest is simply there.
+
+And the room does not separate the outcomes. Wandering Folk, reachable sites
+at arrival: survivors 131, **eliminated 161** on the tuned set — the games they
+died in had *more* room, not less. Held-out: 164 against 155, a difference of
+nothing.
+
+**Section 153's note — "they arrive onto a map the empires have been settling
+since turn one and find nowhere to put a town" — is measured and false.** It
+has been quoted in three sections. It was never checked.
+
+### What does separate them is what they do with it
+
+The same probe, towns founded within forty turns of arriving:
+
+| side | survived | eliminated |
+|---|---|---|
+| Wandering Folk, tuned | **3.0** | **1.7** (median 1.0) |
+| Wandering Folk, held-out | **3.1** | **0.9** (median 1.0) |
+| Unbound, tuned | 4.0 | 1.6 |
+| Unbound, held-out | 3.9 | 1.4 |
+| Hivekin, tuned | 3.5 | 2.7 |
+
+Both sets, every latecomer: **survivors plant three or four towns in their
+first forty turns, the eliminated plant one.** And over all games the Wandering
+Folk plant the fewest of anybody — 2.2 and 2.2, against the Unbound's 2.9, the
+Hive's 3.3 and 3.6, and the starting empires' 3.8 to 4.7 — on the same land,
+with the same room in reach.
+
+So the chain is: **same room, fewer towns, more eliminations.** The question is
+no longer *where* but *why so few*, and it is a question about the first forty
+turns rather than about arrival at all.
+
+### What this does not yet separate, and the next instrument
+
+`founded` counts towns that appeared. It cannot tell **a settler never built**
+from **a settler built and killed on the way**, and those want opposite fixes.
+The later a side arrives the fewer towns it plants in the *same* forty turns,
+which is as consistent with a hostile map as with a slow one.
+
+So the next probe counts, in the window: settlers built, settlers lost and to
+what, and towns founded — and it is section 186's, not this one's.
+
+One asymmetry noticed and deliberately not blamed yet: **the Wanderer costs 25
+shields where every other faction's settler costs 20.** It is the obvious
+suspect for "plants the fewest", it would be a one-line arm, and it is exactly
+the kind of thing this arc has already been wrong about twice by reasoning from
+a plausible mechanism instead of measuring it.

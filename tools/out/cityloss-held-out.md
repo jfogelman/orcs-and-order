@@ -17,11 +17,11 @@ founded, per game. `eliminated` is games ending on zero cities.
 
 | side | games | mean peak | best peak | mean final | worst final | peak turn | founded | eliminated |
 |---|---|---|---|---|---|---|---|---|
-| orc | 18 | **6.7** | 8 | **4.6** | 0 | 143 | 9.5 | 2 |
-| human | 18 | **9.0** | 15 | **8.2** | 6 | 168 | 7.8 | 0 |
-| hivekin | 18 | **6.0** | 10 | **3.0** | 0 | 120 | 11.4 | 4 |
-| wandering | 18 | **5.6** | 11 | **3.9** | 0 | 135 | 6.2 | 9 |
-| unbound | 18 | **5.0** | 13 | **3.6** | 0 | 133 | 5.7 | 8 |
+| orc | 18 | **6.5** | 8 | **4.6** | 0 | 123 | 9.2 | 2 |
+| human | 18 | **8.6** | 15 | **7.6** | 5 | 140 | 7.6 | 0 |
+| hivekin | 18 | **5.9** | 8 | **3.6** | 0 | 111 | 12.1 | 1 |
+| wandering | 18 | **5.3** | 11 | **4.2** | 0 | 135 | 6.3 | 7 |
+| unbound | 18 | **4.8** | 10 | **3.7** | 0 | 137 | 6.0 | 7 |
 
 ## the same, split by whether the side survived
 
@@ -35,11 +35,11 @@ or arrived and was gone before the first look), which have no such turn.
 
 | side | survived n | final, survivors (mean / median) | peak, survivors (mean / median) | eliminated n | peak, eliminated (mean / median / max) | elim turn (mean / median / earliest / latest; n) | before turn 100 | never had one |
 |---|---|---|---|---|---|---|---|---|
-| orc | 16 | 5.1 / 5.0 | 6.8 / 7.0 | 2 | 5.5 / 5.5 / 6 | 183 / 183 / 162 / 204; n=2 | 0 of 2 | 0 |
-| human | 18 | 8.2 / 8.0 | 9.0 / 8.5 | 0 | 0.0 / 0.0 / 0 | -- | 0 of 0 | 0 |
-| hivekin | 14 | 3.9 / 5.0 | 6.2 / 6.0 | 4 | 5.3 / 5.0 / 6 | 193 / 176 / 164 / 254; n=4 | 0 of 4 | 0 |
-| wandering | 9 | 7.9 / 8.0 | 8.4 / 8.0 | 7 | 2.7 / 2.0 / 6 | 131 / 128 / 51 / 237; n=7 | 3 of 7 | 2 |
-| unbound | 10 | 6.4 / 6.0 | 7.3 / 7.0 | 7 | 2.1 / 1.0 / 6 | 99 / 72 / 54 / 227; n=7 | 5 of 7 | 1 |
+| orc | 16 | 5.1 / 5.0 | 6.6 / 7.0 | 2 | 5.5 / 5.5 / 6 | 194 / 194 / 180 / 208; n=2 | 0 of 2 | 0 |
+| human | 18 | 7.6 / 7.0 | 8.6 / 8.0 | 0 | 0.0 / 0.0 / 0 | -- | 0 of 0 | 0 |
+| hivekin | 17 | 3.8 / 5.0 | 5.9 / 6.0 | 1 | 6.0 / 6.0 / 6 | 199 / 199 / 199 / 199; n=1 | 0 of 1 | 0 |
+| wandering | 11 | 6.9 / 7.0 | 7.7 / 7.0 | 5 | 1.6 / 1.0 / 5 | 97 / 61 / 51 / 168; n=5 | 3 of 5 | 2 |
+| unbound | 11 | 6.0 / 6.0 | 6.8 / 7.0 | 6 | 1.6 / 1.0 / 5 | 78 / 71 / 54 / 126; n=6 | 5 of 6 | 1 |
 
 ## arrival slot, and lifespan (section 160 asks whether this is the slot or the faction)
 
@@ -56,13 +56,13 @@ Every n is small; these are numbers, not tested differences.
 
 | side | latecomer games | due (mean / median / min / max) | came, minus due (mean / max) | lifespan (mean / median / min; n) | due, survived (mean / median; n) | due, eliminated (mean / median; n) |
 |---|---|---|---|---|---|---|
-| hivekin | 18 | 39 / 41 / 14 / 63 | 0.0 / 0 | 149 / 140 / 116; n=4 | 37 / 38 (n=14) | 44 / 48 (n=4) |
-| wandering | 18 | 32 / 25 / 14 / 59 | 0.0 / 0 | 96 / 106 / 12; n=7 | 24 / 20 (n=9) | 40 / 39 (n=9) |
-| unbound | 18 | 46 / 42 / 22 / 64 | 0.0 / 0 | 48 / 14 / 5; n=7 | 41 / 39 (n=10) | 52 / 57 (n=8) |
+| hivekin | 18 | 39 / 41 / 14 / 63 | 0.0 / 0 | 175 / 175 / 175; n=1 | 40 / 41 (n=17) | 24 / 24 (n=1) |
+| wandering | 18 | 32 / 25 / 14 / 59 | 0.0 / 0 | 60 / 36 / 12; n=5 | 25 / 22 (n=11) | 43 / 39 (n=7) |
+| unbound | 18 | 46 / 42 / 22 / 64 | 0.0 / 0 | 24 / 13 / 5; n=6 | 40 / 38 (n=11) | 54 / 58 (n=7) |
 
 ## reading the survival split
 
-Unbound: 10 games survived, 7 eliminated after holding a city and 1 eliminated having never held one. 5 of the 7 eliminations came before turn 100, which is the opening of the game rather than its late stages. Read that against the arrival table above before calling it about the faction: a late slot makes an early-looking turn a long life.
+Unbound: 11 games survived, 6 eliminated after holding a city and 1 eliminated having never held one. 5 of the 6 eliminations came before turn 100, which is the opening of the game rather than its late stages. Read that against the arrival table above before calling it about the faction: a late slot makes an early-looking turn a long life.
 
 Every cell here has n of 18 or fewer, and most of 10 or fewer.
 
@@ -75,11 +75,11 @@ than captured itself.
 
 | side | lost | captured | razed | abandoned | own | gained by capture | handed back by raiders |
 |---|---|---|---|---|---|---|---|
-| orc | **8.1** | 4.7 | 3.4 | 0.0 | 81% | 3.2 | 0.0 |
-| human | **4.4** | 2.1 | 2.4 | 0.0 | 29% | 4.8 | 0.0 |
-| hivekin | **10.4** | 3.6 | 6.8 | 0.0 | 88% | 1.9 | 0.0 |
-| wandering | **4.3** | 1.9 | 2.4 | 0.0 | 74% | 2.1 | 0.0 |
-| unbound | **4.4** | 2.1 | 2.3 | 0.0 | 77% | 2.3 | 0.0 |
+| orc | **7.8** | 4.6 | 3.2 | 0.0 | 82% | 3.1 | 0.0 |
+| human | **4.4** | 2.1 | 2.3 | 0.0 | 39% | 4.3 | 0.0 |
+| hivekin | **10.9** | 3.6 | 7.4 | 0.0 | 86% | 2.4 | 0.0 |
+| wandering | **4.0** | 1.9 | 2.1 | 0.0 | 64% | 1.9 | 0.0 |
+| unbound | **4.2** | 1.6 | 2.6 | 0.0 | 72% | 1.9 | 0.0 |
 
 Raider-held towns deleted with no founder to return them to (nobody's loss): 0.
 Raider-held towns handed back to a founder: 0.
@@ -90,11 +90,11 @@ Captures only, per game, by the faction of the taker. A raze has no taker.
 
 | loser | hivekin | human | orc | unbound | wandering |
 |---|---|---|---|---|---|
-| orc | 1.1 | 1.7 | 0.0 | 0.8 | 1.1 |
-| human | 0.3 | 0.0 | 0.9 | 0.4 | 0.4 |
-| hivekin | 0.0 | 1.7 | 1.2 | 0.4 | 0.3 |
-| wandering | 0.1 | 0.6 | 0.6 | 0.6 | 0.0 |
-| unbound | 0.6 | 0.8 | 0.4 | 0.0 | 0.3 |
+| orc | 1.1 | 2.0 | 0.0 | 0.3 | 1.2 |
+| human | 0.7 | 0.0 | 0.7 | 0.3 | 0.3 |
+| hivekin | 0.0 | 1.5 | 1.2 | 0.7 | 0.2 |
+| wandering | 0.3 | 0.3 | 0.6 | 0.6 | 0.0 |
+| unbound | 0.3 | 0.5 | 0.6 | 0.0 | 0.2 |
 
 ## when
 
@@ -103,8 +103,8 @@ last turn, so a short game is divided as a long one is).
 
 | side | mean turn | median turn | first third | middle third | last third | mean size lost |
 |---|---|---|---|---|---|---|
-| orc | 155 | 156 | 22 (15%) | 65 (45%) | 59 (40%) | 4.4 |
-| human | 156 | 169 | 20 (25%) | 23 (29%) | 37 (46%) | 2.8 |
-| hivekin | 140 | 137 | 30 (16%) | 96 (51%) | 61 (33%) | 2.6 |
-| wandering | 155 | 143 | 11 (14%) | 34 (44%) | 32 (42%) | 3.0 |
-| unbound | 156 | 147 | 13 (16%) | 33 (42%) | 33 (42%) | 3.1 |
+| orc | 160 | 173 | 19 (14%) | 41 (29%) | 80 (57%) | 4.1 |
+| human | 154 | 170 | 16 (20%) | 23 (29%) | 40 (51%) | 3.1 |
+| hivekin | 153 | 147 | 25 (13%) | 80 (41%) | 92 (47%) | 2.5 |
+| wandering | 147 | 146 | 10 (14%) | 26 (36%) | 36 (50%) | 2.9 |
+| unbound | 148 | 147 | 5 (7%) | 37 (49%) | 34 (45%) | 2.4 |
