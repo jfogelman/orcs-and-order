@@ -28,7 +28,8 @@
     "standingprobe": "vitest run --config vitest.sweep.config.ts tools/standingprobe.run.test.ts",
     "throughput": "vitest run --config vitest.sweep.config.ts tools/throughputprobe.run.test.ts",
     "cityloss": "vitest run --config vitest.sweep.config.ts tools/citylossprobe.run.test.ts",
-    "room": "vitest run --config vitest.sweep.config.ts tools/roomprobe.run.test.ts"
+    "room": "vitest run --config vitest.sweep.config.ts tools/roomprobe.run.test.ts",
+    "settlers": "vitest run --config vitest.sweep.config.ts tools/settlerprobe.run.test.ts"
   },
   "devDependencies": {
     "jsdom": "^30.1.2",

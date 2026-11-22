@@ -18259,3 +18259,88 @@ shields where every other faction's settler costs 20.** It is the obvious
 suspect for "plants the fewest", it would be a one-line arm, and it is exactly
 the kind of thing this arc has already been wrong about twice by reasoning from
 a plausible mechanism instead of measuring it.
+
+## 186. In the games they die, they build nothing at all
+
+Section 185 left one thing open on purpose: `founded` counts towns that
+appeared, and three different games produce a low count — a settler never
+built, a settler built and killed, a settler built and still walking. Those
+want opposite fixes. `tools/settlerprobe.run.test.ts` (`npm run settlers`)
+follows every settler by unit id between half-turns, 18 games a set.
+
+### One candidate dies immediately
+
+`still walking` is **0.0** for every latecomer on both sets, and
+`founded = built − lost` exactly. A settler either plants a town or is
+killed; none is ever built and left to wander. So "it builds them and never
+uses them" is not a thing that happens, and the question is down to two.
+
+### And the answer is the median, not the mean
+
+| | arrived with | built | founded | lost |
+|---|---|---|---|---|
+| Kingdom | 2.0 | 4.8 / 4.8 | 6.4 / 6.1 | 0.2 / 0.6 |
+| Hivekin | 2.0 | 4.2 / 4.6 | 4.8 / 5.8 | 1.3 / 0.8 |
+| Unbound | 2.0 | 2.8 / 2.1 | 3.9 / 3.5 | 0.9 / 0.6 |
+| **Wandering Folk** | 2.0 | **2.3 / 2.6** | 2.9 / 3.2 | **1.4 / 1.4** |
+
+Split by what became of the side, in the forty turns after it arrives:
+
+| | survived: built | eliminated: built | eliminated: lost |
+|---|---|---|---|
+| Wandering, tuned | 3.4 (median 3.0) | 1.6 (**median 0.0**) | 1.7 |
+| Wandering, held-out | 3.7 (median 4.0) | 0.7 (**median 0.0**) | 1.6 |
+| Unbound, tuned | 4.4 (median 3.5) | 0.9 (**median 0.0**) | 1.1 |
+| Unbound, held-out | 3.2 (median 3.0) | 0.4 (**median 0.0**) | 1.0 |
+
+**In the games a latecomer is eliminated, the median one produces no settlers
+at all.** Not fewer. None. It arrives with its two founders and never builds a
+third in forty turns, on both seed sets and for both factions.
+
+That is a different claim from anything this arc has made, and it rules out
+most of what has been proposed:
+
+- **Not the settler price.** A Wanderer costing 25 against everyone's 20 buys
+  one fewer settler in a run of them. It does not buy zero.
+- **Not protection.** Losses in eliminated games are 1.7 and 1.6 against
+  survivors' 1.0 and 1.4 — a difference, and far too small to be the story
+  when the other column goes to zero.
+- **Not the map, not the package, not lateness**, all three of which section
+  185 and section 179c already closed.
+
+### The Hive dies the other way, which is the control working
+
+Its three eliminated games on the tuned set have it building **5.7** settlers
+and losing **3.3** — the most of anything in the table. The side that is
+eliminated despite building plenty is eliminated by losing them. So the
+instrument can see both failure modes and reports different ones for different
+factions, which is the best evidence available here that it is measuring what
+it claims to. (n = 3, and it is an observation rather than a finding.)
+
+### Two faults of mine, both caught by the data
+
+**The three-game smoke said they build less than half what the Hive does.**
+Over 36 games it is 4.3 against 6.2. The smoke was an artefact and the claim
+was wrong; it is written here because it was reported before it was checked.
+
+**And the first `built` column counted the arrival.** Every latecomer is given
+`HIVEKIN.founders` — two settlers, the same count for every faction — and the
+first cut counted those as production, so a side that built *nothing* read as
+having built two. The probe now separates `arrived with` from `built`, which
+is the difference between "they build fewer" and "they build none" — and the
+corrected column is the entire finding above. A measurement that flatters by
+two is worse than no measurement when the true value is zero.
+
+### What section 187 asks
+
+**What is their one town building instead?** In an eliminated game a latecomer
+holds a town (three and two of those games it never holds one at all, which
+needs no explaining) and spends forty turns not putting a settler in it. That
+is a production-choice question, and sections 169-176 are the precedent for
+answering it: the step counter that found research order acting as build
+priority is the same shape of instrument.
+
+The cheap one-line arm is still there and is still worth running *after* that
+probe rather than before: `wanderer` at 20 instead of 25. On this evidence it
+would change the games they already survive and do nothing for the games they
+do not, which is a prediction worth being wrong about on the record.
