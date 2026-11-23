@@ -18344,3 +18344,87 @@ The cheap one-line arm is still there and is still worth running *after* that
 probe rather than before: `wanderer` at 20 instead of 25. On this evidence it
 would change the games they already survive and do nothing for the games they
 do not, which is a prediction worth being wrong about on the record.
+
+## 187. It is not the choice. It is that there is nothing to choose with.
+
+Section 186 left the question as *what is the one town building instead?* and
+section 174's `PRODUCTION_TRACE` is the instrument for it: `chooseProduction`
+is an ordered list of steps and the trace records which one answered.
+`tools/buildchoiceprobe.run.test.ts` (`npm run builds`) differences those
+counts between half-turns, attributes them to each side's own forty-turn
+window, and classifies the game afterwards.
+
+### The expected answer is wrong
+
+The expectation — mine, written into 186 — was that an earlier step was
+crowding expansion out, the way section 174 found a step answering first for
+three factions and never for two. It is not happening.
+
+Wandering Folk, share of that side's decisions in its window:
+
+| | expand | garrison |
+|---|---|---|
+| survived, tuned | 46% | 30% |
+| **eliminated, tuned** | **34%** | 24% |
+| survived, held-out | 35% | 24% |
+| **eliminated, held-out** | **39%** | 37% |
+
+**The two seed sets disagree on the direction** — expansion's share falls in
+one and rises in the other — and so does the garrison share. By this project's
+own bar that is not a finding, and it is the right answer to have got: the
+chooser is asking for settlers in the games they die, at about the rate it asks
+in the games they live. The three-game smoke suggested otherwise and was read
+too early, again.
+
+### What does differ is the volume, and it is nearly circular
+
+In its window a Wandering town takes **12.9 and 8.6** expansion decisions in
+the games it is eliminated, against **36.3 and 31.2** in the games it survives.
+A decision is one call of the chooser, so those are turns of a town building a
+settler.
+
+Against section 186's settler counts, the exchange rate is steady: survivors
+spend 36.3 expansion-turns on 3.4 settlers and 31.2 on 3.7 — call it **eight to
+eleven turns of production per settler**. The eliminated games have **8.6 to
+12.9** expansion-turns, which is one settler's worth, and they produce
+**zero** (median).
+
+**They land just short of the first one.**
+
+**The confound, stated rather than buried**: a side that dies has fewer towns
+for fewer turns, so its *counts* are lower for free, and that is most of the
+gap above. This is why the share table comes first and why its flatness is the
+finding. What the volume figure adds is only the scale — that the gap is about
+one settler wide, not five.
+
+### Which puts the price back, in a different role
+
+Section 186 ruled the Wanderer's **25 shields against everybody else's 20** out
+like this: *"a settler costing 25 buys one fewer settler in a run of them. It
+does not buy zero."* **That reasoning was wrong, and this section is where it
+is withdrawn.** It assumed a side completing settlers in a run, where the
+measured situation is a town that never completes the *first* one. At a
+threshold, twenty per cent off the price is not one settler in five — it is the
+difference between finishing before the side is overrun and not finishing.
+
+The prediction recorded in 186 — *"it should change the games they already
+survive and do nothing for the games they do not"* — is therefore withdrawn
+too. The opposite is now the better guess, and both are on the record.
+
+### What to run, and what would be cheaper than it looks
+
+**The arm: `wanderer` at 20 instead of 25**, two arms on the shared seeds.
+Every other candidate is closed — the map (185), lateness (185), the arrival
+package (179c), protection and the chooser's priorities (186, 187) — so this
+is no longer a guess among many, it is the last one standing with a mechanism
+attached.
+
+Read `gone` first and `wins` second. The claim being tested is not that they
+become stronger; it is that **fewer of their games end before they have a
+second town**, which is a column that already exists.
+
+Two measurements that would sharpen it and are not needed to run it: shields a
+turn in a one-town latecomer, and whether switching production between the
+garrison step and the expansion step keeps the banked shields or spends them
+twice. If switching is lossy, the alternation the shares show is itself a cost
+and the price is only half the story.
