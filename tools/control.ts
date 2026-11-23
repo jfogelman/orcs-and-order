@@ -38,6 +38,7 @@ import { TURNING } from '../src/sim/turning';
 import { GOSSIP } from '../src/sim/gossip';
 import { INCITE } from '../src/sim/incite';
 import { BRIBE } from '../src/sim/bribery';
+import { SETTLERS, applySettlerCosts } from '../src/sim/founding';
 import { HIVE_WORKS } from '../src/sim/hivekin';
 import { DIPLOMACY_AI } from '../src/ai/diplomacy';
 import { NEW_GAME } from './sweep';
@@ -209,6 +210,13 @@ export const control = () => {
   // file exists to stop, and SPY itself was missing from here for two slices.
   BRIBE.enabled = true;
   BRIBE.ai = true;
+  // Section 188: settler prices, pinned onto the unit table. A no-op on the
+  // shipped game -- every figure is what the creature table already says --
+  // and the reason it exists is that `UNIT_TYPES` is module state shared by
+  // every game in a run, so an arm that moved a price without this would leak
+  // into the next arm.
+  SETTLERS.wanderer = 25;
+  applySettlerCosts();
   // **Pinned, and this is not decoration.** An arm that sets `BRIBE.floor = 1`
   // mutates the shared object, so without this line the *next* arm inherits
   // it and two arms silently become one. Section 59's omission, which is the

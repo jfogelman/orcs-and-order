@@ -5,7 +5,7 @@ import type { Arm } from './sweep';
 import { rawRows, report, runSweep, seedSet } from './sweep';
 // The shipped game, shared with the probes. See the note at the top of it.
 import { control } from './control';
-import { BRIBE } from '../src/sim/bribery';
+import { SETTLERS, applySettlerCosts } from '../src/sim/founding';
 
 /**
  * The question this sweep is currently asking.
@@ -591,7 +591,67 @@ const buildArms = (): Arm[] => {
    * probe cannot see that because it is unpaired. If `bought` collapses toward
    * zero for every side, four is too high and the answer is three.
    */
-  const floor = (label: string, apply: () => void): Arm => ({
+  /**
+   * Section 188: **a Wanderer at 20 instead of 25.**
+   *
+   * The last candidate standing for the Wandering Folk, and the first one in
+   * this arc that arrives with a mechanism rather than a story. Sections 185
+   * to 187 closed the rest:
+   *
+   * - **not the map** (185): a side arriving on turn 38 still finds ~810 legal
+   *   founding sites and ~150 within reach of its own units, and the games
+   *   they are eliminated in have *more* reachable room than the games they
+   *   survive;
+   * - **not lateness alone** (185): the Hive arrives as late and is eliminated
+   *   3 times and once in eighteen;
+   * - **not the arrival package** (179c, agreed from three directions);
+   * - **not protection** (186): losses are 1.7 in eliminated games against 1.0
+   *   in survived ones, far too small when the other column is zero;
+   * - **not the chooser's priorities** (187): expansion's *share* of decisions
+   *   moves in opposite directions on the two seed sets.
+   *
+   * What 186 found instead is that **in the games they are eliminated, the
+   * median side builds no settlers at all** in its first forty turns -- not
+   * fewer, none -- and what 187 adds is the scale: those games hold about one
+   * settler's worth of production turns, at a steady eight to eleven turns per
+   * settler. They land just short of the first one.
+   *
+   * At a threshold, a fifth off the price is not "one settler in five". It is
+   * whether the first one finishes before the side is overrun. Section 186
+   * dismissed this price on the "one in five" reading and **section 187
+   * withdrew the dismissal**; this arm is what that withdrawal is worth.
+   *
+   * ## The arms
+   *
+   * | arm | a Wanderer costs |
+   * |---|---|
+   * | as shipped | 25 |
+   * | a Wanderer at 20 | 20, like every other faction's settler |
+   *
+   * Arm 1 is also the canary: it should reproduce section 184's `floor at
+   * four` arm bit for bit, since `applySettlerCosts` writes the figures the
+   * creature table already holds and rolls no dice. Check that first.
+   *
+   * ## What to read, pre-registered
+   *
+   * **`gone` for the Wandering Folk first, and on its own merits.** The claim
+   * is not that they get stronger. It is that fewer of their games end before
+   * they have a second town. They are `gone` in 30 and 33 of 54 at the shipped
+   * price, which is the number this is aimed at.
+   *
+   * **`cities` second**, which should rise with it, and **`wins` third**,
+   * which may not move at all: a side that stops being eliminated six games in
+   * ten has been fixed even if it still wins rarely, and 3 wins in 108 was
+   * never the thing worth fixing on its own.
+   *
+   * **The risk, written down first.** A cheaper settler is cheaper for the
+   * *survived* games too, where they already finish as the largest empire on
+   * the board (7.7 and 6.9 cities). If `cities` rises and `gone` does not
+   * move, this made a strong side stronger and did nothing for the problem --
+   * and the answer then is not a smaller price but a different lever, because
+   * the threshold reading will have been wrong.
+   */
+  const price = (label: string, apply: () => void): Arm => ({
     label,
     apply: () => {
       control();
@@ -600,12 +660,13 @@ const buildArms = (): Arm[] => {
   });
 
   return [
-    floor('floor at one (as measured)', () => {
-      BRIBE.floor = 1;
+    // `control()` pins 25, so this arm changes nothing on purpose: it is the
+    // shipped game, named, and the canary against section 184's run.
+    price('as shipped (a Wanderer costs 25)', () => {}),
+    price('a Wanderer at 20', () => {
+      SETTLERS.wanderer = 20;
+      applySettlerCosts();
     }),
-    // `control()` pins Jeremy's four, so this arm changes nothing on purpose:
-    // it is the shipped game, named.
-    floor('floor at four (as shipped)', () => {}),
   ];
 };
 
