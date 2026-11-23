@@ -18428,3 +18428,130 @@ turn in a one-town latecomer, and whether switching production between the
 garrison step and the expansion step keeps the banked shields or spends them
 twice. If switching is lossy, the alternation the shares show is itself a cost
 and the price is only half the story.
+
+## 188. A Wanderer at 20 — MEASURED, 216 games, and it does not work
+
+Jeremy: *"run the arm."* Sections 185 to 187 closed every candidate for the
+Wandering Folk but one, so this is the last one standing: `wanderer` at 20
+instead of 25, where every other faction's settler is 20 already.
+
+### The lever came before the arm, and that is the point
+
+A unit's cost is a literal in the creature table, and the sweep's identity
+guard compares **settings** — an arm that moves something the fingerprint
+cannot see is refused as a duplicate, which is how section 160's `no want` and
+`no dispersal` turned out to be one arm run twice and how section 180's first
+smoke refused its own ladder.
+
+So `src/sim/founding.ts` holds `SETTLERS` and `applySettlerCosts()`,
+`control()` pins them, and `LEVERS` registers them — written before the arm
+rather than after it failed. Nothing changes by default: every figure in it is
+what the creature table already says. All five settlers are listed rather than
+only the suspect, so a later arm on any of them needs no new plumbing.
+
+Pinning in `control()` matters for the reason `BRIBE.floor` is pinned:
+`UNIT_TYPES` is module state shared by every game in a run, so an arm that
+moved a price without it would leak into the next arm.
+
+### What was predicted, and the risk, written down before the arm ran
+
+**`gone` for the Wandering Folk first and on its own merits.** The claim was
+never that they get stronger — it was that fewer of their games end before
+they have a second town. 30 and 33 of 54 at the shipped price is the number it
+was aimed at. Then `cities`, which should rise with it, and `wins` third,
+which may not move at all: a side that stops being eliminated six games in ten
+has been fixed even if it still wins rarely.
+
+**The risk**: a cheaper settler is cheaper in the games they *already*
+survive, where they finish as the largest empire on the board. If `cities`
+rises and `gone` does not move, this made a strong side stronger and did
+nothing for the problem — and the answer then is a different lever, not a
+smaller price, because the threshold reading will have been wrong.
+
+### Measured, 216 games: the registered risk is what happened
+
+The harness's own estimate: *"2 arms x 2 sets. 216 games, about 65 minutes
+(39-84, depending on how many run to the turn limit)."* It finished in **65.1
+min**, 18.1s a game. `sweep-results/2026-11-23T05-15-49-581Z.txt`.
+
+**The canary is clean**: arm 1 reproduces section 184's `floor at four` arm
+over 108 rows and all 89 columns, zero differences. `applySettlerCosts` writes
+what the creature table already held, so the lever machinery is inert and the
+comparison is honest.
+
+#### 1. `gone` — the reading this arm was for — does not move
+
+| Wandering Folk, games ending with no city | tuned | held-out |
+|---|---|---|
+| as shipped | 30 of 54 | 33 of 54 |
+| a Wanderer at 20 | **26** | **33** |
+
+Pooled 63 → 59 of 108, t = −1.16, sign test p = 0.388, and **the two seed sets
+do not agree**: one moves four games and the other moves none. By this
+project's bar that is nothing. Nobody else's `gone` moves either, in either
+direction, on both sets.
+
+**The arm fails its own pre-registered primary reading.**
+
+#### 2. `cities` moves, and that is the risk, not the result
+
+| Wandering Folk | tuned | held-out |
+|---|---|---|
+| cities | **+0.65** (t = +1.46) | **+0.56** (t = +1.76) |
+| population | 24.3 → 29.0 | 17.5 → 21.3 |
+
+Both seed sets agree, both at a similar size, and a second column moves with
+them — which is the bar this project uses, so it is believable. A cheaper
+settler makes the Wandering Folk **bigger**.
+
+And section 188 wrote down before the run what that would mean:
+
+> If `cities` rises and `gone` does not move, this made a strong side stronger
+> and did nothing for the problem — and the answer then is not a smaller price
+> but a different lever, because the threshold reading will have been wrong.
+
+That is exactly what the run says. The extra towns land in the games they were
+already going to survive, where they already finish as the largest empire on
+the board; the games they are eliminated in are untouched.
+
+#### 3. `wins` do nothing, as expected
+
+5 → 7 of 108, flips 3 against 5, p = 0.727. Same winner on **70 of 108** maps —
+38 maps reshuffled, which is a reminder that the whole board moves when a price
+moves, and that any single game is no evidence about any of this.
+
+### So section 187's threshold reading is withdrawn
+
+Section 186 dismissed the price; section 187 withdrew the dismissal on a
+threshold argument — *they land one settler short, so a fifth off is the
+difference between finishing and not*. **The arm says no.** In the games they
+die, a town producing a couple of shields a turn is not two or three turns away
+from a settler, and five shields does not reach it.
+
+That is three positions on this one lever across three sections, and the
+measured one is the last. Written out rather than tidied away, because the
+sequence is the point: a mechanism that sounds right, a prediction made from
+it, and an arm that refuses it.
+
+### What is left, and it is no longer a guess
+
+Every candidate this arc raised is now closed by measurement: the map (185),
+lateness (185), the arrival package (179c), protection (186), the chooser's
+priorities (187), and the settler price (188). What has never been measured is
+the thing all of them were standing in front of:
+
+**How much production does a one-town latecomer actually have?** Section 187
+asked for it and did not need it; now it is the only question left. Two
+figures, both cheap, and `PRODUCTION_TRACE` has nothing to say about either:
+
+- **Shields a turn** in a latecomer's first town, against the 20 to 25 a
+  settler costs and the 8 to 11 turns section 187 measured per settler.
+- **Whether switching between the garrison step and the expansion step keeps
+  the banked shields.** The share table in 187 shows a town alternating
+  between the two. If that alternation is lossy, the town is paying for the
+  settler twice and the price was never the number that mattered.
+
+**Do not ship the 20.** It is a buff to a side in the games it is already
+winning, aimed at a problem it does not touch — and if the Wandering Folk are
+wanted larger for their own sake, that is a different decision and should be
+made as one.
