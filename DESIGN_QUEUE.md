@@ -18555,3 +18555,99 @@ figures, both cheap, and `PRODUCTION_TRACE` has nothing to say about either:
 winning, aimed at a problem it does not touch — and if the Wandering Folk are
 wanted larger for their own sake, that is a different decision and should be
 made as one.
+
+## 189. They can afford it. They do not live long enough to finish it.
+
+Jeremy: *"lets go after the prod figures now."* Section 188 left exactly one
+thing unmeasured — how much production a one-town latecomer actually has — and
+two mechanisms to check. `tools/shieldprobe.run.test.ts` (`npm run shields`),
+18 games a set, one row per town per half-turn inside the window.
+
+### Three candidates closed before the probe finished
+
+**Switching is not lossy** — read out of `city.ts` rather than measured.
+`city.shields` accumulates and is never cleared when the chosen item changes,
+so the garrison-then-settler alternation section 187 found costs nothing by
+itself. The standing choices (coin, beakers, calm) *do* empty the box every
+turn, which is the only way a detour costs anything.
+
+**The forced-calm path is human-only.** `autoCalm` in `turn.ts` is gated on
+`controller === 'human'`, so an AI town is never pushed onto `calm` and never
+loses its box that way.
+
+**Upkeep never bites.** This was the promising one — a unit built in a town is
+homed to it, and `city.shields += cityYield().shields − unitUpkeep()` — so a
+small town paying for its own garrison out of the settler's box looked like
+the whole answer. It is not happening:
+
+| one-town latecomer | size | gross | upkeep | **net** | net ≤ 0 |
+|---|---|---|---|---|---|
+| Wandering Folk | 2.0 | 3.6 | **0.0** | **3.6** | **0%** |
+| Hivekin | 1.0 | 3.6 | 0.0 | 3.6 | 0% |
+| Unbound | 1.5 | 4.7 | 0.0 | 4.7 | 0% |
+
+`freeSupport` is `max(2, size)` and these towns have about one unit homed
+against two or more free. **A one-town Wandering Folk town nets 3.6 shields a
+turn**, which is a 25-shield Wanderer in seven turns of production — and
+section 187 independently measured eight to eleven turns per settler. The two
+instruments agree, and **"they cannot afford a settler" is closed.**
+
+### A column of mine that cannot work, and why
+
+To separate *the box reaches 25 and the settler is chosen against* from *the
+box never reaches 25*, I added a high-water mark of `city.shields` across the
+window. **It is invalid and the result shows it**: the Hive reaches 25 in 27%
+and 6% of the games it survives, while section 186 measured it building 4.2
+and 4.6 settlers a game at a cost of 20.
+
+A side cannot build four settlers without the box reaching twenty. The
+explanation is in the production tick: shields are added and the completion is
+checked **in the same half-turn**, so the box is refilled and spent before any
+observer between half-turns can see the peak. The mark reads the trough.
+
+Which is the same fault as section 186's `built` column counting the arrival,
+and section 186's own lesson restated: a column that cannot see what it claims
+to is worse than no column. It is reported here rather than deleted because
+the comparison *within* a faction is measured the same wrong way on both sides
+and still shows something — the eliminated games bank and finish far less —
+but that is the window being cut short, which is the next paragraph.
+
+### What the numbers do say, put together
+
+Nothing new was needed for this; it is four measured figures multiplied out.
+
+- A settler is **seven turns of dedicated production** (3.6 net a turn against
+  25), and section 187 measured eight to eleven.
+- Expansion takes **34% and 39%** of the chooser's decisions in the games they
+  are eliminated (187), so those seven to eleven turns of production are
+  spread across roughly **twenty to thirty turns of calendar**.
+- A Wandering Folk game that ends in elimination has a lifespan from arrival
+  with a **median of 30 and 36 turns** (185).
+
+**They need about as long to finish their first settler as they survive.** It
+is a race, they lose it about half the time, and that is the whole of it. No
+step is starving them, no price is out of reach, no map is full.
+
+It also explains section 188's failure exactly. Twenty shields instead of
+twenty-five is six turns of production instead of seven — **three calendar
+turns off a twenty-five turn race**. That is not nothing, and it is far too
+little, which is precisely what 216 games said.
+
+### What to try, and it is not a price
+
+The lever this points at is the **share**, not the cost: a latecomer's first
+town should finish a settler before it does anything else, because the thing
+that kills it is the calendar.
+
+`chooseProduction` puts the garrison step first and re-asks it every turn, so
+a town that dips below its garrison target goes back to defenders — three
+turns a defender at this net, repeatedly, while the settler waits. **The arm
+is to let a side with one town put expansion ahead of the garrison** until it
+has a second, which is an ordering change inside a function that already has
+an ordering, and is a lever the fingerprint can see if it is added as one.
+
+The risk to write down now: a one-town side with no garrison is a one-town
+side that is easier to kill, and the race could get *shorter* by exactly as
+much as the settler gets sooner. `gone` is the column to read, as in 188, and
+the prediction this time is deliberately weak — the two effects pull opposite
+ways and the sign is genuinely unknown.
